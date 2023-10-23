@@ -14,17 +14,11 @@ from modules.components.data_classes import UserOperations
 #==============================================================================
 user_operations = UserOperations()
 operations_menu = {'1' : 'FAIRS timeseries analysis',
-                   '2' : 'FAIRS training: Grouped Classes Method (GCM)',
-                   '3' : 'FAIRS training: Full Encoding Method (FEM)',                                
-                   '4' : 'Exit and close'}
+                   '2' : 'FAIRS training: Color Code Model (CCM)',                                                   
+                   '3' : 'Exit and close'}
 
-GCM_menu = {'1' : 'Pretrain GCM model',
-            '2' : 'Evaluate GCM model',
-            '3' : 'Predict next extraction',
-            '4' : 'Go back to main menu'}
-
-FEM_menu = {'1' : 'Pretrain FEM model',
-            '2' : 'Evaluate FEM model',
+CCM_menu = {'1' : 'Pretrain ColorCode model',
+            '2' : 'Evaluate ColorCode model',
             '3' : 'Predict next extraction',
             '4' : 'Go back to main menu'}
 
@@ -42,35 +36,18 @@ while True:
 
     elif op_sel == 2:        
         while True:
-            sec_sel = user_operations.menu_selection(GCM_menu)
+            sec_sel = user_operations.menu_selection(CCM_menu)
             print()
             if sec_sel == 1:
-                import modules.GCM_training
-                del sys.modules['modules.GCM_training']
+                import modules.CCM_training
+                del sys.modules['modules.CCM_training']
             elif sec_sel == 2:
                 pass
             elif sec_sel == 3:
-                import modules.GCM_predictions
-                del sys.modules['modules.GCM_predictions']
+                import modules.CCM_predictions
+                del sys.modules['modules.CCM_predictions']
             elif sec_sel == 4:
-                break
-
-    elif op_sel == 3:        
-        while True:
-            sec_sel = user_operations.menu_selection(FEM_menu)
-            print()
-            if sec_sel == 1:
-                pass
-                # import modules.FEM_training
-                # del sys.modules['modules.FEM_training']
-            elif sec_sel == 2:
-                pass
-            elif sec_sel == 3:
-                # import modules.FEM_predictions
-                # del sys.modules['modules.FEM_predictions']
-                pass
-            elif sec_sel == 4:
-                break
+                break    
         
     elif op_sel == 4:
         break

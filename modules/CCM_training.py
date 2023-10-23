@@ -9,13 +9,17 @@ from keras.utils.vis_utils import plot_model
 import warnings
 warnings.simplefilter(action='ignore', category = Warning)
 
-# [IMPORT MODULES AND CLASSES]
-#==============================================================================
+# add modules path if this file is launched as __main__
+#------------------------------------------------------------------------------
 if __name__ == '__main__':
     sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+# import modules and components
+#------------------------------------------------------------------------------
 from modules.components.data_classes import PreProcessing
-from modules.components.training_classes import GroupedClassModel, RealTimeHistory, ModelTraining, ModelValidation
+from modules.components.training_classes import ColorCodeModel, RealTimeHistory, ModelTraining, ModelValidation
 import modules.global_variables as GlobVar
+import modules.configurations as cnf
 
 # [LOAD DATASETS]
 #==============================================================================
@@ -25,7 +29,7 @@ import modules.global_variables as GlobVar
 filepath = os.path.join(GlobVar.data_path, 'FAIRS_dataset.csv')                
 df_FAIRS = pd.read_csv(filepath, sep= ';', encoding='utf-8')
 
-num_samples = int(df_FAIRS.shape[0] * GlobVar.data_size)
+num_samples = int(df_FAIRS.shape[0] * cnf.data_size)
 df_FAIRS = df_FAIRS[(df_FAIRS.shape[0] - num_samples):]
         
 print(f'''
@@ -73,11 +77,11 @@ print('''STEP 1 -----> Separate datasets and generate time windows
 
 # split dataset into train and test
 #------------------------------------------------------------------------------
-categorical_train, categorical_test = preprocessor.split_timeseries(FAIRS_categorical, GlobVar.test_size, inverted=False)
+categorical_train, categorical_test = preprocessor.split_timeseries(FAIRS_categorical, cnf.test_size, inverted=False)
 
 # generate windowed dataset
 #------------------------------------------------------------------------------
-X_train, Y_train, X_test, Y_test = preprocessor.timeseries_labeling(categorical_train, categorical_test, GlobVar.window_size)
+X_train, Y_train, X_test, Y_test = preprocessor.timeseries_labeling(categorical_train, categorical_test, cnf.window_size)
 
 # [ONE HOT ENCODE THE LABELS]
 #==============================================================================
@@ -101,7 +105,7 @@ print('''STEP 3 -----> Save files
 
 # save encoder
 #------------------------------------------------------------------------------
-encoder_path = os.path.join(GlobVar.GCM_data_path, 'categorical_encoder.pkl')
+encoder_path = os.path.join(GlobVar.CCM_data_path, 'categorical_encoder.pkl')
 with open(encoder_path, 'wb') as file:
     pickle.dump(categorical_encoder, file) 
 
@@ -121,7 +125,7 @@ df_Y_test_OHE = pd.DataFrame(Y_test_OHE)
 
 # save csv files
 #------------------------------------------------------------------------------
-file_loc = os.path.join(GlobVar.GCM_data_path, 'GCM_preprocessed.xlsx')  
+file_loc = os.path.join(GlobVar.CCM_data_path, 'GCM_preprocessed.xlsx')  
 writer = pd.ExcelWriter(file_loc, engine='xlsxwriter')
 df_X_train.to_excel(writer, sheet_name='train inputs', index=True)
 df_X_test.to_excel(writer, sheet_name='test inputs', index=True)
@@ -153,18 +157,19 @@ most frequent class in test dataset:   {int(categorical_test['color encoding'].v
 #==============================================================================
 print('''STEP 4 -----> Build the model and start training
 ''')
-trainworker = ModelTraining(device = GlobVar.training_device) 
-model_savepath = preprocessor.model_savefolder(GlobVar.GCM_model_path, 'FAIRSGCM')
+trainworker = ModelTraining(device = cnf.training_device, use_mixed_precision=cnf.use_mixed_precision) 
+model_savepath = preprocessor.model_savefolder(GlobVar.CCM_model_path, 'FAIRSGCM')
 
 # initialize model class
 #------------------------------------------------------------------------------
-modelframe = GroupedClassModel(GlobVar.learning_rate, GlobVar.window_size, output_size=3)
+modelframe = ColorCodeModel(cnf.learning_rate, cnf.window_size, cnf.embedding_size, 
+                            output_size=len(categories[0]), XLA_state=cnf.XLA_acceleration)
 model = modelframe.build()
 model.summary(expand_nested=True)
 
 # plot model graph
 #------------------------------------------------------------------------------
-if GlobVar.generate_model_graph == True:
+if cnf.generate_model_graph == True:
     plot_path = os.path.join(model_savepath, 'FAIRSGCM_model.png')       
     plot_model(model, to_file = plot_path, show_shapes = True, 
                 show_layer_names = True, show_layer_activations = True, 
@@ -176,20 +181,38 @@ if GlobVar.generate_model_graph == True:
 # use command prompt on the model folder and (upon activating environment), 
 # use the bash command: python -m tensorboard.main --logdir = tensorboard/
 #==============================================================================
-log_path = os.path.join(model_savepath, 'tensorboard')
-tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_path, histogram_freq=1)
 RTH_callback = RealTimeHistory(model_savepath, validation=True)
 
 # training loop and model saving at end
 #------------------------------------------------------------------------------
-print(f'''Start model training for {GlobVar.epochs} epochs and batch size of {GlobVar.batch_size}
+print(f'''Start model training for {cnf.epochs} epochs and batch size of {cnf.batch_size}
        ''')
-training = model.fit(x=X_train, y=Y_train_OHE, batch_size=GlobVar.batch_size, 
+if cnf.use_tensorboard == True:
+    log_path = os.path.join(model_savepath, 'tensorboard')
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_path, histogram_freq=1)
+    training = model.fit(x=X_train, y=Y_train_OHE, batch_size=cnf.batch_size, 
                      validation_data=(X_test, Y_test_OHE), 
-                     epochs = GlobVar.epochs, callbacks = [RTH_callback, tensorboard_callback],
+                     epochs = cnf.epochs, callbacks = [RTH_callback, tensorboard_callback],
+                     workers = 6, use_multiprocessing=True)
+else:
+    training = model.fit(x=X_train, y=Y_train_OHE, batch_size=cnf.batch_size, 
+                     validation_data=(X_test, Y_test_OHE), 
+                     epochs = cnf.epochs, callbacks = [RTH_callback],
                      workers = 6, use_multiprocessing=True)
 
 model.save(model_savepath)
+
+# save model parameters in txt files
+#------------------------------------------------------------------------------
+parameters = {'Number of train samples' : categorical_train.shape[0],
+              'Number of test samples' : categorical_test.shape[0],
+              'Window size' : cnf.window_size,
+              'Embedding dimensions' : cnf.embedding_size,             
+              'Batch size' : cnf.batch_size,
+              'Learning rate' : cnf.learning_rate,
+              'Epochs' : cnf.epochs}
+
+trainworker.model_parameters(parameters, model_savepath)
 
 # [MODEL VALIDATION]
 #==============================================================================
@@ -199,7 +222,7 @@ print('''STEP 5 -----> Evaluate the model
 ''')
 categories_mapping = {0 : 'green', 1 : 'black', 2 : 'red'}
 
-validator = ModelValidation()
+validator = ModelValidation(model)
 predicted_train_timeseries = model.predict(X_train)
 predicted_test_timeseries = model.predict(X_test)
 

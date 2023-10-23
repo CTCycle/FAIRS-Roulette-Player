@@ -70,64 +70,48 @@ class RealTimeHistory(keras.callbacks.Callback):
 #==============================================================================
 #==============================================================================
 #==============================================================================
-class GroupedClassModel:
+class ColorCodeModel:
 
-    def __init__(self, learning_rate, window_size, output_size):
+    def __init__(self, learning_rate, window_size, embedding_dims, output_size, XLA_state):
 
         self.learning_rate = learning_rate
-        self.window_size = window_size 
-        self.output_size = output_size
+        self.window_size = window_size
+        self.embedding_dims = embedding_dims 
+        self.output_size = output_size        
+        self.XLA_state = XLA_state
         self.name = 'FAIRS_GCM'
 
     def build(self):                
         
-        sequence_input = layers.Input(shape=(self.window_size, 1))       
+        sequence_input = layers.Input(shape=(self.window_size, 1))    
         #----------------------------------------------------------------------
-        lstm1 = layers.LSTM(512, use_bias=True, return_sequences=True, activation='tanh', dropout=0.2)(sequence_input) 
-        #----------------------------------------------------------------------        
-        lstm2 = layers.LSTM(256, use_bias=True, return_sequences=True, activation='tanh', dropout=0.2)(lstm1)
-        #----------------------------------------------------------------------   
-        lstm3 = layers.LSTM(128, use_bias=True, return_sequences=True, activation='tanh', dropout=0.2)(lstm2) 
+        embedding = layers.Embedding(input_dim=self.output_size, output_dim=self.embedding_dims)(sequence_input) 
+        reshape = layers.Reshape((self.window_size, self.embedding_dims))(embedding)
         #----------------------------------------------------------------------
-        flatten1 = layers.Flatten()(lstm3)       
-        
-               
-        conv1 = layers.Conv1D(512, kernel_size=6, activation='relu')(sequence_input)
-        #----------------------------------------------------------------------               
-        conv2 = layers.Conv1D(256, kernel_size=6, activation='relu')(conv1)
-        #----------------------------------------------------------------------        
-        conv3 = layers.Conv1D(128, kernel_size=6, activation='relu')(conv2)
-        #----------------------------------------------------------------------       
-        flatten2 = layers.Flatten()(conv3)
-
-
-        concat = layers.Concatenate()([flatten1, flatten2])
-        #----------------------------------------------------------------------                
-        dense1 = layers.Dense(1024, activation='relu')(concat)
-        #---------------------------------------------------------------------- 
+        lstm1 = layers.CuDNNLSTM(128, use_bias=True, return_sequences=True, activation='tanh', dropout=0.1)(reshape)         
+        lstm2 = layers.CuDNNLSTM(256, use_bias=True, return_sequences=True, activation='tanh', dropout=0.1)(lstm1)        
+        lstm3 = layers.CuDNNLSTM(512, use_bias=True, return_sequences=False, activation='tanh', dropout=0.1)(lstm2) 
+        #----------------------------------------------------------------------                         
+        dense1 = layers.Dense(1024, activation='relu')(lstm3)        
         drop1 = layers.Dropout(rate=0.2)(dense1)   
         #----------------------------------------------------------------------      
-        dense2 = layers.Dense(512, activation='relu')(drop1)
-        #----------------------------------------------------------------------
+        dense2 = layers.Dense(512, activation='relu')(drop1)        
         drop2 = layers.Dropout(rate=0.2)(dense2)   
         #----------------------------------------------------------------------
-        dense3 = layers.Dense(256, activation='relu')(drop2)
-        #----------------------------------------------------------------------
+        dense3 = layers.Dense(256, activation='relu')(drop2)        
         drop3 = layers.Dropout(rate=0.2)(dense3)   
         #----------------------------------------------------------------------
-        dense4 = layers.Dense(128, activation='relu')(drop3)
+        dense4 = layers.Dense(128, activation='relu')(drop3)        
         #----------------------------------------------------------------------
-        dense5 = layers.Dense(64, activation='relu')(dense4)
-        #----------------------------------------------------------------------
-        output = layers.Dense(self.output_size, activation='softmax', dtype='float32')(dense5)        
+        output = layers.Dense(self.output_size, activation='softmax', dtype='float32')(dense4)        
         
-        model = Model(inputs = sequence_input, outputs = output, name = 'FAIRS_model')      
-    
+        model = Model(inputs = sequence_input, outputs = output, name = 'FAIRS_model')   
     
         opt = keras.optimizers.Adam(learning_rate=self.learning_rate)
         loss = keras.losses.CategoricalCrossentropy()
         metrics = keras.metrics.CategoricalAccuracy()
-        model.compile(loss = loss, optimizer = opt, metrics = metrics)       
+        model.compile(loss = loss, optimizer = opt, metrics = metrics,
+                      jit_compile=self.XLA_state)       
         
         return model
     
@@ -139,32 +123,46 @@ class GroupedClassModel:
 #==============================================================================
 #==============================================================================
 #==============================================================================
-class ModelTraining:
-    
-    def __init__(self, device = 'default'):
-        policy = keras.mixed_precision.Policy('mixed_float16')
-        keras.mixed_precision.set_global_policy(policy)              
-        np.random.seed(42)
-        tf.random.set_seed(42)         
+class ModelTraining:    
+       
+    def __init__(self, device = 'default', seed=42, use_mixed_precision=False):                     
+        np.random.seed(seed)
+        tf.random.set_seed(seed)         
         self.available_devices = tf.config.list_physical_devices()
-        print('----------------------------------------------------------------')
+        print('-------------------------------------------------------------------------------')        
         print('The current devices are available: ')
+        print('-------------------------------------------------------------------------------')
         for dev in self.available_devices:
             print()
             print(dev)
         print()
-        print('----------------------------------------------------------------')
+        print('-------------------------------------------------------------------------------')
         if device == 'GPU':
             self.physical_devices = tf.config.list_physical_devices('GPU')
-            tf.config.set_visible_devices(self.physical_devices[0], 'GPU')
-            print('GPU is set as active device')
-            print('----------------------------------------------------------------')
+            if not self.physical_devices:
+                print('No GPU found. Falling back to CPU')
+                tf.config.set_visible_devices([], 'GPU')
+            else:
+                if use_mixed_precision == True:
+                    policy = keras.mixed_precision.Policy('mixed_float16')
+                    keras.mixed_precision.set_global_policy(policy) 
+                tf.config.set_visible_devices(self.physical_devices[0], 'GPU')                 
+                print('GPU is set as active device')
+            print('-------------------------------------------------------------------------------')
             print()        
         elif device == 'CPU':
             tf.config.set_visible_devices([], 'GPU')
             print('CPU is set as active device')
-            print('----------------------------------------------------------------')
+            print('-------------------------------------------------------------------------------')
             print()
+    
+    #========================================================================== 
+    def model_parameters(self, parameters_dict, savepath): 
+        path = os.path.join(savepath, 'model_parameters.txt')      
+        with open(path, 'w') as f:
+            for key, value in parameters_dict.items():
+                f.write(f'{key}: {value}\n') 
+
           
     # sequential model as generator with Keras module
     #========================================================================== 
@@ -207,20 +205,18 @@ class ModelTraining:
 #============================================================================== 
 #==============================================================================
 #==============================================================================
-class ModelValidation:    
-    
-    
-    
-    
+class ModelValidation:
 
+    def __init__(self, model):      
+        self.model = model       
+    
     # comparison of data distribution using statistical methods 
     #==========================================================================     
     def FAIRS_confusion(self, Y_real, predictions, classes, name, path, dpi):         
         cm = confusion_matrix(Y_real, predictions)    
         fig, ax = plt.subplots()        
         sns.heatmap(cm, annot=True, fmt='d', ax=ax, cmap=plt.cm.Blues, 
-                cbar=False)
-        
+                cbar=False)        
         ax.set_xlabel('Predicted labels')
         ax.set_ylabel('True labels')
         ax.set_title('Confusion Matrix')
