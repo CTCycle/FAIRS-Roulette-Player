@@ -88,9 +88,9 @@ class ColorCodeModel:
         embedding = layers.Embedding(input_dim=self.output_size, output_dim=self.embedding_dims)(sequence_input) 
         reshape = layers.Reshape((self.window_size, self.embedding_dims))(embedding)
         #----------------------------------------------------------------------
-        lstm1 = layers.LSTM(64, use_bias=True, return_sequences=True, activation='tanh', dropout=0.1)(reshape)         
-        lstm2 = layers.LSTM(128, use_bias=True, return_sequences=True, activation='tanh', dropout=0.1)(lstm1)        
-        lstm3 = layers.LSTM(256, use_bias=True, return_sequences=True, activation='tanh', dropout=0.1)(lstm2) 
+        lstm1 = layers.LSTM(64, use_bias=True, return_sequences=True, activation='tanh', dropout=0.3)(reshape)         
+        lstm2 = layers.LSTM(128, use_bias=True, return_sequences=True, activation='tanh', dropout=0.3)(lstm1)        
+        lstm3 = layers.LSTM(256, use_bias=True, return_sequences=True, activation='tanh', dropout=0.3)(lstm2) 
         #----------------------------------------------------------------------
         conv1 = layers.Conv1D(64, kernel_size=16, strides=1, padding='same', activation='relu')(reshape)
         conv2 = layers.Conv1D(128, kernel_size=16, strides=1, padding='same', activation='relu')(conv1)
@@ -101,19 +101,18 @@ class ColorCodeModel:
         dense1 = layers.Dense(256, activation='relu')(concat)        
         dense2 = layers.Dense(128, activation='relu')(dense1)  
         dense3 = layers.Dense(64, activation='relu')(dense2)  
-        #----------------------------------------------------------------------
-        
+        #----------------------------------------------------------------------        
 
         flatten = layers.Flatten()(dense3)
         #----------------------------------------------------------------------               
         dense4 = layers.Dense(1024, activation='relu')(flatten)        
-        drop1 = layers.Dropout(rate=0.2)(dense4)   
+        drop1 = layers.Dropout(rate=0.4)(dense4)   
         #----------------------------------------------------------------------      
         dense5 = layers.Dense(512, activation='relu')(drop1)        
-        drop2 = layers.Dropout(rate=0.2)(dense5)   
+        drop2 = layers.Dropout(rate=0.4)(dense5)   
         #----------------------------------------------------------------------
         dense6 = layers.Dense(256, activation='relu')(drop2)        
-        drop3 = layers.Dropout(rate=0.2)(dense6)   
+        drop3 = layers.Dropout(rate=0.4)(dense6)   
         #----------------------------------------------------------------------        
         output = layers.Dense(self.output_size, activation='softmax', dtype='float32')(drop3)        
         
