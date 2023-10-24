@@ -233,18 +233,19 @@ print('''STEP 5 -----> Evaluate the model
 categories_mapping = {0 : 'green', 1 : 'black', 2 : 'red'}
 
 validator = ModelValidation(model)
-predicted_train_timeseries = model.predict(X_train)
-predicted_test_timeseries = model.predict(X_test)
 
+predicted_train_timeseries = model.predict(X_train)
 y_pred_labels = np.argmax(predicted_train_timeseries, axis=1)
 y_true_labels = np.argmax(Y_train_OHE, axis=1)
 validator.FAIRS_confusion(y_true_labels, y_pred_labels, categories[0], 'train', model_savepath, 400)
 #validator.FAIRS_ROC_curve(y_true_labels, y_pred_labels, categories_mapping, 'train', model_savepath, 400)
 
-y_pred_labels = np.argmax(predicted_test_timeseries, axis=1)
-y_true_labels = np.argmax(Y_test_OHE, axis=1)
-validator.FAIRS_confusion(y_true_labels, y_pred_labels, categories[0], 'test', model_savepath, 400)
-#validator.FAIRS_ROC_curve(y_true_labels, y_pred_labels, categories_mapping, 'test', model_savepath, 400)
+if cnf.use_test_data == True:
+    predicted_test_timeseries = model.predict(X_test)
+    y_pred_labels = np.argmax(predicted_test_timeseries, axis=1)
+    y_true_labels = np.argmax(Y_test_OHE, axis=1)
+    validator.FAIRS_confusion(y_true_labels, y_pred_labels, categories[0], 'test', model_savepath, 400)
+    #validator.FAIRS_ROC_curve(y_true_labels, y_pred_labels, categories_mapping, 'test', model_savepath, 400)
 
 
 
