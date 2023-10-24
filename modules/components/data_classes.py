@@ -158,7 +158,7 @@ class PreProcessing:
     # generate n real samples with class labels; We randomly select n samples 
     # from the real data array
     #========================================================================== 
-    def timeseries_labeling(self, df_train, df_test, window_size):
+    def timeseries_labeling(self, df, window_size):
         
         """
         timeseries_labeling(dataframe, window_size)
@@ -176,14 +176,11 @@ class PreProcessing:
         Y_array (np.ndarray):     the output sequence data
         
         """        
-        label_train = np.array(df_train)
-        label_test = np.array(df_test)        
-        X_train = [label_train[i : i + window_size] for i in range(len(label_train) - window_size)]
-        Y_train = [label_train[i + window_size] for i in range(len(label_train) - window_size)]
-        X_test = [label_test[i : i + window_size] for i in range(len(label_test) - window_size)]
-        Y_test = [label_test[i + window_size] for i in range(len(label_test) - window_size)]              
-                     
-        return np.array(X_train), np.array(Y_train), np.array(X_test), np.array(Y_test)
+        label = np.array(df)               
+        X = [label[i : i + window_size] for i in range(len(label) - window_size)]
+        Y= [label[i + window_size] for i in range(len(label) - window_size)]
+        
+        return np.array(X), np.array(Y)
     
     #==========================================================================
     def model_savefolder(self, path, model_name):

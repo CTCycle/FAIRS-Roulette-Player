@@ -36,11 +36,8 @@ print(f'''
 -------------------------------------------------------------------------------
 FAIRS Training
 -------------------------------------------------------------------------------
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse 
-lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor. Cras elementum 
-ultrices diam. Maecenas ligula massa, varius a, semper congue, euismod non, mi. 
-Proin porttitor, orci nec nonummy molestie, enim est eleifend mi, non fermentum diam 
-nisl sit amet erat. Duis semper. Duis arcu massa, scelerisque vitae, consequat in, pretium a, enim. 
+Leverage large volume of roulette extraction data to train the FAIRS CC Model
+and predict future extractions based on the observed timeseries 
 ''')
 
 # [COLOR MAPPING AND ENCODING]
@@ -51,7 +48,8 @@ print(f'''
 -------------------------------------------------------------------------------
 Data preprocessing
 -------------------------------------------------------------------------------
-...
+''')
+print('''STEP 1 -----> Preprocess data for FAIRS training
 ''')
 
 # map numbers to roulette color and reshape dataset
@@ -68,33 +66,30 @@ categorical_encoder = OrdinalEncoder(categories = categories, handle_unknown = '
 FAIRS_categorical = categorical_encoder.fit_transform(FAIRS_categorical)
 FAIRS_categorical = pd.DataFrame(FAIRS_categorical, columns=['color encoding'])
 
-# [SEPARATE DATASETS AND GENERATE TIMESTEPS WINDOWS]
-#==============================================================================
-# ...
-#==============================================================================
-print('''STEP 1 -----> Separate datasets and generate time windows
-''')
-
-# split dataset into train and test
+# split dataset into train and test and generate window-dataset
 #------------------------------------------------------------------------------
-categorical_train, categorical_test = preprocessor.split_timeseries(FAIRS_categorical, cnf.test_size, inverted=False)
-
-# generate windowed dataset
-#------------------------------------------------------------------------------
-X_train, Y_train, X_test, Y_test = preprocessor.timeseries_labeling(categorical_train, categorical_test, cnf.window_size)
+if cnf.use_test_data == True:
+    categorical_train, categorical_test = preprocessor.split_timeseries(FAIRS_categorical, cnf.test_size, inverted=False)
+    train_samples, test_samples = categorical_train.shape[0], categorical_test.shape[0]
+    X_train, Y_train = preprocessor.timeseries_labeling(categorical_train, cnf.window_size)
+    X_test, Y_test = preprocessor.timeseries_labeling(categorical_test, cnf.window_size)
+else:
+    train_samples, test_samples = FAIRS_categorical.shape[0], 0    
+    X_train, Y_train = preprocessor.timeseries_labeling(FAIRS_categorical, cnf.window_size)
 
 # [ONE HOT ENCODE THE LABELS]
 #==============================================================================
 # ...
 #==============================================================================
-print('''STEP 2 -----> One Hot Encode the labels
+print('''STEP 2 -----> Generate One Hot encoding for labels
 ''')
 
 # one hot encode the output for softmax training (3 classes)
 #------------------------------------------------------------------------------
 OH_encoder = OneHotEncoder(sparse=False)
 Y_train_OHE = OH_encoder.fit_transform(Y_train)
-Y_test_OHE = OH_encoder.fit_transform(Y_test)
+if cnf.use_test_data == True:    
+    Y_test_OHE = OH_encoder.fit_transform(Y_test)
 
 # [SAVE FILES]
 #==============================================================================
@@ -109,34 +104,43 @@ encoder_path = os.path.join(GlobVar.CCM_data_path, 'categorical_encoder.pkl')
 with open(encoder_path, 'wb') as file:
     pickle.dump(categorical_encoder, file) 
 
-# reshape and transform into dataframe (categorical dataset)
+# reshape and transform into dataframe (categorical dataset) and create dataframe
 #------------------------------------------------------------------------------
 X_train = X_train.reshape(X_train.shape[0], -1)
-X_test = X_test.reshape(X_test.shape[0], -1)
 Y_train = Y_train.reshape(Y_train.shape[0], -1)
-Y_test = Y_test.reshape(Y_test.shape[0], -1)
-
-# create pd dataframe from files
-#------------------------------------------------------------------------------
-df_X_train = pd.DataFrame(X_train)
-df_X_test = pd.DataFrame(X_test)
 df_Y_train_OHE = pd.DataFrame(Y_train_OHE)
-df_Y_test_OHE = pd.DataFrame(Y_test_OHE)
+df_X_train = pd.DataFrame(X_train)
+
+if cnf.use_test_data == True:   
+    X_test = X_test.reshape(X_test.shape[0], -1)
+    Y_test = Y_test.reshape(Y_test.shape[0], -1)
+    df_X_test = pd.DataFrame(X_test)
+    df_Y_test_OHE = pd.DataFrame(Y_test_OHE)
 
 # save csv files
 #------------------------------------------------------------------------------
-file_loc = os.path.join(GlobVar.CCM_data_path, 'GCM_preprocessed.xlsx')  
+file_loc = os.path.join(GlobVar.CCM_data_path, 'CCM_preprocessed.xlsx')  
 writer = pd.ExcelWriter(file_loc, engine='xlsxwriter')
 df_X_train.to_excel(writer, sheet_name='train inputs', index=True)
-df_X_test.to_excel(writer, sheet_name='test inputs', index=True)
 df_Y_train_OHE.to_excel(writer, sheet_name='train labels', index=True)
-df_Y_test_OHE.to_excel(writer, sheet_name='test labels', index=True)
+
+if cnf.use_test_data == True:  
+    df_X_test.to_excel(writer, sheet_name='test inputs', index=True)
+    df_Y_test_OHE.to_excel(writer, sheet_name='test labels', index=True)
+
 writer.close()
 
 # [REPORT]
 #==============================================================================
 # ....
 #==============================================================================
+if cnf.use_test_data == True:
+    most_freq_train = int(categorical_train['color encoding'].value_counts().idxmax())
+    most_freq_test = int(categorical_test['color encoding'].value_counts().idxmax())
+else:    
+    most_freq_train = int(FAIRS_categorical['color encoding'].value_counts().idxmax())
+    most_freq_test = 'None'
+
 print(f'''
 -------------------------------------------------------------------------------
 Classes are encoded as following
@@ -145,10 +149,10 @@ green = 0
 black = 1
 red =   2
 -------------------------------------------------------------------------------   
-number of timepoints in train dataset: {categorical_train.shape[0]}
-number of timepoints in test dataset:  {categorical_test.shape[0]}
-most frequent class in train dataset:  {int(categorical_train['color encoding'].value_counts().idxmax())}
-most frequent class in test dataset:   {int(categorical_test['color encoding'].value_counts().idxmax())}
+Number of timepoints in train dataset: {train_samples}
+Number of timepoints in test dataset:  {test_samples}
+Most frequent class in train dataset:  {most_freq_train}
+Most frequent class in test dataset:   {most_freq_test}
 ''')
 
 # [DEFINE AND BUILD MODEL]
@@ -181,31 +185,37 @@ if cnf.generate_model_graph == True:
 # use command prompt on the model folder and (upon activating environment), 
 # use the bash command: python -m tensorboard.main --logdir = tensorboard/
 #==============================================================================
-RTH_callback = RealTimeHistory(model_savepath, validation=True)
+
 
 # training loop and model saving at end
 #------------------------------------------------------------------------------
 print(f'''Start model training for {cnf.epochs} epochs and batch size of {cnf.batch_size}
        ''')
+
+if cnf.use_test_data == True:
+    validation_data = (X_test, Y_test_OHE)
+    RTH_callback = RealTimeHistory(model_savepath, validation=True)
+else:
+    validation_data = None
+    RTH_callback = RealTimeHistory(model_savepath, validation=False)
+
 if cnf.use_tensorboard == True:
     log_path = os.path.join(model_savepath, 'tensorboard')
     tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_path, histogram_freq=1)
-    training = model.fit(x=X_train, y=Y_train_OHE, batch_size=cnf.batch_size, 
-                     validation_data=(X_test, Y_test_OHE), 
-                     epochs = cnf.epochs, callbacks = [RTH_callback, tensorboard_callback],
-                     workers = 6, use_multiprocessing=True)
-else:
-    training = model.fit(x=X_train, y=Y_train_OHE, batch_size=cnf.batch_size, 
-                     validation_data=(X_test, Y_test_OHE), 
-                     epochs = cnf.epochs, callbacks = [RTH_callback],
-                     workers = 6, use_multiprocessing=True)
+    callbacks = [RTH_callback, tensorboard_callback]    
+else:    
+    callbacks = [RTH_callback]
+
+training = model.fit(x=X_train, y=Y_train_OHE, batch_size=cnf.batch_size, 
+                     validation_data=validation_data, epochs = cnf.epochs, 
+                     callbacks = callbacks, workers = 6, use_multiprocessing=True)
 
 model.save(model_savepath)
 
 # save model parameters in txt files
 #------------------------------------------------------------------------------
-parameters = {'Number of train samples' : categorical_train.shape[0],
-              'Number of test samples' : categorical_test.shape[0],
+parameters = {'Number of train samples' : train_samples,
+              'Number of test samples' : test_samples,
               'Window size' : cnf.window_size,
               'Embedding dimensions' : cnf.embedding_size,             
               'Batch size' : cnf.batch_size,
