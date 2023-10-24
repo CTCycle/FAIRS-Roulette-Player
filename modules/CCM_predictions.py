@@ -6,10 +6,13 @@ import pickle
 import warnings
 warnings.simplefilter(action='ignore', category = Warning)
 
-# [IMPORT MODULES AND CLASSES]
-#==============================================================================
+# add modules path if this file is launched as __main__
+#------------------------------------------------------------------------------
 if __name__ == '__main__':
     sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+# import modules and components
+#------------------------------------------------------------------------------
 from modules.components.data_classes import PreProcessing
 from modules.components.training_classes import ModelTraining
 import modules.global_variables as GlobVar
@@ -28,7 +31,6 @@ df_predictions = pd.read_csv(filepath, sep= ';', encoding='utf-8')
 encoder_path = os.path.join(GlobVar.CCM_data_path, 'categorical_encoder.pkl')
 with open(encoder_path, 'rb') as file:
     encoder = pickle.load(file)
-
         
 print(f'''
 -------------------------------------------------------------------------------
@@ -37,7 +39,7 @@ FAIRS predictions
 ...
 ''')
 
-# [COLOR MAPPING AND ENCODING]
+# [PREPROCESS DATA]
 #==============================================================================
 # ...
 #==============================================================================
@@ -55,14 +57,9 @@ categories = [['green', 'black', 'red']]
 CCM_timeseries = encoder.fit_transform(CCM_timeseries)
 CCM_timeseries = pd.DataFrame(CCM_timeseries, columns=['color encoding'])
 
-# [SEPARATE DATASETS AND GENERATE TIMESTEPS WINDOWS]
-#==============================================================================
-# ...
-#==============================================================================
-
 # generate windowed dataset
 #------------------------------------------------------------------------------
-CCM_inputs = preprocessor.timeseries_labeling(CCM_timeseries, CCM_timeseries, cnf.window_size)
+CCM_inputs = preprocessor.timeseries_labeling(CCM_timeseries, cnf.window_size)
 predictions_inputs = CCM_inputs[0]
 
 # [LOAD PRETRAINED SCADS MODEL]
@@ -155,7 +152,7 @@ Red: {round((next_prob_vector[0][2] * 100), 3)}
 #==============================================================================
 # Save the trained preprocessing systems (normalizer and encoders) for further use 
 #==============================================================================
-print('''Saving CCM_predictions file (as CVS)
+print('''Saving CCM_predictions file (as CSV)
 ''')
 file_loc = os.path.join(GlobVar.CCM_data_path, 'CCM_predictions.csv')         
 df_merged.to_csv(file_loc, index = False, sep = ';', encoding = 'utf-8')

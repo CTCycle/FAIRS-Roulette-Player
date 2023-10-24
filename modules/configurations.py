@@ -7,19 +7,19 @@ XLA_acceleration = False
 
 # Define variables for the training
 #------------------------------------------------------------------------------
-seed = 42
+seed = 76
 training_device = 'GPU'
 embedding_size = 512
-epochs = 500
-learning_rate = 0.0001
-batch_size = 256
+epochs = 2000
+learning_rate = 0.00001
+batch_size = 512
 
 # Define variables for preprocessing
 #------------------------------------------------------------------------------
-use_test_data = False
+use_test_data = True
 data_size = 1.0
-test_size = 0.1
-window_size = 64
+test_size = 0.2
+window_size = 96
 
 
 
