@@ -105,13 +105,13 @@ class ColorCodeModel:
 
         flatten = layers.Flatten()(dense3)
         #----------------------------------------------------------------------               
-        dense4 = layers.Dense(1024, activation='relu')(flatten)        
+        dense4 = layers.Dense(512, activation='relu')(flatten)        
         drop1 = layers.Dropout(rate=0.4)(dense4)   
         #----------------------------------------------------------------------      
-        dense5 = layers.Dense(512, activation='relu')(drop1)        
+        dense5 = layers.Dense(256, activation='relu')(drop1)        
         drop2 = layers.Dropout(rate=0.4)(dense5)   
         #----------------------------------------------------------------------
-        dense6 = layers.Dense(256, activation='relu')(drop2)        
+        dense6 = layers.Dense(128, activation='relu')(drop2)        
         drop3 = layers.Dropout(rate=0.4)(dense6)   
         #----------------------------------------------------------------------        
         output = layers.Dense(self.output_size, activation='softmax', dtype='float32')(drop3)        
