@@ -1,12 +1,18 @@
 import os
 import sys
+import art
 import warnings
 warnings.simplefilter(action='ignore', category = Warning)
 
-# [IMPORT MODULES AND CLASSES]
-#==============================================================================
+# import modules and classes
+#------------------------------------------------------------------------------
 sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 from modules.components.data_classes import UserOperations
+
+# welcome message
+#------------------------------------------------------------------------------
+ascii_art = art.text2art('FAIRS')
+print(ascii_art)
 
 # [MAIN MENU]
 #==============================================================================
@@ -23,10 +29,7 @@ CCM_menu = {'1' : 'Pretrain ColorCode model',
             '4' : 'Go back to main menu'}
 
 while True:
-    print('------------------------------------------------------------------------')
-    print('FAIRS Project')
-    print('------------------------------------------------------------------------')
-    print()
+    print('------------------------------------------------------------------------')    
     op_sel = user_operations.menu_selection(operations_menu)
     print() 
     
