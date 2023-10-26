@@ -1,15 +1,20 @@
-# [IMPORT PACKAGES, MODULES AND SETTING WARNINGS]
-#==============================================================================
 import os
 import sys
-import pickle
-from keras.utils.vis_utils import plot_model
+
+
+
+# set warnings
+#------------------------------------------------------------------------------
 import warnings
 warnings.simplefilter(action='ignore', category = Warning)
 
-# [IMPORT MODULES AND CLASSES]
-#==============================================================================
+# add modules path if this file is launched as __main__
+#------------------------------------------------------------------------------
 if __name__ == '__main__':
     sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from modules.components.training_classes import PreProcessing, TrainingModels
+
+# import modules and components
+#------------------------------------------------------------------------------
+from modules.components.data_classes import PreProcessing
 import modules.global_variables as GlobVar
+import modules.configurations as cnf

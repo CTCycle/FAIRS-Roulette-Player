@@ -6,6 +6,9 @@ import pickle
 import tensorflow as tf
 from sklearn.preprocessing import OrdinalEncoder, OneHotEncoder
 from keras.utils.vis_utils import plot_model
+
+# set warnings
+#------------------------------------------------------------------------------
 import warnings
 warnings.simplefilter(action='ignore', category = Warning)
 
@@ -31,7 +34,9 @@ df_FAIRS = pd.read_csv(filepath, sep= ';', encoding='utf-8')
 
 num_samples = int(df_FAIRS.shape[0] * cnf.data_size)
 df_FAIRS = df_FAIRS[(df_FAIRS.shape[0] - num_samples):]
-        
+
+
+
 print(f'''
 -------------------------------------------------------------------------------
 FAIRS Training

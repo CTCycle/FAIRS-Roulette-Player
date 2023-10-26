@@ -3,6 +3,9 @@ import sys
 import numpy as np
 import pandas as pd
 import pickle
+
+# set warnings
+#------------------------------------------------------------------------------
 import warnings
 warnings.simplefilter(action='ignore', category = Warning)
 
