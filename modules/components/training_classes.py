@@ -35,14 +35,14 @@ class RealTimeHistory(keras.callbacks.Callback):
         self.validation = validation            
     #--------------------------------------------------------------------------
     def on_epoch_end(self, epoch, logs = {}):
-        if epoch % 5 == 0:                    
+        if epoch % 10 == 0:                    
             self.epochs.append(epoch)
             self.loss_hist.append(logs[list(logs.keys())[0]])
             self.metric_hist.append(logs[list(logs.keys())[1]])
             if self.validation==True:
                 self.loss_val_hist.append(logs[list(logs.keys())[2]])            
                 self.metric_val_hist.append(logs[list(logs.keys())[3]])
-        if epoch % 20 == 0:            
+        if epoch % 50 == 0:            
             #------------------------------------------------------------------
             fig_path = os.path.join(self.plot_path, 'training_history.jpeg')
             plt.subplot(2, 1, 1)
@@ -90,31 +90,21 @@ class ColorCodeModel:
         #----------------------------------------------------------------------
         lstm1 = layers.LSTM(64, use_bias=True, return_sequences=True, activation='tanh', dropout=0.3)(reshape)         
         lstm2 = layers.LSTM(128, use_bias=True, return_sequences=True, activation='tanh', dropout=0.3)(lstm1)        
-        lstm3 = layers.LSTM(256, use_bias=True, return_sequences=True, activation='tanh', dropout=0.3)(lstm2) 
-        #----------------------------------------------------------------------
-        conv1 = layers.Conv1D(64, kernel_size=16, strides=1, padding='same', activation='relu')(reshape)
-        conv2 = layers.Conv1D(128, kernel_size=16, strides=1, padding='same', activation='relu')(conv1)
-        conv3 = layers.Conv1D(256, kernel_size=16, strides=1, padding='same', activation='relu')(conv2)
-        #----------------------------------------------------------------------
-        concat = layers.Concatenate()([lstm3, conv3])
-        #----------------------------------------------------------------------               
-        dense1 = layers.Dense(256, activation='relu')(concat)        
-        dense2 = layers.Dense(128, activation='relu')(dense1)  
-        dense3 = layers.Dense(64, activation='relu')(dense2)  
+        lstm3 = layers.LSTM(256, use_bias=True, return_sequences=False, activation='tanh', dropout=0.3)(lstm2) 
+        #----------------------------------------------------------------------                       
+        dense1 = layers.Dense(512, activation='relu')(lstm3)
+        drop1 = layers.Dropout(rate=0.2)(dense1)           
+        dense2 = layers.Dense(256, activation='relu')(drop1)
+        drop2 = layers.Dropout(rate=0.2)(dense2)    
+        dense3 = layers.Dense(128, activation='relu')(drop2) 
+        drop3 = layers.Dropout(rate=0.2)(dense3)                             
+        dense4 = layers.Dense(96, activation='relu')(drop3)        
+        drop4 = layers.Dropout(rate=0.2)(dense4)                
+        dense5 = layers.Dense(64, activation='relu')(drop4)        
+        drop5 = layers.Dropout(rate=0.2)(dense5)          
+        dense6 = layers.Dense(32, activation='relu')(drop5)           
         #----------------------------------------------------------------------        
-
-        flatten = layers.Flatten()(dense3)
-        #----------------------------------------------------------------------               
-        dense4 = layers.Dense(512, activation='relu')(flatten)        
-        drop1 = layers.Dropout(rate=0.4)(dense4)   
-        #----------------------------------------------------------------------      
-        dense5 = layers.Dense(256, activation='relu')(drop1)        
-        drop2 = layers.Dropout(rate=0.4)(dense5)   
-        #----------------------------------------------------------------------
-        dense6 = layers.Dense(128, activation='relu')(drop2)        
-        drop3 = layers.Dropout(rate=0.4)(dense6)   
-        #----------------------------------------------------------------------        
-        output = layers.Dense(self.output_size, activation='softmax', dtype='float32')(drop3)        
+        output = layers.Dense(self.output_size, activation='softmax', dtype='float32')(dense6)        
         
         model = Model(inputs = sequence_input, outputs = output, name = 'FAIRS_model')   
     

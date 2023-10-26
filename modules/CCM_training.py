@@ -191,18 +191,17 @@ if cnf.generate_model_graph == True:
 # use the bash command: python -m tensorboard.main --logdir = tensorboard/
 #==============================================================================
 
-
 # training loop and model saving at end
 #------------------------------------------------------------------------------
 print(f'''Start model training for {cnf.epochs} epochs and batch size of {cnf.batch_size}
        ''')
 
+RTH_callback = RealTimeHistory(model_savepath, validation=cnf.use_test_data)
+
 if cnf.use_test_data == True:
-    validation_data = (X_test, Y_test_OHE)
-    RTH_callback = RealTimeHistory(model_savepath, validation=True)
+    validation_data = (X_test, Y_test_OHE)   
 else:
-    validation_data = None
-    RTH_callback = RealTimeHistory(model_savepath, validation=False)
+    validation_data = None    
 
 if cnf.use_tensorboard == True:
     log_path = os.path.join(model_savepath, 'tensorboard')
