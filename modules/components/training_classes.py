@@ -106,18 +106,14 @@ class ColorCodeModel:
         #----------------------------------------------------------------------        
         output = layers.Dense(self.output_size, activation='softmax', dtype='float32')(dense6)        
         
-        model = Model(inputs = sequence_input, outputs = output, name = 'FAIRS_model')   
-    
+        model = Model(inputs = sequence_input, outputs = output, name = 'FAIRS_model')    
         opt = keras.optimizers.Adam(learning_rate=self.learning_rate)
         loss = keras.losses.CategoricalCrossentropy(from_logits=True)
         metrics = keras.metrics.CategoricalAccuracy()
         model.compile(loss = loss, optimizer = opt, metrics = metrics,
                       jit_compile=self.XLA_state)       
         
-        return model
-    
-
-              
+        return model             
 
 
 # define model class
@@ -178,8 +174,7 @@ class ModelTraining:
         print('Please select a pretrained model:') 
         print()
         for i, directory in enumerate(model_folders):
-            print('{0} - {1}'.format(i + 1, directory))
-        
+            print('{0} - {1}'.format(i + 1, directory))        
         print()               
         while True:
            try:
