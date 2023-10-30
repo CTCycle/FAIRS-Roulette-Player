@@ -5,15 +5,21 @@ This script has been developed to allow roulette timeseries forecasting using a 
 
 ## How to use
 Run the FAIRS.py file to launch the script and use the main menu to navigate the different options. The main menu will provide the user with the following options:
-**1) FAIRS timeseries analysis:** Perform timeseries analysis to visualize distribution and main statistical parameters                
-**2) FAIRS training: Color Code Model (CCM)** Open sub-menu for CC model pretraining                                   
+
+**1) FAIRS timeseries analysis:** Perform timeseries analysis to visualize distribution and main statistical parameters   
+
+**2) FAIRS training: Color Code Model (CCM)** Open sub-menu for CC model pretraining       
+
 **3) Exit and close**
 
 The Color Code Model (CCM) sub-menu will provide the following options:
 
 **1) Pretrain ColorCode model:**
+
 **2) Evaluate ColorCode model:**
+
 **3) Predict next extraction:**
+
 **4) Go back to main menu**
 
 ### Requirements
