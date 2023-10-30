@@ -72,12 +72,14 @@ class RealTimeHistory(keras.callbacks.Callback):
 #==============================================================================
 class ColorCodeModel:
 
-    def __init__(self, learning_rate, window_size, embedding_dims, output_size, XLA_state):
+    def __init__(self, learning_rate, window_size, embedding_dims, output_size, 
+                 seed, XLA_state):
 
         self.learning_rate = learning_rate
         self.window_size = window_size
         self.embedding_dims = embedding_dims 
-        self.output_size = output_size        
+        self.output_size = output_size 
+        self.seed = seed       
         self.XLA_state = XLA_state
         self.name = 'FAIRS_GCM'
 
@@ -93,15 +95,15 @@ class ColorCodeModel:
         lstm3 = layers.LSTM(256, use_bias=True, return_sequences=False, activation='tanh', dropout=0.2)(lstm2) 
         #----------------------------------------------------------------------                       
         dense1 = layers.Dense(512, activation='relu')(lstm3)
-        drop1 = layers.Dropout(rate=0.2)(dense1)           
+        drop1 = layers.Dropout(rate=0.2, seed=self.seed)(dense1)           
         dense2 = layers.Dense(256, activation='relu')(drop1)
-        drop2 = layers.Dropout(rate=0.2)(dense2)    
+        drop2 = layers.Dropout(rate=0.2, seed=self.seed)(dense2)    
         dense3 = layers.Dense(128, activation='relu')(drop2) 
-        drop3 = layers.Dropout(rate=0.2)(dense3)                             
+        drop3 = layers.Dropout(rate=0.2, seed=self.seed)(dense3)                             
         dense4 = layers.Dense(96, activation='relu')(drop3)        
-        drop4 = layers.Dropout(rate=0.2)(dense4)                
+        drop4 = layers.Dropout(rate=0.2, seed=self.seed)(dense4)                
         dense5 = layers.Dense(64, activation='relu')(drop4)        
-        drop5 = layers.Dropout(rate=0.2)(dense5)          
+        drop5 = layers.Dropout(rate=0.2, seed=self.seed)(dense5)          
         dense6 = layers.Dense(32, activation='relu')(drop5)           
         #----------------------------------------------------------------------        
         output = layers.Dense(self.output_size, activation='softmax', dtype='float32')(dense6)        
@@ -182,8 +184,7 @@ class ModelTraining:
               print()
            except:
               continue
-           break
-                         
+           break                         
         while dir_index not in index_list:
            try:
                dir_index = int(input('Input is not valid! Try again: '))

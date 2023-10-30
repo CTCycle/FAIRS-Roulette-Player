@@ -31,11 +31,8 @@ import modules.configurations as cnf
 #==============================================================================
 filepath = os.path.join(GlobVar.data_path, 'FAIRS_dataset.csv')                
 df_FAIRS = pd.read_csv(filepath, sep= ';', encoding='utf-8')
-
 num_samples = int(df_FAIRS.shape[0] * cnf.data_size)
 df_FAIRS = df_FAIRS[(df_FAIRS.shape[0] - num_samples):]
-
-
 
 print(f'''
 -------------------------------------------------------------------------------
@@ -128,7 +125,6 @@ file_loc = os.path.join(GlobVar.CCM_data_path, 'CCM_preprocessed.xlsx')
 writer = pd.ExcelWriter(file_loc, engine='xlsxwriter')
 df_X_train.to_excel(writer, sheet_name='train inputs', index=True)
 df_Y_train_OHE.to_excel(writer, sheet_name='train labels', index=True)
-
 if cnf.use_test_data == True:  
     df_X_test.to_excel(writer, sheet_name='test inputs', index=True)
     df_Y_test_OHE.to_excel(writer, sheet_name='test labels', index=True)
@@ -166,20 +162,22 @@ Most frequent class in test dataset:   {most_freq_test}
 #==============================================================================
 print('''STEP 4 -----> Build the model and start training
 ''')
-trainworker = ModelTraining(device = cnf.training_device, use_mixed_precision=cnf.use_mixed_precision) 
-model_savepath = preprocessor.model_savefolder(GlobVar.CCM_model_path, 'FAIRSGCM')
+trainworker = ModelTraining(device = cnf.training_device, seed=cnf.seed, 
+                            use_mixed_precision=cnf.use_mixed_precision) 
+model_savepath = preprocessor.model_savefolder(GlobVar.CCM_model_path, 'FAIRSCCM')
 
 # initialize model class
 #------------------------------------------------------------------------------
 modelframe = ColorCodeModel(cnf.learning_rate, cnf.window_size, cnf.embedding_size, 
-                            output_size=len(categories[0]), XLA_state=cnf.XLA_acceleration)
+                            output_size=len(categories[0]), seed=cnf.seed, 
+                            XLA_state=cnf.XLA_acceleration)
 model = modelframe.build()
 model.summary(expand_nested=True)
 
 # plot model graph
 #------------------------------------------------------------------------------
 if cnf.generate_model_graph == True:
-    plot_path = os.path.join(model_savepath, 'FAIRSGCM_model.png')       
+    plot_path = os.path.join(model_savepath, 'FAIRSCCM_model.png')       
     plot_model(model, to_file = plot_path, show_shapes = True, 
                 show_layer_names = True, show_layer_activations = True, 
                 expand_nested = True, rankdir = 'TB', dpi = 400)
