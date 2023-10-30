@@ -88,9 +88,9 @@ class ColorCodeModel:
         embedding = layers.Embedding(input_dim=self.output_size, output_dim=self.embedding_dims)(sequence_input) 
         reshape = layers.Reshape((self.window_size, self.embedding_dims))(embedding)
         #----------------------------------------------------------------------
-        lstm1 = layers.LSTM(64, use_bias=True, return_sequences=True, activation='tanh', dropout=0.3)(reshape)         
-        lstm2 = layers.LSTM(128, use_bias=True, return_sequences=True, activation='tanh', dropout=0.3)(lstm1)        
-        lstm3 = layers.LSTM(256, use_bias=True, return_sequences=False, activation='tanh', dropout=0.3)(lstm2) 
+        lstm1 = layers.LSTM(64, use_bias=True, return_sequences=True, activation='tanh', dropout=0.2)(reshape)         
+        lstm2 = layers.LSTM(128, use_bias=True, return_sequences=True, activation='tanh', dropout=0.2)(lstm1)        
+        lstm3 = layers.LSTM(256, use_bias=True, return_sequences=False, activation='tanh', dropout=0.2)(lstm2) 
         #----------------------------------------------------------------------                       
         dense1 = layers.Dense(512, activation='relu')(lstm3)
         drop1 = layers.Dropout(rate=0.2)(dense1)           
@@ -109,7 +109,7 @@ class ColorCodeModel:
         model = Model(inputs = sequence_input, outputs = output, name = 'FAIRS_model')   
     
         opt = keras.optimizers.Adam(learning_rate=self.learning_rate)
-        loss = keras.losses.CategoricalCrossentropy()
+        loss = keras.losses.CategoricalCrossentropy(from_logits=True)
         metrics = keras.metrics.CategoricalAccuracy()
         model.compile(loss = loss, optimizer = opt, metrics = metrics,
                       jit_compile=self.XLA_state)       
