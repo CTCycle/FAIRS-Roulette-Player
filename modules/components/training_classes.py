@@ -72,22 +72,22 @@ class RealTimeHistory(keras.callbacks.Callback):
 #==============================================================================
 class ColorCodeModel:
 
-    def __init__(self, learning_rate, window_size, embedding_dims, output_size, 
+    def __init__(self, learning_rate, window_size, output_size, embedding_dims, num_classes, 
                  seed, XLA_state):
 
         self.learning_rate = learning_rate
         self.window_size = window_size
+        self.output_size = output_size
         self.embedding_dims = embedding_dims 
-        self.output_size = output_size 
+        self.num_classes = num_classes
         self.seed = seed       
-        self.XLA_state = XLA_state
-        self.name = 'FAIRS_GCM'
+        self.XLA_state = XLA_state        
 
     def build(self):                
         
         sequence_input = layers.Input(shape=(self.window_size, 1))    
         #----------------------------------------------------------------------
-        embedding = layers.Embedding(input_dim=self.output_size, output_dim=self.embedding_dims)(sequence_input) 
+        embedding = layers.Embedding(input_dim=self.num_classes, output_dim=self.embedding_dims)(sequence_input) 
         reshape = layers.Reshape((self.window_size, self.embedding_dims))(embedding)
         #----------------------------------------------------------------------
         lstm1 = layers.LSTM(64, use_bias=True, return_sequences=True, activation='tanh', dropout=0.2)(reshape)         
@@ -106,11 +106,11 @@ class ColorCodeModel:
         drop5 = layers.Dropout(rate=0.2, seed=self.seed)(dense5)          
         dense6 = layers.Dense(32, activation='relu')(drop5)           
         #----------------------------------------------------------------------        
-        output = layers.Dense(self.output_size, activation='softmax', dtype='float32')(dense6)        
+        output = layers.Dense(self.num_classes, activation='softmax', dtype='float32')(dense6)                
         
         model = Model(inputs = sequence_input, outputs = output, name = 'FAIRS_model')    
         opt = keras.optimizers.Adam(learning_rate=self.learning_rate)
-        loss = keras.losses.CategoricalCrossentropy(from_logits=True)
+        loss = keras.losses.CategoricalCrossentropy(from_logits=False)
         metrics = keras.metrics.CategoricalAccuracy()
         model.compile(loss = loss, optimizer = opt, metrics = metrics,
                       jit_compile=self.XLA_state)       

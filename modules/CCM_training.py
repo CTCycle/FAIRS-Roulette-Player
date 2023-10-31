@@ -73,11 +73,11 @@ FAIRS_categorical = pd.DataFrame(FAIRS_categorical, columns=['color encoding'])
 if cnf.use_test_data == True:
     categorical_train, categorical_test = preprocessor.split_timeseries(FAIRS_categorical, cnf.test_size, inverted=False)
     train_samples, test_samples = categorical_train.shape[0], categorical_test.shape[0]
-    X_train, Y_train = preprocessor.timeseries_labeling(categorical_train, cnf.window_size)
-    X_test, Y_test = preprocessor.timeseries_labeling(categorical_test, cnf.window_size)
+    X_train, Y_train = preprocessor.timeseries_labeling(categorical_train, cnf.window_size, cnf.output_size)
+    X_test, Y_test = preprocessor.timeseries_labeling(categorical_test, cnf.window_size, cnf.output_size)
 else:
     train_samples, test_samples = FAIRS_categorical.shape[0], 0    
-    X_train, Y_train = preprocessor.timeseries_labeling(FAIRS_categorical, cnf.window_size)
+    X_train, Y_train = preprocessor.timeseries_labeling(FAIRS_categorical, cnf.window_size, cnf.output_size)
 
 # [ONE HOT ENCODE THE LABELS]
 #==============================================================================
@@ -89,8 +89,10 @@ print('''STEP 2 -----> Generate One Hot encoding for labels
 # one hot encode the output for softmax training (3 classes)
 #------------------------------------------------------------------------------
 OH_encoder = OneHotEncoder(sparse=False)
+Y_train = np.reshape(Y_train, (Y_train.shape[0], -1))
 Y_train_OHE = OH_encoder.fit_transform(Y_train)
-if cnf.use_test_data == True:    
+if cnf.use_test_data == True: 
+    Y_test = np.reshape(Y_test, (Y_test.shape[0], -1))   
     Y_test_OHE = OH_encoder.fit_transform(Y_test)
 
 # [SAVE FILES]
@@ -109,13 +111,10 @@ with open(encoder_path, 'wb') as file:
 # reshape and transform into dataframe (categorical dataset) and create dataframe
 #------------------------------------------------------------------------------
 X_train = X_train.reshape(X_train.shape[0], -1)
-Y_train = Y_train.reshape(Y_train.shape[0], -1)
 df_Y_train_OHE = pd.DataFrame(Y_train_OHE)
 df_X_train = pd.DataFrame(X_train)
-
 if cnf.use_test_data == True:   
-    X_test = X_test.reshape(X_test.shape[0], -1)
-    Y_test = Y_test.reshape(Y_test.shape[0], -1)
+    X_test = X_test.reshape(X_test.shape[0], -1)    
     df_X_test = pd.DataFrame(X_test)
     df_Y_test_OHE = pd.DataFrame(Y_test_OHE)
 
@@ -168,8 +167,8 @@ model_savepath = preprocessor.model_savefolder(GlobVar.CCM_model_path, 'FAIRSCCM
 
 # initialize model class
 #------------------------------------------------------------------------------
-modelframe = ColorCodeModel(cnf.learning_rate, cnf.window_size, cnf.embedding_size, 
-                            output_size=len(categories[0]), seed=cnf.seed, 
+modelframe = ColorCodeModel(cnf.learning_rate, cnf.window_size, cnf.output_size, 
+                            cnf.embedding_size, len(categories[0]), seed=cnf.seed, 
                             XLA_state=cnf.XLA_acceleration)
 model = modelframe.build()
 model.summary(expand_nested=True)

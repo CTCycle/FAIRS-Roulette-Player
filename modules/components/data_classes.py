@@ -40,15 +40,13 @@ class UserOperations:
         
         indexes = [idx + 1 for idx, val in enumerate(menu)]
         for key, value in menu.items():
-            print('{0} - {1}'.format(key, value))            
-        
+            print('{0} - {1}'.format(key, value))       
         print()
         while True:
             try:
                 op_sel = int(input('Select the desired operation: '))
             except:
-                continue      
-            
+                continue           
             while op_sel not in indexes:
                 try:
                     op_sel = int(input('Input is not valid, please select a valid option: '))
@@ -89,8 +87,7 @@ class PreProcessing:
                      'red' : [32, 19, 21, 25, 34, 27, 36, 30, 23, 5, 16, 1, 14, 9, 18, 7, 12, 3],
                      'green' : [0]}
         
-        reverse_color_map = {v: k for k, values in color_map.items() for v in values}
-        
+        reverse_color_map = {v: k for k, values in color_map.items() for v in values}        
         dataframe['color encoding'] = dataframe['timeseries'].map(reverse_color_map)
 
         return dataframe
@@ -125,40 +122,14 @@ class PreProcessing:
             df_train = dataframe.iloc[:train_size]
             df_test = dataframe.iloc[train_size:]
 
-        return df_train, df_test
-        
-    # array scaling for the KRISK neural network, accepts an array fabricated
-    # through the dataset_splitting to scale train and test dataset independently.
-    # reshapes an input to 2dimensions if is unidimentional 
-    #==========================================================================   
-    def timeseries_normalization(self, df_train, df_test):
-        
-       """ 
-       unidimensional_data_scaling(dataframe)
-       
-       Scales the input dataframe using MinMaxScaler.
+        return df_train, df_test 
     
-       Keyword arguments:  
-        
-       dataframe (pd.dataframe): the dataframe to be scaled
-    
-       Returns:
-            
-       scaled_df (pd.dataframe): the scaled dataframe      
-       
-       """
-       self.normalizer = MinMaxScaler(feature_range = (0, 1))       
-       self.normalizer.fit(df_train)      
-       train_norm = self.normalizer.transform(df_train)
-       test_norm = self.normalizer.transform(df_test)      
-       
-       return train_norm, test_norm
     
     
     # generate n real samples with class labels; We randomly select n samples 
     # from the real data array
     #========================================================================== 
-    def timeseries_labeling(self, df, window_size):
+    def timeseries_labeling(self, df, window_size, output_size):
         
         """
         timeseries_labeling(dataframe, window_size)
@@ -177,11 +148,11 @@ class PreProcessing:
         
         """        
         label = np.array(df)               
-        X = [label[i : i + window_size] for i in range(len(label) - window_size)]
-        Y= [label[i + window_size] for i in range(len(label) - window_size)]
+        X = [label[i : i + window_size] for i in range(len(label) - window_size - output_size + 1)]
+        Y = [label[i + window_size : i + window_size + output_size] for i in range(len(label) - window_size - output_size + 1)]
         
         return np.array(X), np.array(Y)
-    
+        
     #==========================================================================
     def model_savefolder(self, path, model_name):
 
