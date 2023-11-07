@@ -6,8 +6,8 @@ import seaborn as sns
 import tensorflow as tf
 from tensorflow import keras
 from keras.models import Model
-from keras.layers import Dense, Dropout, LSTM, Conv1D, BatchNormalization
-from keras.layers import Embedding, Reshape, Input, RepeatVector, TimeDistributed
+from keras.layers import Dense, Dropout, LSTM, Conv1D, BatchNormalization, Flatten, MaxPooling1D
+from keras.layers import Embedding, Reshape, Input, RepeatVector, TimeDistributed, Concatenate
 from sklearn.metrics import confusion_matrix, roc_curve, auc
 from sklearn.preprocessing import label_binarize
 
@@ -96,24 +96,35 @@ class ColorCodeModel:
         lstm1 = LSTM(self.neurons, use_bias=True, return_sequences=True, activation='tanh', dropout=0.2)(reshape)         
         lstm2 = LSTM(self.neurons*2, use_bias=True, return_sequences=True, activation='tanh', dropout=0.2)(lstm1)        
         lstm3 = LSTM(self.neurons*4, use_bias=True, return_sequences=False, activation='tanh', dropout=0.2)(lstm2) 
+        delstm = Dense(self.neurons*4, kernel_initializer='he_uniform', activation='relu')(lstm3)
         #----------------------------------------------------------------------         
-        repeat_vector = RepeatVector(self.output_size)(lstm3)                      
-        dense1 = Dense(self.neurons*6, activation='relu')(repeat_vector)
+        conv1 = Conv1D(self.neurons, kernel_size=6, padding='same', kernel_initializer='he_uniform', activation='relu')(reshape) 
+        maxpool1 = MaxPooling1D(pool_size=2, padding='same')(conv1)        
+        conv2 = Conv1D(self.neurons*2, kernel_size=6, padding='same', kernel_initializer='he_uniform', activation='relu')(maxpool1) 
+        maxpool2 = MaxPooling1D(pool_size=2, padding='same')(conv2)          
+        conv3 = Conv1D(self.neurons*3, kernel_size=6, padding='same', kernel_initializer='he_uniform', activation='relu')(maxpool2)
+        maxpool3 = MaxPooling1D(pool_size=2, padding='same')(conv3) 
+        flatten = Flatten()(maxpool3)   
+        #---------------------------------------------------------------------- 
+        concat = Concatenate()([delstm, flatten]) 
+        #----------------------------------------------------------------------        
+        repeat_vector = RepeatVector(self.output_size)(concat)                      
+        dense1 = Dense(self.neurons*6, kernel_initializer='he_uniform', activation='relu')(repeat_vector)
         batchnorm1 = BatchNormalization()(dense1)
         drop1 = Dropout(rate=0.2, seed=self.seed)(batchnorm1)           
-        dense2 = Dense(self.neurons*5, activation='relu')(drop1)
+        dense2 = Dense(self.neurons*5, kernel_initializer='he_uniform', activation='relu')(drop1)
         batchnorm2 = BatchNormalization()(dense2)
         drop2 = Dropout(rate=0.2, seed=self.seed)(batchnorm2)    
-        dense3 = Dense(self.neurons*4, activation='relu')(drop2)
+        dense3 = Dense(self.neurons*4, kernel_initializer='he_uniform', activation='relu')(drop2)
         batchnorm3 = BatchNormalization()(dense3) 
         drop3 = Dropout(rate=0.2, seed=self.seed)(batchnorm3)                             
-        dense4 = Dense(self.neurons*3, activation='relu')(drop3)
+        dense4 = Dense(self.neurons*3, kernel_initializer='he_uniform', activation='relu')(drop3)
         batchnorm4 = BatchNormalization()(dense4)        
         drop4 = Dropout(rate=0.2, seed=self.seed)(batchnorm4)                
-        dense5 = Dense(self.neurons*2, activation='relu')(drop4) 
+        dense5 = Dense(self.neurons*2, kernel_initializer='he_uniform', activation='relu')(drop4) 
         batchnorm5 = BatchNormalization()(dense5)       
         drop5 = Dropout(rate=0.2, seed=self.seed)(batchnorm5)          
-        dense6 = Dense(self.neurons, activation='relu')(drop5)           
+        dense6 = Dense(self.neurons, kernel_initializer='he_uniform', activation='relu')(drop5)           
         #----------------------------------------------------------------------        
         output = TimeDistributed(Dense(self.num_classes, activation='softmax', dtype='float32'))(dense6)
 
