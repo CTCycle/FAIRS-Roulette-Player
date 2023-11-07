@@ -86,14 +86,18 @@ else:
 print('''STEP 2 -----> Generate One Hot encoding for labels
 ''')
 
-# one hot encode the output for softmax training (3 classes)
+# one hot encode the output for softmax training shape = (timesteps, features)
 #------------------------------------------------------------------------------
 OH_encoder = OneHotEncoder(sparse=False)
-Y_train = np.reshape(Y_train, (Y_train.shape[0], -1))
-Y_train_OHE = OH_encoder.fit_transform(Y_train)
+Y_train_OHE = OH_encoder.fit_transform(Y_train.reshape(Y_train.shape[0], -1))
+df_Y_train_OHE = pd.DataFrame(Y_train_OHE)
+df_X_train = pd.DataFrame(np.reshape(Y_train, (-1, 1)))
+Y_train_OHE = np.reshape(Y_train_OHE, (Y_train.shape[0], Y_train.shape[1], -1))
 if cnf.use_test_data == True: 
-    Y_test = np.reshape(Y_test, (Y_test.shape[0], -1))   
-    Y_test_OHE = OH_encoder.fit_transform(Y_test)
+    Y_test_OHE = OH_encoder.transform(Y_test.reshape(Y_test.shape[0], -1))
+    df_X_test = pd.DataFrame(np.reshape(Y_test, (-1, 1)))
+    df_Y_test_OHE = pd.DataFrame(Y_test_OHE)
+    Y_test_OHE = np.reshape(Y_test_OHE, (Y_test.shape[0], Y_test.shape[1], -1))
 
 # [SAVE FILES]
 #==============================================================================
@@ -106,27 +110,17 @@ print('''STEP 3 -----> Save files
 #------------------------------------------------------------------------------
 encoder_path = os.path.join(GlobVar.CCM_data_path, 'categorical_encoder.pkl')
 with open(encoder_path, 'wb') as file:
-    pickle.dump(categorical_encoder, file) 
-
-# reshape and transform into dataframe (categorical dataset) and create dataframe
-#------------------------------------------------------------------------------
-X_train = X_train.reshape(X_train.shape[0], -1)
-df_Y_train_OHE = pd.DataFrame(Y_train_OHE)
-df_X_train = pd.DataFrame(X_train)
-if cnf.use_test_data == True:   
-    X_test = X_test.reshape(X_test.shape[0], -1)    
-    df_X_test = pd.DataFrame(X_test)
-    df_Y_test_OHE = pd.DataFrame(Y_test_OHE)
+    pickle.dump(categorical_encoder, file)
 
 # save csv files
 #------------------------------------------------------------------------------
 file_loc = os.path.join(GlobVar.CCM_data_path, 'CCM_preprocessed.xlsx')  
 writer = pd.ExcelWriter(file_loc, engine='xlsxwriter')
-df_X_train.to_excel(writer, sheet_name='train inputs', index=True)
-df_Y_train_OHE.to_excel(writer, sheet_name='train labels', index=True)
+df_X_train.to_excel(writer, sheet_name='train inputs', index=False)
+df_Y_train_OHE.to_excel(writer, sheet_name='train labels', index=False)
 if cnf.use_test_data == True:  
-    df_X_test.to_excel(writer, sheet_name='test inputs', index=True)
-    df_Y_test_OHE.to_excel(writer, sheet_name='test labels', index=True)
+    df_X_test.to_excel(writer, sheet_name='test inputs', index=False)
+    df_Y_test_OHE.to_excel(writer, sheet_name='test labels', index=False)
 
 writer.close()
 
@@ -147,7 +141,7 @@ Classes are encoded as following
 -------------------------------------------------------------------------------
 green = 0
 black = 1
-red =   2
+red = 2
 -------------------------------------------------------------------------------   
 Number of timepoints in train dataset: {train_samples}
 Number of timepoints in test dataset:  {test_samples}
@@ -168,8 +162,8 @@ model_savepath = preprocessor.model_savefolder(GlobVar.CCM_model_path, 'FAIRSCCM
 # initialize model class
 #------------------------------------------------------------------------------
 modelframe = ColorCodeModel(cnf.learning_rate, cnf.window_size, cnf.output_size, 
-                            cnf.embedding_size, len(categories[0]), seed=cnf.seed, 
-                            XLA_state=cnf.XLA_acceleration)
+                            cnf.neuron_baseline, cnf.embedding_size, len(categories[0]),
+                            seed=cnf.seed, XLA_state=cnf.XLA_acceleration)
 model = modelframe.build()
 model.summary(expand_nested=True)
 
@@ -178,8 +172,8 @@ model.summary(expand_nested=True)
 if cnf.generate_model_graph == True:
     plot_path = os.path.join(model_savepath, 'FAIRSCCM_model.png')       
     plot_model(model, to_file = plot_path, show_shapes = True, 
-                show_layer_names = True, show_layer_activations = True, 
-                expand_nested = True, rankdir = 'TB', dpi = 400)
+               show_layer_names = True, show_layer_activations = True, 
+               expand_nested = True, rankdir = 'TB', dpi = 400)
 
 # [TRAINING WITH FAIRS]
 #==============================================================================
@@ -194,11 +188,10 @@ print(f'''Start model training for {cnf.epochs} epochs and batch size of {cnf.ba
        ''')
 
 RTH_callback = RealTimeHistory(model_savepath, validation=cnf.use_test_data)
-
 if cnf.use_test_data == True:
     validation_data = (X_test, Y_test_OHE)   
 else:
-    validation_data = None    
+    validation_data = None 
 
 if cnf.use_tensorboard == True:
     log_path = os.path.join(model_savepath, 'tensorboard')
@@ -218,6 +211,7 @@ model.save(model_savepath)
 parameters = {'Number of train samples' : train_samples,
               'Number of test samples' : test_samples,
               'Window size' : cnf.window_size,
+              'Output seq length' : cnf.output_size,
               'Embedding dimensions' : cnf.embedding_size,             
               'Batch size' : cnf.batch_size,
               'Learning rate' : cnf.learning_rate,
@@ -231,21 +225,20 @@ trainworker.model_parameters(parameters, model_savepath)
 #==============================================================================
 print('''STEP 5 -----> Evaluate the model
 ''')
-categories_mapping = {0 : 'green', 1 : 'black', 2 : 'red'}
-
 validator = ModelValidation(model)
-
 predicted_train_timeseries = model.predict(X_train)
-y_pred_labels = np.argmax(predicted_train_timeseries, axis=1)
-y_true_labels = np.argmax(Y_train_OHE, axis=1)
-validator.FAIRS_confusion(y_true_labels, y_pred_labels, categories[0], 'train', model_savepath, 400)
+y_pred_labels = np.argmax(predicted_train_timeseries, axis=-1)
+y_true_labels = np.argmax(Y_train_OHE, axis=-1)
+Y_pred, Y_true = y_pred_labels[:, 0], y_true_labels[:, 0]
+validator.FAIRS_confusion(Y_true, Y_pred, categories[0], 'train', model_savepath, 400)
 #validator.FAIRS_ROC_curve(y_true_labels, y_pred_labels, categories_mapping, 'train', model_savepath, 400)
 
 if cnf.use_test_data == True:
     predicted_test_timeseries = model.predict(X_test)
-    y_pred_labels = np.argmax(predicted_test_timeseries, axis=1)
-    y_true_labels = np.argmax(Y_test_OHE, axis=1)
-    validator.FAIRS_confusion(y_true_labels, y_pred_labels, categories[0], 'test', model_savepath, 400)
+    y_pred_labels = np.argmax(predicted_test_timeseries, axis=-1)
+    y_true_labels = np.argmax(Y_test_OHE, axis=-1)
+    Y_pred, Y_true = y_pred_labels[:, 0:1], y_true_labels[:, 0:1]
+    validator.FAIRS_confusion(Y_true, Y_pred, categories[0], 'test', model_savepath, 400)
     #validator.FAIRS_ROC_curve(y_true_labels, y_pred_labels, categories_mapping, 'test', model_savepath, 400)
 
 

@@ -1,11 +1,13 @@
 import os
+import json
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import tensorflow as tf
 from tensorflow import keras
 from keras.models import Model
-from keras import layers 
+from keras.layers import Dense, Dropout, LSTM, Conv1D, BatchNormalization
+from keras.layers import Embedding, Reshape, Input, RepeatVector, TimeDistributed
 from sklearn.metrics import confusion_matrix, roc_curve, auc
 from sklearn.preprocessing import label_binarize
 
@@ -72,12 +74,13 @@ class RealTimeHistory(keras.callbacks.Callback):
 #==============================================================================
 class ColorCodeModel:
 
-    def __init__(self, learning_rate, window_size, output_size, embedding_dims, num_classes, 
+    def __init__(self, learning_rate, window_size, output_size, neurons, embedding_dims, num_classes, 
                  seed, XLA_state):
 
         self.learning_rate = learning_rate
         self.window_size = window_size
         self.output_size = output_size
+        self.neurons = neurons
         self.embedding_dims = embedding_dims 
         self.num_classes = num_classes
         self.seed = seed       
@@ -85,29 +88,35 @@ class ColorCodeModel:
 
     def build(self):                
         
-        sequence_input = layers.Input(shape=(self.window_size, 1))    
+        sequence_input = Input(shape=(self.window_size, 1))    
         #----------------------------------------------------------------------
-        embedding = layers.Embedding(input_dim=self.num_classes, output_dim=self.embedding_dims)(sequence_input) 
-        reshape = layers.Reshape((self.window_size, self.embedding_dims))(embedding)
+        embedding = Embedding(input_dim=self.num_classes, output_dim=self.embedding_dims)(sequence_input) 
+        reshape = Reshape((self.window_size, self.embedding_dims))(embedding)
         #----------------------------------------------------------------------
-        lstm1 = layers.LSTM(64, use_bias=True, return_sequences=True, activation='tanh', dropout=0.2)(reshape)         
-        lstm2 = layers.LSTM(128, use_bias=True, return_sequences=True, activation='tanh', dropout=0.2)(lstm1)        
-        lstm3 = layers.LSTM(256, use_bias=True, return_sequences=False, activation='tanh', dropout=0.2)(lstm2) 
-        #----------------------------------------------------------------------                       
-        dense1 = layers.Dense(512, activation='relu')(lstm3)
-        drop1 = layers.Dropout(rate=0.2, seed=self.seed)(dense1)           
-        dense2 = layers.Dense(256, activation='relu')(drop1)
-        drop2 = layers.Dropout(rate=0.2, seed=self.seed)(dense2)    
-        dense3 = layers.Dense(128, activation='relu')(drop2) 
-        drop3 = layers.Dropout(rate=0.2, seed=self.seed)(dense3)                             
-        dense4 = layers.Dense(96, activation='relu')(drop3)        
-        drop4 = layers.Dropout(rate=0.2, seed=self.seed)(dense4)                
-        dense5 = layers.Dense(64, activation='relu')(drop4)        
-        drop5 = layers.Dropout(rate=0.2, seed=self.seed)(dense5)          
-        dense6 = layers.Dense(32, activation='relu')(drop5)           
+        lstm1 = LSTM(self.neurons, use_bias=True, return_sequences=True, activation='tanh', dropout=0.2)(reshape)         
+        lstm2 = LSTM(self.neurons*2, use_bias=True, return_sequences=True, activation='tanh', dropout=0.2)(lstm1)        
+        lstm3 = LSTM(self.neurons*4, use_bias=True, return_sequences=False, activation='tanh', dropout=0.2)(lstm2) 
+        #----------------------------------------------------------------------         
+        repeat_vector = RepeatVector(self.output_size)(lstm3)                      
+        dense1 = Dense(self.neurons*6, activation='relu')(repeat_vector)
+        batchnorm1 = BatchNormalization()(dense1)
+        drop1 = Dropout(rate=0.2, seed=self.seed)(batchnorm1)           
+        dense2 = Dense(self.neurons*5, activation='relu')(drop1)
+        batchnorm2 = BatchNormalization()(dense2)
+        drop2 = Dropout(rate=0.2, seed=self.seed)(batchnorm2)    
+        dense3 = Dense(self.neurons*4, activation='relu')(drop2)
+        batchnorm3 = BatchNormalization()(dense3) 
+        drop3 = Dropout(rate=0.2, seed=self.seed)(batchnorm3)                             
+        dense4 = Dense(self.neurons*3, activation='relu')(drop3)
+        batchnorm4 = BatchNormalization()(dense4)        
+        drop4 = Dropout(rate=0.2, seed=self.seed)(batchnorm4)                
+        dense5 = Dense(self.neurons*2, activation='relu')(drop4) 
+        batchnorm5 = BatchNormalization()(dense5)       
+        drop5 = Dropout(rate=0.2, seed=self.seed)(batchnorm5)          
+        dense6 = Dense(self.neurons, activation='relu')(drop5)           
         #----------------------------------------------------------------------        
-        output = layers.Dense(self.num_classes, activation='softmax', dtype='float32')(dense6)                
-        
+        output = TimeDistributed(Dense(self.num_classes, activation='softmax', dtype='float32'))(dense6)
+
         model = Model(inputs = sequence_input, outputs = output, name = 'FAIRS_model')    
         opt = keras.optimizers.Adam(learning_rate=self.learning_rate)
         loss = keras.losses.CategoricalCrossentropy(from_logits=False)
@@ -157,15 +166,14 @@ class ModelTraining:
     
     #========================================================================== 
     def model_parameters(self, parameters_dict, savepath): 
-        path = os.path.join(savepath, 'model_parameters.txt')      
+        path = os.path.join(savepath, 'model_parameters.json')      
         with open(path, 'w') as f:
-            for key, value in parameters_dict.items():
-                f.write(f'{key}: {value}\n') 
+            json.dump(parameters_dict, f) 
 
           
     # sequential model as generator with Keras module
     #========================================================================== 
-    def load_pretrained_model(self, path):
+    def load_pretrained_model(self, path, load_parameters=True):
         
         model_folders = []
         for entry in os.scandir(path):
@@ -176,7 +184,7 @@ class ModelTraining:
         print('Please select a pretrained model:') 
         print()
         for i, directory in enumerate(model_folders):
-            print('{0} - {1}'.format(i + 1, directory))        
+            print(f'{i + 1} - {directory}')        
         print()               
         while True:
            try:
@@ -193,7 +201,12 @@ class ModelTraining:
                continue  
            
         model_path = os.path.join(path, model_folders[dir_index - 1])
-        model = keras.models.load_model(model_path)        
+        model = keras.models.load_model(model_path)
+
+        if load_parameters==True:
+            path = os.path.join(model_path, 'model_parameters.json')
+            with open(path, 'r') as f:
+                self.model_configuration = json.load(f)            
         
         return model   
 

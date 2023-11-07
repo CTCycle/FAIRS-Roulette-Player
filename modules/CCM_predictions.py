@@ -42,6 +42,20 @@ FAIRS predictions
 ...
 ''')
 
+# [LOAD PRETRAINED SCADS MODEL]
+#==============================================================================
+# ....
+#==============================================================================
+print('''
+-------------------------------------------------------------------------------
+Load pretrained model
+-------------------------------------------------------------------------------
+''')
+trainworker = ModelTraining(device = cnf.training_device) 
+model = trainworker.load_pretrained_model(GlobVar.CCM_model_path)
+parameters = trainworker.model_configuration
+model.summary(expand_nested=True)
+
 # [PREPROCESS DATA]
 #==============================================================================
 # ...
@@ -62,21 +76,9 @@ CCM_timeseries = pd.DataFrame(CCM_timeseries, columns=['color encoding'])
 
 # generate windowed dataset
 #------------------------------------------------------------------------------
-CCM_inputs = preprocessor.timeseries_labeling(CCM_timeseries, cnf.window_size)
+CCM_inputs = preprocessor.timeseries_labeling(CCM_timeseries, parameters['Window size'], 
+                                              parameters['Output seq length'])
 predictions_inputs = CCM_inputs[0]
-
-# [LOAD PRETRAINED SCADS MODEL]
-#==============================================================================
-# ....
-#==============================================================================
-print('''
--------------------------------------------------------------------------------
-Load pretrained model
--------------------------------------------------------------------------------
-''')
-trainworker = ModelTraining(device = cnf.training_device) 
-model = trainworker.load_pretrained_model(GlobVar.CCM_model_path)
-model.summary(expand_nested=True)
 
 # [PERFORM PREDICTIONS]
 #==============================================================================
@@ -88,12 +90,12 @@ print('''Perform prediction using the loaded model
 # predict using pretrained model
 #------------------------------------------------------------------------------ 
 probability_vectors = model.predict(predictions_inputs)
-expected_class = np.argmax(probability_vectors, axis=1)
+expected_class = np.argmax(probability_vectors, axis=-1)
 
-last_window = CCM_timeseries['color encoding'].to_list()[-cnf.window_size:]
-last_window = np.reshape(last_window, (1, cnf.window_size, 1))
+last_window = CCM_timeseries['color encoding'].to_list()[-parameters['Window size']:]
+last_window = np.reshape(last_window, (1, parameters['Window size'], 1))
 next_prob_vector = model.predict(last_window)
-next_exp_class = np.argmax(next_prob_vector, axis=1)
+next_exp_class = np.argmax(next_prob_vector, axis=-1)
 
 # inverse encoding of the classes
 #------------------------------------------------------------------------------ 
@@ -118,16 +120,17 @@ for ts in range(cnf.window_size):
     sync_expected_vector['Black'].append('')
     sync_expected_vector['Red'].append('')
     sync_expected_color.append('')
-for x, z in zip(probability_vectors, expected_color):
-    sync_expected_vector['Green'].append((round(x[0], 3)))
-    sync_expected_vector['Black'].append((round(x[1], 3)))
-    sync_expected_vector['Red'].append((round(x[2], 3)))
+for x, z in zip(probability_vectors, expected_color):    
+    sync_expected_vector['Green'].append(x[0,0])
+    sync_expected_vector['Black'].append(x[0,1])
+    sync_expected_vector['Red'].append(x[0,2])
     sync_expected_color.append(z)
 
-sync_expected_vector['Green'].append((round(next_prob_vector[0][0], 3)))
-sync_expected_vector['Black'].append((round(next_prob_vector[0][1], 3)))
-sync_expected_vector['Red'].append((round(next_prob_vector[0][2], 3)))
-sync_expected_color.append(next_exp_color)
+for i in range(next_prob_vector.shape[1]):
+    sync_expected_vector['Green'].append(next_prob_vector[0,i,0])
+    sync_expected_vector['Black'].append(next_prob_vector[0,i,1])
+    sync_expected_vector['Red'].append(next_prob_vector[0,i,2])
+    sync_expected_color.append(next_exp_color)
 
 # add column with prediction to dataset
 #------------------------------------------------------------------------------
@@ -144,9 +147,9 @@ print(f'''
 Next predicted color: {next_exp_color}
 -------------------------------------------------------------------------------
 Probability vector from softmax (%):
-Green: {round((next_prob_vector[0][0] * 100), 3)}
-Black: {round((next_prob_vector[0][1] * 100), 3)}
-Red: {round((next_prob_vector[0][2] * 100), 3)}
+Green: {next_prob_vector[0,0,0] * 100}
+Black: {next_prob_vector[0,0,1] * 100}
+Red: {next_prob_vector[0,0,2] * 100}
 -------------------------------------------------------------------------------
 ''')
 

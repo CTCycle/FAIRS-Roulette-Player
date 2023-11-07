@@ -9,8 +9,9 @@ XLA_acceleration = False
 #------------------------------------------------------------------------------
 seed = 42
 training_device = 'GPU'
+neuron_baseline = 96
 embedding_size = 512
-epochs = 3000
+epochs = 5000
 learning_rate = 0.0001
 batch_size = 512
 
@@ -18,10 +19,13 @@ batch_size = 512
 #------------------------------------------------------------------------------
 use_test_data = True
 data_size = 1.0
-test_size = 0.1
-window_size = 100
-output_size = 1 #still not working when > 1
+test_size = 0.04
+window_size = 120
+output_size = 2
 
+# mapping data
+#------------------------------------------------------------------------------
+categories_mapping = {0 : 'green', 1 : 'black', 2 : 'red'}
 
 
 
