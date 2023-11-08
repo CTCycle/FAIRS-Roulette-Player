@@ -11,17 +11,18 @@ seed = 42
 training_device = 'GPU'
 neuron_baseline = 128
 embedding_size = 512
-epochs = 3000
-learning_rate = 0.0001
+epochs = 1000
+learning_rate = 0.001
 batch_size = 512
 
 # Define variables for preprocessing
 #------------------------------------------------------------------------------
 use_test_data = True
+invert_test = True
 data_size = 1.0
-test_size = 0.04
-window_size = 128
-output_size = 2
+test_size = 0.1
+window_size = 64
+output_size = 4
 
 # mapping data
 #------------------------------------------------------------------------------

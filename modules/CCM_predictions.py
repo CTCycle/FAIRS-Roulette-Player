@@ -153,7 +153,6 @@ Red: {next_prob_vector[0,0,2] * 100}
 -------------------------------------------------------------------------------
 ''')
 
-
 # [SAVE FILES]
 #==============================================================================
 # Save the trained preprocessing systems (normalizer and encoders) for further use 
@@ -161,7 +160,7 @@ Red: {next_prob_vector[0,0,2] * 100}
 print('''Saving CCM_predictions file (as CSV)
 ''')
 file_loc = os.path.join(GlobVar.CCM_data_path, 'CCM_predictions.csv')         
-df_merged.to_csv(file_loc, index = False, sep = ';', encoding = 'utf-8')
+df_merged.to_csv(file_loc, index=False, sep = ';', encoding = 'utf-8')
 
 
 

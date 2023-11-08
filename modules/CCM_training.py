@@ -56,8 +56,8 @@ print('''STEP 1 -----> Preprocess data for FAIRS training
 
 # map numbers to roulette color and reshape dataset
 #------------------------------------------------------------------------------
-preprocessor = PreProcessing()
-df_FAIRS = preprocessor.roulette_colormapping(df_FAIRS)
+PP = PreProcessing()
+df_FAIRS = PP.roulette_colormapping(df_FAIRS)
 FAIRS_categorical = df_FAIRS['color encoding']
 FAIRS_categorical = FAIRS_categorical.values.reshape(-1, 1)
 
@@ -71,13 +71,13 @@ FAIRS_categorical = pd.DataFrame(FAIRS_categorical, columns=['color encoding'])
 # split dataset into train and test and generate window-dataset
 #------------------------------------------------------------------------------
 if cnf.use_test_data == True:
-    categorical_train, categorical_test = preprocessor.split_timeseries(FAIRS_categorical, cnf.test_size, inverted=False)
-    train_samples, test_samples = categorical_train.shape[0], categorical_test.shape[0]
-    X_train, Y_train = preprocessor.timeseries_labeling(categorical_train, cnf.window_size, cnf.output_size)
-    X_test, Y_test = preprocessor.timeseries_labeling(categorical_test, cnf.window_size, cnf.output_size)
+    trainset, testset = PP.split_timeseries(FAIRS_categorical, cnf.test_size, inverted=cnf.invert_test)
+    train_samples, test_samples = trainset.shape[0], testset.shape[0]
+    X_train, Y_train = PP.timeseries_labeling(trainset, cnf.window_size, cnf.output_size)
+    X_test, Y_test = PP.timeseries_labeling(testset, cnf.window_size, cnf.output_size)
 else:
     train_samples, test_samples = FAIRS_categorical.shape[0], 0    
-    X_train, Y_train = preprocessor.timeseries_labeling(FAIRS_categorical, cnf.window_size, cnf.output_size)
+    X_train, Y_train = PP.timeseries_labeling(FAIRS_categorical, cnf.window_size, cnf.output_size)
 
 # [ONE HOT ENCODE THE LABELS]
 #==============================================================================
@@ -91,11 +91,11 @@ print('''STEP 2 -----> Generate One Hot encoding for labels
 OH_encoder = OneHotEncoder(sparse=False)
 Y_train_OHE = OH_encoder.fit_transform(Y_train.reshape(Y_train.shape[0], -1))
 df_Y_train_OHE = pd.DataFrame(Y_train_OHE)
-df_X_train = pd.DataFrame(np.reshape(Y_train, (-1, 1)))
+df_X_train = pd.DataFrame(X_train.reshape(Y_train.shape[0], -1))
 Y_train_OHE = np.reshape(Y_train_OHE, (Y_train.shape[0], Y_train.shape[1], -1))
 if cnf.use_test_data == True: 
     Y_test_OHE = OH_encoder.transform(Y_test.reshape(Y_test.shape[0], -1))
-    df_X_test = pd.DataFrame(np.reshape(Y_test, (-1, 1)))
+    df_X_test = pd.DataFrame(X_test.reshape(Y_test.shape[0], -1))
     df_Y_test_OHE = pd.DataFrame(Y_test_OHE)
     Y_test_OHE = np.reshape(Y_test_OHE, (Y_test.shape[0], Y_test.shape[1], -1))
 
@@ -129,8 +129,8 @@ writer.close()
 # ....
 #==============================================================================
 if cnf.use_test_data == True:
-    most_freq_train = int(categorical_train['color encoding'].value_counts().idxmax())
-    most_freq_test = int(categorical_test['color encoding'].value_counts().idxmax())
+    most_freq_train = int(trainset['color encoding'].value_counts().idxmax())
+    most_freq_test = int(testset['color encoding'].value_counts().idxmax())
 else:    
     most_freq_train = int(FAIRS_categorical['color encoding'].value_counts().idxmax())
     most_freq_test = 'None'
@@ -157,7 +157,7 @@ print('''STEP 4 -----> Build the model and start training
 ''')
 trainworker = ModelTraining(device = cnf.training_device, seed=cnf.seed, 
                             use_mixed_precision=cnf.use_mixed_precision) 
-model_savepath = preprocessor.model_savefolder(GlobVar.CCM_model_path, 'FAIRSCCM')
+model_savepath = PP.model_savefolder(GlobVar.CCM_model_path, 'FAIRSCCM')
 
 # initialize model class
 #------------------------------------------------------------------------------
@@ -210,6 +210,7 @@ model.save(model_savepath)
 #------------------------------------------------------------------------------
 parameters = {'Number of train samples' : train_samples,
               'Number of test samples' : test_samples,
+              'Lowest neurons number' : cnf.neuron_baseline,
               'Window size' : cnf.window_size,
               'Output seq length' : cnf.output_size,
               'Embedding dimensions' : cnf.embedding_size,             
