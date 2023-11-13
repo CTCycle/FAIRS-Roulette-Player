@@ -21,20 +21,12 @@ from modules.components.training_classes import ModelTraining
 import modules.global_variables as GlobVar
 import modules.configurations as cnf
 
-# [LOAD DATASETS]
-#==============================================================================
-# Load patient dataset and dictionaries from .csv files in the dataset folder.
-# Also, create a clean version of the exploded dataset to work on
-#==============================================================================
-filepath = os.path.join(GlobVar.CCM_data_path, 'predictions_inputs.csv')                
-df_predictions = pd.read_csv(filepath, sep= ';', encoding='utf-8')
 
-# Load normalizer and encoders
-#------------------------------------------------------------------------------
-encoder_path = os.path.join(GlobVar.CCM_data_path, 'categorical_encoder.pkl')
-with open(encoder_path, 'rb') as file:
-    encoder = pickle.load(file)
-        
+
+# [LOAD MODEL AND DATA]
+#==============================================================================
+# ....
+#==============================================================================        
 print(f'''
 -------------------------------------------------------------------------------
 FAIRS predictions
@@ -42,19 +34,24 @@ FAIRS predictions
 ...
 ''')
 
-# [LOAD PRETRAINED SCADS MODEL]
-#==============================================================================
-# ....
-#==============================================================================
-print('''
--------------------------------------------------------------------------------
-Load pretrained model
--------------------------------------------------------------------------------
-''')
+# Load dataset
+#------------------------------------------------------------------------------
+filepath = os.path.join(GlobVar.CCM_data_path, 'predictions_inputs.csv')                
+df_predictions = pd.read_csv(filepath, sep= ';', encoding='utf-8')
+
+# Load model
+#------------------------------------------------------------------------------
 trainworker = ModelTraining(device = cnf.training_device) 
 model = trainworker.load_pretrained_model(GlobVar.CCM_model_path)
 parameters = trainworker.model_configuration
 model.summary(expand_nested=True)
+
+# Load normalizer and encoders
+#------------------------------------------------------------------------------
+if parameters['Class encoding'] == True:
+    encoder_path = os.path.join(GlobVar.CCM_data_path, 'categorical_encoder.pkl')
+    with open(encoder_path, 'rb') as file:
+        encoder = pickle.load(file)
 
 # [PREPROCESS DATA]
 #==============================================================================
@@ -63,20 +60,23 @@ model.summary(expand_nested=True)
 
 # map numbers to roulette color and reshape array
 #------------------------------------------------------------------------------
-preprocessor = PreProcessing()
-df_predictions = preprocessor.roulette_colormapping(df_predictions)
-CCM_timeseries = df_predictions['color encoding']
-CCM_timeseries = CCM_timeseries.values.reshape(-1, 1)
+PP = PreProcessing()
+if parameters['Class encoding'] == True:
+    df_predictions = PP.roulette_colormapping(df_predictions, no_mapping=False)
+    CCM_timeseries = df_predictions['encoding']
+    CCM_timeseries = CCM_timeseries.values.reshape(-1, 1)
+    categories = [['green', 'black', 'red']]
+    CCM_timeseries = encoder.fit_transform(CCM_timeseries)
+    CCM_timeseries = pd.DataFrame(CCM_timeseries, columns=['encoding'])
+else:
+    df_FAIRS = PP.roulette_colormapping(df_predictions, no_mapping=True)
+    categories = [[x for x in df_FAIRS['encoding'].unique()]]
+    FAIRS_categorical = df_FAIRS['encoding']
 
-# encode series from string to number class for the inputs
-#------------------------------------------------------------------------------
-categories = [['green', 'black', 'red']]
-CCM_timeseries = encoder.fit_transform(CCM_timeseries)
-CCM_timeseries = pd.DataFrame(CCM_timeseries, columns=['color encoding'])
 
 # generate windowed dataset
 #------------------------------------------------------------------------------
-CCM_inputs = preprocessor.timeseries_labeling(CCM_timeseries, parameters['Window size'], 
+CCM_inputs = PP.timeseries_labeling(CCM_timeseries, parameters['Window size'], 
                                               parameters['Output seq length'])
 predictions_inputs = CCM_inputs[0]
 

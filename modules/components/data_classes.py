@@ -79,16 +79,18 @@ class PreProcessing:
 
     # Splits time series data into training and testing sets using TimeSeriesSplit
     #==========================================================================
-    def roulette_colormapping(self, dataframe):
+    def roulette_colormapping(self, dataframe, no_mapping=True):
         
         '''
         '''
-        color_map = {'black' : [15, 4, 2, 17, 6, 13, 11, 8, 10, 24, 33, 20, 31, 22, 29, 28, 35, 26],
-                     'red' : [32, 19, 21, 25, 34, 27, 36, 30, 23, 5, 16, 1, 14, 9, 18, 7, 12, 3],
-                     'green' : [0]}
-        
-        reverse_color_map = {v: k for k, values in color_map.items() for v in values}        
-        dataframe['color encoding'] = dataframe['timeseries'].map(reverse_color_map)
+        if no_mapping == False:
+            color_map = {'black' : [15, 4, 2, 17, 6, 13, 11, 8, 10, 24, 33, 20, 31, 22, 29, 28, 35, 26],
+                        'red' : [32, 19, 21, 25, 34, 27, 36, 30, 23, 5, 16, 1, 14, 9, 18, 7, 12, 3],
+                        'green' : [0]}            
+            reverse_color_map = {v: k for k, values in color_map.items() for v in values}        
+            dataframe['encoding'] = dataframe['timeseries'].map(reverse_color_map)
+        else:
+            dataframe['encoding'] = dataframe['timeseries']
 
         return dataframe
 
@@ -122,9 +124,7 @@ class PreProcessing:
             df_train = dataframe.iloc[:train_size]
             df_test = dataframe.iloc[train_size:]
 
-        return df_train, df_test 
-    
-    
+        return df_train, df_test    
     
     # generate n real samples with class labels; We randomly select n samples 
     # from the real data array

@@ -50,24 +50,26 @@ print(f'''
 -------------------------------------------------------------------------------
 Data preprocessing
 -------------------------------------------------------------------------------
-''')
-print('''STEP 1 -----> Preprocess data for FAIRS training
+      
+STEP 1 -----> Preprocess data for FAIRS training
 ''')
 
 # map numbers to roulette color and reshape dataset
 #------------------------------------------------------------------------------
 PP = PreProcessing()
-df_FAIRS = PP.roulette_colormapping(df_FAIRS)
-FAIRS_categorical = df_FAIRS['color encoding']
-FAIRS_categorical = FAIRS_categorical.values.reshape(-1, 1)
-
-# encode series from string to number class for the inputs
-#------------------------------------------------------------------------------
-categories = [['green', 'black', 'red']]
-categorical_encoder = OrdinalEncoder(categories = categories, handle_unknown = 'use_encoded_value', unknown_value=-1)
-FAIRS_categorical = categorical_encoder.fit_transform(FAIRS_categorical)
-FAIRS_categorical = pd.DataFrame(FAIRS_categorical, columns=['color encoding'])
-
+if cnf.color_encoding == True:
+    categories = [['green', 'black', 'red']]
+    df_FAIRS = PP.roulette_colormapping(df_FAIRS, no_mapping=False)
+    FAIRS_categorical = df_FAIRS['encoding']
+    FAIRS_categorical = FAIRS_categorical.values.reshape(-1, 1)    
+    categorical_encoder = OrdinalEncoder(categories = categories, handle_unknown = 'use_encoded_value', unknown_value=-1)
+    FAIRS_categorical = categorical_encoder.fit_transform(FAIRS_categorical)
+    FAIRS_categorical = pd.DataFrame(FAIRS_categorical, columns=['encoding'])
+else:    
+    df_FAIRS = PP.roulette_colormapping(df_FAIRS, no_mapping=True)
+    categories = [sorted([x for x in df_FAIRS['encoding'].unique()])]
+    FAIRS_categorical = df_FAIRS['encoding']
+    
 # split dataset into train and test and generate window-dataset
 #------------------------------------------------------------------------------
 if cnf.use_test_data == True:
@@ -108,9 +110,10 @@ print('''STEP 3 -----> Save files
 
 # save encoder
 #------------------------------------------------------------------------------
-encoder_path = os.path.join(GlobVar.CCM_data_path, 'categorical_encoder.pkl')
-with open(encoder_path, 'wb') as file:
-    pickle.dump(categorical_encoder, file)
+if cnf.color_encoding == True:
+    encoder_path = os.path.join(GlobVar.CCM_data_path, 'categorical_encoder.pkl')
+    with open(encoder_path, 'wb') as file:
+        pickle.dump(categorical_encoder, file)
 
 # save csv files
 #------------------------------------------------------------------------------
@@ -124,29 +127,35 @@ if cnf.use_test_data == True:
 
 writer.close()
 
-# [REPORT]
+# [REPORT AND ANALYSIS]
 #==============================================================================
 # ....
 #==============================================================================
 if cnf.use_test_data == True:
-    most_freq_train = int(trainset['color encoding'].value_counts().idxmax())
-    most_freq_test = int(testset['color encoding'].value_counts().idxmax())
+    most_freq_train = int(trainset.value_counts().idxmax())
+    most_freq_test = int(testset.value_counts().idxmax())
 else:    
-    most_freq_train = int(FAIRS_categorical['color encoding'].value_counts().idxmax())
+    most_freq_train = int(FAIRS_categorical.value_counts().idxmax())
     most_freq_test = 'None'
+
+if cnf.color_encoding == True:
+    encoding_desc = 'Data is encoded by roulette colors: Green as 0, Black as 1, Red as 2'    
+else:
+    encoding_desc = 'Data is encoded as observed numbers'
 
 print(f'''
 -------------------------------------------------------------------------------
-Classes are encoded as following
+{encoding_desc}
 -------------------------------------------------------------------------------
-green = 0
-black = 1
-red = 2
--------------------------------------------------------------------------------   
 Number of timepoints in train dataset: {train_samples}
 Number of timepoints in test dataset:  {test_samples}
+-------------------------------------------------------------------------------  
+DISTRIBUTION OF CLASSES
+-------------------------------------------------------------------------------  
 Most frequent class in train dataset:  {most_freq_train}
 Most frequent class in test dataset:   {most_freq_test}
+Number of represented classes in train dataset: {len(trainset.unique())}
+Number of represented classes in test dataset: {len(testset.unique())}
 ''')
 
 # [DEFINE AND BUILD MODEL]
@@ -155,15 +164,15 @@ Most frequent class in test dataset:   {most_freq_test}
 #==============================================================================
 print('''STEP 4 -----> Build the model and start training
 ''')
-trainworker = ModelTraining(device = cnf.training_device, seed=cnf.seed, 
+trainworker = ModelTraining(device=cnf.training_device, seed=cnf.seed, 
                             use_mixed_precision=cnf.use_mixed_precision) 
 model_savepath = PP.model_savefolder(GlobVar.CCM_model_path, 'FAIRSCCM')
 
 # initialize model class
 #------------------------------------------------------------------------------
 modelframe = ColorCodeModel(cnf.learning_rate, cnf.window_size, cnf.output_size, 
-                            cnf.neuron_baseline, cnf.embedding_size, len(categories[0]),
-                            seed=cnf.seed, XLA_state=cnf.XLA_acceleration)
+                            cnf.neuron_baseline, cnf.embedding_size, cnf.kernel_size,
+                            len(categories[0]), seed=cnf.seed, XLA_state=cnf.XLA_acceleration)
 model = modelframe.build()
 model.summary(expand_nested=True)
 
@@ -186,7 +195,6 @@ if cnf.generate_model_graph == True:
 #------------------------------------------------------------------------------
 print(f'''Start model training for {cnf.epochs} epochs and batch size of {cnf.batch_size}
        ''')
-
 RTH_callback = RealTimeHistory(model_savepath, validation=cnf.use_test_data)
 if cnf.use_test_data == True:
     validation_data = (X_test, Y_test_OHE)   
@@ -210,6 +218,7 @@ model.save(model_savepath)
 #------------------------------------------------------------------------------
 parameters = {'Number of train samples' : train_samples,
               'Number of test samples' : test_samples,
+              'Class encoding' : cnf.color_encoding,
               'Lowest neurons number' : cnf.neuron_baseline,
               'Window size' : cnf.window_size,
               'Output seq length' : cnf.output_size,
@@ -224,23 +233,53 @@ trainworker.model_parameters(parameters, model_savepath)
 #==============================================================================
 # ...
 #==============================================================================
-print('''STEP 5 -----> Evaluate the model
+print(f'''STEP 5 -----> Evaluate the model
 ''')
+
 validator = ModelValidation(model)
-predicted_train_timeseries = model.predict(X_train)
-y_pred_labels = np.argmax(predicted_train_timeseries, axis=-1)
+
+# predict lables from train set
+#------------------------------------------------------------------------------
+predicted_train = model.predict(X_train)
+y_pred_labels = np.argmax(predicted_train, axis=-1)
 y_true_labels = np.argmax(Y_train_OHE, axis=-1)
 Y_pred, Y_true = y_pred_labels[:, 0], y_true_labels[:, 0]
-validator.FAIRS_confusion(Y_true, Y_pred, categories[0], 'train', model_savepath, 400)
-#validator.FAIRS_ROC_curve(y_true_labels, y_pred_labels, categories_mapping, 'train', model_savepath, 400)
 
+# show predicted classes (train dataset)
+#------------------------------------------------------------------------------
+class_pred, class_true = np.unique(Y_pred), np.unique(Y_true)
+print()
+print('Classes observed in predicted train labels:')
+for x in class_pred:
+    print(x)
+
+# generate confusion matrix from train set (if class num is equal)
+#------------------------------------------------------------------------------
+if len(class_pred) == len(class_true):
+    validator.FAIRS_confusion(Y_true, Y_pred, 'train', model_savepath)
+    #validator.FAIRS_ROC_curve(y_true_labels, y_pred_labels, categories_mapping, 'train', model_savepath, 400)
+
+# predict lables from test set
+#------------------------------------------------------------------------------
 if cnf.use_test_data == True:
-    predicted_test_timeseries = model.predict(X_test)
-    y_pred_labels = np.argmax(predicted_test_timeseries, axis=-1)
+    predicted_test = model.predict(X_test)
+    y_pred_labels = np.argmax(predicted_test, axis=-1)
     y_true_labels = np.argmax(Y_test_OHE, axis=-1)
     Y_pred, Y_true = y_pred_labels[:, 0:1], y_true_labels[:, 0:1]
-    validator.FAIRS_confusion(Y_true, Y_pred, categories[0], 'test', model_savepath, 400)
-    #validator.FAIRS_ROC_curve(y_true_labels, y_pred_labels, categories_mapping, 'test', model_savepath, 400)
+
+# show predicted classes (testdataset)
+#------------------------------------------------------------------------------
+    class_pred, class_true = np.unique(Y_pred), np.unique(Y_true)
+    print()
+    print('Classes observed in predicted test labels:')
+    for x in class_pred:
+        print(x)  
+
+# generate confusion matrix from test set (if class num is equal)
+#------------------------------------------------------------------------------
+    if len(class_pred) == len(class_true):
+        validator.FAIRS_confusion(Y_true, Y_pred, 'test', model_savepath)
+        #validator.FAIRS_ROC_curve(y_true_labels, y_pred_labels, categories_mapping, 'test', model_savepath, 400)
 
 
 

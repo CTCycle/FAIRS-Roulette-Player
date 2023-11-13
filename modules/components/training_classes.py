@@ -6,7 +6,7 @@ import seaborn as sns
 import tensorflow as tf
 from tensorflow import keras
 from keras.models import Model
-from keras.layers import Dense, Dropout, LSTM, Conv1D, BatchNormalization, Flatten, MaxPooling1D
+from keras.layers import Dense, Dropout, LSTM, Conv1D, BatchNormalization, Flatten, AveragePooling1D
 from keras.layers import Embedding, Reshape, Input, RepeatVector, TimeDistributed, Concatenate
 from sklearn.metrics import confusion_matrix, roc_curve, auc
 from sklearn.preprocessing import label_binarize
@@ -74,14 +74,15 @@ class RealTimeHistory(keras.callbacks.Callback):
 #==============================================================================
 class ColorCodeModel:
 
-    def __init__(self, learning_rate, window_size, output_size, neurons, embedding_dims, num_classes, 
-                 seed, XLA_state):
+    def __init__(self, learning_rate, window_size, output_size, neurons, embedding_dims, 
+                 kernel_size, num_classes, seed, XLA_state):
 
         self.learning_rate = learning_rate
         self.window_size = window_size
         self.output_size = output_size
         self.neurons = neurons
-        self.embedding_dims = embedding_dims 
+        self.embedding_dims = embedding_dims
+        self.kernel_size = kernel_size 
         self.num_classes = num_classes
         self.seed = seed       
         self.XLA_state = XLA_state        
@@ -99,12 +100,12 @@ class ColorCodeModel:
         delstm = Dense(self.neurons*4, kernel_initializer='he_uniform', activation='relu')(lstm3)
         #----------------------------------------------------------------------         
         conv1 = Conv1D(self.neurons, kernel_size=6, padding='same', kernel_initializer='he_uniform', activation='relu')(reshape) 
-        maxpool1 = MaxPooling1D(pool_size=2, padding='same')(conv1)        
-        conv2 = Conv1D(self.neurons*2, kernel_size=6, padding='same', kernel_initializer='he_uniform', activation='relu')(maxpool1) 
-        maxpool2 = MaxPooling1D(pool_size=2, padding='same')(conv2)          
-        conv3 = Conv1D(self.neurons*3, kernel_size=6, padding='same', kernel_initializer='he_uniform', activation='relu')(maxpool2)
-        maxpool3 = MaxPooling1D(pool_size=2, padding='same')(conv3) 
-        flatten = Flatten()(maxpool3)   
+        pool1 = AveragePooling1D(pool_size=2, padding='same')(conv1)        
+        conv2 = Conv1D(self.neurons*2, kernel_size=6, padding='same', kernel_initializer='he_uniform', activation='relu')(pool1) 
+        pool2 = AveragePooling1D(pool_size=2, padding='same')(conv2)          
+        conv3 = Conv1D(self.neurons*3, kernel_size=6, padding='same', kernel_initializer='he_uniform', activation='relu')(pool2)
+        pool3 = AveragePooling1D(pool_size=2, padding='same')(conv3) 
+        flatten = Flatten()(pool3)   
         #---------------------------------------------------------------------- 
         concat = Concatenate()([delstm, flatten]) 
         #----------------------------------------------------------------------        
@@ -180,7 +181,6 @@ class ModelTraining:
         path = os.path.join(savepath, 'model_parameters.json')      
         with open(path, 'w') as f:
             json.dump(parameters_dict, f) 
-
           
     # sequential model as generator with Keras module
     #========================================================================== 
@@ -213,7 +213,6 @@ class ModelTraining:
            
         model_path = os.path.join(path, model_folders[dir_index - 1])
         model = keras.models.load_model(model_path)
-
         if load_parameters==True:
             path = os.path.join(model_path, 'model_parameters.json')
             with open(path, 'r') as f:
@@ -233,16 +232,15 @@ class ModelValidation:
     
     # comparison of data distribution using statistical methods 
     #==========================================================================     
-    def FAIRS_confusion(self, Y_real, predictions, classes, name, path, dpi):         
+    def FAIRS_confusion(self, Y_real, predictions, name, path, dpi=400):         
         cm = confusion_matrix(Y_real, predictions)    
         fig, ax = plt.subplots()        
-        sns.heatmap(cm, annot=True, fmt='d', ax=ax, cmap=plt.cm.Blues, 
-                cbar=False)        
+        sns.heatmap(cm, annot=True, fmt='d', ax=ax, cmap=plt.cm.Blues, cbar=False)        
         ax.set_xlabel('Predicted labels')
         ax.set_ylabel('True labels')
         ax.set_title('Confusion Matrix')
-        ax.xaxis.set_ticklabels(classes)
-        ax.yaxis.set_ticklabels(classes)
+        ax.xaxis.set_ticklabels(Y_real)
+        ax.yaxis.set_ticklabels(predictions)
         plt.tight_layout()
         plot_loc = os.path.join(path, f'confusion_matrix_{name}.jpeg')
         plt.savefig(plot_loc, bbox_inches='tight', format='jpeg', dpi = dpi)        
@@ -263,7 +261,6 @@ class ModelValidation:
         for i in range(n_classes):
             plt.plot(fpr[i], tpr[i], label='ROC curve of class {0} (area = {1:0.2f})'
                  ''.format(list(class_dict.keys())[i], roc_auc[i]))
-
         plt.plot([0, 1], [0, 1], 'k--')
         plt.xlim([0.0, 1.0])
         plt.ylim([0.0, 1.05])
