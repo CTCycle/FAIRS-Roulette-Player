@@ -21,8 +21,6 @@ from modules.components.training_classes import ModelTraining
 import modules.global_variables as GlobVar
 import modules.configurations as cnf
 
-
-
 # [LOAD MODEL AND DATA]
 #==============================================================================
 # ....
@@ -100,7 +98,7 @@ next_exp_class = np.argmax(next_prob_vector, axis=-1)
 expected_class = np.array(expected_class).reshape(-1, 1)
 next_exp_class = np.array(next_exp_class).reshape(-1, 1)
 original_class = np.array(CCM_timeseries.to_list()).reshape(-1, 1)    
-if cnf.color_encoding == True:   
+if parameters['color encoding'] == True:   
     expected_color = encoder.inverse_transform(expected_class)       
     next_exp_color = encoder.inverse_transform(next_exp_class)
     original_names = encoder.inverse_transform(original_class)     
@@ -118,7 +116,7 @@ else:
 #------------------------------------------------------------------------------ 
 sync_expected_color = []
 for ts in range(cnf.window_size):
-    if cnf.color_encoding == True:
+    if parameters['color encoding'] == True:
         sync_expected_vector['Green'].append('')
         sync_expected_vector['Black'].append('')
         sync_expected_vector['Red'].append('')
@@ -130,7 +128,7 @@ for ts in range(cnf.window_size):
             
         
 for x, z in zip(probability_vectors, expected_color):   
-    if cnf.color_encoding == True: 
+    if parameters['color encoding'] == True: 
         sync_expected_vector['Green'].append(x[0,0])
         sync_expected_vector['Black'].append(x[0,1])
         sync_expected_vector['Red'].append(x[0,2])
@@ -141,7 +139,7 @@ for x, z in zip(probability_vectors, expected_color):
             sync_expected_vector[f'{i}'].append(x[0,i])            
 
 for i in range(next_prob_vector.shape[1]):
-    if cnf.color_encoding == True:
+    if parameters['color encoding'] == True:
         sync_expected_vector['Green'].append(next_prob_vector[0,i,0])
         sync_expected_vector['Black'].append(next_prob_vector[0,i,1])
         sync_expected_vector['Red'].append(next_prob_vector[0,i,2])
