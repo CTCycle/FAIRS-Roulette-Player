@@ -239,11 +239,13 @@ class ModelValidation:
         ax.set_xlabel('Predicted labels')
         ax.set_ylabel('True labels')
         ax.set_title('Confusion Matrix')
-        ax.xaxis.set_ticklabels(Y_real)
-        ax.yaxis.set_ticklabels(predictions)
+        ax.set_xticks(np.arange(len(np.unique(Y_real))))
+        ax.set_yticks(np.arange(len(np.unique(predictions))))
+        ax.set_xticklabels(np.unique(Y_real))
+        ax.set_yticklabels(np.unique(predictions))
         plt.tight_layout()
         plot_loc = os.path.join(path, f'confusion_matrix_{name}.jpeg')
-        plt.savefig(plot_loc, bbox_inches='tight', format='jpeg', dpi = dpi)        
+        plt.savefig(plot_loc, bbox_inches='tight', format='jpeg', dpi = dpi)
 
     # comparison of data distribution using statistical methods 
     #==========================================================================

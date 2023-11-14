@@ -111,13 +111,13 @@ print('''STEP 3 -----> Save files
 # save encoder
 #------------------------------------------------------------------------------
 if cnf.color_encoding == True:
-    encoder_path = os.path.join(GlobVar.CCM_data_path, 'categorical_encoder.pkl')
+    encoder_path = os.path.join(GlobVar.pp_path, 'categorical_encoder.pkl')
     with open(encoder_path, 'wb') as file:
         pickle.dump(categorical_encoder, file)
 
 # save csv files
 #------------------------------------------------------------------------------
-file_loc = os.path.join(GlobVar.CCM_data_path, 'CCM_preprocessed.xlsx')  
+file_loc = os.path.join(GlobVar.pp_path, 'CCM_preprocessed.xlsx')  
 writer = pd.ExcelWriter(file_loc, engine='xlsxwriter')
 df_X_train.to_excel(writer, sheet_name='train inputs', index=False)
 df_Y_train_OHE.to_excel(writer, sheet_name='train labels', index=False)
@@ -166,7 +166,7 @@ print('''STEP 4 -----> Build the model and start training
 ''')
 trainworker = ModelTraining(device=cnf.training_device, seed=cnf.seed, 
                             use_mixed_precision=cnf.use_mixed_precision) 
-model_savepath = PP.model_savefolder(GlobVar.CCM_model_path, 'FAIRSCCM')
+model_savepath = PP.model_savefolder(GlobVar.model_path, 'FAIRSCCM')
 
 # initialize model class
 #------------------------------------------------------------------------------
@@ -233,14 +233,13 @@ trainworker.model_parameters(parameters, model_savepath)
 #==============================================================================
 # ...
 #==============================================================================
-print(f'''STEP 5 -----> Evaluate the model
-''')
+print(f'''STEP 5 -----> Evaluate the model''')
 
 validator = ModelValidation(model)
 
 # predict lables from train set
 #------------------------------------------------------------------------------
-predicted_train = model.predict(X_train)
+predicted_train = model.predict(X_train, verbose=0)
 y_pred_labels = np.argmax(predicted_train, axis=-1)
 y_true_labels = np.argmax(Y_train_OHE, axis=-1)
 Y_pred, Y_true = y_pred_labels[:, 0], y_true_labels[:, 0]
@@ -248,21 +247,26 @@ Y_pred, Y_true = y_pred_labels[:, 0], y_true_labels[:, 0]
 # show predicted classes (train dataset)
 #------------------------------------------------------------------------------
 class_pred, class_true = np.unique(Y_pred), np.unique(Y_true)
-print()
-print('Classes observed in predicted train labels:')
+print(f'''
+Number of classes observed in train (true labels): {len(class_true)}
+Number of classes observed in train (predicted labels): {len(class_pred)}
+Classes observed in predicted train labels:''')
 for x in class_pred:
     print(x)
 
 # generate confusion matrix from train set (if class num is equal)
 #------------------------------------------------------------------------------
-if len(class_pred) == len(class_true):
+try:
     validator.FAIRS_confusion(Y_true, Y_pred, 'train', model_savepath)
     #validator.FAIRS_ROC_curve(y_true_labels, y_pred_labels, categories_mapping, 'train', model_savepath, 400)
+except Exception as e:
+    print('Could not generate confusion matrix for train dataset')
+    print('Error:', str(e))
 
 # predict lables from test set
 #------------------------------------------------------------------------------
 if cnf.use_test_data == True:
-    predicted_test = model.predict(X_test)
+    predicted_test = model.predict(X_test, verbose=0)
     y_pred_labels = np.argmax(predicted_test, axis=-1)
     y_true_labels = np.argmax(Y_test_OHE, axis=-1)
     Y_pred, Y_true = y_pred_labels[:, 0:1], y_true_labels[:, 0:1]
@@ -270,18 +274,21 @@ if cnf.use_test_data == True:
 # show predicted classes (testdataset)
 #------------------------------------------------------------------------------
     class_pred, class_true = np.unique(Y_pred), np.unique(Y_true)
-    print()
-    print('Classes observed in predicted test labels:')
+    print(f'''
+Number of classes observed in test (true labels): {len(class_true)}
+Number of classes observed in test (predicted labels): {len(class_pred)}
+Classes observed in predicted test labels:''')
     for x in class_pred:
-        print(x)  
+        print(x)     
 
 # generate confusion matrix from test set (if class num is equal)
 #------------------------------------------------------------------------------
-    if len(class_pred) == len(class_true):
+    try:
         validator.FAIRS_confusion(Y_true, Y_pred, 'test', model_savepath)
         #validator.FAIRS_ROC_curve(y_true_labels, y_pred_labels, categories_mapping, 'test', model_savepath, 400)
-
-
+    except Exception as e:
+        print('Could not generate confusion matrix for test dataset')
+        print('Error:', str(e))
 
 
 
