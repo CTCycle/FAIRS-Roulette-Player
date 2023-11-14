@@ -69,6 +69,7 @@ else:
     df_FAIRS = PP.roulette_colormapping(df_FAIRS, no_mapping=True)
     categories = [sorted([x for x in df_FAIRS['encoding'].unique()])]
     FAIRS_categorical = df_FAIRS['encoding']
+    FAIRS_categorical = pd.DataFrame(FAIRS_categorical, columns=['encoding'])
     
 # split dataset into train and test and generate window-dataset
 #------------------------------------------------------------------------------
@@ -132,10 +133,10 @@ writer.close()
 # ....
 #==============================================================================
 if cnf.use_test_data == True:
-    most_freq_train = int(trainset.value_counts().idxmax())
-    most_freq_test = int(testset.value_counts().idxmax())
+    most_freq_train = trainset.value_counts().idxmax()
+    most_freq_test = testset.value_counts().idxmax()
 else:    
-    most_freq_train = int(FAIRS_categorical.value_counts().idxmax())
+    most_freq_train = FAIRS_categorical.value_counts().idxmax()
     most_freq_test = 'None'
 
 if cnf.color_encoding == True:
@@ -154,8 +155,8 @@ DISTRIBUTION OF CLASSES
 -------------------------------------------------------------------------------  
 Most frequent class in train dataset:  {most_freq_train}
 Most frequent class in test dataset:   {most_freq_test}
-Number of represented classes in train dataset: {len(trainset.unique())}
-Number of represented classes in test dataset: {len(testset.unique())}
+Number of represented classes in train dataset: {trainset.nunique()}
+Number of represented classes in test dataset: {testset.nunique()}
 ''')
 
 # [DEFINE AND BUILD MODEL]
