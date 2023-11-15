@@ -18,9 +18,8 @@ print(ascii_art)
 # module for the selection of different operations
 #==============================================================================
 user_operations = UserOperations()
-operations_menu = {'1' : 'FAIRS timeseries analysis',
-                   '2' : 'FAIRS training: Color Code Model (CCM)',                                                   
-                   '3' : 'Exit and close'}
+operations_menu = {'1' : 'FAIRS training: Color Code Model (CCM)',                                                   
+                   '2' : 'Exit and close'}
 
 CCM_menu = {'1' : 'Pretrain ColorCode model',
             '2' : 'Evaluate ColorCode model',
@@ -30,13 +29,8 @@ CCM_menu = {'1' : 'Pretrain ColorCode model',
 while True:
     print('------------------------------------------------------------------------')    
     op_sel = user_operations.menu_selection(operations_menu)
-    print() 
-    
+    print()     
     if op_sel == 1:
-        import modules.timeseries_analysis
-        del sys.modules['modules.dataset_composer']
-
-    elif op_sel == 2:        
         while True:
             sec_sel = user_operations.menu_selection(CCM_menu)
             print()
@@ -49,9 +43,9 @@ while True:
                 import modules.CCM_predictions
                 del sys.modules['modules.CCM_predictions']
             elif sec_sel == 4:
-                break    
-        
-    elif op_sel == 4:
+                break  
+
+    elif op_sel == 2:
         break
     
    

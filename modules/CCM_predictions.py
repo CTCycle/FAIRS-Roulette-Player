@@ -98,7 +98,7 @@ next_exp_class = np.argmax(next_prob_vector, axis=-1)
 expected_class = np.array(expected_class).reshape(-1, 1)
 next_exp_class = np.array(next_exp_class).reshape(-1, 1)
 original_class = np.array(CCM_timeseries.to_list()).reshape(-1, 1)    
-if parameters['color encoding'] == True:   
+if parameters['Class encoding'] == True:   
     expected_color = encoder.inverse_transform(expected_class)       
     next_exp_color = encoder.inverse_transform(next_exp_class)
     original_names = encoder.inverse_transform(original_class)     
@@ -116,7 +116,7 @@ else:
 #------------------------------------------------------------------------------ 
 sync_expected_color = []
 for ts in range(cnf.window_size):
-    if parameters['color encoding'] == True:
+    if parameters['Class encoding'] == True:  
         sync_expected_vector['Green'].append('')
         sync_expected_vector['Black'].append('')
         sync_expected_vector['Red'].append('')
@@ -124,11 +124,10 @@ for ts in range(cnf.window_size):
     else:
         sync_expected_color.append('')
         for i in range(37):
-            sync_expected_vector[f'{i}'].append('')
-            
+            sync_expected_vector[f'{i}'].append('')            
         
 for x, z in zip(probability_vectors, expected_color):   
-    if parameters['color encoding'] == True: 
+    if parameters['Class encoding'] == True:  
         sync_expected_vector['Green'].append(x[0,0])
         sync_expected_vector['Black'].append(x[0,1])
         sync_expected_vector['Red'].append(x[0,2])
@@ -139,7 +138,7 @@ for x, z in zip(probability_vectors, expected_color):
             sync_expected_vector[f'{i}'].append(x[0,i])            
 
 for i in range(next_prob_vector.shape[1]):
-    if parameters['color encoding'] == True:
+    if parameters['Class encoding'] == True:  
         sync_expected_vector['Green'].append(next_prob_vector[0,i,0])
         sync_expected_vector['Black'].append(next_prob_vector[0,i,1])
         sync_expected_vector['Red'].append(next_prob_vector[0,i,2])
@@ -166,7 +165,7 @@ Next predicted color: {next_exp_color}
 ''')
 print('Probability vector from softmax (%):')
 for i, (x, y) in enumerate(sync_expected_vector.items()):
-    print(f'{x} = {next_prob_vector[0,0,i] * 100}')
+    print(f'{x} = {round((next_prob_vector[0,0,i] * 100), 4)}')
 
 # [SAVE FILES]
 #==============================================================================
