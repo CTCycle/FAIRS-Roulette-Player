@@ -19,8 +19,8 @@ print(ascii_art)
 #==============================================================================
 user_operations = UserOperations()
 operations_menu = {'1' : 'Data analysis',
-                   '2' : 'FAIRS training: CombinedCode Model (CCM)',
-                   '3' : 'FAIRS training: PositionMatrix Model (PMM)',
+                   '2' : 'FAIRS training: ColorCode Model (CCM)',
+                   '3' : 'FAIRS training: NumberMatrix Model (NMM)',
                    '4' : 'Predict next extraction',                                                 
                    '5' : 'Exit and close'}
 
@@ -34,13 +34,13 @@ while True:
     elif op_sel == 2:
         import modules.CCM_training
         del sys.modules['modules.CCM_training']
-    elif op_sel == 2:
+    elif op_sel == 3:
         import modules.PMM_training
         del sys.modules['modules.PMM_training']           
-    elif op_sel == 3:
+    elif op_sel == 4:
         import modules.timeseries_predictions
         del sys.modules['modules.timeseries_predictions']
-    elif op_sel == 4:
+    elif op_sel == 5:
         break
     
    

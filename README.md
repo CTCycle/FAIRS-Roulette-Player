@@ -10,21 +10,41 @@ FAIRS is based on two different deep learning (DL) forecasting models. Both mode
 ### ColorCode Model (CCM)
 ...
 
-### PositionMatrix Model (PMM)
+### NumberMatrix Model (NMM)
 ...
 
 ## How to use
 Run the FAIRS.py file to launch the script and use the main menu to navigate the different options. The main menu allows selecting one of the following options:
 
-**1) FAIRS timeseries analysis:** Perform timeseries analysis to visualize distribution and main statistical parameters   
+**1) FAIRS timeseries analysis:** Perform timeseries analysis to visualize distribution and main statistical parameters (work in progress).  
 
-**2) FAIRS training: ColorCode Model (CCM)** Perform pretraining using the CC model    
+**2) FAIRS training: ColorCode Model (CCM)** Perform pretraining using the ColorCode model, which is focused on predicting the next color (green, black or red) to be extracted.
 
-**3) FAIRS training: PositionMatrix Model (PMM)** Perform pretraining using the PM model 
+**3) FAIRS training: PositionMatrix Model (PMM)** Perform pretraining using the NumberMatrix model, which is focused on predicting raw numbers based on both previous extractions and the actual number position (following European Roulette encoding) 
 
-**4) Predict next extraction:** Predict the next coming extraction using a pretrained model
+**4) Predict next extraction:** Predict the next coming extraction using a pretrained model. Automatically infers which model has been loaded and forecast extractions accordingly.
 
 **5) Exit and close**
+
+### Configurations
+The configurations.py file allows to change the script configuration. The following parameters are available:
+
+- `generate_model_graph:` generate and save 2D model graph (as .png file)
+- `use_mixed_precision:` whether or not to use mixed precision for faster training (mix float16/float32)
+- `use_tensorboard:` activate or deactivate tensorboard logging
+- `XLA_acceleration:` use of linear algebra acceleration for faster training 
+- `training_device:` select the training device (CPU or GPU) 
+- `neuron_baseline:` lowest number of neurons as reference 
+- `epochs:` number of training iterations
+- `learning_rate:` learning rate of the model during training
+- `batch_size:` size of batches to be fed to the model during training
+- `embedding_size:` embedding dimensions (valid for both models)
+- `use_test_data:` whether or not to use test data
+- `invert_test:` test data placement (True to set last points as test data)
+- `data_size:` fraction of total available data to use
+- `test_size:` fraction of data to leave as test data
+- `window_size:` length of the input timeseries window
+- `output_size:` number of next points to predict (output sequence)
 
 ### Requirements
 This application has been developed and tested using the following dependencies (Python 3.10.12):
