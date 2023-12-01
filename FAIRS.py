@@ -18,34 +18,29 @@ print(ascii_art)
 # module for the selection of different operations
 #==============================================================================
 user_operations = UserOperations()
-operations_menu = {'1' : 'FAIRS training: Color Code Model (CCM)',                                                   
-                   '2' : 'Exit and close'}
-
-CCM_menu = {'1' : 'Pretrain ColorCode model',
-            '2' : 'Evaluate ColorCode model',
-            '3' : 'Predict next extraction',
-            '4' : 'Go back to main menu'}
+operations_menu = {'1' : 'Data analysis',
+                   '2' : 'FAIRS training: CombinedCode Model (CCM)',
+                   '3' : 'FAIRS training: PositionMatrix Model (PMM)',
+                   '4' : 'Predict next extraction',                                                 
+                   '5' : 'Exit and close'}
 
 while True:
     print('------------------------------------------------------------------------')    
     op_sel = user_operations.menu_selection(operations_menu)
     print()     
     if op_sel == 1:
-        while True:
-            sec_sel = user_operations.menu_selection(CCM_menu)
-            print()
-            if sec_sel == 1:
-                import modules.CCM_training
-                del sys.modules['modules.CCM_training']
-            elif sec_sel == 2:
-                pass
-            elif sec_sel == 3:
-                import modules.CCM_predictions
-                del sys.modules['modules.CCM_predictions']
-            elif sec_sel == 4:
-                break  
-
+        import modules.timeseries_analysis
+        del sys.modules['modules.CCM_training'] 
     elif op_sel == 2:
+        import modules.CCM_training
+        del sys.modules['modules.CCM_training']
+    elif op_sel == 2:
+        import modules.PMM_training
+        del sys.modules['modules.PMM_training']           
+    elif op_sel == 3:
+        import modules.timeseries_predictions
+        del sys.modules['modules.timeseries_predictions']
+    elif op_sel == 4:
         break
     
    

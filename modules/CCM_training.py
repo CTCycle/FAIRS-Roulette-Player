@@ -54,39 +54,40 @@ Data preprocessing
 STEP 1 -----> Preprocess data for FAIRS training
 ''')
 
-# map numbers to roulette color and reshape dataset
+# add number positions, map numbers to roulette color and reshape dataset
 #------------------------------------------------------------------------------
 PP = PreProcessing()
+df_FAIRS = PP.roulette_positions(df_FAIRS)
 if cnf.color_encoding == True:
     categories = [['green', 'black', 'red']]
-    df_FAIRS = PP.roulette_colormapping(df_FAIRS, no_mapping=False)
-    FAIRS_categorical = df_FAIRS['encoding']
-    FAIRS_categorical = FAIRS_categorical.values.reshape(-1, 1)    
     categorical_encoder = OrdinalEncoder(categories = categories, handle_unknown = 'use_encoded_value', unknown_value=-1)
-    FAIRS_categorical = categorical_encoder.fit_transform(FAIRS_categorical)
-    FAIRS_categorical = pd.DataFrame(FAIRS_categorical, columns=['encoding'])
+    df_FAIRS = PP.roulette_colormapping(df_FAIRS, no_mapping=False)
+    input_timeseries = df_FAIRS['encoding']    
+    input_timeseries = input_timeseries.values.reshape(-1, 1)       
+    input_timeseries = categorical_encoder.fit_transform(input_timeseries)
+    input_timeseries = pd.DataFrame(input_timeseries, columns=['encoding'])
 else:    
     df_FAIRS = PP.roulette_colormapping(df_FAIRS, no_mapping=True)
     categories = [sorted([x for x in df_FAIRS['encoding'].unique()])]
-    FAIRS_categorical = df_FAIRS['encoding']
-    FAIRS_categorical = pd.DataFrame(FAIRS_categorical, columns=['encoding'])
+    input_timeseries = df_FAIRS['encoding']
+    input_timeseries = pd.DataFrame(input_timeseries, columns=['encoding'])
     
 # split dataset into train and test and generate window-dataset
 #------------------------------------------------------------------------------
 if cnf.use_test_data == True:
-    trainset, testset = PP.split_timeseries(FAIRS_categorical, cnf.test_size, inverted=cnf.invert_test)
+    trainset, testset = PP.split_timeseries(input_timeseries, cnf.test_size, inverted=cnf.invert_test)     
     train_samples, test_samples = trainset.shape[0], testset.shape[0]
-    X_train, Y_train = PP.timeseries_labeling(trainset, cnf.window_size, cnf.output_size)
-    X_test, Y_test = PP.timeseries_labeling(testset, cnf.window_size, cnf.output_size)
+    X_train, Y_train = PP.timeseries_labeling(trainset, cnf.window_size, cnf.output_size)     
+    X_test, Y_test = PP.timeseries_labeling(testset, cnf.window_size, cnf.output_size)        
 else:
-    train_samples, test_samples = FAIRS_categorical.shape[0], 0    
-    X_train, Y_train = PP.timeseries_labeling(FAIRS_categorical, cnf.window_size, cnf.output_size)
+    train_samples, test_samples = input_timeseries.shape[0], 0       
+    X_train, Y_train = PP.timeseries_labeling(input_timeseries, cnf.window_size, cnf.output_size)   
 
 # [ONE HOT ENCODE THE LABELS]
 #==============================================================================
 # ...
 #==============================================================================
-print('''STEP 2 -----> Generate One Hot encoding for labels
+print('''STEP 2 -----> One-Hot encode timeseries labels (Y data)
 ''')
 
 # one hot encode the output for softmax training shape = (timesteps, features)
@@ -106,7 +107,7 @@ if cnf.use_test_data == True:
 #==============================================================================
 # Save the trained preprocessing systems (normalizer and encoders) for further use 
 #==============================================================================
-print('''STEP 3 -----> Save files
+print('''STEP 3 -----> Save preprocessed data on local hard drive
 ''')
 
 # save encoder
@@ -136,7 +137,7 @@ if cnf.use_test_data == True:
     most_freq_train = trainset.value_counts().idxmax()
     most_freq_test = testset.value_counts().idxmax()
 else:    
-    most_freq_train = FAIRS_categorical.value_counts().idxmax()
+    most_freq_train = input_timeseries.value_counts().idxmax()
     most_freq_test = 'None'
 
 if cnf.color_encoding == True:
@@ -153,8 +154,8 @@ Number of timepoints in test dataset:  {test_samples}
 -------------------------------------------------------------------------------  
 DISTRIBUTION OF CLASSES
 -------------------------------------------------------------------------------  
-Most frequent class in train dataset:  {most_freq_train}
-Most frequent class in test dataset:   {most_freq_test}
+Most frequent class in train dataset: {most_freq_train}
+Most frequent class in test dataset:  {most_freq_test}
 Number of represented classes in train dataset: {trainset.nunique()}
 Number of represented classes in test dataset: {testset.nunique()}
 ''')
@@ -172,8 +173,8 @@ model_savepath = PP.model_savefolder(GlobVar.model_path, 'FAIRSCCM')
 # initialize model class
 #------------------------------------------------------------------------------
 modelframe = ColorCodeModel(cnf.learning_rate, cnf.window_size, cnf.output_size, 
-                            cnf.neuron_baseline, cnf.embedding_size, cnf.kernel_size,
-                            len(categories[0]), seed=cnf.seed, XLA_state=cnf.XLA_acceleration)
+                            cnf.neuron_baseline, cnf.embedding_size, len(categories[0]), 
+                            seed=cnf.seed, XLA_state=cnf.XLA_acceleration)
 model = modelframe.build()
 model.summary(expand_nested=True)
 
@@ -217,7 +218,8 @@ model.save(model_savepath)
 
 # save model parameters in txt files
 #------------------------------------------------------------------------------
-parameters = {'Number of train samples' : train_samples,
+parameters = {'Model name' : 'CCM',
+              'Number of train samples' : train_samples,
               'Number of test samples' : test_samples,
               'Class encoding' : cnf.color_encoding,
               'Lowest neurons number' : cnf.neuron_baseline,
@@ -251,9 +253,12 @@ class_pred, class_true = np.unique(Y_pred), np.unique(Y_true)
 print(f'''
 Number of classes observed in train (true labels): {len(class_true)}
 Number of classes observed in train (predicted labels): {len(class_pred)}
-Classes observed in predicted train labels:''')
-for x in class_pred:
-    print(x)
+-------------------------------------------------------------------------------
+Classes observed in predicted train labels:
+-------------------------------------------------------------------------------
+{class_pred}
+''')
+
 
 # generate confusion matrix from train set (if class num is equal)
 #------------------------------------------------------------------------------
@@ -264,7 +269,7 @@ except Exception as e:
     print('Could not generate confusion matrix for train dataset')
     print('Error:', str(e))
 
-# predict lables from test set
+# predict labels from test set
 #------------------------------------------------------------------------------
 if cnf.use_test_data == True:
     predicted_test = model.predict(X_test, verbose=0)
@@ -276,11 +281,15 @@ if cnf.use_test_data == True:
 #------------------------------------------------------------------------------
     class_pred, class_true = np.unique(Y_pred), np.unique(Y_true)
     print(f'''
+-------------------------------------------------------------------------------
 Number of classes observed in test (true labels): {len(class_true)}
 Number of classes observed in test (predicted labels): {len(class_pred)}
-Classes observed in predicted test labels:''')
-    for x in class_pred:
-        print(x)     
+-------------------------------------------------------------------------------
+Classes observed in predicted test labels:
+-------------------------------------------------------------------------------
+{class_pred}
+-------------------------------------------------------------------------------
+''')    
 
 # generate confusion matrix from test set (if class num is equal)
 #------------------------------------------------------------------------------
