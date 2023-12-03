@@ -5,8 +5,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import tensorflow as tf
 from tensorflow import keras
+from keras import regularizers
 from keras.models import Model
-from keras.layers import Dense, Dropout, LSTM, BatchNormalization, Concatenate
+from keras.layers import Dense, Conv1D, Dropout, LSTM, BatchNormalization, LayerNormalization, Concatenate
 from keras.layers import Embedding, Reshape, Input, RepeatVector, TimeDistributed
 from sklearn.metrics import confusion_matrix, roc_curve, auc
 from sklearn.preprocessing import label_binarize
@@ -95,29 +96,32 @@ class ColorCodeModel:
         embeddingseq = Embedding(input_dim=self.num_classes, output_dim=self.embedding_dims)(sequence_input)        
         reshapeseq = Reshape((self.window_size, self.embedding_dims))(embeddingseq)       
         #---------------------------------------------------------------------- 
-        lstmseq1 = LSTM(self.neurons*2, use_bias=True, return_sequences=True, activation='tanh', dropout=0.2)(reshapeseq)
-        lstmseq2 = LSTM(self.neurons*3, use_bias=True, return_sequences=True, activation='tanh', dropout=0.2)(lstmseq1)             
-        lstmseq3 = LSTM(self.neurons*4, use_bias=True, return_sequences=False, activation='tanh', dropout=0.2)(lstmseq2) 
+        lstmseq1 = LSTM(self.neurons*2, use_bias=True, return_sequences=True, activation='tanh', 
+                        dropout=0.2, kernel_regularizer=regularizers.l1_l2(l1=0.01, l2=0.01))(reshapeseq)
+        lstmseq2 = LSTM(self.neurons*3, use_bias=True, return_sequences=True, activation='tanh', 
+                        dropout=0.2, kernel_regularizer=regularizers.l1_l2(l1=0.01, l2=0.01))(lstmseq1)             
+        lstmseq3 = LSTM(self.neurons*4, use_bias=True, return_sequences=False, activation='tanh', 
+                        dropout=0.2, kernel_regularizer=regularizers.l1_l2(l1=0.01, l2=0.01))(lstmseq2) 
 
         # repeated vector
         #----------------------------------------------------------------------        
         repeat_vector = RepeatVector(self.output_size)(lstmseq3) 
         #----------------------------------------------------------------------                     
         dense1 = Dense(self.neurons*4, kernel_initializer='he_uniform', activation='relu')(repeat_vector)
-        batchnorm1 = BatchNormalization()(dense1)
-        drop1 = Dropout(rate=0.2, seed=self.seed)(batchnorm1)           
+        layernorm1 = LayerNormalization(axis=-1, epsilon=0.001)(dense1)
+        drop1 = Dropout(rate=0.2, seed=self.seed)(layernorm1)           
         dense2 = Dense(self.neurons*4, kernel_initializer='he_uniform', activation='relu')(drop1)
-        batchnorm2 = BatchNormalization()(dense2)
-        drop2 = Dropout(rate=0.2, seed=self.seed)(batchnorm2)    
+        layernorm2 = LayerNormalization(axis=-1, epsilon=0.001)(dense2)
+        drop2 = Dropout(rate=0.2, seed=self.seed)(layernorm2)    
         dense3 = Dense(self.neurons*2, kernel_initializer='he_uniform', activation='relu')(drop2)
-        batchnorm3 = BatchNormalization()(dense3) 
-        drop3 = Dropout(rate=0.2, seed=self.seed)(batchnorm3)                             
+        layernorm3 = LayerNormalization(axis=-1, epsilon=0.001)(dense3) 
+        drop3 = Dropout(rate=0.2, seed=self.seed)(layernorm3)                             
         dense4 = Dense(self.neurons*2, kernel_initializer='he_uniform', activation='relu')(drop3)
-        batchnorm4 = BatchNormalization()(dense4)        
-        drop4 = Dropout(rate=0.2, seed=self.seed)(batchnorm4)                
+        layernorm4 = LayerNormalization(axis=-1, epsilon=0.001)(dense4)        
+        drop4 = Dropout(rate=0.2, seed=self.seed)(layernorm4)                
         dense5 = Dense(self.neurons, kernel_initializer='he_uniform', activation='relu')(drop4) 
-        batchnorm5 = BatchNormalization()(dense5)       
-        drop5 = Dropout(rate=0.2, seed=self.seed)(batchnorm5)          
+        layernorm5 = LayerNormalization(axis=-1, epsilon=0.001)(dense5)       
+        drop5 = Dropout(rate=0.2, seed=self.seed)(layernorm5)          
         dense6 = Dense(self.neurons, kernel_initializer='he_uniform', activation='relu')(drop5)           
         #----------------------------------------------------------------------        
         output = TimeDistributed(Dense(self.num_classes, activation='softmax', dtype='float32'))(dense6)
@@ -158,9 +162,14 @@ class NumMatrixModel:
         embeddingseq = Embedding(input_dim=self.num_classes, output_dim=self.embedding_dims)(sequence_input)        
         reshapeseq = Reshape((self.window_size, self.embedding_dims))(embeddingseq)       
         #---------------------------------------------------------------------- 
-        lstmseq1 = LSTM(self.neurons*2, use_bias=True, return_sequences=True, activation='tanh', dropout=0.2)(reshapeseq)
-        lstmseq2 = LSTM(self.neurons*3, use_bias=True, return_sequences=True, activation='tanh', dropout=0.2)(lstmseq1)             
-        lstmseq3 = LSTM(self.neurons*4, use_bias=True, return_sequences=False, activation='tanh', dropout=0.2)(lstmseq2) 
+        conv1 = Conv1D(self.neurons*2, kernel_size=6, padding='same', activation='relu')(reshapeseq) 
+        #----------------------------------------------------------------------
+        lstmseq1 = LSTM(self.neurons*2, use_bias=True, return_sequences=True, activation='tanh',
+                        dropout=0.2, kernel_regularizer=None)(conv1)
+        lstmseq2 = LSTM(self.neurons*3, use_bias=True, return_sequences=True, activation='tanh', 
+                        dropout=0.2, kernel_regularizer=None)(lstmseq1)             
+        lstmseq3 = LSTM(self.neurons*4, use_bias=True, return_sequences=False, activation='tanh', 
+                        dropout=0.2, kernel_regularizer=None)(lstmseq2) 
 
         # position input
         #----------------------------------------------------------------------
@@ -169,9 +178,14 @@ class NumMatrixModel:
         embeddingpos = Embedding(input_dim=self.num_classes, output_dim=self.embedding_dims)(position_input)        
         reshapepos = Reshape((self.window_size, self.embedding_dims))(embeddingpos)       
         #---------------------------------------------------------------------- 
-        lstmpos1 = LSTM(self.neurons*2, use_bias=True, return_sequences=True, activation='tanh', dropout=0.2)(reshapepos) 
-        lstmpos2 = LSTM(self.neurons*3, use_bias=True, return_sequences=True, activation='tanh', dropout=0.2)(lstmpos1)             
-        lstmpos3 = LSTM(self.neurons*4, use_bias=True, return_sequences=False, activation='tanh', dropout=0.2)(lstmpos2) 
+        conv2 = Conv1D(self.neurons*2, kernel_size=6, padding='same', activation='relu')(reshapepos) 
+        #----------------------------------------------------------------------
+        lstmpos1 = LSTM(self.neurons*2, use_bias=True, return_sequences=True, activation='tanh', 
+                        dropout=0.2, kernel_regularizer=None)(conv2) 
+        lstmpos2 = LSTM(self.neurons*3, use_bias=True, return_sequences=True, activation='tanh',
+                        dropout=0.2, kernel_regularizer=None)(lstmpos1)             
+        lstmpos3 = LSTM(self.neurons*4, use_bias=True, return_sequences=False, activation='tanh', 
+                        dropout=0.2, kernel_regularizer=None)(lstmpos2) 
         
         # concatenated model
         #----------------------------------------------------------------------
@@ -181,20 +195,20 @@ class NumMatrixModel:
         repeat_vector = RepeatVector(self.output_size)(densecat) 
         #----------------------------------------------------------------------                     
         dense1 = Dense(self.neurons*4, kernel_initializer='he_uniform', activation='relu')(repeat_vector)
-        batchnorm1 = BatchNormalization()(dense1)
-        drop1 = Dropout(rate=0.2, seed=self.seed)(batchnorm1)           
+        layernorm1 = BatchNormalization(axis=-1, epsilon=0.001)(dense1)
+        drop1 = Dropout(rate=0.2, seed=self.seed)(layernorm1)           
         dense2 = Dense(self.neurons*4, kernel_initializer='he_uniform', activation='relu')(drop1)
-        batchnorm2 = BatchNormalization()(dense2)
-        drop2 = Dropout(rate=0.2, seed=self.seed)(batchnorm2)    
+        layernorm2 = BatchNormalization(axis=-1, epsilon=0.001)(dense2)
+        drop2 = Dropout(rate=0.2, seed=self.seed)(layernorm2)    
         dense3 = Dense(self.neurons*2, kernel_initializer='he_uniform', activation='relu')(drop2)
-        batchnorm3 = BatchNormalization()(dense3) 
-        drop3 = Dropout(rate=0.2, seed=self.seed)(batchnorm3)                             
+        layernorm3 = BatchNormalization(axis=-1, epsilon=0.001)(dense3) 
+        drop3 = Dropout(rate=0.2, seed=self.seed)(layernorm3)                             
         dense4 = Dense(self.neurons*2, kernel_initializer='he_uniform', activation='relu')(drop3)
-        batchnorm4 = BatchNormalization()(dense4)        
-        drop4 = Dropout(rate=0.2, seed=self.seed)(batchnorm4)                
+        layernorm4 = BatchNormalization(axis=-1, epsilon=0.001)(dense4)        
+        drop4 = Dropout(rate=0.2, seed=self.seed)(layernorm4)                
         dense5 = Dense(self.neurons, kernel_initializer='he_uniform', activation='relu')(drop4) 
-        batchnorm5 = BatchNormalization()(dense5)       
-        drop5 = Dropout(rate=0.2, seed=self.seed)(batchnorm5)          
+        layernorm5 = BatchNormalization(axis=-1, epsilon=0.001)(dense5)       
+        drop5 = Dropout(rate=0.2, seed=self.seed)(layernorm5)          
         dense6 = Dense(self.neurons, kernel_initializer='he_uniform', activation='relu')(drop5)           
         #----------------------------------------------------------------------        
         output = TimeDistributed(Dense(self.num_classes, activation='softmax', dtype='float32'))(dense6)
