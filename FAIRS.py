@@ -38,8 +38,8 @@ while True:
         import modules.PMM_training
         del sys.modules['modules.PMM_training']           
     elif op_sel == 4:
-        import modules.timeseries_predictions
-        del sys.modules['modules.timeseries_predictions']
+        import modules.FAIRS_forecast
+        del sys.modules['modules.FAIRS_forecast']
     elif op_sel == 5:
         break
     

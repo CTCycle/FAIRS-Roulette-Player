@@ -1,10 +1,10 @@
 # FAIRS-forecasting
 
 ## Project description
-This script has been developed to allow roulette timeseries forecasting using a series of custom Recurrent Neural Network (RNN) models. Different approaches have been envisaged to accurately predict the probability of a number being the next extraction, by relying on both single number or categorical classification (black, red and green). THe rationale behind the different models is to use Long Short-Term Memory (LSTM) together with Embedding functionality for processing sequential data, having as output the probability distribution over possible next numbers. The input sequence is transformed into a dense vectors of fixed size, before being processed recursively by a series of LSTM layers with increasing neurons number. Once the temporal dependencies from the input sequence are learned by the model, a series of Dense layers map the extracted features to the output space. The final Dense layer is provided with softmax activation in order to output a probability distribution over possible next numbers. Overfitting is largely prevented by using Dropout layers in between.
+This script has been developed to allow roulette timeseries forecasting using a series of custom Recurrent Neural Network (RNN) models. Different approaches have been envisaged to accurately predict the probability of a number being extracted next, by relying on both single number or categorical classification (black, red and green). THe rationale behind the different models is to use Long Short-Term Memory (LSTM) together with Embedding functionality for processing sequential data, having as output the probability distribution over possible next numbers. The input sequence is transformed into a dense vectors of fixed size, before being processed recursively by a series of LSTM layers with increasing neurons number. Once the temporal dependencies from the input sequence are learned by the model, a series of Dense layers map the extracted features to the output space. The final Dense layer is provided with softmax activation in order to output a probability distribution over possible next numbers. Overfitting is largely prevented by using Dropout layers in between.
 
 ## FAIRS Deep Learning models
-FAIRS is based on two different deep learning (DL) forecasting models. Both models are structured as recurrent neural networks that use sequences of previous observations as inputs, and the next expected observation (or many of these) as output. 
+FAIRS is based on two different deep learning (DL) models for timeseries forecasting. Both models are structured as recurrent neural networks that use fixed-length sequences of past observations as inputs, while the next expected observation (or a fixed-length sequence of these) as output. 
 ...
 
 ### ColorCode Model (CCM)
@@ -33,8 +33,7 @@ The configurations.py file allows to change the script configuration. The follow
 - `use_mixed_precision:` whether or not to use mixed precision for faster training (mix float16/float32)
 - `use_tensorboard:` activate or deactivate tensorboard logging
 - `XLA_acceleration:` use of linear algebra acceleration for faster training 
-- `training_device:` select the training device (CPU or GPU) 
-- `neuron_baseline:` lowest number of neurons as reference 
+- `training_device:` select the training device (CPU or GPU)
 - `epochs:` number of training iterations
 - `learning_rate:` learning rate of the model during training
 - `batch_size:` size of batches to be fed to the model during training
@@ -45,6 +44,7 @@ The configurations.py file allows to change the script configuration. The follow
 - `test_size:` fraction of data to leave as test data
 - `window_size:` length of the input timeseries window
 - `output_size:` number of next points to predict (output sequence)
+- `predictions_size:` number of timeseries points to take for the predictions inputs
 
 ### Requirements
 This application has been developed and tested using the following dependencies (Python 3.10.12):

@@ -75,13 +75,12 @@ class RealTimeHistory(keras.callbacks.Callback):
 #==============================================================================
 class ColorCodeModel:
 
-    def __init__(self, learning_rate, window_size, output_size, neurons, embedding_dims, 
+    def __init__(self, learning_rate, window_size, output_size, embedding_dims, 
                  num_classes, seed, XLA_state):
 
         self.learning_rate = learning_rate
         self.window_size = window_size
-        self.output_size = output_size
-        self.neurons = neurons
+        self.output_size = output_size        
         self.embedding_dims = embedding_dims        
         self.num_classes = num_classes
         self.seed = seed       
@@ -96,33 +95,33 @@ class ColorCodeModel:
         embeddingseq = Embedding(input_dim=self.num_classes, output_dim=self.embedding_dims)(sequence_input)        
         reshapeseq = Reshape((self.window_size, self.embedding_dims))(embeddingseq)       
         #---------------------------------------------------------------------- 
-        lstmseq1 = LSTM(self.neurons*2, use_bias=True, return_sequences=True, activation='tanh', 
+        lstmseq1 = LSTM(32, use_bias=True, return_sequences=True, activation='tanh', 
                         dropout=0.2, kernel_regularizer=regularizers.l1_l2(l1=0.01, l2=0.01))(reshapeseq)
-        lstmseq2 = LSTM(self.neurons*3, use_bias=True, return_sequences=True, activation='tanh', 
+        lstmseq2 = LSTM(64, use_bias=True, return_sequences=True, activation='tanh', 
                         dropout=0.2, kernel_regularizer=regularizers.l1_l2(l1=0.01, l2=0.01))(lstmseq1)             
-        lstmseq3 = LSTM(self.neurons*4, use_bias=True, return_sequences=False, activation='tanh', 
+        lstmseq3 = LSTM(128, use_bias=True, return_sequences=False, activation='tanh', 
                         dropout=0.2, kernel_regularizer=regularizers.l1_l2(l1=0.01, l2=0.01))(lstmseq2) 
 
         # repeated vector
         #----------------------------------------------------------------------        
         repeat_vector = RepeatVector(self.output_size)(lstmseq3) 
         #----------------------------------------------------------------------                     
-        dense1 = Dense(self.neurons*4, kernel_initializer='he_uniform', activation='relu')(repeat_vector)
+        dense1 = Dense(256, kernel_initializer='he_uniform', activation='relu')(repeat_vector)
         layernorm1 = LayerNormalization(axis=-1, epsilon=0.001)(dense1)
         drop1 = Dropout(rate=0.2, seed=self.seed)(layernorm1)           
-        dense2 = Dense(self.neurons*4, kernel_initializer='he_uniform', activation='relu')(drop1)
+        dense2 = Dense(256, kernel_initializer='he_uniform', activation='relu')(drop1)
         layernorm2 = LayerNormalization(axis=-1, epsilon=0.001)(dense2)
         drop2 = Dropout(rate=0.2, seed=self.seed)(layernorm2)    
-        dense3 = Dense(self.neurons*2, kernel_initializer='he_uniform', activation='relu')(drop2)
+        dense3 = Dense(128, kernel_initializer='he_uniform', activation='relu')(drop2)
         layernorm3 = LayerNormalization(axis=-1, epsilon=0.001)(dense3) 
         drop3 = Dropout(rate=0.2, seed=self.seed)(layernorm3)                             
-        dense4 = Dense(self.neurons*2, kernel_initializer='he_uniform', activation='relu')(drop3)
+        dense4 = Dense(64, kernel_initializer='he_uniform', activation='relu')(drop3)
         layernorm4 = LayerNormalization(axis=-1, epsilon=0.001)(dense4)        
         drop4 = Dropout(rate=0.2, seed=self.seed)(layernorm4)                
-        dense5 = Dense(self.neurons, kernel_initializer='he_uniform', activation='relu')(drop4) 
+        dense5 = Dense(64, kernel_initializer='he_uniform', activation='relu')(drop4) 
         layernorm5 = LayerNormalization(axis=-1, epsilon=0.001)(dense5)       
         drop5 = Dropout(rate=0.2, seed=self.seed)(layernorm5)          
-        dense6 = Dense(self.neurons, kernel_initializer='he_uniform', activation='relu')(drop5)           
+        dense6 = Dense(32, kernel_initializer='he_uniform', activation='relu')(drop5)           
         #----------------------------------------------------------------------        
         output = TimeDistributed(Dense(self.num_classes, activation='softmax', dtype='float32'))(dense6)
 
@@ -141,13 +140,12 @@ class ColorCodeModel:
 #==============================================================================
 class NumMatrixModel:
 
-    def __init__(self, learning_rate, window_size, output_size, neurons, embedding_dims, 
+    def __init__(self, learning_rate, window_size, output_size, embedding_dims, 
                  num_classes, seed, XLA_state):
 
         self.learning_rate = learning_rate
         self.window_size = window_size
-        self.output_size = output_size
-        self.neurons = neurons
+        self.output_size = output_size        
         self.embedding_dims = embedding_dims        
         self.num_classes = num_classes
         self.seed = seed       
@@ -162,13 +160,13 @@ class NumMatrixModel:
         embeddingseq = Embedding(input_dim=self.num_classes, output_dim=self.embedding_dims)(sequence_input)        
         reshapeseq = Reshape((self.window_size, self.embedding_dims))(embeddingseq)       
         #---------------------------------------------------------------------- 
-        conv1 = Conv1D(self.neurons*2, kernel_size=6, padding='same', activation='relu')(reshapeseq) 
+        conv1 = Conv1D(64, kernel_size=6, padding='same', activation='relu')(reshapeseq) 
         #----------------------------------------------------------------------
-        lstmseq1 = LSTM(self.neurons*2, use_bias=True, return_sequences=True, activation='tanh',
+        lstmseq1 = LSTM(64, use_bias=True, return_sequences=True, activation='tanh',
                         dropout=0.2, kernel_regularizer=None)(conv1)
-        lstmseq2 = LSTM(self.neurons*3, use_bias=True, return_sequences=True, activation='tanh', 
+        lstmseq2 = LSTM(128, use_bias=True, return_sequences=True, activation='tanh', 
                         dropout=0.2, kernel_regularizer=None)(lstmseq1)             
-        lstmseq3 = LSTM(self.neurons*4, use_bias=True, return_sequences=False, activation='tanh', 
+        lstmseq3 = LSTM(256, use_bias=True, return_sequences=False, activation='tanh', 
                         dropout=0.2, kernel_regularizer=None)(lstmseq2) 
 
         # position input
@@ -178,38 +176,38 @@ class NumMatrixModel:
         embeddingpos = Embedding(input_dim=self.num_classes, output_dim=self.embedding_dims)(position_input)        
         reshapepos = Reshape((self.window_size, self.embedding_dims))(embeddingpos)       
         #---------------------------------------------------------------------- 
-        conv2 = Conv1D(self.neurons*2, kernel_size=6, padding='same', activation='relu')(reshapepos) 
+        conv2 = Conv1D(64, kernel_size=6, padding='same', activation='relu')(reshapepos) 
         #----------------------------------------------------------------------
-        lstmpos1 = LSTM(self.neurons*2, use_bias=True, return_sequences=True, activation='tanh', 
+        lstmpos1 = LSTM(64, use_bias=True, return_sequences=True, activation='tanh', 
                         dropout=0.2, kernel_regularizer=None)(conv2) 
-        lstmpos2 = LSTM(self.neurons*3, use_bias=True, return_sequences=True, activation='tanh',
+        lstmpos2 = LSTM(128, use_bias=True, return_sequences=True, activation='tanh',
                         dropout=0.2, kernel_regularizer=None)(lstmpos1)             
-        lstmpos3 = LSTM(self.neurons*4, use_bias=True, return_sequences=False, activation='tanh', 
+        lstmpos3 = LSTM(256, use_bias=True, return_sequences=False, activation='tanh', 
                         dropout=0.2, kernel_regularizer=None)(lstmpos2) 
         
         # concatenated model
         #----------------------------------------------------------------------
         concat = Concatenate()([lstmseq3, lstmpos3])
-        densecat = Dense(self.neurons*4, kernel_initializer='he_uniform', activation='relu')(concat)
+        densecat = Dense(256, kernel_initializer='he_uniform', activation='relu')(concat)
         #----------------------------------------------------------------------        
         repeat_vector = RepeatVector(self.output_size)(densecat) 
         #----------------------------------------------------------------------                     
-        dense1 = Dense(self.neurons*4, kernel_initializer='he_uniform', activation='relu')(repeat_vector)
+        dense1 = Dense(256, kernel_initializer='he_uniform', activation='relu')(repeat_vector)
         layernorm1 = BatchNormalization(axis=-1, epsilon=0.001)(dense1)
         drop1 = Dropout(rate=0.2, seed=self.seed)(layernorm1)           
-        dense2 = Dense(self.neurons*4, kernel_initializer='he_uniform', activation='relu')(drop1)
+        dense2 = Dense(256, kernel_initializer='he_uniform', activation='relu')(drop1)
         layernorm2 = BatchNormalization(axis=-1, epsilon=0.001)(dense2)
         drop2 = Dropout(rate=0.2, seed=self.seed)(layernorm2)    
-        dense3 = Dense(self.neurons*2, kernel_initializer='he_uniform', activation='relu')(drop2)
+        dense3 = Dense(128, kernel_initializer='he_uniform', activation='relu')(drop2)
         layernorm3 = BatchNormalization(axis=-1, epsilon=0.001)(dense3) 
         drop3 = Dropout(rate=0.2, seed=self.seed)(layernorm3)                             
-        dense4 = Dense(self.neurons*2, kernel_initializer='he_uniform', activation='relu')(drop3)
+        dense4 = Dense(64, kernel_initializer='he_uniform', activation='relu')(drop3)
         layernorm4 = BatchNormalization(axis=-1, epsilon=0.001)(dense4)        
         drop4 = Dropout(rate=0.2, seed=self.seed)(layernorm4)                
-        dense5 = Dense(self.neurons, kernel_initializer='he_uniform', activation='relu')(drop4) 
+        dense5 = Dense(64, kernel_initializer='he_uniform', activation='relu')(drop4) 
         layernorm5 = BatchNormalization(axis=-1, epsilon=0.001)(dense5)       
         drop5 = Dropout(rate=0.2, seed=self.seed)(layernorm5)          
-        dense6 = Dense(self.neurons, kernel_initializer='he_uniform', activation='relu')(drop5)           
+        dense6 = Dense(64, kernel_initializer='he_uniform', activation='relu')(drop5)           
         #----------------------------------------------------------------------        
         output = TimeDistributed(Dense(self.num_classes, activation='softmax', dtype='float32'))(dense6)
 
@@ -274,31 +272,35 @@ class ModelTraining:
         for entry in os.scandir(path):
             if entry.is_dir():
                 model_folders.append(entry.name)
-        model_folders.sort()
-        index_list = [idx + 1 for idx, item in enumerate(model_folders)]     
-        print('Please select a pretrained model:') 
-        print()
-        for i, directory in enumerate(model_folders):
-            print(f'{i + 1} - {directory}')        
-        print()               
-        while True:
-           try:
-              dir_index = int(input('Type the model index to select it: '))
-              print()
-           except:
-              continue
-           break                         
-        while dir_index not in index_list:
-           try:
-               dir_index = int(input('Input is not valid! Try again: '))
-               print()
-           except:
-               continue  
-           
-        model_path = os.path.join(path, model_folders[dir_index - 1])
-        model = keras.models.load_model(model_path)
+        if len(model_folders) > 1:
+            model_folders.sort()
+            index_list = [idx + 1 for idx, item in enumerate(model_folders)]     
+            print('Please select a pretrained model:') 
+            print()
+            for i, directory in enumerate(model_folders):
+                print(f'{i + 1} - {directory}')        
+            print()               
+            while True:
+                try:
+                    dir_index = int(input('Type the model index to select it: '))
+                    print()
+                except:
+                    continue
+                break                         
+            while dir_index not in index_list:
+                try:
+                    dir_index = int(input('Input is not valid! Try again: '))
+                    print()
+                except:
+                    continue
+            self.model_path = os.path.join(path, model_folders[dir_index - 1])
+
+        elif len(model_folders) == 1:
+            self.model_path = os.path.join(path, model_folders[0])            
+        
+        model = keras.models.load_model(self.model_path)
         if load_parameters==True:
-            path = os.path.join(model_path, 'model_parameters.json')
+            path = os.path.join(self.model_path, 'model_parameters.json')
             with open(path, 'r') as f:
                 self.model_configuration = json.load(f)            
         

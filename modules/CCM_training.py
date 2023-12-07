@@ -72,9 +72,7 @@ trainext, testext = PP.split_timeseries(ext_timeseries, cnf.test_size, inverted=
 train_samples, test_samples = trainext.shape[0], testext.shape[0]
 X_train_ext, Y_train_ext = PP.timeseries_labeling(trainext, cnf.window_size, cnf.output_size) 
 if cnf.use_test_data == True:      
-    X_test_ext, Y_test_ext = PP.timeseries_labeling(testext, cnf.window_size, cnf.output_size)  
-    
- 
+    X_test_ext, Y_test_ext = PP.timeseries_labeling(testext, cnf.window_size, cnf.output_size)   
 
 # [ONE HOT ENCODE THE LABELS]
 #==============================================================================
@@ -104,15 +102,22 @@ if cnf.use_test_data == True:
 print('''STEP 3 -----> Save preprocessed data on local hard drive
 ''')
 
+# create model folder
+#------------------------------------------------------------------------------
+model_savepath = PP.model_savefolder(GlobVar.model_path, 'FAIRSCCM')
+pp_path = os.path.join(model_savepath, 'preprocessed data')
+if not os.path.exists(pp_path):
+    os.mkdir(pp_path)
+
 # save encoder
 #------------------------------------------------------------------------------
-encoder_path = os.path.join(GlobVar.pp_path, 'categorical_encoder.pkl')
+encoder_path = os.path.join(pp_path, 'categorical_encoder.pkl')
 with open(encoder_path, 'wb') as file:
     pickle.dump(categorical_encoder, file)
 
 # save csv files
 #------------------------------------------------------------------------------
-file_loc = os.path.join(GlobVar.pp_path, 'CCM_preprocessed.xlsx')  
+file_loc = os.path.join(pp_path, 'CCM_preprocessed.xlsx')  
 writer = pd.ExcelWriter(file_loc, engine='xlsxwriter')
 df_X_train.to_excel(writer, sheet_name='train inputs', index=False)
 df_Y_train_OHE.to_excel(writer, sheet_name='train labels', index=False)
@@ -157,13 +162,11 @@ print('''STEP 4 -----> Build the model and start training
 
 trainworker = ModelTraining(device=cnf.training_device, seed=cnf.seed, 
                             use_mixed_precision=cnf.use_mixed_precision) 
-model_savepath = PP.model_savefolder(GlobVar.model_path, 'FAIRSCCM')
-
 # initialize model class
 #------------------------------------------------------------------------------
 modelframe = ColorCodeModel(cnf.learning_rate, cnf.window_size, cnf.output_size, 
-                            cnf.neuron_baseline, cnf.embedding_size, len(categories[0]), 
-                            seed=cnf.seed, XLA_state=cnf.XLA_acceleration)
+                            cnf.embedding_size, len(categories[0]), seed=cnf.seed, 
+                            XLA_state=cnf.XLA_acceleration)
 model = modelframe.build()
 model.summary(expand_nested=True)
 
@@ -209,8 +212,7 @@ model.save(model_savepath)
 #------------------------------------------------------------------------------
 parameters = {'Model name' : 'CCM',
               'Number of train samples' : train_samples,
-              'Number of test samples' : test_samples,              
-              'Lowest neurons number' : cnf.neuron_baseline,
+              'Number of test samples' : test_samples,               
               'Window size' : cnf.window_size,
               'Output seq length' : cnf.output_size,
               'Embedding dimensions' : cnf.embedding_size,             
@@ -250,8 +252,7 @@ Classes observed in predicted train labels:
 # generate confusion matrix from train set (if class num is equal)
 #------------------------------------------------------------------------------
 try:
-    validator.FAIRS_confusion(Y_true, Y_pred, 'train', model_savepath)
-    #validator.FAIRS_ROC_curve(y_true_labels, y_pred_labels, categories_mapping, 'train', model_savepath, 400)
+    validator.FAIRS_confusion(Y_true, Y_pred, 'train', model_savepath)    
 except Exception as e:
     print('Could not generate confusion matrix for train dataset')
     print('Error:', str(e))
@@ -281,8 +282,7 @@ Classes observed in predicted test labels:
 # generate confusion matrix from test set (if class num is equal)
 #------------------------------------------------------------------------------
     try:
-        validator.FAIRS_confusion(Y_true, Y_pred, 'test', model_savepath)
-        #validator.FAIRS_ROC_curve(y_true_labels, y_pred_labels, categories_mapping, 'test', model_savepath, 400)
+        validator.FAIRS_confusion(Y_true, Y_pred, 'test', model_savepath)        
     except Exception as e:
         print('Could not generate confusion matrix for test dataset')
         print('Error:', str(e))

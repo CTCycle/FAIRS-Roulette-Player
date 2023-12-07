@@ -2,21 +2,20 @@
 #------------------------------------------------------------------------------
 generate_model_graph = True
 use_mixed_precision = True
-use_tensorboard = True
+use_tensorboard = False
 XLA_acceleration = False
 
 # Define variables for the training
 #------------------------------------------------------------------------------
 seed = 42
 training_device = 'GPU'
-neuron_baseline = 96
-epochs = 1200
+epochs = 50
 learning_rate = 0.001
-batch_size = 800
+batch_size = 1020
 
 # embedding and convolutions
 #------------------------------------------------------------------------------
-embedding_size = 256
+embedding_size = 128
 
 # Define variables for preprocessing
 #------------------------------------------------------------------------------
@@ -24,8 +23,10 @@ use_test_data = True
 invert_test = True
 data_size = 1.0
 test_size = 0.2
-window_size = 100
+window_size = 50
 output_size = 1
+
+predictions_size = 1500
 
 # mapping data
 #------------------------------------------------------------------------------
