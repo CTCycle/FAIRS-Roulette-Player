@@ -184,17 +184,30 @@ if cnf.generate_model_graph == True:
 # use command prompt on the model folder and (upon activating environment), 
 # use the bash command: python -m tensorboard.main --logdir = tensorboard/
 #==============================================================================
+print(f'''
+-------------------------------------------------------------------------------
+TRAINING INFO
+-------------------------------------------------------------------------------
+Number of epochs: {cnf.epochs}
+Window size:      {cnf.window_size}
+Batch size:       {cnf.batch_size} 
+Learning rate:    {cnf.learning_rate} 
+-------------------------------------------------------------------------------  
+''')
 
-# training loop and model saving at end
+# initialize real time plot callback
 #------------------------------------------------------------------------------
-print(f'''Start model training for {cnf.epochs} epochs and batch size of {cnf.batch_size}
-       ''')
 RTH_callback = RealTimeHistory(model_savepath, validation=cnf.use_test_data)
+
+# setting for validation data
+#------------------------------------------------------------------------------
 if cnf.use_test_data == True:
     validation_data = (X_test_ext, Y_test_OHE)   
 else:
     validation_data = None 
 
+# initialize tensorboard
+#------------------------------------------------------------------------------
 if cnf.use_tensorboard == True:
     log_path = os.path.join(model_savepath, 'tensorboard')
     tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_path, histogram_freq=1)
@@ -202,17 +215,17 @@ if cnf.use_tensorboard == True:
 else:    
     callbacks = [RTH_callback]
 
+# training loop
+#------------------------------------------------------------------------------
 training = model.fit(x=X_train_ext, y=Y_train_OHE, batch_size=cnf.batch_size, 
                      validation_data=validation_data, epochs = cnf.epochs, 
                      callbacks = callbacks, workers = 6, use_multiprocessing=True)
 
-model.save(model_savepath)
-
-# save model parameters in txt files
+# save model data and model parameters in txt files
 #------------------------------------------------------------------------------
-parameters = {'Model name' : 'CCM',
+parameters = {'Model name' : 'NMM',
               'Number of train samples' : train_samples,
-              'Number of test samples' : test_samples,               
+              'Number of test samples' : test_samples,             
               'Window size' : cnf.window_size,
               'Output seq length' : cnf.output_size,
               'Embedding dimensions' : cnf.embedding_size,             
@@ -220,6 +233,7 @@ parameters = {'Model name' : 'CCM',
               'Learning rate' : cnf.learning_rate,
               'Epochs' : cnf.epochs}
 
+model.save(model_savepath)
 trainworker.model_parameters(parameters, model_savepath)
 
 # [MODEL VALIDATION]

@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pickle
 import tensorflow as tf
-from sklearn.preprocessing import OrdinalEncoder, OneHotEncoder
+from sklearn.preprocessing import OneHotEncoder
 from keras.utils.vis_utils import plot_model
 
 # set warnings
@@ -191,17 +191,30 @@ if cnf.generate_model_graph == True:
 # use command prompt on the model folder and (upon activating environment), 
 # use the bash command: python -m tensorboard.main --logdir = tensorboard/
 #==============================================================================
+print(f'''
+-------------------------------------------------------------------------------
+TRAINING INFO
+-------------------------------------------------------------------------------
+Number of epochs: {cnf.epochs}
+Window size:      {cnf.window_size}
+Batch size:       {cnf.batch_size} 
+Learning rate:    {cnf.learning_rate} 
+-------------------------------------------------------------------------------  
+''')
 
-# training loop and model saving at end
+# initialize real time plot callback
 #------------------------------------------------------------------------------
-print(f'''Start model training for {cnf.epochs} epochs and batch size of {cnf.batch_size}
-       ''')
 RTH_callback = RealTimeHistory(model_savepath, validation=cnf.use_test_data)
+
+# setting for validation data
+#------------------------------------------------------------------------------
 if cnf.use_test_data == True:
     validation_data = ([X_test_ext, X_test_pos], Y_test_OHE)   
 else:
     validation_data = None 
 
+# initialize tensorboard
+#------------------------------------------------------------------------------
 if cnf.use_tensorboard == True:
     log_path = os.path.join(model_savepath, 'tensorboard')
     tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_path, histogram_freq=1)
@@ -209,13 +222,13 @@ if cnf.use_tensorboard == True:
 else:    
     callbacks = [RTH_callback]
 
+# training loop
+#------------------------------------------------------------------------------
 training = model.fit(x=[X_train_ext, X_train_pos], y=Y_train_OHE, batch_size=cnf.batch_size, 
                      validation_data=validation_data, epochs = cnf.epochs, 
                      callbacks = callbacks, workers = 6, use_multiprocessing=True)
 
-model.save(model_savepath)
-
-# save model parameters in txt files
+# save model data and model parameters in txt files
 #------------------------------------------------------------------------------
 parameters = {'Model name' : 'NMM',
               'Number of train samples' : train_samples,
@@ -227,6 +240,7 @@ parameters = {'Model name' : 'NMM',
               'Learning rate' : cnf.learning_rate,
               'Epochs' : cnf.epochs}
 
+model.save(model_savepath)
 trainworker.model_parameters(parameters, model_savepath)
 
 # [MODEL VALIDATION]
@@ -260,8 +274,7 @@ Classes observed in predicted train labels:
 # generate confusion matrix from train set (if class num is equal)
 #------------------------------------------------------------------------------
 try:
-    validator.FAIRS_confusion(Y_true, Y_pred, 'train', model_savepath)
-    #validator.FAIRS_ROC_curve(y_true_labels, y_pred_labels, categories_mapping, 'train', model_savepath, 400)
+    validator.FAIRS_confusion(Y_true, Y_pred, 'train', model_savepath)    
 except Exception as e:
     print('Could not generate confusion matrix for train dataset')
     print('Error:', str(e))
@@ -291,8 +304,7 @@ Classes observed in predicted test labels:
 # generate confusion matrix from test set (if class num is equal)
 #------------------------------------------------------------------------------
     try:
-        validator.FAIRS_confusion(Y_true, Y_pred, 'test', model_savepath)
-        #validator.FAIRS_ROC_curve(y_true_labels, y_pred_labels, categories_mapping, 'test', model_savepath, 400)
+        validator.FAIRS_confusion(Y_true, Y_pred, 'test', model_savepath)        
     except Exception as e:
         print('Could not generate confusion matrix for test dataset')
         print('Error:', str(e))
