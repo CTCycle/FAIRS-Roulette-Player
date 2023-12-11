@@ -96,11 +96,11 @@ class ColorCodeModel:
         embedding = Embedding(input_dim=self.num_classes, output_dim=self.embedding_dims)(sequence_input)        
         reshape = Reshape((self.window_size, self.embedding_dims))(embedding)       
         #---------------------------------------------------------------------- 
-        conv1 = Conv1D(64, kernel_size=self.kernel_size, padding='same', activation='relu')(reshape) 
+        conv1 = Conv1D(128, kernel_size=self.kernel_size, padding='same', activation='relu')(reshape) 
         pool1 = MaxPooling1D()(conv1)
-        conv2 = Conv1D(128, kernel_size=self.kernel_size, padding='same', activation='relu')(pool1) 
+        conv2 = Conv1D(256, kernel_size=self.kernel_size, padding='same', activation='relu')(pool1) 
         pool2 = MaxPooling1D()(conv2)
-        conv3 = Conv1D(256, kernel_size=self.kernel_size, padding='same', activation='relu')(pool2)        
+        conv3 = Conv1D(512, kernel_size=self.kernel_size, padding='same', activation='relu')(pool2)        
         #----------------------------------------------------------------------
         lstm1 = LSTM(128, use_bias=True, return_sequences=True, activation='tanh', 
                      dropout=0.2, kernel_regularizer=None)(conv3)
@@ -113,20 +113,20 @@ class ColorCodeModel:
         #----------------------------------------------------------------------                     
         dense1 = Dense(512, kernel_initializer='he_uniform', activation='relu')(repeat_vector)
         batchnorm1 = BatchNormalization(axis=-1, epsilon=0.001)(dense1)
-        drop1 = Dropout(rate=0.2, seed=self.seed)(batchnorm1)           
-        dense2 = Dense(256, kernel_initializer='he_uniform', activation='relu')(drop1)
+        drop1 = Dropout(rate=0.4, seed=self.seed)(batchnorm1)           
+        dense2 = Dense(512, kernel_initializer='he_uniform', activation='relu')(drop1)
         batchnorm2 = BatchNormalization(axis=-1, epsilon=0.001)(dense2)
-        drop2 = Dropout(rate=0.2, seed=self.seed)(batchnorm2)    
+        drop2 = Dropout(rate=0.4, seed=self.seed)(batchnorm2)    
         dense3 = Dense(256, kernel_initializer='he_uniform', activation='relu')(drop2)
         batchnorm3 = BatchNormalization(axis=-1, epsilon=0.001)(dense3) 
-        drop3 = Dropout(rate=0.2, seed=self.seed)(batchnorm3)                             
-        dense4 = Dense(128, kernel_initializer='he_uniform', activation='relu')(drop3)
+        drop3 = Dropout(rate=0.3, seed=self.seed)(batchnorm3)                             
+        dense4 = Dense(256, kernel_initializer='he_uniform', activation='relu')(drop3)
         batchnorm4 = BatchNormalization(axis=-1, epsilon=0.001)(dense4)        
-        drop4 = Dropout(rate=0.2, seed=self.seed)(batchnorm4)                
+        drop4 = Dropout(rate=0.3, seed=self.seed)(batchnorm4)                
         dense5 = Dense(128, kernel_initializer='he_uniform', activation='relu')(drop4) 
         batchnorm5 = BatchNormalization(axis=-1, epsilon=0.001)(dense5)       
         drop5 = Dropout(rate=0.2, seed=self.seed)(batchnorm5)          
-        dense6 = Dense(96, kernel_initializer='he_uniform', activation='relu')(drop5)           
+        dense6 = Dense(64, kernel_initializer='he_uniform', activation='relu')(drop5)           
         #----------------------------------------------------------------------        
         output = TimeDistributed(Dense(self.num_classes, activation='softmax', dtype='float32'))(dense6)
         #----------------------------------------------------------------------
@@ -145,13 +145,14 @@ class ColorCodeModel:
 #==============================================================================
 class NumMatrixModel:
 
-    def __init__(self, learning_rate, window_size, output_size, embedding_dims, 
-                 num_classes, seed, XLA_state):
+    def __init__(self, learning_rate, window_size, output_size, embedding_dims,
+                 kernel_size, num_classes, seed, XLA_state):
 
         self.learning_rate = learning_rate
         self.window_size = window_size
         self.output_size = output_size        
-        self.embedding_dims = embedding_dims        
+        self.embedding_dims = embedding_dims
+        self.kernel_size = kernel_size          
         self.num_classes = num_classes
         self.seed = seed       
         self.XLA_state = XLA_state        
