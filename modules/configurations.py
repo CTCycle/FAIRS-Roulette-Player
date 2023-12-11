@@ -26,6 +26,13 @@ test_size = 0.2
 window_size = 50
 output_size = 1
 
+# k fold training
+#------------------------------------------------------------------------------
+k_fold = 12
+k_epochs = 150
+
+# Predictions variables
+#------------------------------------------------------------------------------
 predictions_size = 1500
 
 # mapping data

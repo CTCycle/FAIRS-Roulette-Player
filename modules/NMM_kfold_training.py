@@ -3,7 +3,7 @@ import sys
 import numpy as np
 import pandas as pd
 import pickle
-import tensorflow as tf
+from sklearn.model_selection import TimeSeriesSplit
 from sklearn.preprocessing import OneHotEncoder
 from keras.utils.vis_utils import plot_model
 
@@ -206,27 +206,22 @@ Learning rate:    {cnf.learning_rate}
 #------------------------------------------------------------------------------
 RTH_callback = RealTimeHistory(model_savepath, validation=cnf.use_test_data)
 
-# setting for validation data
+# define k fold strategy
 #------------------------------------------------------------------------------
-if cnf.use_test_data == True:
-    validation_data = ([X_test_ext, X_test_pos], Y_test_OHE)   
-else:
-    validation_data = None 
+kfold = TimeSeriesSplit(n_splits=cnf.k_fold)
 
-# initialize tensorboard
+# training loop with k fold and save model at the end
 #------------------------------------------------------------------------------
-if cnf.use_tensorboard == True:
-    log_path = os.path.join(model_savepath, 'tensorboard')
-    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_path, histogram_freq=1)
-    callbacks = [RTH_callback, tensorboard_callback]    
-else:    
-    callbacks = [RTH_callback]
-
-# training loop
-#------------------------------------------------------------------------------
-training = model.fit(x=[X_train_ext, X_train_pos], y=Y_train_OHE, batch_size=cnf.batch_size, 
-                     validation_data=validation_data, epochs = cnf.epochs, 
-                     callbacks = callbacks, workers = 6, use_multiprocessing=True)
+model_scores = []
+for train, test in kfold.split(X_train_ext):
+    train_model_inputs = [X_train_ext[train], X_train_pos[train]]
+    train_model_outputs = Y_train_OHE[train]
+    test_data = [[X_train_ext[test], X_train_pos[test]], Y_train_OHE[test]]  
+    training = model.fit(x=train_model_inputs, y=train_model_outputs, batch_size=cnf.batch_size, 
+                     validation_data=test_data, epochs = cnf.k_epochs, verbose=1, shuffle=False, 
+                     callbacks = [RTH_callback], workers = 6, use_multiprocessing=True)    
+    score = model.evaluate(test_data[0], verbose=0)
+    model_scores.append(score)
 
 # save model data and model parameters in txt files
 #------------------------------------------------------------------------------

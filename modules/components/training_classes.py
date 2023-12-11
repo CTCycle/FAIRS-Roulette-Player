@@ -100,9 +100,7 @@ class ColorCodeModel:
         lstmseq2 = LSTM(64, use_bias=True, return_sequences=True, activation='tanh', 
                         dropout=0.2, kernel_regularizer=regularizers.l1_l2(l1=0.01, l2=0.01))(lstmseq1)             
         lstmseq3 = LSTM(128, use_bias=True, return_sequences=False, activation='tanh', 
-                        dropout=0.2, kernel_regularizer=regularizers.l1_l2(l1=0.01, l2=0.01))(lstmseq2) 
-
-        # repeated vector
+                        dropout=0.2, kernel_regularizer=regularizers.l1_l2(l1=0.01, l2=0.01))(lstmseq2)         
         #----------------------------------------------------------------------        
         repeat_vector = RepeatVector(self.output_size)(lstmseq3) 
         #----------------------------------------------------------------------                     
@@ -124,7 +122,7 @@ class ColorCodeModel:
         dense6 = Dense(32, kernel_initializer='he_uniform', activation='relu')(drop5)           
         #----------------------------------------------------------------------        
         output = TimeDistributed(Dense(self.num_classes, activation='softmax', dtype='float32'))(dense6)
-
+        #----------------------------------------------------------------------
         model = Model(inputs = sequence_input, outputs = output, name = 'CCM')    
         opt = keras.optimizers.Adam(learning_rate=self.learning_rate)
         loss = keras.losses.CategoricalCrossentropy(from_logits=False)
@@ -153,9 +151,9 @@ class NumMatrixModel:
 
     def build(self):                
         
-        # encoded extractions input
-        #----------------------------------------------------------------------
-        sequence_input = Input(shape=(self.window_size, 1))                   
+        
+        sequence_input = Input(shape=(self.window_size, 1))
+        position_input = Input(shape=(self.window_size, 1))                   
         #----------------------------------------------------------------------
         embeddingseq = Embedding(input_dim=self.num_classes, output_dim=self.embedding_dims)(sequence_input)        
         reshapeseq = Reshape((self.window_size, self.embedding_dims))(embeddingseq)       
@@ -167,11 +165,7 @@ class NumMatrixModel:
         lstmseq2 = LSTM(128, use_bias=True, return_sequences=True, activation='tanh', 
                         dropout=0.2, kernel_regularizer=None)(lstmseq1)             
         lstmseq3 = LSTM(256, use_bias=True, return_sequences=False, activation='tanh', 
-                        dropout=0.2, kernel_regularizer=None)(lstmseq2) 
-
-        # position input
-        #----------------------------------------------------------------------
-        position_input = Input(shape=(self.window_size, 1))                   
+                        dropout=0.2, kernel_regularizer=None)(lstmseq2)                          
         #----------------------------------------------------------------------
         embeddingpos = Embedding(input_dim=self.num_classes, output_dim=self.embedding_dims)(position_input)        
         reshapepos = Reshape((self.window_size, self.embedding_dims))(embeddingpos)       
@@ -183,9 +177,7 @@ class NumMatrixModel:
         lstmpos2 = LSTM(128, use_bias=True, return_sequences=True, activation='tanh',
                         dropout=0.2, kernel_regularizer=None)(lstmpos1)             
         lstmpos3 = LSTM(256, use_bias=True, return_sequences=False, activation='tanh', 
-                        dropout=0.2, kernel_regularizer=None)(lstmpos2) 
-        
-        # concatenated model
+                        dropout=0.2, kernel_regularizer=None)(lstmpos2)       
         #----------------------------------------------------------------------
         concat = Concatenate()([lstmseq3, lstmpos3])
         densecat = Dense(256, kernel_initializer='he_uniform', activation='relu')(concat)
@@ -210,7 +202,7 @@ class NumMatrixModel:
         dense6 = Dense(64, kernel_initializer='he_uniform', activation='relu')(drop5)           
         #----------------------------------------------------------------------        
         output = TimeDistributed(Dense(self.num_classes, activation='softmax', dtype='float32'))(dense6)
-
+        #----------------------------------------------------------------------
         model = Model(inputs = [sequence_input, position_input], outputs = output, name = 'CCM')    
         opt = keras.optimizers.Adam(learning_rate=self.learning_rate)
         loss = keras.losses.CategoricalCrossentropy(from_logits=False)
@@ -259,15 +251,46 @@ class ModelTraining:
             print()
     
     #========================================================================== 
-    def model_parameters(self, parameters_dict, savepath): 
+    def model_parameters(self, parameters_dict, savepath):
+
+        '''
+        Saves the model parameters to a JSON file. The parameters are provided 
+        as a dictionary and are written to a file named 'model_parameters.json' 
+        in the specified directory.
+
+        Keyword arguments:
+            parameters_dict (dict): A dictionary containing the parameters to be saved.
+            savepath (str): The directory path where the parameters will be saved.
+
+        Returns:
+            None       
+
+        '''
         path = os.path.join(savepath, 'model_parameters.json')      
         with open(path, 'w') as f:
             json.dump(parameters_dict, f) 
           
-    # sequential model as generator with Keras module
+    
     #========================================================================== 
     def load_pretrained_model(self, path, load_parameters=True):
-        
+
+        '''
+        Load pretrained keras model (in folders) from the specified directory. 
+        If multiple model directories are found, the user is prompted to select one,
+        while if only one model directory is found, that model is loaded directly.
+        If `load_parameters` is True, the function also loads the model parameters 
+        from the target .json file in the same directory. 
+
+        Keyword arguments:
+            path (str): The directory path where the pretrained models are stored.
+            load_parameters (bool, optional): If True, the function also loads the 
+                                              model parameters from a JSON file. 
+                                              Default is True.
+
+        Returns:
+            model (keras.Model): The loaded Keras model.
+
+        '''        
         model_folders = []
         for entry in os.scandir(path):
             if entry.is_dir():

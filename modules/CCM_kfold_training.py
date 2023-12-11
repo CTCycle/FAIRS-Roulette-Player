@@ -3,7 +3,7 @@ import sys
 import numpy as np
 import pandas as pd
 import pickle
-import tensorflow as tf
+from sklearn.model_selection import TimeSeriesSplit
 from sklearn.preprocessing import OrdinalEncoder, OneHotEncoder
 from keras.utils.vis_utils import plot_model
 
@@ -188,7 +188,8 @@ print(f'''
 -------------------------------------------------------------------------------
 TRAINING INFO
 -------------------------------------------------------------------------------
-Number of epochs: {cnf.epochs}
+Number of k fold: {cnf.k_fold}
+Number of epochs: {cnf.k_epochs}
 Window size:      {cnf.window_size}
 Batch size:       {cnf.batch_size} 
 Learning rate:    {cnf.learning_rate} 
@@ -199,31 +200,26 @@ Learning rate:    {cnf.learning_rate}
 #------------------------------------------------------------------------------
 RTH_callback = RealTimeHistory(model_savepath, validation=cnf.use_test_data)
 
-# setting for validation data
+# define k fold strategy
 #------------------------------------------------------------------------------
-if cnf.use_test_data == True:
-    validation_data = (X_test_ext, Y_test_OHE)   
-else:
-    validation_data = None 
+kfold = TimeSeriesSplit(n_splits=cnf.k_fold)
 
-# initialize tensorboard
+# training loop with k fold and save model at the end
 #------------------------------------------------------------------------------
-if cnf.use_tensorboard == True:
-    log_path = os.path.join(model_savepath, 'tensorboard')
-    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_path, histogram_freq=1)
-    callbacks = [RTH_callback, tensorboard_callback]    
-else:    
-    callbacks = [RTH_callback]
+model_scores = []
+for train, test in kfold.split(X_train_ext):
+    train_model_inputs = X_train_ext[train]
+    train_model_outputs = Y_train_OHE[train]
+    test_data = [X_train_ext[test], Y_train_OHE[test]]    
+    training = model.fit(x=train_model_inputs, y=train_model_outputs, batch_size=cnf.batch_size, 
+                     validation_data=test_data, epochs = cnf.k_epochs, verbose=1, shuffle=False, 
+                     callbacks = [RTH_callback], workers = 6, use_multiprocessing=True)    
+    score = model.evaluate(test_data[0], verbose=0)
+    model_scores.append(score)
 
-# training loop
+# save model data and parameters in txt files
 #------------------------------------------------------------------------------
-training = model.fit(x=X_train_ext, y=Y_train_OHE, batch_size=cnf.batch_size, 
-                     validation_data=validation_data, epochs = cnf.epochs, 
-                     callbacks = callbacks, workers = 6, use_multiprocessing=True)
-
-# save model data and model parameters in txt files
-#------------------------------------------------------------------------------
-parameters = {'Model name' : 'NMM',
+parameters = {'Model name' : 'CCM',
               'Number of train samples' : train_samples,
               'Number of test samples' : test_samples,             
               'Window size' : cnf.window_size,
