@@ -45,7 +45,7 @@ class RealTimeHistory(keras.callbacks.Callback):
             if self.validation==True:
                 self.loss_val_hist.append(logs[list(logs.keys())[2]])            
                 self.metric_val_hist.append(logs[list(logs.keys())[3]])
-        if epoch % 50 == 0:            
+        if epoch % 40 == 0:            
             #------------------------------------------------------------------
             fig_path = os.path.join(self.plot_path, 'training_history.jpeg')
             plt.subplot(2, 1, 1)
@@ -68,6 +68,24 @@ class RealTimeHistory(keras.callbacks.Callback):
             plt.savefig(fig_path, bbox_inches = 'tight', format = 'jpeg', dpi = 300)
             plt.close()
                   
+# Class for preprocessing tabular data prior to GAN training 
+#==============================================================================
+#==============================================================================
+#==============================================================================
+class PositionEmbedding(keras.layers.Layer):
+    def __init__(self, sequence_length, vocab_size, output_dim, **kwargs):
+        super(PositionEmbedding, self).__init__(**kwargs)
+        self.word_embedding_layer = Embedding(input_dim=vocab_size, 
+                                              output_dim=output_dim)
+        self.position_embedding_layer = Embedding(input_dim=sequence_length, 
+                                                  output_dim=output_dim)
+ 
+    def call(self, inputs):        
+        position_indices = tf.range(tf.shape(inputs)[-1])
+        embedded_words = self.word_embedding_layer(inputs)
+        embedded_indices = self.position_embedding_layer(position_indices)
+
+        return embedded_words + embedded_indices
 
 # Class for preprocessing tabular data prior to GAN training 
 #==============================================================================
@@ -102,27 +120,27 @@ class ColorCodeModel:
         pool2 = MaxPooling1D()(conv2)
         conv3 = Conv1D(512, kernel_size=self.kernel_size, padding='same', activation='relu')(pool2)        
         #----------------------------------------------------------------------
-        lstm1 = LSTM(128, use_bias=True, return_sequences=True, activation='tanh', 
+        lstm1 = LSTM(512, use_bias=True, return_sequences=True, activation='tanh', 
                      dropout=0.2, kernel_regularizer=None)(conv3)
         lstm2 = LSTM(256, use_bias=True, return_sequences=True, activation='tanh', 
                      dropout=0.2, kernel_regularizer=None)(lstm1)             
-        lstm3 = LSTM(512, use_bias=True, return_sequences=False, activation='tanh', 
+        lstm3 = LSTM(128, use_bias=True, return_sequences=False, activation='tanh', 
                      dropout=0.2, kernel_regularizer=None)(lstm2)         
         #----------------------------------------------------------------------        
         repeat_vector = RepeatVector(self.output_size)(lstm3) 
         #----------------------------------------------------------------------                     
         dense1 = Dense(512, kernel_initializer='he_uniform', activation='relu')(repeat_vector)
         batchnorm1 = BatchNormalization(axis=-1, epsilon=0.001)(dense1)
-        drop1 = Dropout(rate=0.4, seed=self.seed)(batchnorm1)           
+        drop1 = Dropout(rate=0.2, seed=self.seed)(batchnorm1)           
         dense2 = Dense(512, kernel_initializer='he_uniform', activation='relu')(drop1)
         batchnorm2 = BatchNormalization(axis=-1, epsilon=0.001)(dense2)
-        drop2 = Dropout(rate=0.4, seed=self.seed)(batchnorm2)    
+        drop2 = Dropout(rate=0.2, seed=self.seed)(batchnorm2)    
         dense3 = Dense(256, kernel_initializer='he_uniform', activation='relu')(drop2)
         batchnorm3 = BatchNormalization(axis=-1, epsilon=0.001)(dense3) 
-        drop3 = Dropout(rate=0.3, seed=self.seed)(batchnorm3)                             
+        drop3 = Dropout(rate=0.2, seed=self.seed)(batchnorm3)                             
         dense4 = Dense(256, kernel_initializer='he_uniform', activation='relu')(drop3)
         batchnorm4 = BatchNormalization(axis=-1, epsilon=0.001)(dense4)        
-        drop4 = Dropout(rate=0.3, seed=self.seed)(batchnorm4)                
+        drop4 = Dropout(rate=0.2, seed=self.seed)(batchnorm4)                
         dense5 = Dense(128, kernel_initializer='he_uniform', activation='relu')(drop4) 
         batchnorm5 = BatchNormalization(axis=-1, epsilon=0.001)(dense5)       
         drop5 = Dropout(rate=0.2, seed=self.seed)(batchnorm5)          
@@ -162,28 +180,28 @@ class NumMatrixModel:
         sequence_input = Input(shape=(self.window_size, 1))
         position_input = Input(shape=(self.window_size, 1))                   
         #----------------------------------------------------------------------
-        embeddingseq = Embedding(input_dim=self.num_classes, output_dim=self.embedding_dims)(sequence_input)        
+        embeddingseq = PositionEmbedding(self.window_size, self.num_classes, self.embedding_dims)(sequence_input)               
         reshapeseq = Reshape((self.window_size, self.embedding_dims))(embeddingseq)       
         #---------------------------------------------------------------------- 
         convseq1 = Conv1D(128, kernel_size=self.kernel_size, padding='same', activation='relu')(reshapeseq) 
         poolseq1 = MaxPooling1D()(convseq1)
-        convseq2 = Conv1D(128, kernel_size=self.kernel_size, padding='same', activation='relu')(poolseq1) 
+        convseq2 = Conv1D(256, kernel_size=self.kernel_size, padding='same', activation='relu')(poolseq1) 
         poolseq2 = MaxPooling1D()(convseq2)
-        convseq3 = Conv1D(256, kernel_size=self.kernel_size, padding='same', activation='relu')(poolseq2)        
+        convseq3 = Conv1D(512, kernel_size=self.kernel_size, padding='same', activation='relu')(poolseq2)        
         #----------------------------------------------------------------------
-        lstmseq1 = LSTM(64, use_bias=True, return_sequences=True, activation='tanh',
+        lstmseq1 = LSTM(256, use_bias=True, return_sequences=True, activation='tanh',
                         dropout=0.2, kernel_regularizer=None)(convseq3)
-        lstmseq2 = LSTM(128, use_bias=True, return_sequences=True, activation='tanh', 
+        lstmseq2 = LSTM(512, use_bias=True, return_sequences=True, activation='tanh', 
                         dropout=0.2, kernel_regularizer=None)(lstmseq1)             
-        lstmseq3 = LSTM(256, use_bias=True, return_sequences=False, activation='tanh', 
+        lstmseq3 = LSTM(512, use_bias=True, return_sequences=False, activation='tanh', 
                         dropout=0.2, kernel_regularizer=None)(lstmseq2)                          
         #----------------------------------------------------------------------
-        embeddingpos = Embedding(input_dim=self.num_classes, output_dim=self.embedding_dims)(position_input)        
+        embeddingpos = PositionEmbedding(self.window_size, self.num_classes, self.embedding_dims)(position_input)              
         reshapepos = Reshape((self.window_size, self.embedding_dims))(embeddingpos)       
         #---------------------------------------------------------------------- 
         convpos1 = Conv1D(128, kernel_size=self.kernel_size, padding='same', activation='relu')(reshapepos) 
         poolpos1 = MaxPooling1D()(convpos1)
-        convpos2 = Conv1D(128, kernel_size=self.kernel_size, padding='same', activation='relu')(poolpos1) 
+        convpos2 = Conv1D(256, kernel_size=self.kernel_size, padding='same', activation='relu')(poolpos1) 
         poolpos2 = MaxPooling1D()(convpos2)
         convpos3 = Conv1D(512, kernel_size=self.kernel_size, padding='same', activation='relu')(poolpos2)        
         #----------------------------------------------------------------------
@@ -195,30 +213,30 @@ class NumMatrixModel:
                         dropout=0.2, kernel_regularizer=None)(lstmpos2)       
         #----------------------------------------------------------------------
         concat = Concatenate()([lstmseq3, lstmpos3])
-        densecat = Dense(256, kernel_initializer='he_uniform', activation='relu')(concat)
+        densecat = Dense(512, kernel_initializer='he_uniform', activation='relu')(concat)
         #----------------------------------------------------------------------        
         repeat_vector = RepeatVector(self.output_size)(densecat) 
         #----------------------------------------------------------------------                     
-        dense1 = Dense(256, kernel_initializer='he_uniform', activation='relu')(repeat_vector)
+        dense1 = Dense(512, kernel_initializer='he_uniform', activation='relu')(repeat_vector)
         batchnorm1 = BatchNormalization(axis=-1, epsilon=0.001)(dense1)
         drop1 = Dropout(rate=0.2, seed=self.seed)(batchnorm1)           
-        dense2 = Dense(256, kernel_initializer='he_uniform', activation='relu')(drop1)
+        dense2 = Dense(512, kernel_initializer='he_uniform', activation='relu')(drop1)
         batchnorm2 = BatchNormalization(axis=-1, epsilon=0.001)(dense2)
         drop2 = Dropout(rate=0.2, seed=self.seed)(batchnorm2)    
-        dense3 = Dense(128, kernel_initializer='he_uniform', activation='relu')(drop2)
+        dense3 = Dense(256, kernel_initializer='he_uniform', activation='relu')(drop2)
         batchnorm3 = BatchNormalization(axis=-1, epsilon=0.001)(dense3) 
         drop3 = Dropout(rate=0.2, seed=self.seed)(batchnorm3)                             
-        dense4 = Dense(64, kernel_initializer='he_uniform', activation='relu')(drop3)
+        dense4 = Dense(256, kernel_initializer='he_uniform', activation='relu')(drop3)
         batchnorm4 = BatchNormalization(axis=-1, epsilon=0.001)(dense4)        
         drop4 = Dropout(rate=0.2, seed=self.seed)(batchnorm4)                
-        dense5 = Dense(64, kernel_initializer='he_uniform', activation='relu')(drop4) 
+        dense5 = Dense(128, kernel_initializer='he_uniform', activation='relu')(drop4) 
         batchnorm5 = BatchNormalization(axis=-1, epsilon=0.001)(dense5)       
         drop5 = Dropout(rate=0.2, seed=self.seed)(batchnorm5)          
         dense6 = Dense(64, kernel_initializer='he_uniform', activation='relu')(drop5)           
         #----------------------------------------------------------------------        
         output = TimeDistributed(Dense(self.num_classes, activation='softmax', dtype='float32'))(dense6)
         #----------------------------------------------------------------------
-        model = Model(inputs = [sequence_input, position_input], outputs = output, name = 'CCM')    
+        model = Model(inputs = [sequence_input, position_input], outputs = output, name = 'NMM')    
         opt = keras.optimizers.Adam(learning_rate=self.learning_rate)
         loss = keras.losses.CategoricalCrossentropy(from_logits=False)
         metrics = keras.metrics.CategoricalAccuracy()

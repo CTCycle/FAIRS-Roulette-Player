@@ -4,11 +4,10 @@
 This script has been developed to allow roulette timeseries forecasting using a series of custom Recurrent Neural Network (RNN) models. Different approaches have been envisaged to accurately predict the probability of a number being extracted next, by relying on both single number or categorical classification (black, red and green). THe rationale behind the different models is to use Long Short-Term Memory (LSTM) together with Embedding functionality for processing sequential data, having as output the probability distribution over possible next numbers. The input sequence is transformed into a dense vectors of fixed size, before being processed recursively by a series of LSTM layers with increasing neurons number. Once the temporal dependencies from the input sequence are learned by the model, a series of Dense layers map the extracted features to the output space. The final Dense layer is provided with softmax activation in order to output a probability distribution over possible next numbers. Overfitting is largely prevented by using Dropout layers in between.
 
 ## FAIRS Deep Learning models
-FAIRS is based on two different deep learning (DL) models for timeseries forecasting. Both models are structured as recurrent neural networks that use fixed-length sequences of past observations as inputs, while the next expected observation (or a fixed-length sequence of these) as output. 
-...
+FAIRS relies on two different Deep Learning (DL) models with recurrent network architecture (for timeseries forecasting). Both models are structured as a combination of convolutional and recurrent neural networks that use fixed-length sequences of past observations as inputs, while the next expected observation (or a fixed-length sequence of these) as output. The two models are referred to as ColorCode Model (CCM) and NumberMatrix Model (NMM). 
 
 ### ColorCode Model (CCM)
-...
+This model is built to predict the future color extractions based on previous observations. Colors are encoded with integers following the mapping logic: green is 0, red is 1 and black is 2. This deep learning model uses a combination of Convolutional Neural Networks (CNNs), Long Short-Term Memory (LSTM) networks, and Dense layers. The input layer accepts sequences of a fixed window size, which is then encoded using embedding to convert the integer vectors into dense vectors of fixed size. The embedded sequences are passed through three convolutional layers, each followed by a max-pooling layer, where the increasing number of filters allows for data thickening. The LSTM layers perform recurrent operations to keep memory of past observations within single batches of data (stateless mode), considering sufficiently long sequences as bearing important information. The output from the LSTM layers is repeated to match the desired output size using a repeated vector layer, and then a series of dense layers with bartch normalization and dropout are used to generate the future outputs with a softmax activation function.
 
 ### NumberMatrix Model (NMM)
 ...
@@ -62,3 +61,9 @@ This application has been developed and tested using the following dependencies 
 - `graphviz==0.20.1`
 
 These dependencies are specified in the provided `requirements.txt` file to ensure full compatibility with the application. 
+
+## License
+This project is licensed under the terms of the MIT license. See the LICENSE file for details.
+
+## Disclaimer
+This project is for educational purposes only. It should not be used as a way to make easy money, nor the forecasted numbers should be considered completely reliable, due to the randomic nature of the roulette game itself.

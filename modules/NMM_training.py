@@ -1,8 +1,8 @@
 import os
 import sys
+import pickle
 import numpy as np
 import pandas as pd
-import pickle
 import tensorflow as tf
 from sklearn.preprocessing import OneHotEncoder
 from keras.utils.vis_utils import plot_model
@@ -22,7 +22,7 @@ if __name__ == '__main__':
 from modules.components.data_classes import PreProcessing
 from modules.components.training_classes import NumMatrixModel, RealTimeHistory, ModelTraining, ModelValidation
 import modules.global_variables as GlobVar
-import modules.configurations as cnf
+import configurations as cnf
 
 # [LOAD DATASETS]
 #==============================================================================
@@ -74,12 +74,10 @@ trainext, testext = PP.split_timeseries(ext_timeseries, cnf.test_size, inverted=
 trainpos, testpos = PP.split_timeseries(pos_timeseries, cnf.test_size, inverted=cnf.invert_test)   
 train_samples, test_samples = trainext.shape[0], testext.shape[0]
 X_train_ext, Y_train_ext = PP.timeseries_labeling(trainext, cnf.window_size, cnf.output_size) 
-X_train_pos, _ = PP.timeseries_labeling(trainext, cnf.window_size, cnf.output_size) 
-
+X_train_pos, _ = PP.timeseries_labeling(trainext, cnf.window_size, cnf.output_size)
 if cnf.use_test_data == True:      
     X_test_ext, Y_test_ext = PP.timeseries_labeling(testext, cnf.window_size, cnf.output_size)  
-    X_test_pos, _ = PP.timeseries_labeling(testext, cnf.window_size, cnf.output_size)     
- 
+    X_test_pos, _ = PP.timeseries_labeling(testext, cnf.window_size, cnf.output_size)
 
 # [ONE HOT ENCODE THE LABELS]
 #==============================================================================
@@ -95,7 +93,6 @@ Y_train_OHE = OH_encoder.fit_transform(Y_train_ext.reshape(Y_train_ext.shape[0],
 df_Y_train_OHE = pd.DataFrame(Y_train_OHE)
 df_X_train = pd.DataFrame(X_train_ext.reshape(Y_train_ext.shape[0], -1))
 Y_train_OHE = np.reshape(Y_train_OHE, (Y_train_ext.shape[0], Y_train_ext.shape[1], -1))
-
 if cnf.use_test_data == True: 
     Y_test_OHE = OH_encoder.transform(Y_test_ext.reshape(Y_test_ext.shape[0], -1))
     df_X_test = pd.DataFrame(X_test_ext.reshape(Y_test_ext.shape[0], -1))
@@ -172,8 +169,8 @@ trainworker = ModelTraining(device=cnf.training_device, seed=cnf.seed,
 # initialize model class
 #------------------------------------------------------------------------------
 modelframe = NumMatrixModel(cnf.learning_rate, cnf.window_size, cnf.output_size, 
-                            cnf.embedding_size, len(categories[0]), seed=cnf.seed, 
-                            XLA_state=cnf.XLA_acceleration)
+                            cnf.embedding_size, cnf.kernel_size, len(categories[0]), 
+                            seed=cnf.seed, XLA_state=cnf.XLA_acceleration)
 model = modelframe.build()
 model.summary(expand_nested=True)
 

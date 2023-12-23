@@ -7,16 +7,16 @@ XLA_acceleration = False
 
 # Define variables for the training
 #------------------------------------------------------------------------------
-seed = 42
+seed = 76
 training_device = 'GPU'
-epochs = 5000
-learning_rate = 0.0001
-batch_size = 1080
+epochs = 1000
+learning_rate = 0.001
+batch_size = 1000
 
 # embedding and convolutions
 #------------------------------------------------------------------------------
 embedding_size = 256
-kernel_size = 6
+kernel_size = 12
 
 # Define variables for preprocessing
 #------------------------------------------------------------------------------
@@ -24,7 +24,7 @@ use_test_data = True
 invert_test = False
 data_size = 1.0
 test_size = 0.2
-window_size = 120
+window_size = 45
 output_size = 1
 
 # k fold training
