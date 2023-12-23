@@ -27,7 +27,6 @@ import configurations as cnf
 # [LOAD DATASETS]
 #==============================================================================
 # Load patient dataset and dictionaries from .csv files in the dataset folder.
-# Also, create a clean version of the exploded dataset to work on
 #==============================================================================
 filepath = os.path.join(GlobVar.data_path, 'FAIRS_dataset.csv')                
 df_FAIRS = pd.read_csv(filepath, sep= ';', encoding='utf-8')

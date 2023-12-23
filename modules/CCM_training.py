@@ -59,7 +59,6 @@ STEP 1 -----> Preprocess data for FAIRS training
 PP = PreProcessing()
 categories = [['green', 'black', 'red']]
 categorical_encoder = OrdinalEncoder(categories = categories, handle_unknown = 'use_encoded_value', unknown_value=-1)
-
 df_FAIRS = PP.roulette_colormapping(df_FAIRS, no_mapping=False)
 ext_timeseries = df_FAIRS['encoding'] 
 ext_timeseries = ext_timeseries.values.reshape(-1, 1)       
@@ -88,7 +87,6 @@ Y_train_OHE = OH_encoder.fit_transform(Y_train_ext.reshape(Y_train_ext.shape[0],
 df_Y_train_OHE = pd.DataFrame(Y_train_OHE)
 df_X_train = pd.DataFrame(X_train_ext.reshape(Y_train_ext.shape[0], -1))
 Y_train_OHE = np.reshape(Y_train_OHE, (Y_train_ext.shape[0], Y_train_ext.shape[1], -1))
-
 if cnf.use_test_data == True: 
     Y_test_OHE = OH_encoder.transform(Y_test_ext.reshape(Y_test_ext.shape[0], -1))
     df_X_test = pd.DataFrame(X_test_ext.reshape(Y_test_ext.shape[0], -1))
