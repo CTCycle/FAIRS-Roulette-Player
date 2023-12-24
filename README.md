@@ -28,15 +28,20 @@ Run the FAIRS.py file to launch the script and use the main menu to navigate the
 ### Configurations
 The configurations.py file allows to change the script configuration. The following parameters are available:
 
+**Settings for training performance and monitoring options:**
 - `generate_model_graph:` generate and save 2D model graph (as .png file)
 - `use_mixed_precision:` whether or not to use mixed precision for faster training (mix float16/float32)
 - `use_tensorboard:` activate or deactivate tensorboard logging
 - `XLA_acceleration:` use of linear algebra acceleration for faster training 
+
+**Settings for pretraining parameters:**
 - `training_device:` select the training device (CPU or GPU)
 - `epochs:` number of training iterations
 - `learning_rate:` learning rate of the model during training
 - `batch_size:` size of batches to be fed to the model during training
 - `embedding_size:` embedding dimensions (valid for both models)
+
+**Settings for data preprocessing and predictions:**
 - `use_test_data:` whether or not to use test data
 - `invert_test:` test data placement (True to set last points as test data)
 - `data_size:` fraction of total available data to use
@@ -44,6 +49,7 @@ The configurations.py file allows to change the script configuration. The follow
 - `window_size:` length of the input timeseries window
 - `output_size:` number of next points to predict (output sequence)
 - `predictions_size:` number of timeseries points to take for the predictions inputs
+
 
 ### Requirements
 This application has been developed and tested using the following dependencies (Python 3.10.12):
