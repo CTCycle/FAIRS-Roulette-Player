@@ -9,9 +9,9 @@ XLA_acceleration = False
 #------------------------------------------------------------------------------
 seed = 42
 training_device = 'GPU'
-epochs = 1000
+epochs = 2000
 learning_rate = 0.001
-batch_size = 1440
+batch_size = 1200
 
 # embedding and convolutions
 #------------------------------------------------------------------------------
@@ -24,7 +24,7 @@ use_test_data = True
 invert_test = False
 data_size = 1.0
 test_size = 0.2
-window_size = 60
+window_size = 45
 output_size = 1
 
 # k fold training

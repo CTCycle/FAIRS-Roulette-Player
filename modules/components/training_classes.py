@@ -7,7 +7,7 @@ import tensorflow as tf
 from tensorflow import keras
 from keras import regularizers
 from keras.models import Model
-from keras.layers import Dense, Conv1D, MaxPooling1D, Dropout, LSTM, BatchNormalization, Add, Concatenate
+from keras.layers import Dense, Conv1D, MaxPooling1D, Dropout, LSTM, BatchNormalization, Add
 from keras.layers import Embedding, Reshape, Input, RepeatVector, TimeDistributed
 from sklearn.metrics import confusion_matrix, roc_curve, auc
 from sklearn.preprocessing import label_binarize
@@ -107,8 +107,7 @@ class ColorCodeModel:
 
     def build(self):                
         
-        # encoded extractions input
-        #----------------------------------------------------------------------
+        
         sequence_input = Input(shape=(self.window_size, 1))                   
         #----------------------------------------------------------------------
         embedding = Embedding(input_dim=self.num_classes, output_dim=self.embedding_dims)(sequence_input)        
@@ -132,7 +131,7 @@ class ColorCodeModel:
         dense1 = Dense(1024, kernel_initializer='he_uniform', activation='relu')(repeat_vector)
         batchnorm1 = BatchNormalization(axis=-1, epsilon=0.001)(dense1)
         drop1 = Dropout(rate=0.2, seed=self.seed)(batchnorm1)           
-        dense2 = Dense(512, kernel_initializer='he_uniform', activation='relu')(drop1)
+        dense2 = Dense(768, kernel_initializer='he_uniform', activation='relu')(drop1)
         batchnorm2 = BatchNormalization(axis=-1, epsilon=0.001)(dense2)
         drop2 = Dropout(rate=0.2, seed=self.seed)(batchnorm2)    
         dense3 = Dense(512, kernel_initializer='he_uniform', activation='relu')(drop2)
