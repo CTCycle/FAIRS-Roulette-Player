@@ -13,13 +13,13 @@ This model is built to predict the future color extractions based on previous ob
 ...
 
 ## How to use
-Run the FAIRS.py file to launch the script and use the main menu to navigate the different options. The main menu allows selecting one of the following options:
+Run the FAIRS.py file to launch the script and use the main menu to navigate the different options. The main menu allows selecting one of the following options (when selecting a pretraining method, another menu will be presented to allow the user chosing between the ColorCode and the NumberMatrix models):
 
-**1) FAIRS timeseries analysis:** Perform timeseries analysis to visualize distribution and main statistical parameters (work in progress).  
+**1) Timeseries analysis:** Perform timeseries analysis to visualize distribution and main statistical parameters (work in progress).  
 
-**2) FAIRS training: ColorCode Model (CCM)** Perform pretraining using the ColorCode model, which is focused on predicting the next color (green, black or red) to be extracted.
+**2) Standard model pretraining** Allows training the DL models throughout multiple epochs, using the entire dataset (or a part of it) as the training set.
 
-**3) FAIRS training: PositionMatrix Model (PMM)** Perform pretraining using the NumberMatrix model, which is focused on predicting raw numbers based on both previous extractions and the actual number position (following European Roulette encoding) 
+**3) K-fold model pretraining** Perform pretraining using the K-fold method for cross-validation, by splitting the entire datasets into subsets and training the model on each subset separately. 
 
 **4) Predict next extraction:** Predict the next coming extraction using a pretrained model. Automatically infers which model has been loaded and forecast extractions accordingly.
 
@@ -66,4 +66,4 @@ These dependencies are specified in the provided `requirements.txt` file to ensu
 This project is licensed under the terms of the MIT license. See the LICENSE file for details.
 
 ## Disclaimer
-This project is for educational purposes only. It should not be used as a way to make easy money, nor the forecasted numbers should be considered completely reliable, due to the randomic nature of the roulette game itself.
+This project is for educational purposes only. It should not be used as a way to make easy money, since the model won't be able to accurately forecast numbers merely based on previous observations!
