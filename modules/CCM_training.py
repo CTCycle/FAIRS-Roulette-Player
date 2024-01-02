@@ -19,15 +19,14 @@ if __name__ == '__main__':
 
 # import modules and components
 #------------------------------------------------------------------------------
-from modules.components.data_classes import PreProcessing
-from modules.components.training_classes import ColorCodeModel, RealTimeHistory, ModelTraining, ModelValidation
+from modules.components.data_assets import PreProcessing
+from modules.components.training_assets import ColorCodeModel, RealTimeHistory, ModelTraining, ModelValidation
 import modules.global_variables as GlobVar
 import configurations as cnf
 
 # [LOAD DATASETS]
 #==============================================================================
 # Load patient dataset and dictionaries from .csv files in the dataset folder.
-# Also, create a clean version of the exploded dataset to work on
 #==============================================================================
 filepath = os.path.join(GlobVar.data_path, 'FAIRS_dataset.csv')                
 df_FAIRS = pd.read_csv(filepath, sep= ';', encoding='utf-8')

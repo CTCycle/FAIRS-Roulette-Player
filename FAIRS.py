@@ -6,7 +6,7 @@ warnings.simplefilter(action='ignore', category = Warning)
 
 # import modules and classes
 #------------------------------------------------------------------------------
-from modules.components.data_classes import UserOperations
+from modules.components.data_assets import UserOperations
 
 # welcome message
 #------------------------------------------------------------------------------

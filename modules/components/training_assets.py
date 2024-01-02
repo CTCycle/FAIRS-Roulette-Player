@@ -15,7 +15,7 @@ from sklearn.preprocessing import label_binarize
 
 # [CALLBACK FOR REAL TIME TRAINING MONITORING]
 #==============================================================================
-#==============================================================================
+# Callback to check real time model history and visualize it through custom plot
 #==============================================================================
 class RealTimeHistory(keras.callbacks.Callback):
     
@@ -87,9 +87,9 @@ class PositionEmbedding(keras.layers.Layer):
 
         return embedded_words + embedded_indices
 
-# Class for preprocessing tabular data prior to GAN training 
+# [MACHINE LEARNING MODELS]
 #==============================================================================
-#==============================================================================
+# collection of model and submodels
 #==============================================================================
 class ColorCodeModel:
 
@@ -156,9 +156,9 @@ class ColorCodeModel:
         
         return model 
 
-# Class for preprocessing tabular data prior to GAN training 
+# [MACHINE LEARNING MODELS]
 #==============================================================================
-#==============================================================================
+# collection of model and submodels
 #==============================================================================
 class NumMatrixModel:
 
@@ -245,9 +245,9 @@ class NumMatrixModel:
         return model               
 
 
-# define model class
+# [TOOLS FOR TRAINING MACHINE LEARNING MODELS]
 #==============================================================================
-#==============================================================================
+# Collection of methods for machine learning training and tensorflow settings
 #==============================================================================
 class ModelTraining:    
        
@@ -282,7 +282,7 @@ class ModelTraining:
             print('-------------------------------------------------------------------------------')
             print()
     
-    #========================================================================== 
+    #-------------------------------------------------------------------------- 
     def model_parameters(self, parameters_dict, savepath):
 
         '''
@@ -303,7 +303,7 @@ class ModelTraining:
             json.dump(parameters_dict, f) 
           
     
-    #========================================================================== 
+    #-------------------------------------------------------------------------- 
     def load_pretrained_model(self, path, load_parameters=True):
 
         '''
