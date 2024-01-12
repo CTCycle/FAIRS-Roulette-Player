@@ -11,26 +11,23 @@ seed = 42
 training_device = 'GPU'
 epochs = 2000
 learning_rate = 0.001
-batch_size = 1200
+batch_size = 800
 
 # embedding and convolutions
 #------------------------------------------------------------------------------
-embedding_size = 256
+embedding_size = 128
 kernel_size = 6
+num_blocks = 3
+num_heads = 3
 
 # Define variables for preprocessing
 #------------------------------------------------------------------------------
 use_test_data = True
 invert_test = False
 data_size = 1.0
-test_size = 0.2
-window_size = 45
+test_size = 0.1
+window_size = 30
 output_size = 1
-
-# k fold training
-#------------------------------------------------------------------------------
-k_fold = 4
-k_epochs = 1500
 
 # Predictions variables
 #------------------------------------------------------------------------------

@@ -162,8 +162,8 @@ trainworker = ModelTraining(device=cnf.training_device, seed=cnf.seed,
 # initialize model class
 #------------------------------------------------------------------------------
 modelframe = ColorCodeModel(cnf.learning_rate, cnf.window_size, cnf.output_size, 
-                            cnf.embedding_size, cnf.kernel_size, len(categories[0]), seed=cnf.seed, 
-                            XLA_state=cnf.XLA_acceleration)
+                            cnf.embedding_size, cnf.num_blocks, cnf.num_heads, cnf.kernel_size, 
+                            seed=cnf.seed, XLA_state=cnf.XLA_acceleration)
 model = modelframe.build()
 model.summary(expand_nested=True)
 

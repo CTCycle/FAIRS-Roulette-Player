@@ -8,7 +8,7 @@ from tensorflow import keras
 from keras import regularizers
 from keras.models import Model
 from keras.layers import Dense, Conv1D, MaxPooling1D, Dropout, LSTM, BatchNormalization, Add
-from keras.layers import Embedding, Reshape, Input, RepeatVector, TimeDistributed
+from keras.layers import Embedding, Reshape, Input, RepeatVector, TimeDistributed, MultiHeadAttention, LayerNormalization
 from sklearn.metrics import confusion_matrix, roc_curve, auc
 from sklearn.preprocessing import label_binarize
 
@@ -68,85 +68,164 @@ class RealTimeHistory(keras.callbacks.Callback):
             plt.savefig(fig_path, bbox_inches = 'tight', format = 'jpeg', dpi = 300)
             plt.close()
                   
-# Class for preprocessing tabular data prior to GAN training 
+# [POSITION EMBEDDING]
 #==============================================================================
+# Positional embedding custom layer
 #==============================================================================
-#==============================================================================
-class PositionEmbedding(keras.layers.Layer):
-    def __init__(self, sequence_length, vocab_size, output_dim, **kwargs):
-        super(PositionEmbedding, self).__init__(**kwargs)
-        self.word_embedding_layer = Embedding(input_dim=vocab_size, 
-                                              output_dim=output_dim)
-        self.position_embedding_layer = Embedding(input_dim=sequence_length, 
-                                                  output_dim=output_dim)
+class PositionalEmbedding(keras.layers.Layer):
+    def __init__(self, sequence_length, vocab_size, embedding_dims, mask_zero=None):
+        super(PositionalEmbedding, self).__init__()
+        self.sequence_length = sequence_length
+        self.vocab_size = vocab_size
+        self.embedding_dims = embedding_dims
+        self.mask_zero = mask_zero
+        self.word_embedding_layer = Embedding(input_dim=vocab_size, output_dim=embedding_dims)
+        self.position_embedding_layer = Embedding(input_dim=sequence_length, output_dim=embedding_dims)
  
+    # implement positional embedding through call method  
+    #--------------------------------------------------------------------------    
     def call(self, inputs):        
         position_indices = tf.range(tf.shape(inputs)[-1])
         embedded_words = self.word_embedding_layer(inputs)
         embedded_indices = self.position_embedding_layer(position_indices)
 
         return embedded_words + embedded_indices
+    
+    # compute the mask for padded sequences  
+    #--------------------------------------------------------------------------
+    def compute_mask(self, inputs, mask=None):
 
-# [MACHINE LEARNING MODELS]
+        return tf.math.not_equal(inputs, 0)
+    
+    # serialize layer for saving  
+    #--------------------------------------------------------------------------
+    def get_config(self):
+        config = super(PositionalEmbedding, self).get_config()
+        config.update({'sequence_length': self.sequence_length,
+                       'vocab_size': self.vocab_size,
+                       'embedding_dims': self.embedding_dims,
+                       'mask_zero': self.mask_zero})
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        return cls(**config)
+    
+# [CONVOLUTIONAL BLOCK  ]
+#==============================================================================
+# Positional embedding custom layer
+#==============================================================================
+class ConvolutionalBlock(keras.layers.Layer):
+    def __init__(self, kernel_size):
+        super(ConvolutionalBlock, self).__init__()
+        self.kernel_size = kernel_size
+        self.conv1 = Conv1D(64, kernel_size=kernel_size, padding='same', activation='relu')
+        self.conv2 = Conv1D(128, kernel_size=kernel_size, padding='same', activation='relu')
+        self.conv3 = Conv1D(256, kernel_size=kernel_size, padding='same', activation='relu') 
+        self.pool1 = MaxPooling1D()   
+        self.pool2 = MaxPooling1D()
+        self.pool3 = MaxPooling1D()    
+
+    # implement positional embedding through call method  
+    #--------------------------------------------------------------------------
+    def call(self, inputs):
+        layer = self.conv1(inputs)
+        layer = self.pool1(layer)
+        layer = self.conv2(layer)
+        layer = self.pool2(layer)
+        output = self.conv3(layer)
+        layer = self.pool3(layer)       
+
+        return output
+    
+    # serialize layer for saving  
+    #--------------------------------------------------------------------------
+    def get_config(self):
+        config = super(ConvolutionalBlock, self).get_config()
+        config.update({'kernel_size': self.kernel_size})
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        return cls(**config)
+        
+# [TRANSFORMER ENCODER]
+#==============================================================================
+# Custom transformer encoder
+#============================================================================== 
+class TransformerEncoder(keras.layers.Layer):
+    def __init__(self, embedding_dims, num_heads):
+        super(TransformerEncoder, self).__init__()
+        self.embedding_dims = embedding_dims       
+        self.num_heads = num_heads        
+        self.attention = MultiHeadAttention(num_heads=num_heads, key_dim=self.embedding_dims)
+        self.layernorm1 = LayerNormalization()
+        self.layernorm2 = LayerNormalization()
+        self.dense1 = Dense(512, activation='relu', kernel_initializer='he_uniform')
+        self.dense2 = Dense(256, activation='relu', kernel_initializer='he_uniform')
+        
+
+    # implement transformer encoder through call method  
+    #--------------------------------------------------------------------------
+    def call(self, inputs, training):        
+        inputs = self.layernorm1(inputs)
+        inputs = self.dense1(inputs)       
+        attention_output = self.attention(query=inputs, value=inputs, key=inputs,
+                                          attention_mask=None, training=training)        
+        layernorm = self.layernorm2(inputs + attention_output)
+        output = self.dense2(layernorm)
+       
+        return output
+    
+    # serialize layer for saving  
+    #--------------------------------------------------------------------------
+    def get_config(self):
+        config = super(TransformerEncoder, self).get_config()
+        config.update({'embedding_dims': self.embedding_dims,
+                       'num_heads': self.num_heads})
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        return cls(**config)       
+        
+
+# [COLOR CODE MODEL]
 #==============================================================================
 # collection of model and submodels
 #==============================================================================
 class ColorCodeModel:
 
     def __init__(self, learning_rate, window_size, output_size, embedding_dims, 
-                 kernel_size, num_classes, seed, XLA_state):
+                 num_blocks, num_heads, kernel_size, seed, XLA_state):
 
         self.learning_rate = learning_rate
         self.window_size = window_size
         self.output_size = output_size        
         self.embedding_dims = embedding_dims
-        self.kernel_size = kernel_size        
-        self.num_classes = num_classes
+        self.num_blocks = num_blocks
+        self.num_heads = num_heads
+        self.kernel_size = kernel_size         
         self.seed = seed       
-        self.XLA_state = XLA_state        
+        self.XLA_state = XLA_state
+        self.convblock = ConvolutionalBlock(kernel_size)        
 
-    def build(self):                
+    # build model given the architecture
+    #--------------------------------------------------------------------------
+    def build(self):        
         
-        
-        sequence_input = Input(shape=(self.window_size, 1))                   
-        #----------------------------------------------------------------------
-        embedding = Embedding(input_dim=self.num_classes, output_dim=self.embedding_dims)(sequence_input)        
-        reshape = Reshape((self.window_size, self.embedding_dims))(embedding)       
-        #---------------------------------------------------------------------- 
-        conv1 = Conv1D(128, kernel_size=self.kernel_size, padding='same', activation='relu')(reshape) 
-        pool1 = MaxPooling1D()(conv1)
-        conv2 = Conv1D(256, kernel_size=self.kernel_size, padding='same', activation='relu')(pool1) 
-        pool2 = MaxPooling1D()(conv2)
-        conv3 = Conv1D(512, kernel_size=self.kernel_size, padding='same', activation='relu')(pool2)        
-        #----------------------------------------------------------------------
-        lstm1 = LSTM(512, use_bias=True, return_sequences=True, activation='tanh', 
-                     dropout=0.2, kernel_regularizer=None)(conv3)
-        lstm2 = LSTM(768, use_bias=True, return_sequences=True, activation='tanh', 
-                     dropout=0.2, kernel_regularizer=None)(lstm1)             
-        lstm3 = LSTM(1024, use_bias=True, return_sequences=False, activation='tanh', 
-                     dropout=0.2, kernel_regularizer=None)(lstm2)         
-        #----------------------------------------------------------------------        
-        repeat_vector = RepeatVector(self.output_size)(lstm3) 
-        #----------------------------------------------------------------------                     
-        dense1 = Dense(1024, kernel_initializer='he_uniform', activation='relu')(repeat_vector)
-        batchnorm1 = BatchNormalization(axis=-1, epsilon=0.001)(dense1)
-        drop1 = Dropout(rate=0.2, seed=self.seed)(batchnorm1)           
-        dense2 = Dense(768, kernel_initializer='he_uniform', activation='relu')(drop1)
-        batchnorm2 = BatchNormalization(axis=-1, epsilon=0.001)(dense2)
-        drop2 = Dropout(rate=0.2, seed=self.seed)(batchnorm2)    
-        dense3 = Dense(512, kernel_initializer='he_uniform', activation='relu')(drop2)
-        batchnorm3 = BatchNormalization(axis=-1, epsilon=0.001)(dense3) 
-        drop3 = Dropout(rate=0.2, seed=self.seed)(batchnorm3)                             
-        dense4 = Dense(256, kernel_initializer='he_uniform', activation='relu')(drop3)
-        batchnorm4 = BatchNormalization(axis=-1, epsilon=0.001)(dense4)        
-        drop4 = Dropout(rate=0.2, seed=self.seed)(batchnorm4)                
-        dense5 = Dense(128, kernel_initializer='he_uniform', activation='relu')(drop4) 
-        batchnorm5 = BatchNormalization(axis=-1, epsilon=0.001)(dense5)       
-        drop5 = Dropout(rate=0.2, seed=self.seed)(batchnorm5)          
-        dense6 = Dense(64, kernel_initializer='he_uniform', activation='relu')(drop5)           
-        #----------------------------------------------------------------------        
-        output = TimeDistributed(Dense(self.num_classes, activation='softmax', dtype='float32'))(dense6)
-        #----------------------------------------------------------------------
+        sequence_input = Input(shape=(self.window_size, 1))                        
+        embedding = PositionalEmbedding(self.window_size, 3, self.embedding_dims)(sequence_input)
+        layer = Reshape((self.window_size, -1))(embedding)
+        for i in range(self.num_blocks):
+            layer = TransformerEncoder(self.embedding_dims, self.num_heads)(layer)        
+        conv = self.convblock(layer) 
+        reshape = Reshape((-1, ))(conv)              
+        repeat = RepeatVector(self.output_size)(reshape)      
+        layer = Dense(1024, activation='relu', kernel_initializer='he_uniform')(repeat)
+        layer = Dense(512, activation='relu', kernel_initializer='he_uniform')(layer) 
+        output = TimeDistributed(Dense(3, activation='softmax', dtype='float32'))(layer)        
+       
         model = Model(inputs = sequence_input, outputs = output, name = 'CCM')    
         opt = keras.optimizers.Adam(learning_rate=self.learning_rate)
         loss = keras.losses.CategoricalCrossentropy(from_logits=False)
@@ -156,30 +235,31 @@ class ColorCodeModel:
         
         return model 
 
-# [MACHINE LEARNING MODELS]
+# [NUM MATRIX MODEL]
 #==============================================================================
 # collection of model and submodels
 #==============================================================================
 class NumMatrixModel:
 
-    def __init__(self, learning_rate, window_size, output_size, embedding_dims,
-                 kernel_size, num_classes, seed, XLA_state):
+    def __init__(self, learning_rate, window_size, output_size, embedding_dims, 
+                 num_blocks, num_heads, kernel_size, seed, XLA_state):
 
         self.learning_rate = learning_rate
         self.window_size = window_size
         self.output_size = output_size        
         self.embedding_dims = embedding_dims
-        self.kernel_size = kernel_size          
-        self.num_classes = num_classes
+        self.num_blocks = num_blocks
+        self.num_heads = num_heads
+        self.kernel_size = kernel_size        
         self.seed = seed       
-        self.XLA_state = XLA_state        
+        self.XLA_state = XLA_state  
 
     def build(self):         
         
         sequence_input = Input(shape=(self.window_size, 1))
         position_input = Input(shape=(self.window_size, 1))                   
         #----------------------------------------------------------------------
-        embeddingseq = Embedding(self.num_classes, self.embedding_dims)(sequence_input)               
+        embeddingseq = Embedding(37, self.embedding_dims)(sequence_input)               
         reshapeseq = Reshape((self.window_size, self.embedding_dims))(embeddingseq)       
         #---------------------------------------------------------------------- 
         convseq1 = Conv1D(128, kernel_size=self.kernel_size, padding='same', activation='relu')(reshapeseq) 
@@ -195,7 +275,7 @@ class NumMatrixModel:
         lstmseq3 = LSTM(1024, use_bias=True, return_sequences=False, activation='tanh', 
                         dropout=0.2, kernel_regularizer=None)(lstmseq2)                          
         #----------------------------------------------------------------------
-        embeddingpos = Embedding(self.num_classes, self.embedding_dims)(position_input)              
+        embeddingpos = Embedding(37, self.embedding_dims)(position_input)              
         reshapepos = Reshape((self.window_size, self.embedding_dims))(embeddingpos)       
         #---------------------------------------------------------------------- 
         convpos1 = Conv1D(128, kernel_size=self.kernel_size, padding='same', activation='relu')(reshapepos) 
@@ -233,7 +313,7 @@ class NumMatrixModel:
         drop5 = Dropout(rate=0.2, seed=self.seed)(batchnorm5)          
         dense6 = Dense(64, kernel_initializer='he_uniform', activation='relu')(drop5)           
         #----------------------------------------------------------------------        
-        output = TimeDistributed(Dense(self.num_classes, activation='softmax', dtype='float32'))(dense6)
+        output = TimeDistributed(Dense(37, activation='softmax', dtype='float32'))(dense6)
         #----------------------------------------------------------------------
         model = Model(inputs = [sequence_input, position_input], outputs = output, name = 'NMM')    
         opt = keras.optimizers.Adam(learning_rate=self.learning_rate)
@@ -242,7 +322,9 @@ class NumMatrixModel:
         model.compile(loss = loss, optimizer = opt, metrics = metrics,
                       jit_compile=self.XLA_state)       
         
-        return model               
+        return model      
+
+        
 
 
 # [TOOLS FOR TRAINING MACHINE LEARNING MODELS]
