@@ -9,9 +9,9 @@ XLA_acceleration = False
 #------------------------------------------------------------------------------
 seed = 42
 training_device = 'GPU'
-epochs = 2000
+epochs = 1000
 learning_rate = 0.001
-batch_size = 800
+batch_size = 1024
 
 # embedding and convolutions
 #------------------------------------------------------------------------------
@@ -26,7 +26,7 @@ use_test_data = True
 invert_test = False
 data_size = 1.0
 test_size = 0.1
-window_size = 30
+window_size = 25
 output_size = 1
 
 # Predictions variables
