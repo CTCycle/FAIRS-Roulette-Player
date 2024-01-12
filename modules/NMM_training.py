@@ -62,9 +62,6 @@ df_FAIRS = PP.roulette_colormapping(df_FAIRS, no_mapping=True)
 ext_timeseries = df_FAIRS['encoding'] 
 ext_timeseries = ext_timeseries.values.reshape(-1, 1)       
 ext_timeseries = pd.DataFrame(ext_timeseries, columns=['encoding'])
-
-# isolate position inputs
-#------------------------------------------------------------------------------
 pos_timeseries = df_FAIRS['position'] 
 
 # split dataset into train and test and generate window-dataset
