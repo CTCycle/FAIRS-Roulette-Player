@@ -9,9 +9,9 @@ XLA_acceleration = False
 #------------------------------------------------------------------------------
 seed = 42
 training_device = 'GPU'
-epochs = 1000
-learning_rate = 0.001
-batch_size = 1024
+epochs = 600
+learning_rate = 0.0001
+batch_size = 512
 
 # embedding and convolutions
 #------------------------------------------------------------------------------

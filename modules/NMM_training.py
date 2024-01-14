@@ -263,7 +263,6 @@ Classes observed in predicted train labels:
 {class_pred}
 ''')
 
-
 # generate confusion matrix from train set (if class num is equal)
 #------------------------------------------------------------------------------
 try:

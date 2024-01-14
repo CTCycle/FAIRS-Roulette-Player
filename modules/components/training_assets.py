@@ -238,8 +238,7 @@ class ColorCodeModel:
         self.XLA_state = XLA_state        
         self.posembedding = PositionalEmbedding(self.window_size, 3, self.embedding_dims)
         self.encoders = [TransformerEncoder(self.embedding_dims, self.num_heads) for i in range(self.num_blocks)]
-        self.ffns = [ConvFeedForward(self.kernel_size) for i in range(self.num_blocks)]
-        
+        self.ffns = [ConvFeedForward(self.kernel_size) for i in range(self.num_blocks)]        
 
     # build model given the architecture
     #--------------------------------------------------------------------------
