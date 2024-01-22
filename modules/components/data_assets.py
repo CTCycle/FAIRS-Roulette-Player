@@ -3,24 +3,13 @@ from datetime import datetime
 import numpy as np
 
 
+# [CONSOLE OPERATIONS]
+#==============================================================================
 # ...
-#==============================================================================
-#==============================================================================
 #==============================================================================
 class UserOperations:
     
-    """    
-    A class for user operations such as interactions with the console, directories 
-    and files cleaning and other maintenance operations.
-      
-    Methods:
-        
-    menu_selection(menu):         console menu management
-    clear_all_files(folder_path): cleaning files and directories 
-   
-    """
-    
-    #==========================================================================
+    #--------------------------------------------------------------------------
     def menu_selection(self, menu):
         
         """        
@@ -56,19 +45,6 @@ class UserOperations:
         
         return op_sel
     
-    
-               
-    #==========================================================================
-    def datetime_fetching(self):
-        
-        raw_today_datetime = str(datetime.now())
-        truncated_datetime = raw_today_datetime[:-7]
-        today_datetime = truncated_datetime
-        for rep in ('-', ':', ' '):
-            today_datetime = today_datetime.replace(rep, '_')
-            
-        return today_datetime
-      
 
 # define model class
 #==============================================================================
@@ -86,7 +62,7 @@ class PreProcessing:
                           'red' : [32, 19, 21, 25, 34, 27, 36, 30, 23, 5, 16, 1, 14, 9, 18, 7, 12, 3],
                           'green' : [0]}  
 
-    #==========================================================================
+    #--------------------------------------------------------------------------
     def roulette_positions(self, dataframe):
         
         '''
@@ -95,8 +71,8 @@ class PreProcessing:
         
         return dataframe
     
-    # Splits time series data into training and testing sets using TimeSeriesSplit
-    #==========================================================================
+    
+    #--------------------------------------------------------------------------
     def roulette_colormapping(self, dataframe, no_mapping=True):
         
         '''
@@ -110,24 +86,21 @@ class PreProcessing:
         return dataframe
 
     
-    # Splits time series data into training and testing sets using TimeSeriesSplit
-    #==========================================================================
+ 
+    #--------------------------------------------------------------------------
     def split_timeseries(self, dataframe, test_size, inverted=False):
         
-        """
-        timeseries_split(dataframe, test_size)
+        """        
         
         Splits the input dataframe into training and testing sets based on the test size.
     
-        Keyword arguments:  
+        Keyword arguments:          
+            dataframe (pd.dataframe): the dataframe to be split
+            test_size (float):        the proportion of data to be used as the test set
         
-        dataframe (pd.dataframe): the dataframe to be split
-        test_size (float):        the proportion of data to be used as the test set
-    
-        Returns:
-            
-        df_train (pd.dataframe): the training set
-        df_test (pd.dataframe):  the testing set
+        Returns:            
+            df_train (pd.dataframe): the training set
+            df_test (pd.dataframe):  the testing set
         
         """
         train_size = int(len(dataframe) * (1 - test_size))
@@ -141,9 +114,8 @@ class PreProcessing:
 
         return df_train, df_test    
     
-    # generate n real samples with class labels; We randomly select n samples 
-    # from the real data array
-    #========================================================================== 
+
+    #--------------------------------------------------------------------------
     def timeseries_labeling(self, df, window_size, output_size):
         
         """
@@ -167,8 +139,8 @@ class PreProcessing:
         Y = [label[i + window_size : i + window_size + output_size] for i in range(len(label) - window_size - output_size + 1)]
         
         return np.array(X), np.array(Y)
-        
-    #==========================================================================
+    
+    #--------------------------------------------------------------------------
     def model_savefolder(self, path, model_name):
 
         '''
@@ -191,6 +163,8 @@ class PreProcessing:
             os.mkdir(model_savepath)               
             
         return model_savepath
+        
+    
     
     
      

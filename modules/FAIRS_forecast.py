@@ -17,7 +17,7 @@ if __name__ == '__main__':
 # import modules and components
 #------------------------------------------------------------------------------
 from modules.components.data_assets import PreProcessing
-from modules.components.training_assets import ModelTraining
+from modules.components.model_assets import Inference
 import modules.global_variables as GlobVar
 import configurations as cnf
 
@@ -48,10 +48,9 @@ df_predictions.reset_index(inplace=True)
 
 # Load model
 #------------------------------------------------------------------------------
-trainworker = ModelTraining(device = cnf.training_device) 
-model = trainworker.load_pretrained_model(GlobVar.model_path)
-load_path = trainworker.model_path
-parameters = trainworker.model_configuration
+inference = Inference() 
+model = inference.load_pretrained_model(GlobVar.model_path)
+load_path, parameters = inference.model_path, inference.model_configuration
 model.summary(expand_nested=True)
 
 # Load normalizer and encoders
@@ -65,28 +64,28 @@ if parameters['Model name'] == 'CCM':
 #==============================================================================
 # ...
 #==============================================================================
-PP = PreProcessing()
+preprocessor = PreProcessing()
 
 # map numbers to roulette color, reshape array and generate window dataset
 # CCM model
 #------------------------------------------------------------------------------
 if parameters['Model name'] == 'CCM':    
-    df_predictions = PP.roulette_colormapping(df_predictions, no_mapping=False)
+    df_predictions = preprocessor.roulette_colormapping(df_predictions, no_mapping=False)
     timeseries = df_predictions['encoding']
     timeseries = timeseries.values.reshape(-1, 1)
     categories = [['green', 'black', 'red']]
     timeseries = encoder.transform(timeseries)
     timeseries = pd.DataFrame(timeseries, columns=['encoding'])
-    predictions_inputs, _ = PP.timeseries_labeling(timeseries, parameters['Window size'], 
+    predictions_inputs, _ = preprocessor.timeseries_labeling(timeseries, parameters['Window size'], 
                                                          parameters['Output seq length'])
 else:
-    df_predictions = PP.roulette_positions(df_predictions)
-    df_predictions = PP.roulette_colormapping(df_predictions, no_mapping=True)
+    df_predictions = preprocessor.roulette_positions(df_predictions)
+    df_predictions = preprocessor.roulette_colormapping(df_predictions, no_mapping=True)
     categories = [[x for x in df_predictions['encoding'].unique()]]
     timeseries = df_predictions[['encoding', 'position']]    
-    val_inputs, _ = PP.timeseries_labeling(timeseries['encoding'], parameters['Window size'], 
+    val_inputs, _ = preprocessor.timeseries_labeling(timeseries['encoding'], parameters['Window size'], 
                                             parameters['Output seq length'])
-    pos_inputs, _ = PP.timeseries_labeling(timeseries['position'], parameters['Window size'], 
+    pos_inputs, _ = preprocessor.timeseries_labeling(timeseries['position'], parameters['Window size'], 
                                             parameters['Output seq length'])
 
 # [PERFORM PREDICTIONS]
@@ -101,18 +100,14 @@ print('''Perform prediction using the loaded model
 if parameters['Model name'] == 'CCM': 
     last_window = timeseries['encoding'].to_list()[-parameters['Window size']:]
     last_window = np.reshape(last_window, (1, parameters['Window size'], 1))
-
     probability_vectors = model.predict(predictions_inputs)
     next_prob_vector = model.predict(last_window)
-
     expected_class = np.argmax(probability_vectors, axis=-1)    
     next_exp_class = np.argmax(next_prob_vector, axis=-1)
     original_class = np.array(timeseries['encoding'].to_list()).reshape(-1, 1) 
-
     expected_color = encoder.inverse_transform(expected_class)       
     next_exp_color = encoder.inverse_transform(next_exp_class)
     original_names = encoder.inverse_transform(original_class) 
-
     expected_color = expected_color.flatten().tolist() 
     next_exp_color = next_exp_color.flatten().tolist()[0]   
     original_names = np.append(original_names.flatten().tolist(), '?')
@@ -125,14 +120,11 @@ else:
     last_window_val = np.reshape(last_window_val, (1, parameters['Window size'], 1))
     last_window_pos = timeseries['position'].to_list()[-parameters['Window size']:]
     last_window_pos = np.reshape(last_window_val, (1, parameters['Window size'], 1))
-
     probability_vectors = model.predict([val_inputs, pos_inputs])
     next_prob_vector = model.predict([last_window_val, last_window_pos])
-
     expected_class = np.argmax(probability_vectors, axis=-1)    
     next_exp_class = np.argmax(next_prob_vector, axis=-1)
-    original_class = np.array(timeseries['encoding'].to_list()).reshape(-1, 1)     
-
+    original_class = np.array(timeseries['encoding'].to_list()).reshape(-1, 1) 
     expected_color = expected_class.flatten().tolist() 
     next_exp_color = next_exp_class.flatten().tolist()[0]   
     original_names = np.append(original_class.flatten().tolist(), '?')
@@ -186,10 +178,8 @@ for i in range(next_prob_vector.shape[1]):
     df_probability = pd.DataFrame(sync_expected_vector)
     df_merged = pd.concat([timeseries, df_probability], axis=1)
 
-# [PRINT PREDICTIONS]
-#==============================================================================
-# Save the trained preprocessing systems (normalizer and encoders) for further use 
-#==============================================================================
+# print predictions
+#------------------------------------------------------------------------------
 print(f'''
 -------------------------------------------------------------------------------
 Next predicted color: {next_exp_color}
@@ -200,10 +190,8 @@ for i, (x, y) in enumerate(sync_expected_vector.items()):
     print(f'{x} = {round((next_prob_vector[0,0,i] * 100), 4)}')
 
 
-# [SAVE FILES]
-#==============================================================================
-# Save the trained preprocessing systems (normalizer and encoders) for further use 
-#==============================================================================
+# save files
+#------------------------------------------------------------------------------
 print('''
 -------------------------------------------------------------------------------
 Saving predictions file (as CSV)

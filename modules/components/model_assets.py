@@ -48,17 +48,17 @@ class RealTimeHistory(keras.callbacks.Callback):
             #------------------------------------------------------------------
             fig_path = os.path.join(self.plot_path, 'training_history.jpeg')
             plt.subplot(2, 1, 1)
-            plt.plot(self.epochs, self.loss_hist, label = 'training loss')
+            plt.plot(self.epochs, self.loss_hist, label='training loss')
             if self.validation==True:
-                plt.plot(self.epochs, self.loss_val_hist, label = 'validation loss')
+                plt.plot(self.epochs, self.loss_val_hist, label='validation loss')
                 plt.legend(loc = 'best', fontsize = 8)
             plt.title('Loss plot')
             plt.ylabel('Categorical Crossentropy')
             plt.xlabel('epoch')
             plt.subplot(2, 1, 2)
-            plt.plot(self.epochs, self.metric_hist, label = 'train metrics') 
+            plt.plot(self.epochs, self.metric_hist, label='train metrics') 
             if self.validation==True: 
-                plt.plot(self.epochs, self.metric_val_hist, label = 'validation metrics') 
+                plt.plot(self.epochs, self.metric_val_hist, label='validation metrics') 
                 plt.legend(loc = 'best', fontsize = 8)
             plt.title('metrics plot')
             plt.ylabel('Categorical accuracy')
@@ -374,9 +374,71 @@ class ModelTraining:
         '''
         path = os.path.join(savepath, 'model_parameters.json')      
         with open(path, 'w') as f:
-            json.dump(parameters_dict, f) 
-          
+            json.dump(parameters_dict, f)          
     
+     
+
+
+# [MODEL VALIDATION]
+#============================================================================== 
+# Methods for model validation
+#==============================================================================
+class ModelValidation:
+
+    def __init__(self, model):      
+        self.model = model       
+    
+    # comparison of data distribution using statistical methods 
+    #--------------------------------------------------------------------------     
+    def FAIRS_confusion(self, Y_real, predictions, name, path, dpi=400):         
+        cm = confusion_matrix(Y_real, predictions)    
+        fig, ax = plt.subplots()        
+        sns.heatmap(cm, annot=True, fmt='d', ax=ax, cmap=plt.cm.Blues, cbar=False)        
+        ax.set_xlabel('Predicted labels')
+        ax.set_ylabel('True labels')
+        ax.set_title('Confusion Matrix')
+        ax.set_xticks(np.arange(len(np.unique(Y_real))))
+        ax.set_yticks(np.arange(len(np.unique(predictions))))
+        ax.set_xticklabels(np.unique(Y_real))
+        ax.set_yticklabels(np.unique(predictions))
+        plt.tight_layout()
+        plot_loc = os.path.join(path, f'confusion_matrix_{name}.jpeg')
+        plt.savefig(plot_loc, bbox_inches='tight', format='jpeg', dpi = dpi)
+
+    # comparison of data distribution using statistical methods 
+    #--------------------------------------------------------------------------
+    def plot_multi_ROC(Y_real, predictions, class_dict, path, dpi):
+    
+        Y_real_bin = label_binarize(Y_real, classes=list(class_dict.values()))
+        n_classes = Y_real_bin.shape[1]        
+        fpr = dict()
+        tpr = dict()
+        roc_auc = dict()
+        for i in range(n_classes):
+            fpr[i], tpr[i], _ = roc_curve(Y_real_bin[:, i], predictions[:, i])
+            roc_auc[i] = auc(fpr[i], tpr[i])    
+        plt.figure()
+        for i in range(n_classes):
+            plt.plot(fpr[i], tpr[i], label='ROC curve of class {0} (area = {1:0.2f})'
+                 ''.format(list(class_dict.keys())[i], roc_auc[i]))
+        plt.plot([0, 1], [0, 1], 'k--')
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.title('Some extension of Receiver operating characteristic to multi-class')
+        plt.legend(loc="lower right")       
+        plot_loc = os.path.join(path, 'multi_ROC.jpeg')
+        plt.savefig(plot_loc, bbox_inches='tight', format='jpeg', dpi=dpi)           
+    
+
+# [MODEL VALIDATION]
+#============================================================================== 
+# Methods for model validation
+#==============================================================================
+class Inference:
+
+
     #-------------------------------------------------------------------------- 
     def load_pretrained_model(self, path, load_parameters=True):
 
@@ -433,59 +495,4 @@ class ModelTraining:
             with open(path, 'r') as f:
                 self.model_configuration = json.load(f)            
         
-        return model   
-
-
-# [MODEL VALIDATION]
-#============================================================================== 
-# Methods for model validation
-#==============================================================================
-class ModelValidation:
-
-    def __init__(self, model):      
-        self.model = model       
-    
-    # comparison of data distribution using statistical methods 
-    #--------------------------------------------------------------------------     
-    def FAIRS_confusion(self, Y_real, predictions, name, path, dpi=400):         
-        cm = confusion_matrix(Y_real, predictions)    
-        fig, ax = plt.subplots()        
-        sns.heatmap(cm, annot=True, fmt='d', ax=ax, cmap=plt.cm.Blues, cbar=False)        
-        ax.set_xlabel('Predicted labels')
-        ax.set_ylabel('True labels')
-        ax.set_title('Confusion Matrix')
-        ax.set_xticks(np.arange(len(np.unique(Y_real))))
-        ax.set_yticks(np.arange(len(np.unique(predictions))))
-        ax.set_xticklabels(np.unique(Y_real))
-        ax.set_yticklabels(np.unique(predictions))
-        plt.tight_layout()
-        plot_loc = os.path.join(path, f'confusion_matrix_{name}.jpeg')
-        plt.savefig(plot_loc, bbox_inches='tight', format='jpeg', dpi = dpi)
-
-    # comparison of data distribution using statistical methods 
-    #--------------------------------------------------------------------------
-    def plot_multi_ROC(Y_real, predictions, class_dict, path, dpi):
-    
-        Y_real_bin = label_binarize(Y_real, classes=list(class_dict.values()))
-        n_classes = Y_real_bin.shape[1]        
-        fpr = dict()
-        tpr = dict()
-        roc_auc = dict()
-        for i in range(n_classes):
-            fpr[i], tpr[i], _ = roc_curve(Y_real_bin[:, i], predictions[:, i])
-            roc_auc[i] = auc(fpr[i], tpr[i])    
-        plt.figure()
-        for i in range(n_classes):
-            plt.plot(fpr[i], tpr[i], label='ROC curve of class {0} (area = {1:0.2f})'
-                 ''.format(list(class_dict.keys())[i], roc_auc[i]))
-        plt.plot([0, 1], [0, 1], 'k--')
-        plt.xlim([0.0, 1.0])
-        plt.ylim([0.0, 1.05])
-        plt.xlabel('False Positive Rate')
-        plt.ylabel('True Positive Rate')
-        plt.title('Some extension of Receiver operating characteristic to multi-class')
-        plt.legend(loc="lower right")       
-        plot_loc = os.path.join(path, 'multi_ROC.jpeg')
-        plt.savefig(plot_loc, bbox_inches='tight', format='jpeg', dpi=dpi)           
-    
-
+        return model  

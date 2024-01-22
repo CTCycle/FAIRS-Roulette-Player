@@ -9,7 +9,7 @@ XLA_acceleration = False
 #------------------------------------------------------------------------------
 seed = 42
 training_device = 'GPU'
-epochs = 600
+epochs = 10
 learning_rate = 0.0001
 batch_size = 512
 
