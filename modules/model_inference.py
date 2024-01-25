@@ -49,8 +49,8 @@ df_predictions.reset_index(inplace=True)
 # Load model
 #------------------------------------------------------------------------------
 inference = Inference() 
-model = inference.load_pretrained_model(GlobVar.model_path)
-load_path, parameters = inference.model_path, inference.model_configuration
+model, parameters = inference.load_pretrained_model(GlobVar.model_path)
+load_path = inference.model_path
 model.summary(expand_nested=True)
 
 # Load normalizer and encoders

@@ -45,7 +45,7 @@ while True:
             elif mod_sel == 3: 
                 break  
     elif op_sel == 3:
-        import modules.FAIRS_forecast
+        import modules.model_inference
         del sys.modules['modules.FAIRS_forecast']
     elif op_sel == 4:
         break

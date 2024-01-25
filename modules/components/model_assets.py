@@ -489,10 +489,9 @@ class Inference:
         elif len(model_folders) == 1:
             self.model_path = os.path.join(path, model_folders[0])            
         
-        model = keras.models.load_model(self.model_path)
-        if load_parameters==True:
-            path = os.path.join(self.model_path, 'model_parameters.json')
-            with open(path, 'r') as f:
-                self.model_configuration = json.load(f)            
+        model = keras.models.load_model(self.model_path)        
+        path = os.path.join(self.model_path, 'model_parameters.json')
+        with open(path, 'r') as f:
+            configuration = json.load(f)            
         
-        return model  
+        return model, configuration  
