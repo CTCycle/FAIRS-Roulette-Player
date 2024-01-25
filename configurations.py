@@ -1,7 +1,7 @@
 # Define general variables
 #------------------------------------------------------------------------------
 generate_model_graph = True
-use_mixed_precision = True
+use_mixed_precision = False
 use_tensorboard = False
 XLA_acceleration = False
 
@@ -9,8 +9,8 @@ XLA_acceleration = False
 #------------------------------------------------------------------------------
 seed = 42
 training_device = 'GPU'
-epochs = 10
-learning_rate = 0.0001
+epochs = 600
+learning_rate = 10e-06
 batch_size = 512
 
 # embedding and convolutions
@@ -22,11 +22,10 @@ num_heads = 3
 
 # Define variables for preprocessing
 #------------------------------------------------------------------------------
-use_test_data = True
 invert_test = False
 data_size = 1.0
 test_size = 0.1
-window_size = 25
+window_size = 30
 output_size = 1
 
 # Predictions variables

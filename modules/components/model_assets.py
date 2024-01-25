@@ -402,7 +402,7 @@ class ModelValidation:
         ax.set_xticklabels(np.unique(Y_real))
         ax.set_yticklabels(np.unique(predictions))
         plt.tight_layout()
-        plot_loc = os.path.join(path, f'confusion_matrix_{name}.jpeg')
+        plot_loc = os.path.join(path, f'{name}.jpeg')
         plt.savefig(plot_loc, bbox_inches='tight', format='jpeg', dpi = dpi)
 
     # comparison of data distribution using statistical methods 

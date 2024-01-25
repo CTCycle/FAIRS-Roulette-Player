@@ -18,9 +18,10 @@ print(ascii_art)
 #==============================================================================
 user_operations = UserOperations()
 operations_menu = {'1' : 'Data analysis',
-                   '2' : 'FAIRS model pretraining',                  
-                   '3' : 'Predict next extraction',                                                 
-                   '4' : 'Exit and close'}
+                   '2' : 'FAIRS model pretraining',  
+                   '3' : 'FAIRS model evaluation',                 
+                   '4' : 'Predict next extraction',                                                 
+                   '5' : 'Exit and close'}
 model_menu = {'1' : 'ColorCode Model (CCM)',
               '2' : 'NumberMatrix Model (NMM)',                                                          
               '3' : 'Exit and close'}
@@ -43,10 +44,13 @@ while True:
                 import modules.NMM_training
                 del sys.modules['modules.NMM_training']
             elif mod_sel == 3: 
-                break  
+                break 
+    elif op_sel == 3:
+        import modules.model_evaluation
+        del sys.modules['modules.model_evaluation'] 
     elif op_sel == 3:
         import modules.model_inference
-        del sys.modules['modules.FAIRS_forecast']
+        del sys.modules['modules.model_inference']
     elif op_sel == 4:
         break
     
