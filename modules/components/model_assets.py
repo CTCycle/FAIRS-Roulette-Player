@@ -6,10 +6,10 @@ import seaborn as sns
 import tensorflow as tf
 from tensorflow import keras
 from keras.models import Model
-from keras.layers import Dense, Conv1D, GlobalAveragePooling1D, Dropout, BatchNormalization, LayerNormalization
-from keras.layers import Input, Embedding, Reshape, RepeatVector, TimeDistributed, MultiHeadAttention, Add
+from keras import layers
 from sklearn.metrics import confusion_matrix, roc_curve, auc
 from sklearn.preprocessing import label_binarize
+from tensorflow.keras.utils import register_keras_serializable
 
 
 # [CALLBACK FOR REAL TIME TRAINING MONITORING]
@@ -35,7 +35,7 @@ class RealTimeHistory(keras.callbacks.Callback):
         self.loss_val_hist = []        
         self.metric_val_hist = []
         self.validation = validation            
-    #--------------------------------------------------------------------------
+    
     def on_epoch_end(self, epoch, logs = {}):
         if epoch % 10 == 0:                    
             self.epochs.append(epoch)
@@ -44,8 +44,7 @@ class RealTimeHistory(keras.callbacks.Callback):
             if self.validation==True:
                 self.loss_val_hist.append(logs[list(logs.keys())[2]])            
                 self.metric_val_hist.append(logs[list(logs.keys())[3]])
-        if epoch % 40 == 0:            
-            #------------------------------------------------------------------
+        if epoch % 40 == 0:           
             fig_path = os.path.join(self.plot_path, 'training_history.jpeg')
             plt.subplot(2, 1, 1)
             plt.plot(self.epochs, self.loss_hist, label='training loss')
@@ -66,20 +65,22 @@ class RealTimeHistory(keras.callbacks.Callback):
             plt.tight_layout()
             plt.savefig(fig_path, bbox_inches = 'tight', format = 'jpeg', dpi = 300)
             plt.close()
+
                   
 # [POSITION EMBEDDING]
 #==============================================================================
 # Positional embedding custom layer
 #==============================================================================
-class PositionalEmbedding(keras.layers.Layer):
-    def __init__(self, sequence_length, vocab_size, embedding_dims, mask_zero=None):
-        super(PositionalEmbedding, self).__init__()
+@register_keras_serializable(package='CustomLayers', name='PositionalEmbedding')
+class PositionalEmbedding(layers.Layer):
+    def __init__(self, sequence_length, vocab_size, embedding_dims, mask_zero=None, **kwargs):
+        super(PositionalEmbedding, self).__init__(**kwargs)
         self.sequence_length = sequence_length
         self.vocab_size = vocab_size
         self.embedding_dims = embedding_dims
         self.mask_zero = mask_zero
-        self.word_embedding_layer = Embedding(input_dim=vocab_size, output_dim=embedding_dims)
-        self.position_embedding_layer = Embedding(input_dim=sequence_length, output_dim=embedding_dims)
+        self.word_embedding_layer = layers.Embedding(input_dim=vocab_size, output_dim=embedding_dims)
+        self.position_embedding_layer = layers.Embedding(input_dim=sequence_length, output_dim=embedding_dims)
  
     # implement positional embedding through call method  
     #--------------------------------------------------------------------------    
@@ -87,6 +88,7 @@ class PositionalEmbedding(keras.layers.Layer):
         position_indices = tf.range(tf.shape(inputs)[-1])
         embedded_words = self.word_embedding_layer(inputs)
         embedded_indices = self.position_embedding_layer(position_indices)
+
         return embedded_words + embedded_indices
     
     # compute the mask for padded sequences  
@@ -108,28 +110,31 @@ class PositionalEmbedding(keras.layers.Layer):
     def from_config(cls, config):
         return cls(**config)
     
+    
 # [CONVOLUTIONAL BLOCK  ]
 #==============================================================================
 # Positional embedding custom layer
 #==============================================================================
+@register_keras_serializable(package='CustomLayers', name='ConvFeedForward')
 class ConvFeedForward(keras.layers.Layer):
-    def __init__(self, kernel_size):
-        super(ConvFeedForward, self).__init__()
+    def __init__(self, kernel_size, **kwargs):
+        super(ConvFeedForward, self).__init__(**kwargs)
         self.kernel_size = kernel_size
-        self.conv1 = Conv1D(128, kernel_size=kernel_size, padding='same', activation='relu')
-        self.conv2 = Conv1D(256, kernel_size=kernel_size, padding='same', activation='relu')
-        self.conv3 = Conv1D(512, kernel_size=kernel_size, padding='same', activation='relu')         
-        self.layernorm = LayerNormalization()
-        self.dense = Dense(512, activation='relu', kernel_initializer='he_uniform')          
+        self.conv1 = layers.Conv1D(128, kernel_size=kernel_size, padding='same', activation='relu')
+        self.conv2 = layers.Conv1D(256, kernel_size=kernel_size, padding='same', activation='relu')
+        self.conv3 = layers.Conv1D(512, kernel_size=kernel_size, padding='same', activation='relu')         
+        self.layernorm = layers.LayerNormalization()
+        self.dense = layers.Dense(512, activation='relu', kernel_initializer='he_uniform')          
 
     # implement positional embedding through call method  
     #--------------------------------------------------------------------------
-    def call(self, inputs):
+    def call(self, inputs, training=True):
         layer = self.conv1(inputs)       
         layer = self.conv2(layer)       
         layer = self.conv3(layer)
         layer = self.layernorm(inputs + layer)
         output = self.dense(layer)
+
         return output
     
     # serialize layer for saving  
@@ -147,20 +152,21 @@ class ConvFeedForward(keras.layers.Layer):
 #==============================================================================
 # Custom transformer encoder
 #============================================================================== 
+@register_keras_serializable(package='CustomLayers', name='TransformerEncoder')
 class TransformerEncoder(keras.layers.Layer):
-    def __init__(self, embedding_dims, num_heads):
-        super(TransformerEncoder, self).__init__()
+    def __init__(self, embedding_dims, num_heads, **kwargs):
+        super(TransformerEncoder, self).__init__(**kwargs)
         self.embedding_dims = embedding_dims       
         self.num_heads = num_heads        
-        self.attention = MultiHeadAttention(num_heads=num_heads, key_dim=self.embedding_dims)
-        self.layernorm1 = LayerNormalization()
-        self.layernorm2 = LayerNormalization()
-        self.dense1 = Dense(512, activation='relu', kernel_initializer='he_uniform')
-        self.dense2 = Dense(512, activation='relu', kernel_initializer='he_uniform')        
+        self.attention = layers.MultiHeadAttention(num_heads=num_heads, key_dim=self.embedding_dims)
+        self.layernorm1 = layers.LayerNormalization()
+        self.layernorm2 = layers.LayerNormalization()
+        self.dense1 = layers.Dense(512, activation='relu', kernel_initializer='he_uniform')
+        self.dense2 = layers.Dense(512, activation='relu', kernel_initializer='he_uniform')        
 
     # implement transformer encoder through call method  
     #--------------------------------------------------------------------------
-    def call(self, inputs, training):        
+    def call(self, inputs, training=True):        
         inputs = self.layernorm1(inputs)
         inputs = self.dense1(inputs)       
         attention_output = self.attention(query=inputs, value=inputs, key=inputs,
@@ -185,21 +191,22 @@ class TransformerEncoder(keras.layers.Layer):
 #==============================================================================
 # Custom layer
 #============================================================================== 
+@register_keras_serializable(package='CustomLayers', name='BNFeedForward')
 class BNFeedForward(keras.layers.Layer):
-    def __init__(self, units, seed=42, dropout=0.1):
-        super(BNFeedForward, self).__init__()
+    def __init__(self, units, seed=42, dropout=0.1, **kwargs):
+        super(BNFeedForward, self).__init__(**kwargs)
         self.units = units   
         self.seed = seed  
         self.dropout = dropout
-        self.BN = BatchNormalization(axis=-1, epsilon=0.001)  
-        self.drop = Dropout(rate=dropout, seed=seed)      
-        self.dense = Dense(units, activation='relu', kernel_initializer='he_uniform')
+        self.BN = layers.BatchNormalization(axis=-1, epsilon=0.001)  
+        self.drop = layers.Dropout(rate=dropout, seed=seed)      
+        self.dense = layers.Dense(units, activation='relu', kernel_initializer='he_uniform')
         
     # implement transformer encoder through call method  
     #--------------------------------------------------------------------------
-    def call(self, inputs, training):        
+    def call(self, inputs, training=True):        
         layer = self.dense(inputs)
-        layer = self.BN(layer)       
+        layer = self.BN(layer, training=training)       
         output = self.drop(layer, training=training)                
         
         return output
@@ -224,12 +231,11 @@ class BNFeedForward(keras.layers.Layer):
 #==============================================================================
 class ColorCodeModel:
 
-    def __init__(self, learning_rate, window_size, output_size, embedding_dims, 
+    def __init__(self, learning_rate, window_size, embedding_dims, 
                  num_blocks, num_heads, kernel_size, seed, XLA_state):
 
         self.learning_rate = learning_rate
-        self.window_size = window_size
-        self.output_size = output_size        
+        self.window_size = window_size             
         self.embedding_dims = embedding_dims
         self.num_blocks = num_blocks
         self.num_heads = num_heads
@@ -243,18 +249,17 @@ class ColorCodeModel:
     # build model given the architecture
     #--------------------------------------------------------------------------
     def build(self):       
-        sequence_input = Input(shape=(self.window_size, 1))                              
+        sequence_input = layers.Input(shape=(self.window_size, 1))                              
         layer = self.posembedding(sequence_input)  
-        layer = Reshape((self.window_size, self.embedding_dims))(layer)      
+        layer = layers.Reshape((self.window_size, self.embedding_dims))(layer)      
         for encoder, ffn in zip(self.encoders, self.ffns):
             layer = encoder(layer)
             layer = ffn(layer) 
-        pooling = GlobalAveragePooling1D()(layer)             
-        layer = RepeatVector(self.output_size)(pooling)
-        layer = BNFeedForward(512, self.seed, 0.1)(layer)
+        pooling = layers.GlobalAveragePooling1D()(layer)       
+        layer = BNFeedForward(512, self.seed, 0.1)(pooling)
         layer = BNFeedForward(256, self.seed, 0.1)(layer)
         layer = BNFeedForward(128, self.seed, 0.1)(layer)        
-        output = TimeDistributed(Dense(3, activation='softmax', dtype='float32'))(layer)        
+        output = layers.Dense(3, activation='softmax', dtype='float32')(layer)        
        
         model = Model(inputs = sequence_input, outputs = output, name = 'CCM')    
         opt = keras.optimizers.Adam(learning_rate=self.learning_rate)
@@ -262,7 +267,8 @@ class ColorCodeModel:
         metrics = keras.metrics.CategoricalAccuracy()
         model.compile(loss = loss, optimizer = opt, metrics = metrics,
                       jit_compile=self.XLA_state)          
-        return model 
+        return model
+     
 
 # [NUM MATRIX MODEL]
 #==============================================================================
@@ -270,12 +276,11 @@ class ColorCodeModel:
 #==============================================================================
 class NumMatrixModel:
 
-    def __init__(self, learning_rate, window_size, output_size, embedding_dims, 
+    def __init__(self, learning_rate, window_size, embedding_dims, 
                  num_blocks, num_heads, kernel_size, seed, XLA_state):
 
         self.learning_rate = learning_rate
-        self.window_size = window_size
-        self.output_size = output_size        
+        self.window_size = window_size               
         self.embedding_dims = embedding_dims
         self.num_blocks = num_blocks
         self.num_heads = num_heads
@@ -288,26 +293,24 @@ class NumMatrixModel:
         self.ffnpos = [ConvFeedForward(self.kernel_size) for i in range(self.num_blocks)] 
 
     def build(self):        
-        sequence_input = Input(shape=(self.window_size, 1))
-        position_input = Input(shape=(self.window_size, 1))
+        sequence_input = layers.Input(shape=(self.window_size, 1))
+        position_input = layers.Input(shape=(self.window_size, 1))
         embeddingseq = PositionalEmbedding(self.window_size, 37, self.embedding_dims)(sequence_input)
-        layerseq = Reshape((self.window_size, self.embedding_dims))(embeddingseq)
+        layerseq = layers.Reshape((self.window_size, self.embedding_dims))(embeddingseq)
         embeddingpos = PositionalEmbedding(self.window_size, 37, self.embedding_dims)(position_input)
-        layerpos = Reshape((self.window_size, self.embedding_dims))(embeddingpos)        
+        layerpos =layers. Reshape((self.window_size, self.embedding_dims))(embeddingpos)        
         for encoder, ffn in zip(self.encoderseq, self.ffnseq):
             layerseq = encoder(layerseq)
             layerseq = ffn(layerseq)                
         for encoder, ffn in zip(self.encoderpos, self.ffnpos):
             layerpos = encoder(layerpos)
             layerpos = ffn(layerpos) 
-        layerseq = GlobalAveragePooling1D()(layerseq) 
-        layerpos = GlobalAveragePooling1D()(layerpos)       
-        add = Add()([layerseq, layerpos])                           
-        layer = RepeatVector(self.output_size)(add)
-        layer = BNFeedForward(512, self.seed, 0.1)(layer)
-        layer = BNFeedForward(256, self.seed, 0.1)(layer)
+        layerseq = layers.GlobalAveragePooling1D()(layerseq) 
+        layerpos = layers.GlobalAveragePooling1D()(layerpos)       
+        add = layers.Add()([layerseq, layerpos])        
+        layer = BNFeedForward(512, self.seed, 0.1)(add)
         layer = BNFeedForward(128, self.seed, 0.1)(layer)        
-        output = TimeDistributed(Dense(37, activation='softmax', dtype='float32'))(layer)
+        output = layers.Dense(37, activation='softmax', dtype='float32')(layer)
 
         model = Model(inputs = [sequence_input, position_input], outputs = output, name = 'NMM')    
         opt = keras.optimizers.Adam(learning_rate=self.learning_rate)
@@ -346,7 +349,8 @@ class ModelTraining:
                 if use_mixed_precision == True:
                     policy = keras.mixed_precision.Policy('mixed_float16')
                     keras.mixed_precision.set_global_policy(policy) 
-                tf.config.set_visible_devices(self.physical_devices[0], 'GPU')                 
+                tf.config.set_visible_devices(self.physical_devices[0], 'GPU') 
+                #os.environ['TF_GPU_ALLOCATOR']='cuda_malloc_async'                  
                 print('GPU is set as active device')
             print('-------------------------------------------------------------------------------')
             print()        
@@ -374,9 +378,7 @@ class ModelTraining:
         '''
         path = os.path.join(savepath, 'model_parameters.json')      
         with open(path, 'w') as f:
-            json.dump(parameters_dict, f)          
-    
-     
+            json.dump(parameters_dict, f)    
 
 
 # [MODEL VALIDATION]
@@ -427,7 +429,7 @@ class ModelValidation:
         plt.xlabel('False Positive Rate')
         plt.ylabel('True Positive Rate')
         plt.title('Some extension of Receiver operating characteristic to multi-class')
-        plt.legend(loc="lower right")       
+        plt.legend(loc='lower right')       
         plot_loc = os.path.join(path, 'multi_ROC.jpeg')
         plt.savefig(plot_loc, bbox_inches='tight', format='jpeg', dpi=dpi)           
     
@@ -438,9 +440,8 @@ class ModelValidation:
 #==============================================================================
 class Inference:
 
-
     #-------------------------------------------------------------------------- 
-    def load_pretrained_model(self, path, load_parameters=True):
+    def load_pretrained_model(self, path):
 
         '''
         Load pretrained keras model (in folders) from the specified directory. 
@@ -484,14 +485,15 @@ class Inference:
                     print()
                 except:
                     continue
-            self.model_path = os.path.join(path, model_folders[dir_index - 1])
+            self.folder_path = os.path.join(path, model_folders[dir_index - 1])
 
         elif len(model_folders) == 1:
-            self.model_path = os.path.join(path, model_folders[0])            
+            self.folder_path = os.path.join(path, model_folders[0])                 
         
-        model = keras.models.load_model(self.model_path)        
-        path = os.path.join(self.model_path, 'model_parameters.json')
+        model_path = os.path.join(self.folder_path, 'model.keras') 
+        model = tf.keras.models.load_model(model_path)
+        path = os.path.join(self.folder_path, 'model_parameters.json')
         with open(path, 'r') as f:
-            configuration = json.load(f)            
+            configuration = json.load(f)               
         
         return model, configuration  

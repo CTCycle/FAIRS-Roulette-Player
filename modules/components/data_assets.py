@@ -12,7 +12,7 @@ class UserOperations:
     #--------------------------------------------------------------------------
     def menu_selection(self, menu):
         
-        """        
+        '''        
         menu_selection(menu)
         
         Presents a menu to the user and returns the selected option.
@@ -25,7 +25,7 @@ class UserOperations:
         Returns:            
             op_sel (int): The selected option number.
         
-        """
+        '''
         
         indexes = [idx + 1 for idx, val in enumerate(menu)]
         for key, value in menu.items():
@@ -46,9 +46,9 @@ class UserOperations:
         return op_sel
     
 
-# define model class
+# [PREPROCESSING]
 #==============================================================================
-#==============================================================================
+# preprocessing tools
 #==============================================================================
 class PreProcessing:
 
@@ -83,14 +83,12 @@ class PreProcessing:
         else:
             dataframe['encoding'] = dataframe['timeseries']
 
-        return dataframe
-
-    
+        return dataframe    
  
     #--------------------------------------------------------------------------
     def split_timeseries(self, dataframe, test_size, inverted=False):
         
-        """        
+        '''        
         
         Splits the input dataframe into training and testing sets based on the test size.
     
@@ -102,7 +100,7 @@ class PreProcessing:
             df_train (pd.dataframe): the training set
             df_test (pd.dataframe):  the testing set
         
-        """
+        '''
         train_size = int(len(dataframe) * (1 - test_size))
         test_size = len(dataframe) - train_size 
         if inverted == True:
@@ -112,13 +110,12 @@ class PreProcessing:
             df_train = dataframe.iloc[:train_size]
             df_test = dataframe.iloc[train_size:]
 
-        return df_train, df_test    
-    
+        return df_train, df_test   
 
     #--------------------------------------------------------------------------
-    def timeseries_labeling(self, df, window_size, output_size):
+    def timeseries_labeling(self, df, window_size, output_size=1):
         
-        """
+        '''
         timeseries_labeling(dataframe, window_size)
     
         Labels time series data by splitting into input and output sequences using sliding window method.
@@ -133,7 +130,7 @@ class PreProcessing:
         X_array (np.ndarray):     the input sequence data
         Y_array (np.ndarray):     the output sequence data
         
-        """        
+        '''        
         label = np.array(df)               
         X = [label[i : i + window_size] for i in range(len(label) - window_size - output_size + 1)]
         Y = [label[i + window_size : i + window_size + output_size] for i in range(len(label) - window_size - output_size + 1)]
@@ -154,15 +151,15 @@ class PreProcessing:
             str: A string containing the path of the folder where the model will be saved.
         
         '''        
-        raw_today_datetime = str(datetime.now())
-        truncated_datetime = raw_today_datetime[:-10]
+        today_datetime = str(datetime.now())
+        truncated_datetime = today_datetime[:-10]
         today_datetime = truncated_datetime.replace(':', '').replace('-', '').replace(' ', 'H') 
-        model_name = f'{model_name}_{today_datetime}'
-        model_savepath = os.path.join(path, model_name)
-        if not os.path.exists(model_savepath):
-            os.mkdir(model_savepath)               
-            
-        return model_savepath
+        self.folder_name = f'{model_name}_{today_datetime}'
+        model_folder_path = os.path.join(path, self.folder_name)
+        if not os.path.exists(model_folder_path):
+            os.mkdir(model_folder_path) 
+                    
+        return model_folder_path
         
     
     

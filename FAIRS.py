@@ -49,8 +49,8 @@ while True:
         import modules.model_evaluation
         del sys.modules['modules.model_evaluation'] 
     elif op_sel == 3:
-        import modules.model_inference
-        del sys.modules['modules.model_inference']
+        import modules.roulette_forecasting
+        del sys.modules['modules.roulette_forecasting']
     elif op_sel == 4:
         break
     
