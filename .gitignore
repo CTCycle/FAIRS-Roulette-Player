@@ -1,4 +1,5 @@
 __pycache__
-dataset/FAIRS_dataset.csv
-models/
-predictions/
+data/FAIRS_dataset.csv
+data/predictions/*
+models/*
+

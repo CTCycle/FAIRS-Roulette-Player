@@ -9,7 +9,6 @@ from keras.models import Model
 from keras import layers
 from sklearn.metrics import confusion_matrix, roc_curve, auc
 from sklearn.preprocessing import label_binarize
-from tensorflow.keras.utils import register_keras_serializable
 
 
 # [CALLBACK FOR REAL TIME TRAINING MONITORING]
@@ -71,7 +70,7 @@ class RealTimeHistory(keras.callbacks.Callback):
 #==============================================================================
 # Positional embedding custom layer
 #==============================================================================
-@register_keras_serializable(package='CustomLayers', name='PositionalEmbedding')
+@keras.utils.register_keras_serializable(package='CustomLayers', name='PositionalEmbedding')
 class PositionalEmbedding(layers.Layer):
     def __init__(self, sequence_length, vocab_size, embedding_dims, mask_zero=None, **kwargs):
         super(PositionalEmbedding, self).__init__(**kwargs)
@@ -115,7 +114,7 @@ class PositionalEmbedding(layers.Layer):
 #==============================================================================
 # Positional embedding custom layer
 #==============================================================================
-@register_keras_serializable(package='CustomLayers', name='ConvFeedForward')
+@keras.utils.register_keras_serializable(package='CustomLayers', name='ConvFeedForward')
 class ConvFeedForward(keras.layers.Layer):
     def __init__(self, kernel_size, **kwargs):
         super(ConvFeedForward, self).__init__(**kwargs)
@@ -152,7 +151,7 @@ class ConvFeedForward(keras.layers.Layer):
 #==============================================================================
 # Custom transformer encoder
 #============================================================================== 
-@register_keras_serializable(package='CustomLayers', name='TransformerEncoder')
+@keras.utils.register_keras_serializable(package='CustomLayers', name='TransformerEncoder')
 class TransformerEncoder(keras.layers.Layer):
     def __init__(self, embedding_dims, num_heads, **kwargs):
         super(TransformerEncoder, self).__init__(**kwargs)
@@ -191,7 +190,7 @@ class TransformerEncoder(keras.layers.Layer):
 #==============================================================================
 # Custom layer
 #============================================================================== 
-@register_keras_serializable(package='CustomLayers', name='BNFeedForward')
+@keras.utils.register_keras_serializable(package='CustomLayers', name='BNFeedForward')
 class BNFeedForward(keras.layers.Layer):
     def __init__(self, units, seed=42, dropout=0.1, **kwargs):
         super(BNFeedForward, self).__init__(**kwargs)
@@ -248,7 +247,7 @@ class ColorCodeModel:
 
     # build model given the architecture
     #--------------------------------------------------------------------------
-    def build(self):       
+    def get_model(self, summary=True):          
         sequence_input = layers.Input(shape=(self.window_size, 1))                              
         layer = self.posembedding(sequence_input)  
         layer = layers.Reshape((self.window_size, self.embedding_dims))(layer)      
@@ -266,7 +265,10 @@ class ColorCodeModel:
         loss = keras.losses.CategoricalCrossentropy(from_logits=False)
         metrics = keras.metrics.CategoricalAccuracy()
         model.compile(loss = loss, optimizer = opt, metrics = metrics,
-                      jit_compile=self.XLA_state)          
+                      jit_compile=self.XLA_state) 
+        if summary==True:
+            model.summary(expand_nested=True)
+
         return model
      
 
@@ -292,13 +294,15 @@ class NumMatrixModel:
         self.ffnseq = [ConvFeedForward(self.kernel_size) for i in range(self.num_blocks)]  
         self.ffnpos = [ConvFeedForward(self.kernel_size) for i in range(self.num_blocks)] 
 
-    def build(self):        
+    # build model given the architecture
+    #--------------------------------------------------------------------------
+    def get_model(self, summary=True):      
         sequence_input = layers.Input(shape=(self.window_size, 1))
         position_input = layers.Input(shape=(self.window_size, 1))
         embeddingseq = PositionalEmbedding(self.window_size, 37, self.embedding_dims)(sequence_input)
         layerseq = layers.Reshape((self.window_size, self.embedding_dims))(embeddingseq)
         embeddingpos = PositionalEmbedding(self.window_size, 37, self.embedding_dims)(position_input)
-        layerpos =layers. Reshape((self.window_size, self.embedding_dims))(embeddingpos)        
+        layerpos = layers.Reshape((self.window_size, self.embedding_dims))(embeddingpos)        
         for encoder, ffn in zip(self.encoderseq, self.ffnseq):
             layerseq = encoder(layerseq)
             layerseq = ffn(layerseq)                
@@ -317,7 +321,9 @@ class NumMatrixModel:
         loss = keras.losses.CategoricalCrossentropy(from_logits=False)
         metrics = keras.metrics.CategoricalAccuracy()
         model.compile(loss = loss, optimizer = opt, metrics = metrics,
-                      jit_compile=self.XLA_state)      
+                      jit_compile=self.XLA_state)
+        if summary==True:
+            model.summary(expand_nested=True)      
         
         return model       
 
@@ -440,6 +446,12 @@ class ModelValidation:
 #==============================================================================
 class Inference:
 
+
+    def __init__(self, seed):
+        self.seed = seed
+        np.random.seed(seed)
+        tf.random.set_seed(seed)    
+
     #-------------------------------------------------------------------------- 
     def load_pretrained_model(self, path):
 
@@ -490,7 +502,7 @@ class Inference:
         elif len(model_folders) == 1:
             self.folder_path = os.path.join(path, model_folders[0])                 
         
-        model_path = os.path.join(self.folder_path, 'model.keras') 
+        model_path = os.path.join(self.folder_path, 'model') 
         model = tf.keras.models.load_model(model_path)
         path = os.path.join(self.folder_path, 'model_parameters.json')
         with open(path, 'r') as f:

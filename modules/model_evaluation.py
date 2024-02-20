@@ -17,6 +17,7 @@ if __name__ == '__main__':
 #------------------------------------------------------------------------------
 from modules.components.model_assets import Inference, ModelValidation
 import modules.global_variables as GlobVar
+import configurations as cnf
 
 # [LOAD DATASETS AND MODEL]
 #==============================================================================
@@ -25,36 +26,37 @@ import modules.global_variables as GlobVar
 
 # Load model
 #------------------------------------------------------------------------------
-inference = Inference() 
+inference = Inference(cnf.seed) 
 model, parameters = inference.load_pretrained_model(GlobVar.models_path)
 model_folder = inference.folder_path
 model.summary(expand_nested=True)
 
 # Load normalizer and encoders
 #------------------------------------------------------------------------------
-if parameters['Model_name']=='CCM':    
-    encoder_path = os.path.join(model_folder, 'preprocessing', 'categorical_encoder.pkl')
+pp_path = os.path.join(model_folder, 'preprocessing')
+if parameters['model_name']=='CCM':    
+    encoder_path = os.path.join(pp_path, 'categorical_encoder.pkl')
     with open(encoder_path, 'rb') as file:
         encoder = pickle.load(file)    
 
 # load npy files
 #------------------------------------------------------------------------------
-if parameters['Model_name']=='CCM':
-    load_path = os.path.join(model_folder, 'preprocessing')
-    X_train = np.load(os.path.join(load_path, 'train_data.npy'))
-    Y_train_OHE = np.load(os.path.join(load_path, 'train_labels.npy'))
-    X_test = np.load(os.path.join(load_path, 'test_data.npy'))
-    Y_test_OHE = np.load(os.path.join(load_path, 'test_labels.npy'))
+if parameters['model_name']=='CCM':
+    pp_path = os.path.join(model_folder, 'preprocessing')
+    X_train = np.load(os.path.join(pp_path, 'train_data.npy'))
+    Y_train_OHE = np.load(os.path.join(pp_path, 'train_labels.npy'))
+    X_test = np.load(os.path.join(pp_path, 'test_data.npy'))
+    Y_test_OHE = np.load(os.path.join(pp_path, 'test_labels.npy'))
     train_inputs, train_outputs = X_train, Y_train_OHE
     test_inputs, test_outputs = X_test, Y_test_OHE
-elif parameters['Model_name']=='NMM':
-    load_path = os.path.join(model_folder, 'preprocessing')
-    X_train_ext = np.load(os.path.join(load_path, 'train_extractions.npy'))
-    X_train_pos = np.load(os.path.join(load_path, 'train_positions.npy'))
-    Y_train_OHE = np.load(os.path.join(load_path, 'train_labels.npy'))
-    X_test_ext = np.load(os.path.join(load_path, 'test_extractions.npy'))
-    X_test_pos = np.load(os.path.join(load_path, 'test_positions.npy'))
-    Y_test_OHE = np.load(os.path.join(load_path, 'test_labels.npy'))
+elif parameters['model_name']=='NMM':
+    pp_path = os.path.join(model_folder, 'preprocessing')
+    X_train_ext = np.load(os.path.join(pp_path, 'train_extractions.npy'))
+    X_train_pos = np.load(os.path.join(pp_path, 'train_positions.npy'))
+    Y_train_OHE = np.load(os.path.join(pp_path, 'train_labels.npy'))
+    X_test_ext = np.load(os.path.join(pp_path, 'test_extractions.npy'))
+    X_test_pos = np.load(os.path.join(pp_path, 'test_positions.npy'))
+    Y_test_OHE = np.load(os.path.join(pp_path, 'test_labels.npy'))
     train_inputs, train_outputs = [X_train_ext, X_train_pos], Y_train_OHE
     test_inputs, test_outputs = [X_test_ext, X_test_pos], Y_test_OHE
 
@@ -82,7 +84,6 @@ if not os.path.exists(eval_path):
 predicted_train = model.predict(train_inputs, verbose=0)
 y_pred = np.argmax(predicted_train, axis=-1)
 y_true = np.argmax(train_outputs, axis=-1)
-
 
 # show predicted classes (train dataset)
 #------------------------------------------------------------------------------

@@ -15,40 +15,46 @@ This model is built to predict the next number extraction based on previous obse
 ## How to use
 Run the FAIRS.py file to launch the script and use the main menu to navigate the different options. The main menu allows selecting one of the following options (when selecting a pretraining method, another menu will be presented to allow the user chosing between the ColorCode and the NumberMatrix models):
 
-**1) Timeseries analysis:** Perform timeseries analysis to visualize distribution and main statistical parameters (work in progress).  
+**1) Timeseries analysis:** Perform timeseries analysis to visualize distribution and main statistical parameters 
 
-**2) Standard model pretraining** Allows training the DL models throughout multiple epochs, using the entire dataset (or a part of it) as the training set.
+**2) FAIRS models pretraining** Allows training the DL models throughout multiple epochs, using the entire dataset (or a part of it) as the training set.
 
-**3) Predict next extraction:** Predict the next coming extraction using a pretrained model. Automatically infers which model has been loaded and forecast extractions accordingly.
+**3) FAIRS models evaluation** Evaluate the performance of pretrained models
 
-**4) Exit and close**
+**4) Predict next extraction:** Predict the next coming extraction using a pretrained model. Automatically infers which model has been loaded and forecast extractions accordingly.
+
+**5) Exit and close**
 
 ### Configurations
 The configurations.py file allows to change the script configuration. The following parameters are available:
 
-**Settings for training performance and monitoring options:**
-- `generate_model_graph:` generate and save 2D model graph (as .png file)
+**Advanced settings for training:**
 - `use_mixed_precision:` whether or not to use mixed precision for faster training (mix float16/float32)
 - `use_tensorboard:` activate or deactivate tensorboard logging
 - `XLA_acceleration:` use of linear algebra acceleration for faster training 
-
-**Settings for pretraining parameters:**
 - `training_device:` select the training device (CPU or GPU)
+- `num_processors:` number of processors (cores) to be used during training; if set to 1, multiprocessing is not used
+
+**Settings for training routine:**
 - `epochs:` number of training iterations
-- `learning_rate:` learning rate of the model during training
+- `learning_rate:` learning rate of the model 
 - `batch_size:` size of batches to be fed to the model during training
+
+**Model settings:**
 - `embedding_size:` embedding dimensions (valid for both models)
 - `num_blocks:` how many encoder layers to stack
 - `num_heads:` number of heads for multi-head attention mechanism
+- `generate_model_graph:` generate and save 2D model graph (as .png file)
 
-**Settings for data preprocessing and predictions:**
-- `use_test_data:` whether or not to use test data
-- `invert_test:` test data placement (True to set last points as test data)
-- `data_size:` fraction of total available data to use
-- `test_size:` fraction of data to leave as test data
-- `window_size:` length of the input timeseries window
-- `output_size:` number of next points to predict (output sequence)
-- `predictions_size:` number of timeseries points to take for the predictions inputs
+**Settings for training data:**
+- `invert_test:` where to place the test set (True to set last points as test data)
+- `data_size:` fraction of total data to consider for training
+- `test_size:` fraction of selected data to consider for test
+- `window_size:` size of the timepoints window
+
+**General settings:**
+- `seed:` global random seed
+- `predictions_size:` how many points to take from the original timeseries as prediction set
 
 ## Installation 
 First, ensure that you have Python 3.10.12 installed on your system. Then, you can easily install the required Python packages using the provided requirements.txt file:

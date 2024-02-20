@@ -18,8 +18,8 @@ print(ascii_art)
 #==============================================================================
 user_operations = UserOperations()
 operations_menu = {'1' : 'Data analysis',
-                   '2' : 'FAIRS model pretraining',  
-                   '3' : 'FAIRS model evaluation',                 
+                   '2' : 'FAIRS models pretraining',  
+                   '3' : 'FAIRS models evaluation',                 
                    '4' : 'Predict next extraction',                                                 
                    '5' : 'Exit and close'}
 model_menu = {'1' : 'ColorCode Model (CCM)',
@@ -38,11 +38,11 @@ while True:
             mod_sel = user_operations.menu_selection(model_menu)
             print()
             if mod_sel == 1:
-                import modules.CCM_training
-                del sys.modules['modules.CCM_training']
+                import modules.colormap_training
+                del sys.modules['modules.colormap_training']
             elif mod_sel == 2: 
-                import modules.NMM_training
-                del sys.modules['modules.NMM_training']
+                import modules.posmatrix_training
+                del sys.modules['modules.posmatrix_training']
             elif mod_sel == 3: 
                 break 
     elif op_sel == 3:

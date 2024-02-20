@@ -37,21 +37,22 @@ extracted numbers as input
 # else creates a new csv file named predictions_inputs.csv
 #------------------------------------------------------------------------------
 filepath = os.path.join(GlobVar.data_path, 'FAIRS_dataset.csv')                 
-df_predictions = pd.read_csv(filepath, sep= ';', encoding='utf-8')
-df_predictions = df_predictions[-cnf.predictions_size:]
-df_predictions.reset_index(inplace=True)
+df_timeseries = pd.read_csv(filepath, sep= ';', encoding='utf-8')
+df_timeseries = df_timeseries[-cnf.predictions_size:]
+df_timeseries.reset_index(drop=True, inplace=True)
 
 # Load model
 #------------------------------------------------------------------------------
-inference = Inference() 
+inference = Inference(cnf.seed)
 model, parameters = inference.load_pretrained_model(GlobVar.models_path)
 model_folder = inference.folder_path
 model.summary(expand_nested=True)
 
 # Load normalizer and encoders
 #------------------------------------------------------------------------------
-if parameters['Model_name'] == 'CCM':    
-    encoder_path = os.path.join(model_folder, 'preprocessing', 'categorical_encoder.pkl')
+pp_path = os.path.join(model_folder, 'preprocessing')
+if parameters['model_name'] == 'CCM':    
+    encoder_path = os.path.join(pp_path, 'categorical_encoder.pkl')
     with open(encoder_path, 'rb') as file:
         encoder = pickle.load(file)    
 
@@ -64,21 +65,20 @@ preprocessor = PreProcessing()
 # map numbers to roulette color, reshape array and generate window dataset
 # CCM model
 #------------------------------------------------------------------------------
-if parameters['Model_name'] == 'CCM':    
-    df_predictions = preprocessor.roulette_colormapping(df_predictions, no_mapping=False)
-    timeseries = df_predictions['encoding']
-    timeseries = timeseries.values.reshape(-1, 1)
+pp_path = os.path.join(model_folder, 'preprocessing')
+if parameters['model_name'] == 'CCM':        
+    df_predictions = preprocessor.roulette_colormapping(df_timeseries, no_mapping=False)    
     categories = [['green', 'black', 'red']]
-    timeseries = encoder.transform(timeseries)
+    timeseries = encoder.transform(df_predictions['encoding'].values.reshape(-1, 1))
     timeseries = pd.DataFrame(timeseries, columns=['encoding'])
-    predictions_inputs, _ = preprocessor.timeseries_labeling(timeseries, parameters['Window_size'])
+    pred_inputs, _ = preprocessor.timeseries_labeling(timeseries, parameters['window_size'])
 else:
-    df_predictions = preprocessor.roulette_positions(df_predictions)
+    df_predictions = preprocessor.roulette_positions(df_timeseries)
     df_predictions = preprocessor.roulette_colormapping(df_predictions, no_mapping=True)
     categories = [[x for x in df_predictions['encoding'].unique()]]
     timeseries = df_predictions[['encoding', 'position']]    
-    val_inputs, _ = preprocessor.timeseries_labeling(timeseries['encoding'], parameters['Window_size'])
-    pos_inputs, _ = preprocessor.timeseries_labeling(timeseries['position'], parameters['Window_size'])
+    val_inputs, _ = preprocessor.timeseries_labeling(timeseries['encoding'], parameters['window_size'])
+    pos_inputs, _ = preprocessor.timeseries_labeling(timeseries['position'], parameters['window_size'])
 
 # [PERFORM PREDICTIONS]
 #==============================================================================
@@ -87,113 +87,94 @@ else:
 print('''Perform prediction using the loaded model
 ''')
 
-# inverse encoding of the classes (CCM)
+# predict extractions using the pretrained ColorCode model, generate a dataframe
+# containing original values and predictions
 #------------------------------------------------------------------------------ 
-if parameters['Model_name'] == 'CCM': 
-    last_window = timeseries['encoding'].to_list()[-parameters['Window_size']:]
-    last_window = np.reshape(last_window, (1, parameters['Window_size'], 1))
-    probability_vectors = model.predict(predictions_inputs)
-    next_prob_vector = model.predict(last_window)
-    expected_class = np.argmax(probability_vectors, axis=-1)    
-    next_exp_class = np.argmax(next_prob_vector, axis=-1)
-    original_class = np.array(timeseries['encoding'].to_list()).reshape(-1, 1) 
-    expected_color = encoder.inverse_transform(expected_class.reshape(-1, 1))       
-    next_exp_color = encoder.inverse_transform(next_exp_class.reshape(-1, 1))
-    original_names = encoder.inverse_transform(original_class.reshape(-1, 1)) 
-    expected_color = expected_color.flatten().tolist() 
-    next_exp_color = next_exp_color.flatten().tolist()[0]   
-    original_names = np.append(original_names.flatten().tolist(), '?')
-    sync_expected_vector = {'Green' : [], 'Black' : [], 'Red' : []}
+if parameters['model_name'] == 'CCM': 
 
-# inverse encoding of the classes (CCM)
+    # create dummy arrays to fill first positions 
+    nan_array_probs = np.full((parameters['window_size'], 3), np.nan)
+    nan_array_values = np.full((parameters['window_size'], 1), np.nan)
+
+    # create and reshape last window of inputs to obtain the future prediction
+    last_window = timeseries['encoding'].tail(parameters['window_size'])
+    last_window = np.reshape(last_window, (1, parameters['window_size'], 1))
+
+    # predict from inputs and last window    
+    probability_vectors = model.predict(pred_inputs)   
+    next_prob_vector = model.predict(last_window)
+    predicted_probs = np.vstack((nan_array_probs, probability_vectors, next_prob_vector))
+
+    # find the most probable class using argmax on the probability vector
+    expected_value = np.argmax(probability_vectors, axis=-1)    
+    next_exp_value = np.argmax(next_prob_vector, axis=-1)  
+
+    # decode the classes to obtain original color code  
+    expected_value = encoder.inverse_transform(expected_value.reshape(-1, 1))       
+    next_exp_value = encoder.inverse_transform(next_exp_value.reshape(-1, 1))
+    predicted_value = np.vstack((nan_array_values, expected_value, next_exp_value))
+    
+    # create the dataframe by adding the new columns with predictions
+    df_timeseries.loc[df_timeseries.shape[0]] = ['?', '?'] 
+    df_timeseries['probability of green'] = predicted_probs[:, 0]
+    df_timeseries['probability of black'] = predicted_probs[:, 1]
+    df_timeseries['probability of red'] = predicted_probs[:, 2] 
+    df_timeseries['predicted color'] = predicted_value[:, 0]      
+    
+# predict extractions using the pretrained NumMatrix model, generate a dataframe
+# containing original values and predictions
 #------------------------------------------------------------------------------ 
 else: 
-    last_window_val = timeseries['encoding'].to_list()[-parameters['Window_size']:]
-    last_window_val = np.reshape(last_window_val, (1, parameters['Window_size'], 1))
-    last_window_pos = timeseries['position'].to_list()[-parameters['Window_size']:]
-    last_window_pos = np.reshape(last_window_val, (1, parameters['Window_size'], 1))
-    probability_vectors = model.predict([val_inputs, pos_inputs])
-    next_prob_vector = model.predict([last_window_val, last_window_pos])
-    expected_class = np.argmax(probability_vectors, axis=-1)    
-    next_exp_class = np.argmax(next_prob_vector, axis=-1)
-    original_class = np.array(timeseries['encoding'].to_list()).reshape(-1, 1) 
-    expected_color = expected_class.flatten().tolist() 
-    next_exp_color = next_exp_class.flatten().tolist()[0]   
-    original_names = np.append(original_class.flatten().tolist(), '?')
-    sync_expected_vector = {'Green' : [], 'Black' : [], 'Red' : []}         
-    expected_color = expected_class.flatten().tolist() 
-    next_exp_color = next_exp_class.flatten().tolist()[0]   
-    original_names = np.append(original_class.flatten().tolist(), '?')
-    sync_expected_vector = {f'{i}': [] for i in range(37)}
 
-# synchronize the window of timesteps with the predictions (CCM)
-#------------------------------------------------------------------------------ 
-sync_expected_color = []
-for ts in range(parameters['Window_size']):
-    if parameters['Model_name'] == 'CCM':         
-        sync_expected_vector['Green'].append('')
-        sync_expected_vector['Black'].append('')
-        sync_expected_vector['Red'].append('')
-        sync_expected_color.append('')
-    else:
-        sync_expected_color.append('')
-        for i in range(37):
-            sync_expected_vector[f'{i}'].append('')           
-                
-for x, z in zip(probability_vectors, expected_color):
-    if parameters['Model_name'] == 'CCM':          
-        sync_expected_vector['Green'].append(x[0])
-        sync_expected_vector['Black'].append(x[1])
-        sync_expected_vector['Red'].append(x[2])
-        sync_expected_color.append(z)
-    else:
-        sync_expected_color.append(z)
-        for i in range(37):
-            sync_expected_vector[f'{i}'].append(x[0,i])            
+    # create dummy arrays to fill first positions 
+    nan_array_probs = np.full((parameters['window_size'], 37), np.nan)
+    nan_array_values = np.full((parameters['window_size'], 1), np.nan)
 
-for i in range(next_prob_vector.shape[1]):
-    if parameters['Model_name'] == 'CCM':          
-        sync_expected_vector['Green'].append(next_prob_vector[0,i])
-        sync_expected_vector['Black'].append(next_prob_vector[0,i])
-        sync_expected_vector['Red'].append(next_prob_vector[0,i])
-        sync_expected_color.append(next_exp_color)
-    else:
-        sync_expected_color.append(next_exp_color)
-        for r in range(37):
-            sync_expected_vector[f'{r}'].append(next_prob_vector[0,i,r])
+    # create and reshape last window of inputs to obtain the future prediction
+    last_window_ext = timeseries['encoding'].tail(parameters['window_size'])
+    last_window_ext = np.reshape(last_window_ext, (1, parameters['window_size'], 1))
+    last_window_pos = timeseries['position'].tail(parameters['window_size'])
+    last_window_pos = np.reshape(last_window_pos, (1, parameters['window_size'], 1))
 
-# add column with prediction to dataset
-#------------------------------------------------------------------------------
-    timeseries.loc[len(timeseries.index)] = None
-    timeseries['extraction'] = original_names
-    timeseries['predicted_extraction'] = sync_expected_color    
-    df_probability = pd.DataFrame(sync_expected_vector)
-    df_merged = pd.concat([timeseries, df_probability], axis=1)
+    # predict from inputs and last window    
+    probability_vectors = model.predict([val_inputs, pos_inputs]) 
+    next_prob_vector = model.predict([last_window_ext, last_window_pos])
+    predicted_probs = np.vstack((nan_array_probs, probability_vectors, next_prob_vector))
 
-# print predictions
+    # find the most probable class using argmax on the probability vector
+    expected_value = np.argmax(probability_vectors, axis=-1)    
+    next_exp_value = np.argmax(next_prob_vector, axis=-1)     
+    predicted_values = np.vstack((nan_array_values, expected_value.reshape(-1, 1), next_exp_value.reshape(-1, 1)))   
+    
+    # create the dataframe by adding the new columns with predictions
+    df_timeseries.loc[df_timeseries.shape[0]] = ['?', '?', '?'] 
+    for x in range(37):
+        df_timeseries[f'probability of {x+1}'] = predicted_probs[:, x]     
+    df_timeseries['predicted number'] = predicted_values[:, 0] 
+
+# print predictions on console
 #------------------------------------------------------------------------------
 print(f'''
 -------------------------------------------------------------------------------
-Next predicted color: {next_exp_color}
+Next predicted value: {next_exp_value[0,0]}
 -------------------------------------------------------------------------------
 ''')
 print('Probability vector from softmax (%):')
-for i, (x, y) in enumerate(sync_expected_vector.items()):
-    print(f'{x} = {round((next_prob_vector[0,0,i] * 100), 4)}')
+for i, x in enumerate(next_prob_vector[0]):
+    if parameters['model_name'] == 'CCM':
+        i = encoder.inverse_transform(np.reshape(i, (1, 1)))
+        print(f'{i[0,0]} = {round((x * 100), 4)}')  
+    else:
+        print(f'{i+1} = {round((x * 100), 4)}')
 
-# save files
+# save files as .csv in prediction folder
 #------------------------------------------------------------------------------
-print('''
--------------------------------------------------------------------------------
-Saving predictions file (as CSV)
--------------------------------------------------------------------------------
-''')
-if parameters['Model_name'] == 'CCM':  
+if parameters['model_name'] == 'CCM':  
     file_loc = os.path.join(GlobVar.pred_path, 'CCM_predictions.csv')         
-    df_merged.to_csv(file_loc, index=False, sep = ';', encoding = 'utf-8')
+    df_timeseries.to_csv(file_loc, index=False, sep = ';', encoding = 'utf-8')
 else:
     file_loc = os.path.join(GlobVar.pred_path, 'NMM_predictions.csv')         
-    df_merged.to_csv(file_loc, index=False, sep = ';', encoding = 'utf-8')
+    df_timeseries.to_csv(file_loc, index=False, sep = ';', encoding = 'utf-8')
 
 
 
