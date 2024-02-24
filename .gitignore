@@ -1,5 +1,5 @@
 __pycache__
 data/FAIRS_dataset.csv
-data/predictions/*
-models/*
+inference/predictions/*
+training/checkpoints/*
 

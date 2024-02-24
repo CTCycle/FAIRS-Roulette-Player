@@ -9,21 +9,27 @@ import pickle
 import warnings
 warnings.simplefilter(action='ignore', category = Warning)
 
-# add modules path if this file is launched as __main__
+# add parent folder path to the namespace
 #------------------------------------------------------------------------------
-if __name__ == '__main__':
-    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..')) 
 
 # import modules and components
 #------------------------------------------------------------------------------
-from modules.components.data_assets import PreProcessing
-from modules.components.model_assets import Inference
-import modules.global_variables as GlobVar
+from components.data_assets import PreProcessing
+from components.model_assets import Inference
+import components.global_paths as globpt
 import configurations as cnf
+
+# specify relative paths from global paths and create subfolders
+#------------------------------------------------------------------------------
+cp_path = os.path.join(globpt.train_path, 'checkpoints')
+pred_path = os.path.join(globpt.inference_path, 'predictions')
+os.mkdir(cp_path) if not os.path.exists(cp_path) else None
+os.mkdir(pred_path) if not os.path.exists(pred_path) else None
+
 
 # [LOAD MODEL AND DATA]
 #==============================================================================
-# ....
 #==============================================================================        
 print(f'''
 -------------------------------------------------------------------------------
@@ -36,7 +42,7 @@ extracted numbers as input
 # Load dataset of prediction inputs (if the file is present in the target folder)
 # else creates a new csv file named predictions_inputs.csv
 #------------------------------------------------------------------------------
-filepath = os.path.join(GlobVar.data_path, 'FAIRS_dataset.csv')                 
+filepath = os.path.join(globpt.data_path, 'FAIRS_dataset.csv')                 
 df_timeseries = pd.read_csv(filepath, sep= ';', encoding='utf-8')
 df_timeseries = df_timeseries[-cnf.predictions_size:]
 df_timeseries.reset_index(drop=True, inplace=True)
@@ -44,7 +50,7 @@ df_timeseries.reset_index(drop=True, inplace=True)
 # Load model
 #------------------------------------------------------------------------------
 inference = Inference(cnf.seed)
-model, parameters = inference.load_pretrained_model(GlobVar.models_path)
+model, parameters = inference.load_pretrained_model(cp_path)
 model_folder = inference.folder_path
 model.summary(expand_nested=True)
 
@@ -58,15 +64,14 @@ if parameters['model_name'] == 'CCM':
 
 # [PREPROCESS DATA FOR DIFFERENT MODEL]
 #==============================================================================
-# ...
 #==============================================================================
 preprocessor = PreProcessing()
 
-# map numbers to roulette color, reshape array and generate window dataset
-# CCM model
+# Preprocessd data according to each model pipeline
 #------------------------------------------------------------------------------
 pp_path = os.path.join(model_folder, 'preprocessing')
-if parameters['model_name'] == 'CCM':        
+if parameters['model_name'] == 'CCM':
+    # map numbers to roulette color, reshape array and generate window dataset        
     df_predictions = preprocessor.roulette_colormapping(df_timeseries, no_mapping=False)    
     categories = [['green', 'black', 'red']]
     timeseries = encoder.transform(df_predictions['encoding'].values.reshape(-1, 1))
@@ -82,38 +87,31 @@ else:
 
 # [PERFORM PREDICTIONS]
 #==============================================================================
-# ....
 #==============================================================================
-print('''Perform prediction using the loaded model
-''')
 
 # predict extractions using the pretrained ColorCode model, generate a dataframe
 # containing original values and predictions
-#------------------------------------------------------------------------------ 
-if parameters['model_name'] == 'CCM': 
+#------------------------------------------------------------------------------
+print('''Perform prediction using the loaded model\n''')
 
+if parameters['model_name'] == 'CCM':
     # create dummy arrays to fill first positions 
     nan_array_probs = np.full((parameters['window_size'], 3), np.nan)
     nan_array_values = np.full((parameters['window_size'], 1), np.nan)
-
     # create and reshape last window of inputs to obtain the future prediction
     last_window = timeseries['encoding'].tail(parameters['window_size'])
     last_window = np.reshape(last_window, (1, parameters['window_size'], 1))
-
-    # predict from inputs and last window    
+    # predict from inputs and last window and stack arrays   
     probability_vectors = model.predict(pred_inputs)   
     next_prob_vector = model.predict(last_window)
     predicted_probs = np.vstack((nan_array_probs, probability_vectors, next_prob_vector))
-
     # find the most probable class using argmax on the probability vector
     expected_value = np.argmax(probability_vectors, axis=-1)    
-    next_exp_value = np.argmax(next_prob_vector, axis=-1)  
-
+    next_exp_value = np.argmax(next_prob_vector, axis=-1)
     # decode the classes to obtain original color code  
     expected_value = encoder.inverse_transform(expected_value.reshape(-1, 1))       
     next_exp_value = encoder.inverse_transform(next_exp_value.reshape(-1, 1))
-    predicted_value = np.vstack((nan_array_values, expected_value, next_exp_value))
-    
+    predicted_value = np.vstack((nan_array_values, expected_value, next_exp_value))    
     # create the dataframe by adding the new columns with predictions
     df_timeseries.loc[df_timeseries.shape[0]] = ['?', '?'] 
     df_timeseries['probability of green'] = predicted_probs[:, 0]
@@ -125,27 +123,22 @@ if parameters['model_name'] == 'CCM':
 # containing original values and predictions
 #------------------------------------------------------------------------------ 
 else: 
-
     # create dummy arrays to fill first positions 
     nan_array_probs = np.full((parameters['window_size'], 37), np.nan)
     nan_array_values = np.full((parameters['window_size'], 1), np.nan)
-
     # create and reshape last window of inputs to obtain the future prediction
     last_window_ext = timeseries['encoding'].tail(parameters['window_size'])
     last_window_ext = np.reshape(last_window_ext, (1, parameters['window_size'], 1))
     last_window_pos = timeseries['position'].tail(parameters['window_size'])
     last_window_pos = np.reshape(last_window_pos, (1, parameters['window_size'], 1))
-
     # predict from inputs and last window    
     probability_vectors = model.predict([val_inputs, pos_inputs]) 
     next_prob_vector = model.predict([last_window_ext, last_window_pos])
     predicted_probs = np.vstack((nan_array_probs, probability_vectors, next_prob_vector))
-
     # find the most probable class using argmax on the probability vector
     expected_value = np.argmax(probability_vectors, axis=-1)    
     next_exp_value = np.argmax(next_prob_vector, axis=-1)     
-    predicted_values = np.vstack((nan_array_values, expected_value.reshape(-1, 1), next_exp_value.reshape(-1, 1)))   
-    
+    predicted_values = np.vstack((nan_array_values, expected_value.reshape(-1, 1), next_exp_value.reshape(-1, 1)))     
     # create the dataframe by adding the new columns with predictions
     df_timeseries.loc[df_timeseries.shape[0]] = ['?', '?', '?'] 
     for x in range(37):
@@ -170,11 +163,11 @@ for i, x in enumerate(next_prob_vector[0]):
 # save files as .csv in prediction folder
 #------------------------------------------------------------------------------
 if parameters['model_name'] == 'CCM':  
-    file_loc = os.path.join(GlobVar.pred_path, 'CCM_predictions.csv')         
-    df_timeseries.to_csv(file_loc, index=False, sep = ';', encoding = 'utf-8')
+    file_loc = os.path.join(pred_path, 'CCM_predictions.csv')         
+    df_timeseries.to_csv(file_loc, index=False, sep=';', encoding='utf-8')
 else:
-    file_loc = os.path.join(GlobVar.pred_path, 'NMM_predictions.csv')         
-    df_timeseries.to_csv(file_loc, index=False, sep = ';', encoding = 'utf-8')
+    file_loc = os.path.join(pred_path, 'NMM_predictions.csv')         
+    df_timeseries.to_csv(file_loc, index=False, sep=';', encoding='utf-8')
 
 
 

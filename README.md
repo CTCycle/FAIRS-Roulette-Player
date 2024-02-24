@@ -13,17 +13,23 @@ This model is built to predict the future color extractions based on previous ob
 This model is built to predict the next number extraction based on previous observations (for a totla of 37 different classes). Similarly to the ColorCode Model (CCM), this deep learning netwokr is based on transformer encoders followed by  stacks of convolutional layers (feed forward module), where multihead attention is used to apply self attention on the input sequences. Again, this model does not rely on recurrent architecture as the temporal sequence logic is learned by using the attention mechanisms on previous observations, given the positional encoding of each extraction. Moreover, this model intergates in its input the roulette position for each number, in the attempt to provide information on the real-life arrangements of number on the roulette wheel. 
 
 ## How to use
-Run the FAIRS.py file to launch the script and use the main menu to navigate the different options. The main menu allows selecting one of the following options (when selecting a pretraining method, another menu will be presented to allow the user chosing between the ColorCode and the NumberMatrix models):
+Within the project folder, you'll find several key subfolders:
 
-**1) Timeseries analysis:** Perform timeseries analysis to visualize distribution and main statistical parameters 
+**Components**
+This directory serves as the home for fundamental files crucial for the flawless operation of the program. It's imperative not to tamper with these files as any modifications could jeopardize the script's integrity.
 
-**2) FAIRS models pretraining** Allows training the DL models throughout multiple epochs, using the entire dataset (or a part of it) as the training set.
+**Data**
+In this folder is locate the `FIARS_dataset.csv` file, containing the roulette extraction timeseries. 
+Execute `timeseries_analysis.py` to calculate a series of metrics regarding the data distribtuion and other significant statical parameters.
 
-**3) FAIRS models evaluation** Evaluate the performance of pretrained models
+**Model**
+In this folder are the necessary files for conducting model training and evaluation:
+- `training/checkpoints` acts as the default repository where checkpoints of pre-trained models are stored.
+- Run `model_training.py` to initiate the training process for deep learning models.
+- Run `model_evaluation.py` to evaluate the performance metrics of pre-trained models.
 
-**4) Predict next extraction:** Predict the next coming extraction using a pretrained model. Automatically infers which model has been loaded and forecast extractions accordingly.
-
-**5) Exit and close**
+**Inference**
+Use `roulette_forecasting.py` from this directory to predict the future roulette extractions based on the historical timeseries of previous extracted values. Depending on the selected model, the predicted values will be saved in `inference/predictions` folder with a different filename.  
 
 ### Configurations
 The configurations.py file allows to change the script configuration. The following parameters are available:

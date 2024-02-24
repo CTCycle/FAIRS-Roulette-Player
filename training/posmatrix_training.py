@@ -12,17 +12,23 @@ from keras.utils.vis_utils import plot_model
 import warnings
 warnings.simplefilter(action='ignore', category = Warning)
 
-# add modules path if this file is launched as __main__
+# add parent folder path to the namespace
 #------------------------------------------------------------------------------
-if __name__ == '__main__':
-    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..')) 
 
 # import modules and components
 #------------------------------------------------------------------------------
-from modules.components.data_assets import PreProcessing
-from modules.components.model_assets import NumMatrixModel, RealTimeHistory, ModelTraining
-import modules.global_variables as GlobVar
+from components.data_assets import PreProcessing
+from components.model_assets import NumMatrixModel, RealTimeHistory, ModelTraining
+import components.global_paths as globpt
 import configurations as cnf
+
+# specify relative paths from global paths and create subfolders
+#------------------------------------------------------------------------------
+cp_path = os.path.join(globpt.train_path, 'checkpoints')
+pred_path = os.path.join(globpt.inference_path, 'predictions')
+os.mkdir(cp_path) if not os.path.exists(cp_path) else None
+os.mkdir(pred_path) if not os.path.exists(pred_path) else None
 
 # [DATA PREPROCESSING]
 #==============================================================================
@@ -38,7 +44,7 @@ and predict future extractions based on the observed timeseries
 
 # Load extraction history data from the .csv datasets in the dataset folder
 #------------------------------------------------------------------------------
-filepath = os.path.join(GlobVar.data_path, 'FAIRS_dataset.csv')                
+filepath = os.path.join(globpt.data_path, 'FAIRS_dataset.csv')                
 df_FAIRS = pd.read_csv(filepath, sep= ';', encoding='utf-8')
 
 # Sample a subset from the main dataset
@@ -84,14 +90,13 @@ print('''STEP 3 -----> Save preprocessed data on local hard drive
 
 # create model folder
 #------------------------------------------------------------------------------
-model_folder_path = preprocessor.model_savefolder(GlobVar.models_path, 'FAIRSNMM')
+model_folder_path = preprocessor.model_savefolder(cp_path, 'FAIRSNMM')
 model_folder_name = preprocessor.folder_name
 
 # create preprocessing subfolder
 #------------------------------------------------------------------------------
 pp_path = os.path.join(model_folder_path, 'preprocessing')
-if not os.path.exists(pp_path):
-    os.mkdir(pp_path)
+os.mkdir(pp_path) if not os.path.exists(pp_path) else None
 
 # save encoder
 #------------------------------------------------------------------------------

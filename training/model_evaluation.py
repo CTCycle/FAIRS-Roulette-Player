@@ -8,16 +8,22 @@ import numpy as np
 import warnings
 warnings.simplefilter(action='ignore', category = Warning)
 
-# add modules path if this file is launched as __main__
+# add parent folder path to the namespace
 #------------------------------------------------------------------------------
-if __name__ == '__main__':
-    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..')) 
 
 # import modules and components
 #------------------------------------------------------------------------------
-from modules.components.model_assets import Inference, ModelValidation
-import modules.global_variables as GlobVar
+from components.model_assets import Inference, ModelValidation
+import components.global_paths as globpt
 import configurations as cnf
+
+# specify relative paths from global paths and create subfolders
+#------------------------------------------------------------------------------
+cp_path = os.path.join(globpt.train_path, 'checkpoints')
+pred_path = os.path.join(globpt.inference_path, 'predictions')
+os.mkdir(cp_path) if not os.path.exists(cp_path) else None
+os.mkdir(pred_path) if not os.path.exists(pred_path) else None
 
 # [LOAD DATASETS AND MODEL]
 #==============================================================================
@@ -27,7 +33,7 @@ import configurations as cnf
 # Load model
 #------------------------------------------------------------------------------
 inference = Inference(cnf.seed) 
-model, parameters = inference.load_pretrained_model(GlobVar.models_path)
+model, parameters = inference.load_pretrained_model(cp_path)
 model_folder = inference.folder_path
 model.summary(expand_nested=True)
 
@@ -76,8 +82,7 @@ validator = ModelValidation(model)
 # create subfolder for evaluation data
 #------------------------------------------------------------------------------
 eval_path = os.path.join(model_folder, 'evaluation') 
-if not os.path.exists(eval_path):
-    os.mkdir(eval_path)
+os.mkdir(eval_path) if not os.path.exists(eval_path) else None
 
 # predict lables from train set
 #------------------------------------------------------------------------------

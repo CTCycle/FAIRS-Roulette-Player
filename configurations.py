@@ -1,4 +1,5 @@
 # Advanced settings for training 
+# For XLA acceleration you must add XLA_FLAGS: --xla_gpu_cuda_data_dir=path\to\nvvm\folder
 #------------------------------------------------------------------------------
 use_mixed_precision = False
 use_tensorboard = False
