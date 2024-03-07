@@ -18,9 +18,9 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 # import modules and components
 #------------------------------------------------------------------------------
-from components.data_assets import PreProcessing
-from components.model_assets import NumMatrixModel, RealTimeHistory, ModelTraining
-import components.global_paths as globpt
+from utils.data_assets import PreProcessing
+from utils.model_assets import NumMatrixModel, RealTimeHistory, ModelTraining
+import utils.global_paths as globpt
 import configurations as cnf
 
 # specify relative paths from global paths and create subfolders

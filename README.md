@@ -1,7 +1,7 @@
-# FAIRS-forecasting
+# FAIRS: Fabulous Automated Intelligent Roulette Series
 
-## Project description
-This script has been developed to allow roulette timeseries forecasting using a series of custom Neural Network (NN) models. Different approaches have been envisaged to accurately predict the probability of a number being extracted next, by relying on either the specific number or the categorical classification (black, red and green).  
+## Project Overview
+FAIRS is a project revolving around the forecasting of online roulette extractions, based on two different Neural Network (NN) models. Different approaches have been envisaged to accurately predict the probability of a number being extracted next, by relying on either the specific number or the categorical classification (black, red and green).  
 
 ## FAIRS Deep Learning models
 FAIRS relies on two different Deep Learning (DL) models with transformer encoder architecture for timeseries forecasting. The rationale behind the different models is to use the transformer encoder coupled with a feed forward convolutional network, to learn both long-term past dependencies and local patters in the extractionm sequence. Positional embedding is used to provide information about each extraction position in the timeseries, as due to the lack of recurrent architecture the model needs to know in advance the position of each timestep in the input sequences.  The model output is the probability distribution of the next element, which is calculated using softmax activation. The two models are referred to as ColorCode Model (CCM) and NumberMatrix Model (NMM). 
@@ -77,15 +77,12 @@ You can install these dependencies using the appropriate package manager for you
 If you have an NVIDIA GPU and want to harness the power of GPU acceleration using CUDA, please follow these additional steps. The application is built using TensorFlow 2.10.0 to ensure native Windows GPU support, so remember to install the appropriate versions:
 
 ### 1. Install NVIDIA CUDA Toolkit (Version 11.2)
-
 To enable GPU acceleration, you'll need to install the NVIDIA CUDA Toolkit. Visit the [NVIDIA CUDA Toolkit download page](https://developer.nvidia.com/cuda-downloads) and select the version that matches your GPU and operating system. Follow the installation instructions provided. Alternatively, you can install `cuda-toolkit` as a package within your environment.
 
 ### 2. Install cuDNN (NVIDIA Deep Neural Network Library, Version 8.1.0.77)
-
 Next, you'll need to install cuDNN, which is the NVIDIA Deep Neural Network Library. Visit the [cuDNN download page](https://developer.nvidia.com/cudnn) and download the cuDNN library version that corresponds to your CUDA version (in this case, version 8.1.0.77). Follow the installation instructions provided.
 
 ### 3. Additional Package (If CUDA Toolkit Is Installed)
-
 If you've installed the NVIDIA CUDA Toolkit within your environment, you may also need to install an additional package called `cuda-nvcc` (Version 12.3.107). This package provides the CUDA compiler and tools necessary for building CUDA-enabled applications.
 
 By following these steps, you can ensure that your environment is configured to take full advantage of GPU acceleration for enhanced performance.                 
