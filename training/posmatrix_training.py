@@ -54,8 +54,7 @@ df_FAIRS = df_FAIRS[(df_FAIRS.shape[0] - num_samples):]
 
 # add number positions, map numbers to roulette color and reshape dataset
 #------------------------------------------------------------------------------
-print(f'''STEP 1 -----> Preprocess data for FAIRS training
-''')
+print('Preprocess data for FAIRS training\n')
 preprocessor = PreProcessing()
 categories = [sorted([x for x in df_FAIRS['timeseries'].unique()])]
 df_FAIRS = preprocessor.roulette_positions(df_FAIRS)
@@ -75,8 +74,7 @@ X_test_pos, _ = preprocessor.timeseries_labeling(testext, cnf.window_size)
 
 # one hot encode the output for softmax training shape = (timesteps, features)
 #------------------------------------------------------------------------------
-print('''STEP 2 -----> One-Hot encode timeseries labels (Y data)
-''')
+print('One-Hot encode timeseries labels (Y data)\n')
 OH_encoder = OneHotEncoder(sparse=False)
 Y_train_OHE = OH_encoder.fit_transform(Y_train_ext.reshape(Y_train_ext.shape[0], -1))
 Y_test_OHE = OH_encoder.transform(Y_test_ext.reshape(Y_test_ext.shape[0], -1))
@@ -85,8 +83,7 @@ Y_test_OHE = OH_encoder.transform(Y_test_ext.reshape(Y_test_ext.shape[0], -1))
 #==============================================================================
 # Save the trained preprocessing systems (normalizer and encoders) for further use 
 #==============================================================================
-print('''STEP 3 -----> Save preprocessed data on local hard drive
-''')
+print('Save preprocessed data on local hard drive\n')
 
 # create model folder
 #------------------------------------------------------------------------------
