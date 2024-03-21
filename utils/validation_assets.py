@@ -79,15 +79,16 @@ class ModelValidation:
     
     # comparison of data distribution using statistical methods 
     #--------------------------------------------------------------------------     
-    def plot_confusion_matrix(self, Y_real, predictions, name, path, dpi=400):         
+    def plot_confusion_matrix(self, Y_real, predictions, name, path, dpi=400): 
+        class_names = ['green', 'red', 'black']        
         cm = confusion_matrix(Y_real, predictions)    
         plt.figure(figsize=(14, 14))        
         sns.heatmap(cm, annot=True, fmt='d', cmap=plt.cm.Blues, cbar=False)        
         plt.xlabel('Predicted labels', fontsize=14)
         plt.ylabel('True labels', fontsize=14)
         plt.title('Confusion Matrix', fontsize=14)
-        plt.xticks(np.arange(len(np.unique(Y_real))), fontsize=12)
-        plt.yticks(np.arange(len(np.unique(predictions))), fontsize=12)        
+        plt.xticks(np.arange(len(class_names)) + 0.5, class_names, rotation=45, fontsize=12, ha="right")
+        plt.yticks(np.arange(len(class_names)) + 0.5, class_names, rotation=0, fontsize=12, va="center")          
         plt.tight_layout()
         plot_loc = os.path.join(path, f'{name}.jpeg')
         plt.savefig(plot_loc, bbox_inches='tight', format='jpeg', dpi = dpi)

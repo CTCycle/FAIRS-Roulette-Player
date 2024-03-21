@@ -150,13 +150,6 @@ Data is encoded by roulette colors: Green as 0, Black as 1, Red as 2
 Number of timepoints in train dataset: {train_samples}
 Number of timepoints in test dataset:  {test_samples}
 -------------------------------------------------------------------------------  
-DISTRIBUTION OF CLASSES
--------------------------------------------------------------------------------  
-Most frequent class in train dataset: {most_freq_train}
-Most frequent class in test dataset:  {most_freq_test}
-Number of classes in train dataset:   {train_data.nunique()['encoding']}
-Number of classes in test dataset:    {test_data.nunique()['encoding']}
--------------------------------------------------------------------------------
 Number of epochs: {cnf.epochs}
 Window size:      {cnf.window_size}
 Batch size:       {cnf.batch_size} 
@@ -203,6 +196,7 @@ Training session is over. Model has been saved in folder {model_folder_name}
 # save model data and model parameters in txt files
 #------------------------------------------------------------------------------
 parameters = {'model_name' : 'CCM',
+              'inverted_test' : cnf.invert_test,
               'train_samples' : train_samples,
               'test_samples' : test_samples,             
               'window_size' : cnf.window_size,              
