@@ -57,20 +57,37 @@ class BaselineModels:
 #==============================================================================
 class ModelValidation:
 
-    def __init__(self, model):      
-        self.model = model       
+    # comparison of data distribution using statistical methods 
+    #--------------------------------------------------------------------------     
+    def plot_timeseries_prediction(self, train_Y, test_Y, train_pred, test_pred, name, path, dpi=400):
+        
+        plt.figure(figsize=(12, 10))
+        plt.plot(train_Y, label='Train Data', linestyle='-', marker='o', color='blue')
+        plt.plot(range(len(train_Y), len(train_Y) + len(test_Y)), test_Y, label='Test Data', linestyle='-', marker='x', color='red')
+        plt.plot(train_pred, label='Predicted Train', linestyle='--', color='cyan')
+        plt.plot(range(len(train_Y), len(train_Y) + len(test_pred)), test_pred, label='Predicted Test', linestyle='--', color='magenta')
+        plt.xlabel('Extraction Number', fontsize=14)
+        plt.ylabel('Class', fontsize=14)
+        plt.title('FAIRS Extractions', fontsize=14)
+        plt.legend()
+        plt.xticks(fontsize=12)
+        plt.yticks(fontsize=12)
+        plt.tight_layout()
+        plot_loc = os.path.join(path, f'{name}.jpeg')
+        plt.savefig(plot_loc, bbox_inches='tight', format='jpeg', dpi=dpi)
+        plt.show(block=False)
     
     # comparison of data distribution using statistical methods 
     #--------------------------------------------------------------------------     
-    def FAIRS_confusion(self, Y_real, predictions, name, path, dpi=400):         
+    def plot_confusion_matrix(self, Y_real, predictions, name, path, dpi=400):         
         cm = confusion_matrix(Y_real, predictions)    
-        plt.subplots()        
-        sns.heatmap(cm, annot=True, fmt='d', ax=ax, cmap=plt.cm.Blues, cbar=False)        
-        plt.xlabel('Predicted labels')
-        plt.ylabel('True labels')
-        plt.title('Confusion Matrix')
-        plt.xticks(np.arange(len(np.unique(Y_real))))
-        plt.yticks(np.arange(len(np.unique(predictions))))        
+        plt.figure(figsize=(14, 14))        
+        sns.heatmap(cm, annot=True, fmt='d', cmap=plt.cm.Blues, cbar=False)        
+        plt.xlabel('Predicted labels', fontsize=14)
+        plt.ylabel('True labels', fontsize=14)
+        plt.title('Confusion Matrix', fontsize=14)
+        plt.xticks(np.arange(len(np.unique(Y_real))), fontsize=12)
+        plt.yticks(np.arange(len(np.unique(predictions))), fontsize=12)        
         plt.tight_layout()
         plot_loc = os.path.join(path, f'{name}.jpeg')
         plt.savefig(plot_loc, bbox_inches='tight', format='jpeg', dpi = dpi)
