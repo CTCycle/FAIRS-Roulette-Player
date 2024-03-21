@@ -66,10 +66,10 @@ timeseries = pd.DataFrame(timeseries, columns=['encoding'])
 
 # split dataset into train and test and generate window-dataset
 #------------------------------------------------------------------------------
-train_data, test_data = preprocessor.split_timeseries(timeseries, cnf.test_size, inverted=cnf.invert_test)   
-train_samples, test_samples = train_data.shape[0], test_data.shape[0]
+train_data, test_data = preprocessor.split_timeseries(timeseries, cnf.test_size, inverted=cnf.invert_test) 
 X_train, Y_train = preprocessor.timeseries_labeling(train_data, cnf.window_size) 
 X_test, Y_test = preprocessor.timeseries_labeling(test_data, cnf.window_size)   
+train_samples, test_samples = train_data.shape[0], test_data.shape[0]
 
 # one hot encode the output for softmax training shape = (timesteps, features)
 #------------------------------------------------------------------------------

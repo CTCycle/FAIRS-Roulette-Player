@@ -2,16 +2,10 @@ import os
 import json
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
 import tensorflow as tf
 from tensorflow import keras
 from keras.models import Model
 from keras import layers
-from sklearn.metrics import confusion_matrix, roc_curve, auc
-from sklearn.preprocessing import label_binarize
-from IPython.display import display
-import ipywidgets as widgets
-
 
 
 # [CALLBACK FOR REAL TIME TRAINING MONITORING]
@@ -470,58 +464,3 @@ class Inference:
         
         return model, configuration
     
-    
-
-# [MODEL VALIDATION]
-#============================================================================== 
-# Methods for model validation
-#==============================================================================
-class ModelValidation:
-
-    def __init__(self, model):      
-        self.model = model       
-    
-    # comparison of data distribution using statistical methods 
-    #--------------------------------------------------------------------------     
-    def FAIRS_confusion(self, Y_real, predictions, name, path, dpi=400):         
-        cm = confusion_matrix(Y_real, predictions)    
-        fig, ax = plt.subplots()        
-        sns.heatmap(cm, annot=True, fmt='d', ax=ax, cmap=plt.cm.Blues, cbar=False)        
-        ax.set_xlabel('Predicted labels')
-        ax.set_ylabel('True labels')
-        ax.set_title('Confusion Matrix')
-        ax.set_xticks(np.arange(len(np.unique(Y_real))))
-        ax.set_yticks(np.arange(len(np.unique(predictions))))
-        ax.set_xticklabels(np.unique(Y_real))
-        ax.set_yticklabels(np.unique(predictions))
-        plt.tight_layout()
-        plot_loc = os.path.join(path, f'{name}.jpeg')
-        plt.savefig(plot_loc, bbox_inches='tight', format='jpeg', dpi = dpi)
-
-    # comparison of data distribution using statistical methods 
-    #--------------------------------------------------------------------------
-    def plot_multi_ROC(Y_real, predictions, class_dict, path, dpi):
-    
-        Y_real_bin = label_binarize(Y_real, classes=list(class_dict.values()))
-        n_classes = Y_real_bin.shape[1]        
-        fpr = dict()
-        tpr = dict()
-        roc_auc = dict()
-        for i in range(n_classes):
-            fpr[i], tpr[i], _ = roc_curve(Y_real_bin[:, i], predictions[:, i])
-            roc_auc[i] = auc(fpr[i], tpr[i])    
-        plt.figure()
-        for i in range(n_classes):
-            plt.plot(fpr[i], tpr[i], label='ROC curve of class {0} (area = {1:0.2f})'
-                 ''.format(list(class_dict.keys())[i], roc_auc[i]))
-        plt.plot([0, 1], [0, 1], 'k--')
-        plt.xlim([0.0, 1.0])
-        plt.ylim([0.0, 1.05])
-        plt.xlabel('False Positive Rate')
-        plt.ylabel('True Positive Rate')
-        plt.title('Some extension of Receiver operating characteristic to multi-class')
-        plt.legend(loc='lower right')       
-        plot_loc = os.path.join(path, 'multi_ROC.jpeg')
-        plt.savefig(plot_loc, bbox_inches='tight', format='jpeg', dpi=dpi)           
-    
-
