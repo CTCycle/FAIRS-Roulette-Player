@@ -80,7 +80,7 @@ class ModelValidation:
     # comparison of data distribution using statistical methods 
     #--------------------------------------------------------------------------     
     def plot_confusion_matrix(self, Y_real, predictions, name, path, dpi=400): 
-        class_names = ['green', 'red', 'black']        
+        class_names = ['green', 'black', 'red']        
         cm = confusion_matrix(Y_real, predictions)    
         plt.figure(figsize=(14, 14))        
         sns.heatmap(cm, annot=True, fmt='d', cmap=plt.cm.Blues, cbar=False)        
