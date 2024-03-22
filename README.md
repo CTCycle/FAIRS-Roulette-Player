@@ -49,21 +49,26 @@ The project is organized into subfolders, each dedicated to specific tasks. The 
 ### 4.1 Configurations
 The configurations.py file allows to change the script configuration. 
 
-| Category                  | Setting               | Description                                                    |
-|---------------------------|-----------------------|----------------------------------------------------------------|
-| **Training Routine**      | epochs              | Number of training iterations                                  |
-|                           | learning_rate       | Learning rate of the model                                     |
-|                           | batch_size          | Size of batches to be fed to the model during training         |
-| **Model Settings**        | embedding_size      | Embedding dimensions (valid for both models)                   |
-|                           | num_blocks          | How many encoder layers to stack                               |
-|                           | num_heads           | Number of heads for multi-head attention mechanism             |
-|                           | generate_model_graph| Generate and save 2D model graph (as .png file)                |
-| **Training Data**         | invert_test         | Where to place the test set (True to set last points as test data) |
-|                           | data_size           | Fraction of total data to consider for training                |
-|                           | test_size           | Fraction of selected data to consider for test                 |
-|                           | window_size         | Size of the timepoints window                                  |
-| **General Settings**      | seed                | Global random seed                                             |
-|                           | predictions_size    | How many points to take from the original timeseries as prediction set |
+| Category                  | Setting                | Description                                                        |
+|---------------------------|------------------------|--------------------------------------------------------------------|
+| **Advanced settings**     | use_mixed_precision    | use mixed precision for faster training (float16/32)               |
+|                           | use_tensorboard        | Activate/deactivate tensorboard logging                            |
+|                           | XLA_acceleration       | Use linear algebra acceleration for faster training                |
+|                           | training_device        | Select the training device (CPU or GPU)                            |
+|                           | num_processors         | Number of processors (cores) to use; 1 disables multiprocessing    |
+| **Training settings**      | epochs                 | Number of training iterations                                      |
+|                           | learning_rate          | Learning rate of the model                                         |
+|                           | batch_size             | Size of batches to be fed to the model during training             |
+| **Model settings**        | embedding_size         | Embedding dimensions (valid for both models)                       |
+|                           | num_blocks             | How many encoder layers to stack                                   |
+|                           | num_heads              | Number of heads for multi-head attention mechanism                 |
+|                           | generate_model_graph   | Generate and save 2D model graph (as .png file)                    |
+| **Data settings**         | invert_test            | Where to place the test set (True to set last points as test data) |
+|                           | data_size              | Fraction of total data to consider for training                    |
+|                           | test_size              | Fraction of selected data to consider for test                     |
+|                           | window_size            | Size of the timepoints window                                      |
+| **General Settings**      | seed                   | Global random seed                                                 |
+|                           | predictions_size       | Points to take from the original timeseries as prediction set      |
 
 ## License
 This project is licensed under the terms of the MIT license. See the LICENSE file for details.
