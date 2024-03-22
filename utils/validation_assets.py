@@ -59,14 +59,19 @@ class ModelValidation:
 
     # comparison of data distribution using statistical methods 
     #--------------------------------------------------------------------------     
-    def plot_timeseries_prediction(self, train_Y, test_Y, train_pred, test_pred, name, path, dpi=400):
+    def plot_timeseries_prediction(self, values, name, path, dpi=400):
         
+
+        train_data = values['train']
+        test_data = values['test']
+
         plt.figure(figsize=(12, 10))
-        plt.plot(train_Y, label='Train Data', linestyle='-', marker='o', color='blue')
-        plt.plot(range(len(train_Y), len(train_Y) + len(test_Y)), test_Y, label='Test Data', linestyle='-', marker='x', color='red')
-        plt.plot(train_pred, label='Predicted Train', linestyle='--', color='cyan')
-        plt.plot(range(len(train_Y), len(train_Y) + len(test_pred)), test_pred, label='Predicted Test', linestyle='--', color='magenta')
-        plt.xlabel('Extraction Number', fontsize=14)
+        
+        plt.scatter(train_data[0], train_data[1], label='True train', color='blue')
+        plt.scatter(test_data[0], test_data[1], label='True test', color='cyan')        
+        plt.scatter(train_data[0], train_data[2], label='Predicted train', color='orange')
+        plt.scatter(test_data[0], test_data[2], label='Predicted test', color='magenta')
+        plt.xlabel('Extraction N.', fontsize=14)
         plt.ylabel('Class', fontsize=14)
         plt.title('FAIRS Extractions', fontsize=14)
         plt.legend()
