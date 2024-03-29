@@ -46,20 +46,11 @@ df_FAIRS = pd.read_csv(filepath, sep= ';', encoding='utf-8')
 num_samples = int(df_FAIRS.shape[0] * cnf.data_size)
 df_FAIRS = df_FAIRS[(df_FAIRS.shape[0] - num_samples):]
 
-print(f'''
--------------------------------------------------------------------------------
-FAIRS Training
--------------------------------------------------------------------------------
-Leverage large volume of roulette extraction data to train the FAIRS CC Model
-and predict future extractions based on the observed timeseries 
-''')
-
-preprocessor = PreProcessing()
-
 # add number positions, map numbers to roulette color and reshape dataset
 #------------------------------------------------------------------------------
 print(f'\nPreprocess data for FAIRS training')
 categories = [['green', 'black', 'red']]
+preprocessor = PreProcessing()
 categorical_encoder = OrdinalEncoder(categories=categories, handle_unknown='use_encoded_value', unknown_value=-1)
 df_FAIRS = preprocessor.roulette_colormapping(df_FAIRS, no_mapping=False)
 timeseries = categorical_encoder.fit_transform(df_FAIRS['encoding'].values.reshape(-1, 1))
@@ -81,9 +72,6 @@ Y_test_OHE = OH_encoder.transform(Y_test.reshape(Y_test.shape[0], -1))
 
 # [SAVE FILES]
 #==============================================================================
-# Save the trained preprocessing systems (normalizer and encoders) for further use 
-#==============================================================================
-
 # create model folder
 #------------------------------------------------------------------------------
 model_folder_path, model_folder_name = model_savefolder(cp_path, 'FAIRSCCM')
@@ -106,10 +94,7 @@ np.save(os.path.join(pp_path, 'test_labels.npy'), Y_test_OHE)
 
 # [DEFINE AND BUILD MODEL]
 #==============================================================================
-# module for the selection of different operations
-#==============================================================================
-print('''Build the model and start training\n''')
-
+print('\nBuild the model and start training\n')
 trainer = ModelTraining(device=cnf.training_device, seed=cnf.seed, 
                         use_mixed_precision=cnf.use_mixed_precision)
  
@@ -133,7 +118,7 @@ if cnf.generate_model_graph == True:
 # Setting callbacks and training routine for the features extraction model. 
 # use command prompt on the model folder and (upon activating environment), 
 # use the bash command: python -m tensorboard.main --logdir = tensorboard/
-#==============================================================================
+
 most_freq_train = int(train_data.value_counts().idxmax()[0])
 most_freq_test = int(test_data.value_counts().idxmax()[0])
 

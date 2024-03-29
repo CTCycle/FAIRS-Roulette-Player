@@ -1,35 +1,17 @@
 import os
 import json
 import numpy as np
-import matplotlib.pyplot as plt
 import tensorflow as tf
-from tensorflow import keras
-from keras.models import Model
-from keras import layers
-
 
 
 # [MODEL INFERENCE]
 #============================================================================== 
-# Methods for model validation
-#==============================================================================
 class Inference:
-
 
     def __init__(self, seed):
         self.seed = seed
         np.random.seed(seed)
-        tf.random.set_seed(seed)        
-       
-
-    def load_model(self, model_path):     
-        model = tf.keras.models.load_model(model_path)
-        path = os.path.join(self.folder_path, 'model_parameters.json')
-        with open(path, 'r') as f:
-            configuration = json.load(f)               
-        
-        return model, configuration  
-
+        tf.random.set_seed(seed) 
 
     #--------------------------------------------------------------------------
     def load_pretrained_model(self, path):
