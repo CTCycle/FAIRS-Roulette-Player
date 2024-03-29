@@ -18,8 +18,9 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 # import modules and components
 #------------------------------------------------------------------------------
-from utils.data_assets import PreProcessing
-from utils.model_assets import NumMatrixModel, RealTimeHistory, ModelTraining
+from utils.preprocessing import PreProcessing
+from utils.models import NumMatrixModel, ModelTraining, model_savefolder
+from utils.callbacks import RealTimeHistory
 import utils.global_paths as globpt
 import configurations as cnf
 
@@ -83,15 +84,10 @@ Y_test_OHE = OH_encoder.transform(Y_test_ext.reshape(Y_test_ext.shape[0], -1))
 #==============================================================================
 # Save the trained preprocessing systems (normalizer and encoders) for further use 
 #==============================================================================
-print('Save preprocessed data on local hard drive\n')
 
 # create model folder
 #------------------------------------------------------------------------------
-model_folder_path = preprocessor.model_savefolder(cp_path, 'FAIRSNMM')
-model_folder_name = preprocessor.folder_name
-
-# create preprocessing subfolder
-#------------------------------------------------------------------------------
+model_folder_path, model_folder_name = model_savefolder(cp_path, 'FAIRSNMM')
 pp_path = os.path.join(model_folder_path, 'preprocessing')
 os.mkdir(pp_path) if not os.path.exists(pp_path) else None
 
@@ -103,6 +99,7 @@ with open(encoder_path, 'wb') as file:
 
 # save npy files
 #------------------------------------------------------------------------------
+print('Save preprocessed data on local hard drive\n')
 np.save(os.path.join(pp_path, 'train_extractions.npy'), X_train_ext)
 np.save(os.path.join(pp_path, 'train_positions.npy'), X_train_pos)
 np.save(os.path.join(pp_path, 'train_labels.npy'), Y_train_OHE)
@@ -114,8 +111,7 @@ np.save(os.path.join(pp_path, 'test_labels.npy'), Y_test_OHE)
 #==============================================================================
 # module for the selection of different operations
 #==============================================================================
-print('''STEP 4 -----> Build the model and start training
-''')
+print('Build the model and start training\n')
 
 trainer = ModelTraining(device=cnf.training_device, seed=cnf.seed, 
                         use_mixed_precision=cnf.use_mixed_precision) 

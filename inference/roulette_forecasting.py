@@ -15,8 +15,8 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 # import modules and components
 #------------------------------------------------------------------------------
-from utils.data_assets import PreProcessing
-from utils.model_assets import Inference
+from utils.preprocessing import PreProcessing
+from utils.inference import Inference
 import utils.global_paths as globpt
 import configurations as cnf
 
@@ -26,7 +26,6 @@ cp_path = os.path.join(globpt.train_path, 'checkpoints')
 pred_path = os.path.join(globpt.inference_path, 'predictions')
 os.mkdir(cp_path) if not os.path.exists(cp_path) else None
 os.mkdir(pred_path) if not os.path.exists(pred_path) else None
-
 
 # [LOAD MODEL AND DATA]
 #==============================================================================

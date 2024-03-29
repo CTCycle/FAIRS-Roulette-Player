@@ -18,8 +18,9 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 # import modules and components
 #------------------------------------------------------------------------------
-from utils.data_assets import PreProcessing
-from utils.model_assets import ColorCodeModel, RealTimeHistory, ModelTraining
+from utils.preprocessing import PreProcessing
+from utils.models import ColorCodeModel, ModelTraining, model_savefolder
+from utils.callbacks import RealTimeHistory
 import utils.global_paths as globpt
 import configurations as cnf
 
@@ -57,7 +58,7 @@ preprocessor = PreProcessing()
 
 # add number positions, map numbers to roulette color and reshape dataset
 #------------------------------------------------------------------------------
-print(f'''Preprocess data for FAIRS training\n''')
+print(f'\nPreprocess data for FAIRS training')
 categories = [['green', 'black', 'red']]
 categorical_encoder = OrdinalEncoder(categories=categories, handle_unknown='use_encoded_value', unknown_value=-1)
 df_FAIRS = preprocessor.roulette_colormapping(df_FAIRS, no_mapping=False)
@@ -73,7 +74,7 @@ train_samples, test_samples = train_data.shape[0], test_data.shape[0]
 
 # one hot encode the output for softmax training shape = (timesteps, features)
 #------------------------------------------------------------------------------
-print('''One-Hot encode timeseries labels (Y data)\n''')
+print('\nOne-Hot encode timeseries labels (Y data)')
 OH_encoder = OneHotEncoder(sparse=False)
 Y_train_OHE = OH_encoder.fit_transform(Y_train.reshape(Y_train.shape[0], -1))
 Y_test_OHE = OH_encoder.transform(Y_test.reshape(Y_test.shape[0], -1))
@@ -82,16 +83,10 @@ Y_test_OHE = OH_encoder.transform(Y_test.reshape(Y_test.shape[0], -1))
 #==============================================================================
 # Save the trained preprocessing systems (normalizer and encoders) for further use 
 #==============================================================================
-print('''STEP 3 -----> Save preprocessed data on local hard drive
-''')
 
 # create model folder
 #------------------------------------------------------------------------------
-model_folder_path = preprocessor.model_savefolder(cp_path, 'FAIRSCCM')
-model_folder_name = preprocessor.folder_name
-
-# create preprocessing subfolder
-#------------------------------------------------------------------------------
+model_folder_path, model_folder_name = model_savefolder(cp_path, 'FAIRSCCM')
 pp_path = os.path.join(model_folder_path, 'preprocessing')
 os.mkdir(pp_path) if not os.path.exists(pp_path) else None
 
@@ -103,6 +98,7 @@ with open(encoder_path, 'wb') as file:
 
 # save npy files
 #------------------------------------------------------------------------------
+print('\nSave preprocessed data on local hard drive')
 np.save(os.path.join(pp_path, 'train_data.npy'), X_train)
 np.save(os.path.join(pp_path, 'train_labels.npy'), Y_train_OHE)
 np.save(os.path.join(pp_path, 'test_data.npy'), X_test)
