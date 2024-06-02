@@ -1,6 +1,8 @@
 __pycache__
-data/FAIRS_dataset.csv
-data/analysis/*
-inference/predictions/*
-training/checkpoints/*
+FAIRS/data/FAIRS_dataset.csv
+FAIRS/data/analysis/*
+FAIRS/inference/predictions/*
+FAIRS/training/checkpoints/*
+
+!.gitkeep
 
