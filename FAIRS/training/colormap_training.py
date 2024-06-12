@@ -1,5 +1,4 @@
 import os
-import sys
 import pickle
 import numpy as np
 import pandas as pd
@@ -7,188 +6,151 @@ import tensorflow as tf
 from sklearn.preprocessing import OrdinalEncoder, OneHotEncoder
 from keras.utils.vis_utils import plot_model
 
-# set warnings
-#------------------------------------------------------------------------------
+# [SETTING WARNINGS]
 import warnings
-warnings.simplefilter(action='ignore', category = Warning)
+warnings.simplefilter(action='ignore', category=Warning)
 
-# add parent folder path to the namespace
-#------------------------------------------------------------------------------
-sys.path.append(os.path.join(os.path.dirname(__file__), '..')) 
+# [IMPORT CUSTOM MODULES]
+from FAIRS.commons.utils.preprocessing import PreProcessing
+from FAIRS.commons.utils.models import ColorCodeModel, ModelTraining, model_savefolder
+from FAIRS.commons.utils.callbacks import RealTimeHistory
+from FAIRS.commons.pathfinder import DATA_PATH, CHECKPOINT_PATH
+import FAIRS.commons.configurations as cnf
 
-# import modules and components
-#------------------------------------------------------------------------------
-from utils.preprocessing import PreProcessing
-from utils.models import ColorCodeModel, ModelTraining, model_savefolder
-from utils.callbacks import RealTimeHistory
-import utils.global_paths as globpt
-import configurations as cnf
 
-# specify relative paths from global paths and create subfolders
-#------------------------------------------------------------------------------
-cp_path = os.path.join(globpt.train_path, 'checkpoints')
-pred_path = os.path.join(globpt.inference_path, 'predictions')
-os.mkdir(cp_path) if not os.path.exists(cp_path) else None
-os.mkdir(pred_path) if not os.path.exists(pred_path) else None
+# [RUN MAIN]
+if __name__ == '__main__':
 
-# [DATA PREPROCESSING]
-#==============================================================================
-# ...
-#==============================================================================
+    # 1. [LOAD DATA]
+    #--------------------------------------------------------------------------     
+    # Load extraction history data from the .csv datasets in the dataset folder    
+    filepath = os.path.join(DATA_PATH, 'FAIRS_dataset.csv')                
+    df_FAIRS = pd.read_csv(filepath, sep= ';', encoding='utf-8')
 
-# Load extraction history data from the .csv datasets in the dataset folder
-#------------------------------------------------------------------------------
-filepath = os.path.join(globpt.data_path, 'FAIRS_dataset.csv')                
-df_FAIRS = pd.read_csv(filepath, sep= ';', encoding='utf-8')
+    # Sample a subset from the main dataset    
+    num_samples = int(df_FAIRS.shape[0] * cnf.DATA_SIZE)
+    df_FAIRS = df_FAIRS[(df_FAIRS.shape[0] - num_samples):]
 
-# Sample a subset from the main dataset
-#------------------------------------------------------------------------------
-num_samples = int(df_FAIRS.shape[0] * cnf.data_size)
-df_FAIRS = df_FAIRS[(df_FAIRS.shape[0] - num_samples):]
+    # 2. [PREPROCESS DATA]
+    #--------------------------------------------------------------------------       
+    # add number positions, map numbers to roulette color and reshape dataset    
+    print(f'\nPreprocess data for FAIRS training')
+    categories = [['green', 'black', 'red']]
+    preprocessor = PreProcessing()
+    categorical_encoder = OrdinalEncoder(categories=categories, 
+                                         handle_unknown='use_encoded_value', 
+                                         unknown_value=-1)
+    df_FAIRS = preprocessor.roulette_colormapping(df_FAIRS, no_mapping=False)
+    timeseries = categorical_encoder.fit_transform(df_FAIRS['encoding'].values.reshape(-1, 1))
+    timeseries = pd.DataFrame(timeseries, columns=['encoding'])
 
-# add number positions, map numbers to roulette color and reshape dataset
-#------------------------------------------------------------------------------
-print(f'\nPreprocess data for FAIRS training')
-categories = [['green', 'black', 'red']]
-preprocessor = PreProcessing()
-categorical_encoder = OrdinalEncoder(categories=categories, handle_unknown='use_encoded_value', unknown_value=-1)
-df_FAIRS = preprocessor.roulette_colormapping(df_FAIRS, no_mapping=False)
-timeseries = categorical_encoder.fit_transform(df_FAIRS['encoding'].values.reshape(-1, 1))
-timeseries = pd.DataFrame(timeseries, columns=['encoding'])
+    # split dataset into train and test and generate window-dataset    
+    train_data, test_data = preprocessor.split_timeseries(timeseries, cnf.TEST_SIZE, inverted=cnf.INVERT_TEST) 
+    X_train, Y_train = preprocessor.timeseries_labeling(train_data, cnf.WINDOW_SIZE) 
+    X_test, Y_test = preprocessor.timeseries_labeling(test_data, cnf.WINDOW_SIZE)   
+    train_samples, test_samples = train_data.shape[0], test_data.shape[0]
 
-# split dataset into train and test and generate window-dataset
-#------------------------------------------------------------------------------
-train_data, test_data = preprocessor.split_timeseries(timeseries, cnf.test_size, inverted=cnf.invert_test) 
-X_train, Y_train = preprocessor.timeseries_labeling(train_data, cnf.window_size) 
-X_test, Y_test = preprocessor.timeseries_labeling(test_data, cnf.window_size)   
-train_samples, test_samples = train_data.shape[0], test_data.shape[0]
+    # one hot encode the output for softmax training shape = (timesteps, features)    
+    print('\nOne-Hot encode timeseries labels (Y data)')
+    OH_encoder = OneHotEncoder(sparse=False)
+    Y_train_OHE = OH_encoder.fit_transform(Y_train.reshape(Y_train.shape[0], -1))
+    Y_test_OHE = OH_encoder.transform(Y_test.reshape(Y_test.shape[0], -1))
 
-# one hot encode the output for softmax training shape = (timesteps, features)
-#------------------------------------------------------------------------------
-print('\nOne-Hot encode timeseries labels (Y data)')
-OH_encoder = OneHotEncoder(sparse=False)
-Y_train_OHE = OH_encoder.fit_transform(Y_train.reshape(Y_train.shape[0], -1))
-Y_test_OHE = OH_encoder.transform(Y_test.reshape(Y_test.shape[0], -1))
+    # 2. [SAVE FILES]
+    #--------------------------------------------------------------------------       
+    # create model folder    
+    model_folder_path, model_folder_name = model_savefolder(CHECKPOINT_PATH, 'FAIRSCCM')
+    pp_path = os.path.join(model_folder_path, 'preprocessing')
+    os.mkdir(pp_path) if not os.path.exists(pp_path) else None
 
-# [SAVE FILES]
-#==============================================================================
-# create model folder
-#------------------------------------------------------------------------------
-model_folder_path, model_folder_name = model_savefolder(cp_path, 'FAIRSCCM')
-pp_path = os.path.join(model_folder_path, 'preprocessing')
-os.mkdir(pp_path) if not os.path.exists(pp_path) else None
+    # save encoder    
+    encoder_path = os.path.join(pp_path, 'categorical_encoder.pkl')
+    with open(encoder_path, 'wb') as file:
+        pickle.dump(categorical_encoder, file)
 
-# save encoder
-#------------------------------------------------------------------------------
-encoder_path = os.path.join(pp_path, 'categorical_encoder.pkl')
-with open(encoder_path, 'wb') as file:
-    pickle.dump(categorical_encoder, file)
+    # save npy files    
+    print('\nSave preprocessed data on local hard drive')
+    np.save(os.path.join(pp_path, 'train_data.npy'), X_train)
+    np.save(os.path.join(pp_path, 'train_labels.npy'), Y_train_OHE)
+    np.save(os.path.join(pp_path, 'test_data.npy'), X_test)
+    np.save(os.path.join(pp_path, 'test_labels.npy'), Y_test_OHE)
 
-# save npy files
-#------------------------------------------------------------------------------
-print('\nSave preprocessed data on local hard drive')
-np.save(os.path.join(pp_path, 'train_data.npy'), X_train)
-np.save(os.path.join(pp_path, 'train_labels.npy'), Y_train_OHE)
-np.save(os.path.join(pp_path, 'test_data.npy'), X_test)
-np.save(os.path.join(pp_path, 'test_labels.npy'), Y_test_OHE)
+    # 4. [DEFINE AND BUILD MODEL]    
+    print('\nBuild the model and start training\n')
+    trainer = ModelTraining(seed=cnf.SEED)
+    trainer.set_device(device=cnf.ML_DEVICE, use_mixed_precision=cnf.MIXED_PRECISION)
+    
 
-# [DEFINE AND BUILD MODEL]
-#==============================================================================
-print('\nBuild the model and start training\n')
-trainer = ModelTraining(device=cnf.training_device, seed=cnf.seed, 
-                        use_mixed_precision=cnf.use_mixed_precision)
- 
-# initialize model class and build model
-#------------------------------------------------------------------------------
-modelframe = ColorCodeModel(cnf.learning_rate, cnf.window_size, cnf.embedding_size, 
-                            cnf.num_blocks, cnf.num_heads, cnf.kernel_size, 
-                            seed=cnf.seed, XLA_state=cnf.XLA_acceleration)
-model = modelframe.get_model(summary=True)
+    # initialize model class and build model    
+    modelframe = ColorCodeModel(cnf.LEARNING_RATE, cnf.WINDOW_SIZE, cnf.EMBEDDING_SIZE, 
+                                cnf.NUM_BLOCKS, cnf.NUM_HEADS, cnf.KERNEL_SIZE, 
+                                seed=cnf.SEED, XLA_state=cnf.XLA_ACCELERATION)
+    model = modelframe.get_model(summary=True)
 
-# plot model graph
-#------------------------------------------------------------------------------
-if cnf.generate_model_graph == True:
-    plot_path = os.path.join(model_folder_path, 'FAIRSCCM_model.png')       
-    plot_model(model, to_file = plot_path, show_shapes = True, 
-               show_layer_names = True, show_layer_activations = True, 
-               expand_nested = True, rankdir = 'TB', dpi = 400)
+    # plot model graph    
+    if cnf.SAVE_MODEL_PLOT:
+        plot_path = os.path.join(model_folder_path, 'FAIRSCCM_model.png')       
+        plot_model(model, to_file = plot_path, show_shapes = True, 
+                    show_layer_names = True, show_layer_activations = True, 
+                    expand_nested = True, rankdir = 'TB', dpi = 400)
 
-# [TRAINING MODEL]
-#==============================================================================
-# Setting callbacks and training routine for the features extraction model. 
-# use command prompt on the model folder and (upon activating environment), 
-# use the bash command: python -m tensorboard.main --logdir = tensorboard/
+    # 4. [TRAINING MODEL]
+    #--------------------------------------------------------------------------    
+    # Setting callbacks and training routine for the features extraction model. 
+    # use command prompt on the model folder and (upon activating environment), 
+    # use the bash command: python -m tensorboard.main --logdir = tensorboard/
 
-most_freq_train = int(train_data.value_counts().idxmax()[0])
-most_freq_test = int(test_data.value_counts().idxmax()[0])
+    most_freq_train = int(train_data.value_counts().idxmax()[0])
+    most_freq_test = int(test_data.value_counts().idxmax()[0])
 
-print(f'''
--------------------------------------------------------------------------------
-TRAINING INFO
--------------------------------------------------------------------------------
-Data is encoded by roulette colors: Green as 0, Black as 1, Red as 2
--------------------------------------------------------------------------------
-Number of timepoints in train dataset: {train_samples}
-Number of timepoints in test dataset:  {test_samples}
--------------------------------------------------------------------------------  
-Number of epochs: {cnf.epochs}
-Window size:      {cnf.window_size}
-Batch size:       {cnf.batch_size} 
-Learning rate:    {cnf.learning_rate} 
--------------------------------------------------------------------------------  
-''')
+    print('TRAINING INFO\n')
+    print(f'Number of timepoints in train dataset: {train_samples}')
+    print(f'Number of timepoints in test dataset:  {test_samples}')    
+    print(f'Number of epochs: {cnf.EPOCHS}')
+    print(f'Window size:      {cnf.WINDOW_SIZE}')
+    print(f'Batch size:       {cnf.BATCH_SIZE}')
+    print(f'Learning rate:    {cnf.LEARNING_RATE}') 
 
-# initialize real time plot callback
-#------------------------------------------------------------------------------
-RTH_callback = RealTimeHistory(model_folder_path)
+    # initialize real time plot callback    
+    RTH_callback = RealTimeHistory(model_folder_path)
 
-# setting for validation data
-#------------------------------------------------------------------------------
-validation_data = (X_test, Y_test_OHE)   
+    # setting for validation data    
+    validation_data = (X_test, Y_test_OHE)   
 
-# initialize tensorboard
-#------------------------------------------------------------------------------
-if cnf.use_tensorboard == True:
-    log_path = os.path.join(model_folder_path, 'tensorboard')
-    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_path, histogram_freq=1)
-    callbacks = [RTH_callback, tensorboard_callback]    
-else:    
-    callbacks = [RTH_callback]
+    # initialize tensorboard    
+    if cnf.USE_TENSORBOARD:
+        log_path = os.path.join(model_folder_path, 'tensorboard')
+        tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_path, histogram_freq=1)
+        callbacks = [RTH_callback, tensorboard_callback]    
+    else:    
+        callbacks = [RTH_callback]
 
-# training loop
-#------------------------------------------------------------------------------
-multiprocessing = cnf.num_processors > 1
-training = model.fit(x=X_train, y=Y_train_OHE, batch_size=cnf.batch_size, 
-                     validation_data=validation_data, epochs=cnf.epochs, 
-                     callbacks=callbacks, workers=cnf.num_processors, 
-                     use_multiprocessing=multiprocessing)
+    # training loop    
+    multiprocessing = cnf.NUM_PROCESSORS > 1
+    training = model.fit(x=X_train, y=Y_train_OHE, batch_size=cnf.BATCH_SIZE, 
+                        validation_data=validation_data, epochs=cnf.EPOCHS, 
+                        callbacks=callbacks, workers=cnf.NUM_PROCESSORS, 
+                        use_multiprocessing=multiprocessing)   
+    
+    # save model as savedmodel format
+    model_file_path = os.path.join(model_folder_path, 'model')
+    model.save(model_file_path)
+    print(f'\nTraining session is over. Model has been saved in folder {model_folder_name}')
 
-# save model as savedmodel format
-#------------------------------------------------------------------------------
-model_file_path = os.path.join(model_folder_path, 'model')
-model.save(model_file_path, save_format='tf', save_traces=True)
+    # save model data and model parameters in txt files    
+    parameters = {'model_name' : 'CCM',
+                  'inverted_test' : cnf.INVERT_TEST,
+                  'train_samples' : train_samples,
+                  'test_samples' : test_samples,             
+                  'window_size' : cnf.WINDOW_SIZE,              
+                  'embedding_dimensions' : cnf.EMBEDDING_SIZE,
+                  'num_blocks' : cnf.NUM_BLOCKS,
+                  'num_heads' : cnf.NUM_HEADS,             
+                  'batch_size' : cnf.BATCH_SIZE,
+                  'learning_rate' : cnf.LEARNING_RATE,
+                  'epochs' : cnf.EPOCHS}
 
-print(f'''
--------------------------------------------------------------------------------
-Training session is over. Model has been saved in folder {model_folder_name}
--------------------------------------------------------------------------------
-''')
-
-# save model data and model parameters in txt files
-#------------------------------------------------------------------------------
-parameters = {'model_name' : 'CCM',
-              'inverted_test' : cnf.invert_test,
-              'train_samples' : train_samples,
-              'test_samples' : test_samples,             
-              'window_size' : cnf.window_size,              
-              'embedding_dimensions' : cnf.embedding_size,
-              'num_blocks' : cnf.num_blocks,
-              'num_heads' : cnf.num_heads,             
-              'batch_size' : cnf.batch_size,
-              'learning_rate' : cnf.learning_rate,
-              'epochs' : cnf.epochs}
-
-trainer.model_parameters(parameters, model_folder_path)
+    trainer.model_parameters(parameters, model_folder_path)
 
 
 

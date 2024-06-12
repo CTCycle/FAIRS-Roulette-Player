@@ -288,37 +288,34 @@ class NumMatrixModel:
 #==============================================================================
 class ModelTraining:    
        
-    def __init__(self, device = 'default', seed=42, use_mixed_precision=False):                     
+    def __init__(self, seed=42):                            
         np.random.seed(seed)
         tf.random.set_seed(seed)         
-        self.available_devices = tf.config.list_physical_devices()
-        print('-------------------------------------------------------------------------------')        
-        print('The current devices are available: ')
-        print('-------------------------------------------------------------------------------')
-        for dev in self.available_devices:
-            print()
+        self.available_devices = tf.config.list_physical_devices()               
+        print('The current devices are available:\n')        
+        for dev in self.available_devices:            
             print(dev)
-        print()
-        print('-------------------------------------------------------------------------------')
+
+    # set device
+    #--------------------------------------------------------------------------
+    def set_device(self, device='default', use_mixed_precision=False):
+
         if device == 'GPU':
             self.physical_devices = tf.config.list_physical_devices('GPU')
             if not self.physical_devices:
-                print('No GPU found. Falling back to CPU')
+                print('\nNo GPU found. Falling back to CPU\n')
                 tf.config.set_visible_devices([], 'GPU')
             else:
                 if use_mixed_precision == True:
                     policy = keras.mixed_precision.Policy('mixed_float16')
                     keras.mixed_precision.set_global_policy(policy) 
-                tf.config.set_visible_devices(self.physical_devices[0], 'GPU') 
-                #os.environ['TF_GPU_ALLOCATOR']='cuda_malloc_async'                  
-                print('GPU is set as active device')
-            print('-------------------------------------------------------------------------------')
-            print()        
+                tf.config.set_visible_devices(self.physical_devices[0], 'GPU')
+                os.environ['TF_GPU_ALLOCATOR']='cuda_malloc_async'                 
+                print('\nGPU is set as active device\n')
+                   
         elif device == 'CPU':
             tf.config.set_visible_devices([], 'GPU')
-            print('CPU is set as active device')
-            print('-------------------------------------------------------------------------------')
-            print()
+            print('\nCPU is set as active device\n')
     
     #-------------------------------------------------------------------------- 
     def model_parameters(self, parameters_dict, savepath):

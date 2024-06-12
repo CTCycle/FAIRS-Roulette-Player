@@ -1,35 +1,37 @@
 # Advanced settings for training 
 # For XLA acceleration you must add XLA_FLAGS: --xla_gpu_cuda_data_dir=path\to\nvvm\folder
 #------------------------------------------------------------------------------
-use_mixed_precision = False
-use_tensorboard = False
-XLA_acceleration = False
-training_device = 'GPU'
-num_processors = 6
+MIXED_PRECISION = False
+USE_TENSORBOARD = False
+XLA_ACCELERATION = False
+ML_DEVICE = 'GPU'
+NUM_PROCESSORS = 6
 
 # Settings for training routine
 #------------------------------------------------------------------------------
-epochs = 20
-learning_rate = 0.0001
-batch_size = 512
+EPOCHS = 20
+LEARNING_RATE = 0.0001
+BATCH_SIZE = 512
 
 # Model settings
 #------------------------------------------------------------------------------
-embedding_size = 128
-kernel_size = 6
-num_blocks = 3
-num_heads = 3
-generate_model_graph = True
+EMBEDDING_SIZE = 128
+KERNEL_SIZE = 6
+NUM_BLOCKS = 3
+NUM_HEADS = 3
+SAVE_MODEL_PLOT = True
 
 # Settings for training data 
 #------------------------------------------------------------------------------
-invert_test = False
-data_size = 1.0
-test_size = 0.1
-window_size = 30
+INVERT_TEST = False
+DATA_SIZE = 1.0
+TEST_SIZE = 0.1
+WINDOW_SIZE = 30
 
 # Other settings
 #------------------------------------------------------------------------------
-seed = 514
-predictions_size = 1000
-categories_mapping = {0 : 'green', 1 : 'black', 2 : 'red'}
+SEED = 514
+PREDICTIONS_SIZE = 1000
+CATEGORIES_MAPPING = {0 : 'green',
+                      1 : 'black', 
+                      2 : 'red'}

@@ -4,5 +4,6 @@ FAIRS/data/analysis/*
 FAIRS/inference/predictions/*
 FAIRS/training/checkpoints/*
 
+*.egg-info
 !.gitkeep
 

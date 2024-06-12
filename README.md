@@ -12,30 +12,16 @@ This model is built to predict the future color extractions based on previous ob
 ### 2.2 NumberMatrix Model (NMM)
 This model is built to predict the next number extraction based on previous observations (for a totla of 37 different classes). Similarly to the ColorCode Model (CCM), this deep learning netwokr is based on transformer encoders followed by stacks of convolutional layers, where multihead attention is used to apply self attention on the input sequences. Again, this model does not rely on recurrent architecture as the temporal sequence logic is learned by using the attention mechanisms on previous observations, given the positional encoding of each extraction. Moreover, this model integrates in its input the roulette position for each number, in the attempt to provide information on the real-life arrangements of number on the roulette wheel. 
 
-## 3. Installation 
-First, ensure that you have Python 3.10.12 installed on your system. Then, you can easily install the required Python packages using the provided requirements.txt file:
+## 3. Installation
+The installation process is designed for simplicity, using .bat scripts to automatically create a virtual environment with all necessary dependencies. Please ensure that Anaconda or Miniconda is installed on your system before proceeding.
 
-`pip install -r requirements.txt` 
+- To set up a CPU-only environment, run `setup/create_cpu_environment.bat`. This script installs the base version of TensorFlow, which is lighter and does not include CUDA libraries.
+- For GPU support, which is necessary for model training on a GPU, use `setup/create_gpu_environment.bat`. This script includes all required CUDA dependencies to enable GPU utilization.
+- Once the environment has been created, run `scripts/package_setup.bat` to install the app package locally.
+- **IMPORTANT:** run `scripts/package_setup.bat` if you move the project folder somewhere else after installation, or the app won't work! 
 
-In addition to the Python packages, certain extra dependencies may be required for specific functionalities. These dependencies can be installed using conda or other external installation methods, depending on your operating system. Specifically, you will need to install graphviz and pydot to enable the visualization of the 2D model architecture:
-- graphviz version 2.38.0
-- pydot version 1.4.2
-
-You can install these dependencies using the appropriate package manager for your system. For instance, you might use conda or an external installation method based on your operating system's requirements.
-
-## 3.1 CUDA GPU Support (Optional, for GPU Acceleration)
-If you have an NVIDIA GPU and want to harness the power of GPU acceleration using CUDA, please follow these additional steps. The application is built using TensorFlow 2.10.0 to ensure native Windows GPU support, so remember to install the appropriate versions:
-
-#### 3.1.1 Install NVIDIA CUDA Toolkit (Version 11.2)
-To enable GPU acceleration, you'll need to install the NVIDIA CUDA Toolkit. Visit the [NVIDIA CUDA Toolkit download page](https://developer.nvidia.com/cuda-downloads) and select the version that matches your GPU and operating system. Follow the installation instructions provided. Alternatively, you can install `cuda-toolkit` as a package within your environment.
-
-#### 3.1.2 Install cuDNN (NVIDIA Deep Neural Network Library, Version 8.1.0.77)
-Next, you'll need to install cuDNN, which is the NVIDIA Deep Neural Network Library. Visit the [cuDNN download page](https://developer.nvidia.com/cudnn) and download the cuDNN library version that corresponds to your CUDA version (in this case, version 8.1.0.77). Follow the installation instructions provided.
-
-#### 3.1.2 Additional Package (If CUDA Toolkit Is Installed)
-If you've installed the NVIDIA CUDA Toolkit within your environment, you may also need to install an additional package called `cuda-nvcc` (Version 12.3.107). This package provides the CUDA compiler and tools necessary for building CUDA-enabled applications.
-
-By following these steps, you can ensure that your environment is configured to take full advantage of GPU acceleration for enhanced performance.  
+### 3.1 Additional Package for XLA Acceleration
+XLA is designed to optimize computations for speed and efficiency, particularly beneficial when working with TensorFlow and other machine learning frameworks that support XLA. By incorporating XLA acceleration, you can achieve significant performance improvements in numerical computations, especially for large-scale machine learning models. XLA integration is directly available in TensorFlow but may require enabling specific settings or flags.   
 
 ## 4. How to use
 The project is organized into subfolders, each dedicated to specific tasks. The `utils/` folder houses crucial components utilized by various scripts. It's critical to avoid modifying these files, as doing so could compromise the overall integrity and functionality of the program.
@@ -56,7 +42,7 @@ The configurations.py file allows to change the script configuration.
 |                           | XLA_acceleration       | Use linear algebra acceleration for faster training                |
 |                           | training_device        | Select the training device (CPU or GPU)                            |
 |                           | num_processors         | Number of processors (cores) to use; 1 disables multiprocessing    |
-| **Training settings**      | epochs                 | Number of training iterations                                      |
+| **Training settings**     | epochs                 | Number of training iterations                                      |
 |                           | learning_rate          | Learning rate of the model                                         |
 |                           | batch_size             | Size of batches to be fed to the model during training             |
 | **Model settings**        | embedding_size         | Embedding dimensions (valid for both models)                       |
