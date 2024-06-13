@@ -130,7 +130,7 @@ if __name__ == '__main__':
 
     # save files as .csv in prediction folder    
     if parameters['model_name'] == 'CCM':  
-        file_loc = os.path.join(p, 'CCM_predictions.csv')         
+        file_loc = os.path.join(PREDICTIONS_PATH, 'CCM_predictions.csv')         
         df_timeseries.to_csv(file_loc, index=False, sep=';', encoding='utf-8')
     else:
         file_loc = os.path.join(PREDICTIONS_PATH, 'NMM_predictions.csv')         
