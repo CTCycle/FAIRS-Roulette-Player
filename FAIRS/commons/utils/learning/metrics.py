@@ -51,20 +51,9 @@ class RouletteAccuracy(keras.metrics.Metric):
     #--------------------------------------------------------------------------
     def update_state(self, y_true, y_pred, sample_weight=None):
         
-        true_number = y_true[0]
-        true_color = y_true[1]
-        predicted_number = y_pred[0]
-        predicted_color = y_pred[1]
-
-        true_number = keras.ops.cast(true_number, dtype=torch.float32)
-        true_color = keras.ops.cast(true_color, dtype=torch.float32)
-        
-        number_argmax = keras.ops.argmax(predicted_number, axis=2)
-        color_argmax = keras.ops.argmax(predicted_color, axis=2) 
-
-        number_accuracy = keras.ops.equal(true_number, number_argmax)    
-        color_accuracy = keras.ops.equal(true_color, color_argmax)       
-        accuracy = (number_accuracy + color_accuracy)/2           
+        y_true = keras.ops.cast(y_true, dtype=torch.float32)       
+        probabilities = keras.ops.argmax(y_pred, axis=2)
+        accuracy = keras.ops.equal(y_true, probabilities)               
         
         if sample_weight is not None:
             sample_weight = keras.ops.cast(sample_weight, dtype=torch.float32)
@@ -73,8 +62,7 @@ class RouletteAccuracy(keras.metrics.Metric):
         
         # Update the state variables
         self.total.assign_add(keras.ops.sum(accuracy))
-        self.count.assign_add(keras.ops.sum(mask))
-    
+     
     #--------------------------------------------------------------------------
     def result(self):
         return self.total / (self.count + keras.backend.epsilon())
@@ -86,7 +74,7 @@ class RouletteAccuracy(keras.metrics.Metric):
 
     #--------------------------------------------------------------------------
     def get_config(self):
-        base_config = super(MaskedAccuracy, self).get_config()
+        base_config = super(RouletteAccuracy, self).get_config()
         return {**base_config, 'name': self.name}
     
     @classmethod

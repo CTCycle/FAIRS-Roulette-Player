@@ -1,8 +1,7 @@
 __pycache__
-FAIRS/data/FAIRS_dataset.csv
-FAIRS/data/analysis/*
+FAIRS/resources/dataset/*
 FAIRS/inference/predictions/*
-FAIRS/training/checkpoints/*
+FAIRS/resources/checkpoints/*
 
 *.egg-info
 *.log

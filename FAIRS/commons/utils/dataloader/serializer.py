@@ -34,14 +34,9 @@ class DataSerializer:
 
     # ...
     #--------------------------------------------------------------------------
-    def save_preprocessed_data(self, train_data : dict, validation_data : dict, path=''): 
-
-        # stack arrays to create single array with all data, then transpose to have number
-        # of features on the last axis
-        stacked_train_X = np.transpose(np.stack([v[0] for k, v in train_data.items()]), (1, 2, 0))
-        stacked_val_X = np.transpose(np.stack([v[0] for k, v in validation_data.items()]), (1, 2, 0))
-        stacked_train_Y = np.transpose(np.stack([v[1] for k, v in train_data.items()]), (1, 2, 0))
-        stacked_val_Y = np.transpose(np.stack([v[1] for k, v in validation_data.items()]), (1, 2, 0))
+    def save_preprocessed_data(self, stacked_train_X, stacked_train_Y,
+                               stacked_val_X, stacked_val_Y, path=''): 
+        
         # save the array as .npy files
         np.save(os.path.join(path, 'train_inputs.npy'), stacked_train_X)
         np.save(os.path.join(path, 'train_outputs.npy'), stacked_train_Y)

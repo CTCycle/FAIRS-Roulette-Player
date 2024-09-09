@@ -23,10 +23,9 @@ class FAIRSnet:
         self.xla_state = CONFIG["training"]["XLA_STATE"]  
 
         # initialize the image encoder and the transformers encoders and decoders
-        self.sequence_inputs = layers.Input(shape=self.window_size, name='sequence_inputs')
-        self.position_inputs = layers.Input(shape=self.window_size, name='position_inputs') 
-        self.color_inputs = layers.Input(shape=self.window_size, name='colors_inputs') 
-        
+        self.sequence_inputs = layers.Input(shape=(self.window_size,), name='sequence_inputs')
+        self.position_inputs = layers.Input(shape=(self.window_size,), name='position_inputs') 
+                
         self.encoders = [TransformerEncoder(self.embedding_dims, self.num_heads) for _ in range(self.num_encoders)]
         self.embeddings = PositionalEmbedding(self.embedding_dims, self.window_size, mask_zero=False) 
         self.number_predictor = NumberPredictor(128, STATES)  
@@ -47,11 +46,11 @@ class FAIRSnet:
         outputs = (predicted_numbers, predicted_colors)
 
         # define the model from inputs and outputs
-        model = Model(inputs=[self.sequence_inputs, self.color_inputs], outputs=outputs)     
+        model = Model(inputs=[self.sequence_inputs, self.position_inputs], outputs=outputs)     
 
         # define model compilation parameters such as learning rate, loss, metrics and optimizer
         loss = HybridCategoricalCrossentropy()  
-        metric = [RouletteAccuracy()]
+        metric = [RouletteAccuracy(), RouletteAccuracy()]
         opt = keras.optimizers.Adam(learning_rate=self.learning_rate)          
         model.compile(loss=loss, optimizer=opt, metrics=metric, jit_compile=self.xla_state)         
         if summary:

@@ -22,12 +22,11 @@ class DataGenerator():
     def process_data(self, X, Y): 
 
         sequence = X[:, 0]
-        positions = X[:, 1]
-        colors = X[:, 2]  
+        positions = X[:, 1]         
         output_seq = Y[:, 0]
         output_color = Y[:, 2]      
 
-        return (sequence, positions, colors), (output_seq, output_color)   
+        return (sequence, positions), (output_seq, output_color)   
 
    
               
@@ -47,15 +46,15 @@ class DataGenerator():
 
 # wrapper function to run the data pipeline from raw inputs to tensor dataset
 ###############################################################################
-def training_data_pipeline(train_data, validation_data):    
+def training_data_pipeline(train_X, train_Y, validation_X, validation_Y):    
         
         generator = DataGenerator()           
 
-        train_dataset = generator.build_tensor_dataset(train_data['inputs'], train_data['outputs'])
-        validation_dataset = generator.build_tensor_dataset(validation_data['inputs'], validation_data['outputs'])        
-        for x, y in train_dataset.take(1):
-            logger.debug(f'X batch shape is: {x.shape}')  
-            logger.debug(f'Y batch shape is: {y.shape}') 
+        train_dataset = generator.build_tensor_dataset(train_X, train_Y)
+        validation_dataset = generator.build_tensor_dataset(validation_X, validation_Y)        
+        for (x1, x2), (y1, y2) in train_dataset.take(1):
+            logger.debug(f'X batch shape is: {x1.shape}')  
+            logger.debug(f'Y batch shape is: {y1.shape}') 
 
         return train_dataset, validation_dataset
 
