@@ -84,40 +84,97 @@ class FeedForward(keras.layers.Layer):
     def from_config(cls, config):
         return cls(**config)
     
+
+# [FEED FORWARD]
+###############################################################################
+@keras.utils.register_keras_serializable(package='CustomLayers', name='ConvFeedForward')
+class ConvFeedForward(keras.layers.Layer):
+    def __init__(self, dense_units, kernel_size, dropout_rate, **kwargs):
+        super(ConvFeedForward, self).__init__(**kwargs)
+        self.dense_units = dense_units
+        self.kernel_size = kernel_size
+        self.dropout_rate = dropout_rate   
+        self.conv1 = layers.Conv1D(dense_units, kernel_size=kernel_size, 
+                                   activation='relu', kernel_initializer='he_uniform')
+        self.conv2 = layers.Conv1D(dense_units, kernel_size=kernel_size, 
+                                   activation='relu', kernel_initializer='he_uniform')       
+        self.dropout = layers.Dropout(rate=dropout_rate, seed=CONFIG["SEED"])
+
+    # build method for the custom layer 
+    #--------------------------------------------------------------------------
+    def build(self, input_shape):        
+        super(ConvFeedForward, self).build(input_shape)
+
+    # implement transformer encoder through call method  
+    #--------------------------------------------------------------------------    
+    def call(self, x, training=None):
+        x = self.conv1(x)
+        x = self.conv2(x)  
+        output = self.dropout(x, training=training) 
+        return output
+    
+    # serialize layer for saving  
+    #--------------------------------------------------------------------------
+    def get_config(self):
+        config = super(ConvFeedForward, self).get_config()
+        config.update({'dense_units' : self.dense_units,
+                       'kernel_size' : self.kernel_size,
+                       'dropout_rate' : self.dropout_rate,
+                       'seed' : CONFIG["SEED"]})
+        return config
+
+    # deserialization method 
+    #--------------------------------------------------------------------------
+    @classmethod
+    def from_config(cls, config):
+        return cls(**config)
+    
          
-# [CLASSIFIER]
+
+    
+
+
+# [TRANSFORMER ENCODER]
 ###############################################################################
-@keras.utils.register_keras_serializable(package='CustomLayers', name='NumberPredictor')
-class NumberPredictor(keras.layers.Layer):
-    def __init__(self, dense_units, output_size, **kwargs):
-        super(NumberPredictor, self).__init__(**kwargs)
-        self.dense_units = dense_units
-        self.output_size = output_size
-        self.dense1 = layers.Dense(dense_units, activation='relu', 
-                                   kernel_initializer='he_uniform')
-        self.dense2 = layers.Dense(output_size, activation='softmax', 
-                                   kernel_initializer='he_uniform', dtype=torch.float32)
+@keras.utils.register_keras_serializable(package='Encoders', name='ReformingEncoder')
+class ReformingEncoder(keras.layers.Layer):
+
+    def __init__(self, embedding_dims, kernel_size, **kwargs):
+        super(ReformingEncoder, self).__init__(**kwargs)
+        self.embedding_dims = embedding_dims 
+        self.kernel_size = kernel_size   
+        self.high_kernel_size = self.kernel_size * 3   
+        self.cffn = ConvFeedForward(self.embedding_dims, kernel_size, 0.2)
+        self.cffn_hk = ConvFeedForward(self.embedding_dims, self.high_kernel_size, 0.2)
+        self.dense1 = layers.Dense(512, activation='relu', kernel_initializer='he_uniform')
+        self.dense2 = layers.Dense(self.embedding_dims, activation='relu', kernel_initializer='he_uniform')
+        self.reshape = layers.Reshape(target_shape=(-1,))    
 
     # build method for the custom layer 
     #--------------------------------------------------------------------------
     def build(self, input_shape):        
-        super(NumberPredictor, self).build(input_shape)     
-        
+        super(ReformingEncoder, self).build(input_shape)    
 
     # implement transformer encoder through call method  
     #--------------------------------------------------------------------------    
-    def call(self, x, training=None):
-        x = self.dense1(x)
-        output = self.dense2(x)          
+    def call(self, inputs, training=None):               
+
+        # feed forward network with ReLU activation to further process the output
+        # addition and layer normalization of inputs and outputs
+        layer = self.cffn(inputs, training=training)        
+        layer = self.cffn_hk(layer, training=training)
+        layer = self.reshape(layer)
+        layer = self.dense1(layer)
+        output = self.dense2(layer)
 
         return output
     
     # serialize layer for saving  
     #--------------------------------------------------------------------------
     def get_config(self):
-        config = super(NumberPredictor, self).get_config()
-        config.update({'dense_units' : self.dense_units,
-                       'output_size' : self.output_size})
+        config = super(ReformingEncoder, self).get_config()
+        config.update({'embedding_dims': self.embedding_dims,
+                       'kernel_size': self.kernel_size})
         return config
 
     # deserialization method 
@@ -127,47 +184,6 @@ class NumberPredictor(keras.layers.Layer):
         return cls(**config)
     
 
-# [CLASSIFIER]
-###############################################################################
-@keras.utils.register_keras_serializable(package='CustomLayers', name='ColorPredictor')
-class ColorPredictor(keras.layers.Layer):
-    def __init__(self, dense_units, output_size, **kwargs):
-        super(ColorPredictor, self).__init__(**kwargs)
-        self.dense_units = dense_units
-        self.output_size = output_size
-        self.dense1 = layers.Dense(dense_units, activation='relu', 
-                                   kernel_initializer='he_uniform')
-        self.dense2 = layers.Dense(output_size, activation='softmax', 
-                                   kernel_initializer='he_uniform', dtype=torch.float32)
-
-    # build method for the custom layer 
-    #--------------------------------------------------------------------------
-    def build(self, input_shape):        
-        super(ColorPredictor, self).build(input_shape)     
-        
-
-    # implement transformer encoder through call method  
-    #--------------------------------------------------------------------------    
-    def call(self, x, training=None):
-        x = self.dense1(x)
-        output = self.dense2(x)          
-
-        return output
-    
-    # serialize layer for saving  
-    #--------------------------------------------------------------------------
-    def get_config(self):
-        config = super(ColorPredictor, self).get_config()
-        config.update({'dense_units' : self.dense_units,
-                       'output_size' : self.output_size})
-        return config
-
-    # deserialization method 
-    #--------------------------------------------------------------------------
-    @classmethod
-    def from_config(cls, config):
-        return cls(**config)
-    
 
 # [TRANSFORMER ENCODER]
 ###############################################################################

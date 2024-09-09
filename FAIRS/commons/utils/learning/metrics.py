@@ -52,7 +52,7 @@ class RouletteAccuracy(keras.metrics.Metric):
     def update_state(self, y_true, y_pred, sample_weight=None):
         
         y_true = keras.ops.cast(y_true, dtype=torch.float32)       
-        probabilities = keras.ops.argmax(y_pred, axis=2)
+        probabilities = keras.ops.argmax(y_pred, axis=1)
         accuracy = keras.ops.equal(y_true, probabilities)               
         
         if sample_weight is not None:

@@ -41,7 +41,7 @@ class DataSerializer:
         np.save(os.path.join(path, 'train_inputs.npy'), stacked_train_X)
         np.save(os.path.join(path, 'train_outputs.npy'), stacked_train_Y)
         np.save(os.path.join(path, 'validation_inputs.npy'), stacked_val_X)
-        np.save(os.path.join(path, 'validartion_outputs.npy'), stacked_val_Y)        
+        np.save(os.path.join(path, 'validation_outputs.npy'), stacked_val_Y)        
         logger.debug(f'Preprocessed train and validation data has been saved at {path}') 
               
         # save the preprocessing info as .json file in the dataset folder
@@ -64,7 +64,7 @@ class DataSerializer:
         train_inputs_path = os.path.join(PP_PATH, 'train_inputs.npy')
         train_outputs_path = os.path.join(PP_PATH, 'train_outputs.npy')
         val_inputs_path = os.path.join(PP_PATH, 'validation_inputs.npy')
-        val_outputs_path = os.path.join(PP_PATH, 'validartion_outputs.npy')
+        val_outputs_path = os.path.join(PP_PATH, 'validation_outputs.npy')
 
         # Load the .npy files
         train_inputs = np.load(train_inputs_path)
