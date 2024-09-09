@@ -27,6 +27,8 @@ class RollingWindows:
             X_data = np.array([v[i : i + self.window_size] for i in range(len(v) - self.window_size)])
             Y_data = np.array([v[i + self.window_size : i + self.window_size + 1] 
                                for i in range(len(v) - self.window_size)])
+            
+            # transpose data to shape (samples, window size, features)            
             rolling_windows[k] = (X_data, Y_data)
         
         return rolling_windows

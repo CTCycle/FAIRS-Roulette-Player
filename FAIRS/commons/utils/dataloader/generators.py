@@ -14,49 +14,29 @@ class DataGenerator():
 
     def __init__(self):        
         
-        self.img_shape = CONFIG["model"]["IMG_SHAPE"]       
-        self.normalization = CONFIG["dataset"]["IMG_NORMALIZE"]
-        self.augmentation = CONFIG["dataset"]["IMG_AUGMENT"]  
+        self.widows_size = CONFIG["dataset"]["WINDOW_SIZE"]         
         self.batch_size = CONFIG["training"]["BATCH_SIZE"]  
-    
-    # load and preprocess a single image
-    #--------------------------------------------------------------------------
-    def load_image(self, path):
-        image = tf.io.read_file(path)
-        rgb_image = tf.image.decode_image(image, channels=1, expand_animations=False)        
-        rgb_image = tf.image.resize(rgb_image, self.img_shape[:-1])
-        if self.augmentation:
-            rgb_image = self.image_augmentation(rgb_image)
-        if self.normalization:
-            rgb_image = rgb_image/255.0 
-
-        return rgb_image 
     
     # ...
     #--------------------------------------------------------------------------
-    def process_data(self, path, text): 
+    def process_data(self, X, Y): 
 
-        rgb_image = self.load_image(path) 
-        input_text = text[:-1]
-        output_text = text[1:]      
+        sequence = X[:, 0]
+        positions = X[:, 1]
+        colors = X[:, 2]  
+        output_seq = Y[:, 0]
+        output_color = Y[:, 2]      
 
-        return (rgb_image, input_text), output_text     
+        return (sequence, positions, colors), (output_seq, output_color)   
 
-    # define method perform data augmentation    
-    #--------------------------------------------------------------------------
-    def image_augmentation(self, image):    
-
-        image = tf.image.random_flip_left_right(image)
-        image = tf.image.random_flip_up_down(image) 
-
-        return image
+   
               
     # effectively build the tf.dataset and apply preprocessing, batching and prefetching
     #--------------------------------------------------------------------------
-    def build_tensor_dataset(self, paths, tokens, buffer_size=tf.data.AUTOTUNE):
+    def build_tensor_dataset(self, inputs : np.array, outputs : np.array, buffer_size=tf.data.AUTOTUNE):
 
-        num_samples = len(paths)         
-        dataset = tf.data.Dataset.from_tensor_slices((paths, tokens))
+        num_samples = inputs.shape[0]         
+        dataset = tf.data.Dataset.from_tensor_slices((inputs, outputs))
         dataset = dataset.shuffle(buffer_size=num_samples)          
         dataset = dataset.map(self.process_data, num_parallel_calls=buffer_size)        
         dataset = dataset.batch(self.batch_size)
@@ -71,12 +51,10 @@ def training_data_pipeline(train_data, validation_data):
         
         generator = DataGenerator()           
 
-        train_dataset = generator.build_tensor_dataset(train_data['path'].to_list(), 
-                                                       train_data['tokens'].to_list())
-        validation_dataset = generator.build_tensor_dataset(validation_data['path'].to_list(), 
-                                                            validation_data['tokens'].to_list())        
-        for (x1, x2), y in train_dataset.take(1):
-            logger.debug(f'X batch shape is: {x1.shape}')  
+        train_dataset = generator.build_tensor_dataset(train_data['inputs'], train_data['outputs'])
+        validation_dataset = generator.build_tensor_dataset(validation_data['inputs'], validation_data['outputs'])        
+        for x, y in train_dataset.take(1):
+            logger.debug(f'X batch shape is: {x.shape}')  
             logger.debug(f'Y batch shape is: {y.shape}') 
 
         return train_dataset, validation_dataset

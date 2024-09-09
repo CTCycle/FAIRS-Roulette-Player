@@ -7,7 +7,7 @@ from datetime import datetime
 import keras
 
 
-from FAIRS.commons.constants import CONFIG, DATA_PATH, DATASET_NAME, CHECKPOINT_PATH
+from FAIRS.commons.constants import CONFIG, DATA_PATH, DATASET_NAME, PP_PATH, CHECKPOINT_PATH
 from FAIRS.commons.logger import logger
 
 
@@ -36,11 +36,12 @@ class DataSerializer:
     #--------------------------------------------------------------------------
     def save_preprocessed_data(self, train_data : dict, validation_data : dict, path=''): 
 
-        # stack arrays to create single array with all data
-        stacked_train_X = np.stack([v[0] for k, v in train_data.items()])
-        stacked_val_X = np.stack([v[0] for k, v in validation_data.items()])
-        stacked_train_Y = np.stack([v[1] for k, v in train_data.items()])
-        stacked_val_Y = np.stack([v[1] for k, v in validation_data.items()])
+        # stack arrays to create single array with all data, then transpose to have number
+        # of features on the last axis
+        stacked_train_X = np.transpose(np.stack([v[0] for k, v in train_data.items()]), (1, 2, 0))
+        stacked_val_X = np.transpose(np.stack([v[0] for k, v in validation_data.items()]), (1, 2, 0))
+        stacked_train_Y = np.transpose(np.stack([v[1] for k, v in train_data.items()]), (1, 2, 0))
+        stacked_val_Y = np.transpose(np.stack([v[1] for k, v in validation_data.items()]), (1, 2, 0))
         # save the array as .npy files
         np.save(os.path.join(path, 'train_inputs.npy'), stacked_train_X)
         np.save(os.path.join(path, 'train_outputs.npy'), stacked_train_Y)
@@ -62,13 +63,13 @@ class DataSerializer:
 
     # ...
     #--------------------------------------------------------------------------
-    def load_preprocessed_data(self, path):
+    def load_preprocessed_data(self):
 
         # load preprocessed train and validation data from .npy files
-        train_inputs_path = os.path.join(path, 'train_inputs.npy')
-        train_outputs_path = os.path.join(path, 'train_outputs.npy')
-        val_inputs_path = os.path.join(path, 'validation_inputs.npy')
-        val_outputs_path = os.path.join(path, 'validartion_outputs.npy')
+        train_inputs_path = os.path.join(PP_PATH, 'train_inputs.npy')
+        train_outputs_path = os.path.join(PP_PATH, 'train_outputs.npy')
+        val_inputs_path = os.path.join(PP_PATH, 'validation_inputs.npy')
+        val_outputs_path = os.path.join(PP_PATH, 'validartion_outputs.npy')
 
         # Load the .npy files
         train_inputs = np.load(train_inputs_path)
@@ -77,7 +78,7 @@ class DataSerializer:
         val_outputs = np.load(val_outputs_path)
 
         # Load preprocessing metadata from .json file
-        metadata_path = os.path.join(path, 'preprocessing_metadata.json')
+        metadata_path = os.path.join(PP_PATH, 'preprocessing_metadata.json')
         with open(metadata_path, 'r') as file:
             metadata = json.load(file)
         
