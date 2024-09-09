@@ -1,0 +1,28 @@
+{   
+    "SEED" : 54,   
+    "dataset": {"SAMPLE_SIZE" : 1.0,
+                "VALIDATION_SIZE" : 0.2,
+                "WINDOW_SIZE": 30}, 
+
+    "model" : {"NUM_HEADS" : 4,
+               "NUM_ENCODERS" : 3,    
+               "NUM_DECODERS" : 3,    
+               "EMBEDDING_DIMS" : 256, 
+               "SAVE_MODEL_PLOT" : true},
+
+    "training" : {"EPOCHS" : 10,
+                  "ADDITIONAL_EPOCHS" : 2,
+                  "BATCH_SIZE" : 18,
+                  "LEARNING_RATE" : 0.002,
+                  "MIXED_PRECISION" : false,
+                  "USE_TENSORBOARD" : false,
+                  "XLA_STATE" : false,
+                  "ML_DEVICE" : "GPU",
+                  "NUM_PROCESSORS": 6,
+                  "PLOT_EPOCH_GAP": 1},
+                                    
+    "inference" : {"TEMPERATURE" : 1.0},
+
+    "evaluation" : {"BATCH_SIZE" : 20}    
+      
+}
