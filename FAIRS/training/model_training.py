@@ -1,6 +1,5 @@
 # [SET KERAS BACKEND]
 import os 
-import pandas as pd
 os.environ["KERAS_BACKEND"] = "torch"
 
 # [SETTING WARNINGS]
@@ -44,7 +43,7 @@ if __name__ == '__main__':
     sequencer = RollingWindows() 
     train_rolling_windows = sequencer.timeseries_rolling_windows(train_data)
     val_rolling_windows = sequencer.timeseries_rolling_windows(validation_data)
-    train_X, val_X, train_Y, val_Y = sequencer.stack_features_by_window(train_rolling_windows, 
+    train_X, train_Y, val_X, val_Y = sequencer.stack_features_by_window(train_rolling_windows, 
                                                                         val_rolling_windows)    
 
     # 3. [SAVE PREPROCESSED DATA]
@@ -56,8 +55,7 @@ if __name__ == '__main__':
     # save preprocessed data using data serializer
     dataserializer = DataSerializer()
     processed_data_path = os.path.join(model_folder_path, 'data')   
-    dataserializer.save_preprocessed_data(train_X, val_X, train_Y, val_Y, processed_data_path)   
-      
+    dataserializer.save_preprocessed_data(train_X, train_Y, val_X, val_Y, processed_data_path)      
 
     # 4. [DEFINE GENERATOR AND BUILD TF.DATASET]
     #--------------------------------------------------------------------------
@@ -68,8 +66,7 @@ if __name__ == '__main__':
     trainer.set_device()    
        
     # create the tf.datasets using the previously initialized generators    
-    train_dataset, validation_dataset = training_data_pipeline(train_X, train_Y, 
-                                                               val_X, val_Y)   
+    train_dataset, validation_dataset = training_data_pipeline(train_X, train_Y, val_X, val_Y)   
    
     # 3. [TRAINING MODEL]  
     #--------------------------------------------------------------------------  

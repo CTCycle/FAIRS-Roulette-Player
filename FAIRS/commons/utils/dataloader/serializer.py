@@ -6,8 +6,8 @@ import pandas as pd
 from datetime import datetime
 import keras
 
-
-from FAIRS.commons.constants import CONFIG, DATA_PATH, DATASET_NAME, PP_PATH, CHECKPOINT_PATH
+from FAIRS.commons.utils.learning.metrics import ScaledCategoricalCrossentropy
+from FAIRS.commons.constants import CONFIG, DATA_PATH, DATASET_NAME, CHECKPOINT_PATH
 from FAIRS.commons.logger import logger
 
 
@@ -58,29 +58,27 @@ class DataSerializer:
 
     # ...
     #--------------------------------------------------------------------------
-    def load_preprocessed_data(self):
+    def load_preprocessed_data(self, path):
 
+        pp_path = os.path.join(path, 'data')
         # load preprocessed train and validation data from .npy files
-        train_inputs_path = os.path.join(PP_PATH, 'train_inputs.npy')
-        train_outputs_path = os.path.join(PP_PATH, 'train_outputs.npy')
-        val_inputs_path = os.path.join(PP_PATH, 'validation_inputs.npy')
-        val_outputs_path = os.path.join(PP_PATH, 'validation_outputs.npy')
+        train_inputs_path = os.path.join(pp_path, 'train_inputs.npy')
+        train_outputs_path = os.path.join(pp_path, 'train_outputs.npy')
+        val_inputs_path = os.path.join(pp_path, 'validation_inputs.npy')
+        val_outputs_path = os.path.join(pp_path, 'validation_outputs.npy')
 
         # Load the .npy files
-        train_inputs = np.load(train_inputs_path)
-        train_outputs = np.load(train_outputs_path)
-        val_inputs = np.load(val_inputs_path)
-        val_outputs = np.load(val_outputs_path)
+        train_X = np.load(train_inputs_path)
+        train_Y = np.load(train_outputs_path)
+        val_X = np.load(val_inputs_path)
+        val_Y = np.load(val_outputs_path)
 
         # Load preprocessing metadata from .json file
-        metadata_path = os.path.join(PP_PATH, 'preprocessing_metadata.json')
+        metadata_path = os.path.join(pp_path, 'preprocessing_metadata.json')
         with open(metadata_path, 'r') as file:
-            metadata = json.load(file)
-        
-        train_data = {'inputs': train_inputs, 'outputs': train_outputs}
-        validation_data = {'inputs': val_inputs, 'outputs': val_outputs}
+            metadata = json.load(file)        
 
-        return train_data, validation_data, metadata    
+        return train_X, train_Y, val_X, val_Y, metadata 
     
 
 # [MODEL SERIALIZATION]
@@ -255,9 +253,7 @@ class ModelSerializer:
             self.loaded_model_folder = os.path.join(CHECKPOINT_PATH, model_folders[0])                 
             
         # Set dictionary of custom objects     
-        custom_objects = {'MaskedSparseCategoricalCrossentropy': MaskedSparseCategoricalCrossentropy,
-                          'MaskedAccuracy': MaskedAccuracy, 
-                          'LRScheduler': LRScheduler}          
+        custom_objects = {'ScaledCategoricalCrossentropy': ScaledCategoricalCrossentropy}          
         
         # effectively load the model using keras builtin method
         # Load the model with the custom objects 

@@ -7,32 +7,26 @@ from FAIRS.commons.logger import logger
 
 # [LOSS FUNCTION]
 ###############################################################################
-class HybridCategoricalCrossentropy(keras.losses.Loss):
+class ScaledCategoricalCrossentropy(keras.losses.Loss):
     
-    def __init__(self, name='HybridCategoricalCrossentropy', **kwargs):
-        super(HybridCategoricalCrossentropy, self).__init__(name=name, **kwargs)
-        self.number_loss = keras.losses.SparseCategoricalCrossentropy(from_logits=False)
-        self.color_loss = keras.losses.SparseCategoricalCrossentropy(from_logits=False)
-
+    def __init__(self, name='ScaledCategoricalCrossentropy', num_categories=10e6, **kwargs):
+        super(ScaledCategoricalCrossentropy, self).__init__(name=name, **kwargs)
+        self.num_categories = num_categories
+        self.loss = keras.losses.SparseCategoricalCrossentropy(from_logits=False)
+        
     #--------------------------------------------------------------------------    
     def call(self, y_true, y_pred):
-        true_number = y_true[0]
-        true_color = y_true[1]
-        predicted_number = y_pred[0]
-        predicted_color = y_pred[1]
-
-        true_number = keras.ops.cast(true_number, dtype=torch.float32)
-        true_color = keras.ops.cast(true_color, dtype=torch.float32)
-        N_loss = self.number_loss(true_number, predicted_number)
-        C_loss = self.color_loss(true_color, predicted_color)        
-        loss = N_loss + C_loss
-
-        return loss
+        
+        y_true = keras.ops.cast(y_true, dtype=torch.float32)       
+        loss = self.loss(y_true, y_pred)        
+        scaled_loss = loss * (1 + 1/self.num_categories)    
+        
+        return scaled_loss
     
     #--------------------------------------------------------------------------    
     def get_config(self):
-        base_config = super(HybridCategoricalCrossentropy, self).get_config()
-        return {**base_config, 'name': self.name}
+        base_config = super(ScaledCategoricalCrossentropy, self).get_config()
+        return {**base_config, 'name': self.name, 'num_categories': self.num_categories}
     
     @classmethod
     def from_config(cls, config):

@@ -32,12 +32,13 @@ class DataGenerator():
               
     # effectively build the tf.dataset and apply preprocessing, batching and prefetching
     #--------------------------------------------------------------------------
-    def build_tensor_dataset(self, inputs : np.array, outputs : np.array, buffer_size=tf.data.AUTOTUNE):
+    def build_tensor_dataset(self, inputs : np.array, outputs : np.array, 
+                             buffer_size=tf.data.AUTOTUNE):
 
         num_samples = inputs.shape[0]         
         dataset = tf.data.Dataset.from_tensor_slices((inputs, outputs))
         dataset = dataset.shuffle(buffer_size=num_samples)          
-        dataset = dataset.map(self.process_data, num_parallel_calls=buffer_size)        
+        dataset = dataset.map(self.process_data, num_parallel_calls=buffer_size)                
         dataset = dataset.batch(self.batch_size)
         dataset = dataset.prefetch(buffer_size=buffer_size)
 

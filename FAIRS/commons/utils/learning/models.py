@@ -1,11 +1,10 @@
 import keras
-from keras import layers, Model
-
+from keras import metrics, layers, Model
 
 from FAIRS.commons.utils.learning.embeddings import PositionalEmbedding
-from FAIRS.commons.utils.learning.transformers import TransformerEncoder, ReformingEncoder
+from FAIRS.commons.utils.learning.transformers import TransformerEncoder, CompressionEncoder
 from FAIRS.commons.utils.learning.classifiers import NumberPredictor, ColorPredictor
-from FAIRS.commons.utils.learning.metrics import HybridCategoricalCrossentropy, RouletteAccuracy
+from FAIRS.commons.utils.learning.metrics import ScaledCategoricalCrossentropy, RouletteAccuracy
 from FAIRS.commons.constants import CONFIG, STATES, COLORS
 from FAIRS.commons.logger import logger
 
@@ -29,10 +28,10 @@ class FAIRSnet:
         self.position_inputs = layers.Input(shape=(self.window_size,), name='position_inputs') 
                 
         self.encoders = [TransformerEncoder(self.embedding_dims, self.num_heads) for _ in range(self.num_encoders)]
-        self.reformer = ReformingEncoder(self.embedding_dims, self.kernel_size)
+        self.compressor = CompressionEncoder(self.embedding_dims)
         self.embeddings = PositionalEmbedding(self.embedding_dims, self.window_size, mask_zero=False) 
-        self.number_predictor = NumberPredictor(128, STATES)  
-        self.color_predictor = ColorPredictor(64, COLORS)                
+        self.number_predictor = NumberPredictor(128, STATES, name='NP')  
+        self.color_predictor = ColorPredictor(64, COLORS, name='CP')                
 
     # build model given the architecture
     #--------------------------------------------------------------------------
@@ -41,23 +40,24 @@ class FAIRSnet:
         # encode images using the convolutional encoder              
         embeddings = self.embeddings(self.sequence_inputs, self.position_inputs)    
         for encoder in self.encoders:
-            embeddings = encoder(embeddings, training=False) 
-
-        layer = self.reformer(embeddings)
+            embeddings = encoder(embeddings, training=False)         
 
         # apply the softmax classifier layer
-        predicted_numbers = self.number_predictor(layer)    
-        predicted_colors = self.color_predictor(layer) 
-        outputs = (predicted_numbers, predicted_colors)
-
+        compression = self.compressor(embeddings)
+        predicted_numbers = self.number_predictor(compression)  
+        predicted_colors = self.color_predictor(compression) 
+        
         # define the model from inputs and outputs
-        model = Model(inputs=[self.sequence_inputs, self.position_inputs], outputs=outputs)     
+        model = Model(inputs=[self.sequence_inputs, self.position_inputs], 
+                      outputs=[predicted_numbers, predicted_colors])     
 
         # define model compilation parameters such as learning rate, loss, metrics and optimizer
-        loss = HybridCategoricalCrossentropy()  
-        metric = [RouletteAccuracy(), RouletteAccuracy()]
+        losses = [ScaledCategoricalCrossentropy(num_categories=STATES, name='number_loss'),
+                  ScaledCategoricalCrossentropy(num_categories=COLORS, name='color_loss')] 
+        metric = [metrics.SparseCategoricalAccuracy(name='number_accuracy'), 
+                  metrics.SparseCategoricalAccuracy(name='color_accuracy')]
         opt = keras.optimizers.Adam(learning_rate=self.learning_rate)          
-        model.compile(loss=loss, optimizer=opt, metrics=metric, jit_compile=self.xla_state)         
+        model.compile(loss=losses, optimizer=opt, metrics=metric, jit_compile=self.xla_state)         
         if summary:
             model.summary(expand_nested=True)
 

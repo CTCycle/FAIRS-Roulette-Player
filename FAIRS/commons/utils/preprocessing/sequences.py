@@ -44,6 +44,6 @@ class RollingWindows:
         stacked_train_Y = np.transpose(np.stack([v[1] for k, v in train_data.items()]), (1, 2, 0))
         stacked_val_Y = np.transpose(np.stack([v[1] for k, v in validation_data.items()]), (1, 2, 0))
 
-        return stacked_train_X, stacked_val_X, stacked_train_Y, stacked_val_Y
+        return stacked_train_X, stacked_train_Y, stacked_val_X, stacked_val_Y
 
    

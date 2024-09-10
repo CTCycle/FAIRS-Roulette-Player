@@ -136,45 +136,50 @@ class ConvFeedForward(keras.layers.Layer):
 
 # [TRANSFORMER ENCODER]
 ###############################################################################
-@keras.utils.register_keras_serializable(package='Encoders', name='ReformingEncoder')
-class ReformingEncoder(keras.layers.Layer):
+@keras.utils.register_keras_serializable(package='Encoders', name='CompressionEncoder')
+class CompressionEncoder(keras.layers.Layer):
 
-    def __init__(self, embedding_dims, kernel_size, **kwargs):
-        super(ReformingEncoder, self).__init__(**kwargs)
+    def __init__(self, embedding_dims, **kwargs):
+        super(CompressionEncoder, self).__init__(**kwargs)        
         self.embedding_dims = embedding_dims 
-        self.kernel_size = kernel_size   
-        self.high_kernel_size = self.kernel_size * 3   
-        self.cffn = ConvFeedForward(self.embedding_dims, kernel_size, 0.2)
-        self.cffn_hk = ConvFeedForward(self.embedding_dims, self.high_kernel_size, 0.2)
-        self.dense1 = layers.Dense(512, activation='relu', kernel_initializer='he_uniform')
-        self.dense2 = layers.Dense(self.embedding_dims, activation='relu', kernel_initializer='he_uniform')
+                 
+        self.depthconv = layers.DepthwiseConv1D(kernel_size=4, activation='tanh')  
+        self.conv1 = layers.Conv1D(256, kernel_size=2, activation='tanh') 
+        self.conv2 = layers.Conv1D(256, kernel_size=2, activation='tanh')
+        self.conv3 = layers.Conv1D(256, kernel_size=2, activation='tanh')
+        self.pool1 = layers.AveragePooling1D(pool_size=2, strides=2, padding='same')
+        self.pool2 = layers.AveragePooling1D(pool_size=2, strides=2, padding='same')
+        self.pool3 = layers.AveragePooling1D(pool_size=2, strides=2, padding='same')
+        self.dense = layers.Dense(self.embedding_dims, activation='relu', kernel_initializer='he_uniform')
         self.reshape = layers.Reshape(target_shape=(-1,))    
 
     # build method for the custom layer 
     #--------------------------------------------------------------------------
     def build(self, input_shape):        
-        super(ReformingEncoder, self).build(input_shape)    
+        super(CompressionEncoder, self).build(input_shape)    
 
     # implement transformer encoder through call method  
     #--------------------------------------------------------------------------    
-    def call(self, inputs, training=None):               
+    def call(self, inputs, training=None):              
 
-        # feed forward network with ReLU activation to further process the output
-        # addition and layer normalization of inputs and outputs
-        layer = self.cffn(inputs, training=training)        
-        layer = self.cffn_hk(layer, training=training)
+        
+        layer = self.depthconv(inputs)        
+        layer = self.conv1(layer)
+        layer = self.pool1(layer)
+        layer = self.conv2(layer)
+        layer = self.pool2(layer)
+        layer = self.conv3(layer)
+        layer = self.pool3(layer)
         layer = self.reshape(layer)
-        layer = self.dense1(layer)
-        output = self.dense2(layer)
-
+        output = self.dense(layer)
+        
         return output
     
     # serialize layer for saving  
     #--------------------------------------------------------------------------
     def get_config(self):
-        config = super(ReformingEncoder, self).get_config()
-        config.update({'embedding_dims': self.embedding_dims,
-                       'kernel_size': self.kernel_size})
+        config = super(CompressionEncoder, self).get_config()
+        config.update({'embedding_dims': self.embedding_dims})
         return config
 
     # deserialization method 

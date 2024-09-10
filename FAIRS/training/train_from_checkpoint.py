@@ -38,12 +38,12 @@ if __name__ == '__main__':
     # initialize training device, allows changing device prior to initializing the generators
     #--------------------------------------------------------------------------   
     # load saved tf.datasets from the proper folders in the checkpoint directory     
-    train_data, validation_data = dataserializer.load_preprocessed_data(model_folder)
+    train_X, train_Y, val_X, val_Y, metadata = dataserializer.load_preprocessed_data(model_folder)
 
     # initialize the TensorDataSet class with the generator instances
     # create the tf.datasets using the previously initialized generators   
     logger.info('Building data loaders') 
-    train_dataset, validation_dataset = training_data_pipeline(train_data, validation_data)
+    train_dataset, validation_dataset = training_data_pipeline(train_X, train_Y, val_X, val_Y)
     
     # 3. [TRAINING MODEL]  
     #--------------------------------------------------------------------------  
@@ -52,14 +52,14 @@ if __name__ == '__main__':
     # use the bash command: python -m tensorboard.main --logdir tensorboard/ 
     #--------------------------------------------------------------------------
     logger.info('--------------------------------------------------------------')
-    logger.info('FeXT resume training report')
+    logger.info('FAIRS training report')
     logger.info('--------------------------------------------------------------')    
-    logger.info(f'Number of train samples:       {len(train_data)}')
-    logger.info(f'Number of validation samples:  {len(validation_data)}')      
-    logger.info(f'Picture shape:                 {configuration["model"]["IMG_SHAPE"]}')   
-    logger.info(f'Batch size:                    {configuration["training"]["BATCH_SIZE"]}')
-    logger.info(f'Epochs:                        {CONFIG["training"]["ADDITIONAL_EPOCHS"]}')  
-    logger.info('--------------------------------------------------------------\n')      
+    logger.info(f'Number of train samples:       {train_X.shape[0]}')
+    logger.info(f'Number of validation samples:  {val_X.shape[0]}')      
+    logger.info(f'Embedding dimensions:          {CONFIG["model"]["EMBEDDING_DIMS"]}')   
+    logger.info(f'Batch size:                    {CONFIG["training"]["BATCH_SIZE"]}')
+    logger.info(f'Epochs:                        {CONFIG["training"]["ADDITIONAL_EPOCHS"]}')
+    logger.info('--------------------------------------------------------------\n')    
 
     # resume training from pretrained model    
     trainer.train_model(model, train_dataset, validation_dataset, model_folder,

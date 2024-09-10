@@ -1,7 +1,6 @@
-import os
-import numpy as np
-import pandas as pd
-import pickle
+# [SET KERAS BACKEND]
+import os 
+os.environ["KERAS_BACKEND"] = "torch"
 
 # [SETTING WARNINGS]
 import warnings
@@ -9,14 +8,14 @@ warnings.simplefilter(action='ignore', category=Warning)
 
 # [IMPORT CUSTOM MODULES]
 from FAIRS.commons.utils.preprocessing import PreProcessing
-from FAIRS.commons.utils.inference import Inference
-from FAIRS.commons.pathfinder import DATA_PATH, CHECKPOINT_PATH, PREDICTIONS_PATH
-import FAIRS.commons.configurations as cnf
+from FAIRS.commons.utils.learning.inferencer import Inference
+from FAIRS.commons.constants import CONFIG
+from FAIRS.commons.logger import logger
 
 
 # [RUN MAIN]
+###############################################################################
 if __name__ == '__main__':
-
 
     # 1. [LOAD DATA]
     #--------------------------------------------------------------------------

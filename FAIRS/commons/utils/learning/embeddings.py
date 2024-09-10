@@ -4,7 +4,6 @@ import keras
 import tensorflow as tf
 from keras import activations, layers 
 
-from FAIRS.commons.utils.preprocessing.mapping import RouletteMapper
 from FAIRS.commons.constants import CONFIG, STATES
 from FAIRS.commons.logger import logger
       
@@ -19,6 +18,8 @@ class PositionalEmbedding(keras.layers.Layer):
         self.sequence_length = sequence_length         
         self.mask_zero = mask_zero
         
+        # calculate radiand values for the different position of each number on
+        # the roulette wheel, as they will be used for positional embeddings
         self.radiant_gap = (2 * np.pi)/STATES
         self.numbers_embedding = layers.Embedding(input_dim=self.sequence_length, 
                                                   output_dim=self.embedding_dims, 
@@ -32,6 +33,7 @@ class PositionalEmbedding(keras.layers.Layer):
     def call(self, numbers, positions):        
         embedded_timeseries = self.numbers_embedding(numbers) 
         embedded_timeseries *= self.embedding_scale 
+        # multiply each position with the radiant gap to obtain the radial position
         embedded_positions = positions * self.radiant_gap
         embedded_positions = self.position_embeddings(embedded_positions)     
         full_embedding = embedded_timeseries + embedded_positions
@@ -54,8 +56,7 @@ class PositionalEmbedding(keras.layers.Layer):
     #--------------------------------------------------------------------------
     def get_config(self):
         config = super(PositionalEmbedding, self).get_config()
-        config.update({'categories': self.categories,
-                       'sequence_length': self.sequence_length,                       
+        config.update({'sequence_length': self.sequence_length,                       
                        'embedding_dims': self.embedding_dims,                       
                        'mask_zero': self.mask_zero})
         return config

@@ -48,23 +48,21 @@ class RealTimeHistory(keras.callbacks.Callback):
     #--------------------------------------------------------------------------
     def plot_training_history(self):
         fig_path = os.path.join(self.plot_path, 'training_history.jpeg')
-        plt.figure(figsize=(10, 8))
-        
-        # Plot each metric
+        plt.figure(figsize=(16, 14))      
         for i, (metric, values) in enumerate(self.history.items()):
             plt.subplot(len(self.history), 1, i + 1)
-            plt.plot(range(len(values)), values, label=f'train {metric}')
+            plt.plot(range(len(values)), values, label=f'train')
             if f'val_{metric}' in self.val_history:
-                plt.plot(range(len(self.val_history[f'val_{metric}'])), self.val_history[f'val_{metric}'], label=f'val {metric}')
+                plt.plot(range(len(self.val_history[f'val_{metric}'])), 
+                         self.val_history[f'val_{metric}'], label=f'validation')
                 plt.legend(loc='best', fontsize=8)
-            plt.title(f'{metric} Plot')
-            plt.ylabel(metric)
+            plt.title(metric)
+            plt.ylabel('')
             plt.xlabel('Epoch')
         
         plt.tight_layout()
         plt.savefig(fig_path, bbox_inches='tight', format='jpeg', dpi=300)
         plt.close()
-
 
 
 # [LOGGING]
