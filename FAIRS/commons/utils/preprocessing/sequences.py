@@ -4,46 +4,34 @@ import numpy as np
 from FAIRS.commons.constants import CONFIG
 from FAIRS.commons.logger import logger
 
+
 # [DATA SPLITTING]
 ###############################################################################
-class RollingWindows:
+class TimeSequencer:
 
     def __init__(self):
 
         # Set the sizes for the train and validation datasets        
         self.validation_size = CONFIG["dataset"]["VALIDATION_SIZE"]
-        self.window_size = CONFIG["dataset"]["WINDOW_SIZE"]
-       
+        self.window_size = CONFIG["dataset"]["WINDOW_SIZE"]       
 
     #--------------------------------------------------------------------------
-    def timeseries_rolling_windows(self, dataframe : pd.DataFrame):
+    def generate_shifted_sequences(self, dataframe : pd.DataFrame):
         
         features = {'timeseries' : dataframe['timeseries'].values,
                     'position' : dataframe['position'].values,
                     'color' : dataframe['encoded color'].values}
         
-        rolling_windows = {}
+        full_sequence_len = self.window_size + 1
+        shifted_sequences = {}
         for k, v in features.items():                   
-            X_data = np.array([v[i : i + self.window_size] for i in range(len(v) - self.window_size)])
-            Y_data = np.array([v[i + self.window_size : i + self.window_size + 1] 
-                               for i in range(len(v) - self.window_size)])
-            
-            
-            # transpose data to shape (samples, window size, features)            
-            rolling_windows[k] = (X_data, Y_data)
+            X_data = np.array([v[i : i + full_sequence_len] for i in range(len(v) - full_sequence_len)])                             
+            shifted_sequences[k] = X_data
+
+        stacked_data = np.transpose(np.stack([v for v in shifted_sequences.values()]), (1, 2, 0))
         
-        return rolling_windows
+        return stacked_data
     
-    #--------------------------------------------------------------------------
-    def stack_features_by_window(self, train_data : dict, validation_data : dict):
-
-        # stack arrays to create single array with all data, then transpose to have number
-        # of features on the last axis
-        stacked_train_X = np.transpose(np.stack([v[0] for k, v in train_data.items()]), (1, 2, 0))
-        stacked_val_X = np.transpose(np.stack([v[0] for k, v in validation_data.items()]), (1, 2, 0))
-        stacked_train_Y = np.transpose(np.stack([v[1] for k, v in train_data.items()]), (1, 2, 0))
-        stacked_val_Y = np.transpose(np.stack([v[1] for k, v in validation_data.items()]), (1, 2, 0))
-
-        return stacked_train_X, stacked_train_Y, stacked_val_X, stacked_val_Y
+ 
 
    

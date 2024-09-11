@@ -6,14 +6,13 @@ import pandas as pd
 from datetime import datetime
 import keras
 
-from FAIRS.commons.utils.learning.metrics import ScaledCategoricalCrossentropy
-from FAIRS.commons.constants import CONFIG, DATA_PATH, DATASET_NAME, CHECKPOINT_PATH
+from FAIRS.commons.constants import CONFIG, DATA_PATH, PRED_PATH, DATASET_NAME, CHECKPOINT_PATH
 from FAIRS.commons.logger import logger
 
 
-# get images from the paths specified in a pandas dataframe 
+# get FAIRS data for training
 ###############################################################################
-def get_dataset(sample_size=None):     
+def get_training_dataset(sample_size=None):     
 
     if sample_size is None:
         sample_size =  CONFIG["dataset"]["SAMPLE_SIZE"]
@@ -21,6 +20,15 @@ def get_dataset(sample_size=None):
     dataset = pd.read_csv(file_loc, encoding='utf-8', sep=';')
     num_samples = int(dataset.shape[0] * sample_size)
     dataset = dataset[(dataset.shape[0] - num_samples):]
+
+    return dataset
+
+# get FAIRS data for predictions
+###############################################################################
+def get_predictions_dataset():
+
+    file_loc = os.path.join(PRED_PATH, 'FAIRS_predictions.csv') 
+    dataset = pd.read_csv(file_loc, encoding='utf-8', sep=';')    
 
     return dataset
     
@@ -34,14 +42,11 @@ class DataSerializer:
 
     # ...
     #--------------------------------------------------------------------------
-    def save_preprocessed_data(self, stacked_train_X, stacked_train_Y,
-                               stacked_val_X, stacked_val_Y, path=''): 
+    def save_preprocessed_data(self, train_data, validation_data, path=''): 
         
         # save the array as .npy files
-        np.save(os.path.join(path, 'train_inputs.npy'), stacked_train_X)
-        np.save(os.path.join(path, 'train_outputs.npy'), stacked_train_Y)
-        np.save(os.path.join(path, 'validation_inputs.npy'), stacked_val_X)
-        np.save(os.path.join(path, 'validation_outputs.npy'), stacked_val_Y)        
+        np.save(os.path.join(path, 'train_inputs.npy'), train_data)   
+        np.save(os.path.join(path, 'validation_inputs.npy'), validation_data)           
         logger.debug(f'Preprocessed train and validation data has been saved at {path}') 
               
         # save the preprocessing info as .json file in the dataset folder
@@ -59,26 +64,20 @@ class DataSerializer:
     # ...
     #--------------------------------------------------------------------------
     def load_preprocessed_data(self, path):
-
-        pp_path = os.path.join(path, 'data')
+ 
         # load preprocessed train and validation data from .npy files
-        train_inputs_path = os.path.join(pp_path, 'train_inputs.npy')
-        train_outputs_path = os.path.join(pp_path, 'train_outputs.npy')
-        val_inputs_path = os.path.join(pp_path, 'validation_inputs.npy')
-        val_outputs_path = os.path.join(pp_path, 'validation_outputs.npy')
-
-        # Load the .npy files
-        train_X = np.load(train_inputs_path)
-        train_Y = np.load(train_outputs_path)
-        val_X = np.load(val_inputs_path)
-        val_Y = np.load(val_outputs_path)
+        pp_path = os.path.join(path, 'data')
+        train_inputs_path = os.path.join(pp_path, 'train_inputs.npy')       
+        val_inputs_path = os.path.join(pp_path, 'validation_inputs.npy')    
+        train_data = np.load(train_inputs_path)       
+        validation_data = np.load(val_inputs_path)   
 
         # Load preprocessing metadata from .json file
         metadata_path = os.path.join(pp_path, 'preprocessing_metadata.json')
         with open(metadata_path, 'r') as file:
             metadata = json.load(file)        
 
-        return train_X, train_Y, val_X, val_Y, metadata 
+        return train_data, validation_data, metadata 
     
 
 # [MODEL SERIALIZATION]
@@ -253,12 +252,12 @@ class ModelSerializer:
             self.loaded_model_folder = os.path.join(CHECKPOINT_PATH, model_folders[0])                 
             
         # Set dictionary of custom objects     
-        custom_objects = {'ScaledCategoricalCrossentropy': ScaledCategoricalCrossentropy}          
+        # custom_objects = {'RouletteCategoricalCrossentropy': RouletteCategoricalCrossentropy}          
         
         # effectively load the model using keras builtin method
         # Load the model with the custom objects 
         model_path = os.path.join(self.loaded_model_folder, 'saved_model.keras')         
-        model = keras.models.load_model(model_path, custom_objects=custom_objects) 
+        model = keras.models.load_model(model_path, custom_objects=None) 
 
         # load configuration data from .json file in checkpoint folder
         configuration, history = self.load_session_configuration(self.loaded_model_folder)          

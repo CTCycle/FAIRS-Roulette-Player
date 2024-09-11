@@ -9,9 +9,9 @@ warnings.simplefilter(action='ignore', category=Warning)
 # [IMPORT CUSTOM MODULES]
 from FAIRS.commons.utils.preprocessing.mapping import RouletteMapper
 from FAIRS.commons.utils.preprocessing.splitting import DatasetSplit
-from FAIRS.commons.utils.preprocessing.sequences import RollingWindows
+from FAIRS.commons.utils.preprocessing.sequences import TimeSequencer
 from FAIRS.commons.utils.dataloader.generators import training_data_pipeline
-from FAIRS.commons.utils.dataloader.serializer import get_dataset, DataSerializer, ModelSerializer
+from FAIRS.commons.utils.dataloader.serializer import get_training_dataset, DataSerializer, ModelSerializer
 from FAIRS.commons.utils.learning.models import FAIRSnet
 from FAIRS.commons.utils.learning.training import ModelTraining
 from FAIRS.commons.constants import CONFIG, DATA_PATH, DATASET_NAME
@@ -26,7 +26,7 @@ if __name__ == '__main__':
     #--------------------------------------------------------------------------     
     # load data from csv, add paths to images 
     logger.info(f'Loading FAIRS dataset from {DATA_PATH}')    
-    df_FAIRS = get_dataset()    
+    df_FAIRS = get_training_dataset()
 
     # 2. [MAP DATA TO ROULETTE POSITIONS AND COLORS]
     #--------------------------------------------------------------------------    
@@ -40,11 +40,9 @@ if __name__ == '__main__':
     splitter = DatasetSplit(df_FAIRS)    
     train_data, validation_data = splitter.split_train_and_validation() 
 
-    sequencer = RollingWindows() 
-    train_rolling_windows = sequencer.timeseries_rolling_windows(train_data)
-    val_rolling_windows = sequencer.timeseries_rolling_windows(validation_data)
-    train_X, train_Y, val_X, val_Y = sequencer.stack_features_by_window(train_rolling_windows, 
-                                                                        val_rolling_windows)    
+    sequencer = TimeSequencer() 
+    train_inputs = sequencer.generate_shifted_sequences(train_data)
+    validation_inputs = sequencer.generate_shifted_sequences(validation_data)       
 
     # 3. [SAVE PREPROCESSED DATA]
     #--------------------------------------------------------------------------
@@ -55,7 +53,7 @@ if __name__ == '__main__':
     # save preprocessed data using data serializer
     dataserializer = DataSerializer()
     processed_data_path = os.path.join(model_folder_path, 'data')   
-    dataserializer.save_preprocessed_data(train_X, train_Y, val_X, val_Y, processed_data_path)      
+    dataserializer.save_preprocessed_data(train_inputs, validation_inputs, processed_data_path)      
 
     # 4. [DEFINE GENERATOR AND BUILD TF.DATASET]
     #--------------------------------------------------------------------------
@@ -66,7 +64,7 @@ if __name__ == '__main__':
     trainer.set_device()    
        
     # create the tf.datasets using the previously initialized generators    
-    train_dataset, validation_dataset = training_data_pipeline(train_X, train_Y, val_X, val_Y)   
+    train_dataset, validation_dataset = training_data_pipeline(train_inputs, validation_inputs)   
    
     # 3. [TRAINING MODEL]  
     #--------------------------------------------------------------------------  

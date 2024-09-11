@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from FAIRS.commons.utils.dataloader.serializer import DataSerializer
-from FAIRS.commons.constants import CONFIG, RESULTS_PATH
+from FAIRS.commons.constants import CONFIG
 from FAIRS.commons.logger import logger
 
 

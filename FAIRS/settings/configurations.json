@@ -5,15 +5,15 @@
                 "WINDOW_SIZE": 80}, 
 
     "model" : {"NUM_HEADS" : 3,
-               "NUM_ENCODERS" : 4,                 
-               "EMBEDDING_DIMS" : 128,
-               "CONVOLUTIONAL_KERNEL" : 4, 
+               "NUM_ENCODERS" : 4,  
+               "NUM_DECODERS" : 4,                 
+               "EMBEDDING_DIMS" : 128,               
                "SAVE_MODEL_PLOT" : true},
 
-    "training" : {"EPOCHS" : 10,
+    "training" : {"EPOCHS" : 50,
                   "ADDITIONAL_EPOCHS" : 2,
-                  "BATCH_SIZE" : 64,
-                  "LEARNING_RATE" : 0.002,
+                  "BATCH_SIZE" : 128,
+                  "LEARNING_RATE" : 0.001,
                   "MIXED_PRECISION" : false,
                   "USE_TENSORBOARD" : false,
                   "XLA_STATE" : false,
@@ -21,8 +21,7 @@
                   "NUM_PROCESSORS": 6,
                   "PLOT_EPOCH_GAP": 1},
                                     
-    "inference" : {"TEMPERATURE" : 1.0,
-                   "TIMESERIES_SIZE" : 1000},
+    "inference" : {"TEMPERATURE" : 1.0},
 
     "evaluation" : {"BATCH_SIZE" : 20}    
       

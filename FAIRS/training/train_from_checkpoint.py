@@ -38,12 +38,12 @@ if __name__ == '__main__':
     # initialize training device, allows changing device prior to initializing the generators
     #--------------------------------------------------------------------------   
     # load saved tf.datasets from the proper folders in the checkpoint directory     
-    train_X, train_Y, val_X, val_Y, metadata = dataserializer.load_preprocessed_data(model_folder)
+    train_data, validation_data, metadata = dataserializer.load_preprocessed_data(model_folder)
 
     # initialize the TensorDataSet class with the generator instances
     # create the tf.datasets using the previously initialized generators   
     logger.info('Building data loaders') 
-    train_dataset, validation_dataset = training_data_pipeline(train_X, train_Y, val_X, val_Y)
+    train_dataset, validation_dataset = training_data_pipeline(train_data, validation_data)
     
     # 3. [TRAINING MODEL]  
     #--------------------------------------------------------------------------  
@@ -54,8 +54,8 @@ if __name__ == '__main__':
     logger.info('--------------------------------------------------------------')
     logger.info('FAIRS training report')
     logger.info('--------------------------------------------------------------')    
-    logger.info(f'Number of train samples:       {train_X.shape[0]}')
-    logger.info(f'Number of validation samples:  {val_X.shape[0]}')      
+    logger.info(f'Number of train samples:       {train_data.shape[0]}')
+    logger.info(f'Number of validation samples:  {validation_data.shape[0]}')      
     logger.info(f'Embedding dimensions:          {CONFIG["model"]["EMBEDDING_DIMS"]}')   
     logger.info(f'Batch size:                    {CONFIG["training"]["BATCH_SIZE"]}')
     logger.info(f'Epochs:                        {CONFIG["training"]["ADDITIONAL_EPOCHS"]}')
