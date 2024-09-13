@@ -61,7 +61,8 @@ class FAIRSnet:
                       outputs=output)     
 
         # define model compilation parameters such as learning rate, loss, metrics and optimizer
-        loss = [losses.SparseCategoricalCrossentropy()] 
+        loss = [RouletteCategoricalCrossentropy(window_size=self.window_size, 
+                                                penalty_increase=CONFIG["training"]["LOSS_PENALTY_FACTOR"])] 
         metric = [metrics.SparseCategoricalAccuracy()]
         opt = keras.optimizers.Adam(learning_rate=self.learning_rate)          
         model.compile(loss=loss, optimizer=opt, metrics=metric, jit_compile=self.xla_state)         
