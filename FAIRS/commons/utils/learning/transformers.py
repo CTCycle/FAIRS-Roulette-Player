@@ -156,7 +156,7 @@ class TransformerDecoder(keras.layers.Layer):
         self.addnorm1 = AddNorm()
         self.addnorm2 = AddNorm()
         self.addnorm3 = AddNorm()
-        self.ffn1 = FeedForward(self.embedding_dims, 0.2)            
+        self.ffn1 = FeedForward(self.embedding_dims, 0.3)            
         self.supports_masking = True 
 
     # build method for the custom layer 
@@ -193,7 +193,7 @@ class TransformerDecoder(keras.layers.Layer):
 
         # feed forward network with ReLU activation to further process the output
         # addition and layer normalization of inputs and outputs
-        ffn = self.ffn1(addnorm_out2)
+        ffn = self.ffn1(addnorm_out2, training=training)
         logits = self.addnorm3([ffn, addnorm_out2])        
 
         return logits

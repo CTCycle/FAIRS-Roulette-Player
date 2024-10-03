@@ -33,7 +33,7 @@ class FAIRSnet:
         self.decoders = [TransformerDecoder(self.embedding_dims, self.num_heads) for _ in range(self.num_decoders)]
         self.encoder_embeddings = PositionalEmbedding(self.embedding_dims, self.window_size, mask_zero=False) 
         self.decoder_embeddings = PositionalEmbedding(self.embedding_dims, self.window_size, mask_zero=False) 
-        self.classifier = SoftMaxClassifier(256, STATES)  
+        self.classifier = SoftMaxClassifier(128, STATES)  
         
     # build model given the architecture
     #--------------------------------------------------------------------------
