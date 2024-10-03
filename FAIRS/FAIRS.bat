@@ -95,7 +95,7 @@ if /i "%skip_CUDA_check%"=="true" (
 :main_menu
 echo.
 echo =======================================
-echo           FAIRS AutoEncoder
+echo                 FAIRS 
 echo =======================================
 echo 1. Data analysis
 echo 2. Model training and evaluation
