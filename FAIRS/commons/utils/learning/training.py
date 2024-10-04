@@ -5,6 +5,7 @@ import torch
 from torch.amp import GradScaler
 import tensorflow as tf
 
+from FAIRS.commons.utils.learning.environment import RouletteEnvironment
 from FAIRS.commons.utils.learning.callbacks import RealTimeHistory, LoggingCallback
 from FAIRS.commons.utils.dataloader.serializer import ModelSerializer
 from FAIRS.commons.constants import CONFIG
@@ -92,4 +93,48 @@ class ModelTraining:
         
 
 
-      
+# [TOOLS FOR TRAINING MACHINE LEARNING MODELS]
+###############################################################################
+class ReinforcementLearningCycle: 
+
+
+    def __init__(self):  
+
+
+        environment = RouletteEnvironment()
+        state_shape = (environment.observation_space.shape[0],)
+        action_size = environment.action_space.n
+        #model = create_model(state_shape, action_size)
+
+        for episode in range(episodes):
+            state = env.reset()
+            state = np.reshape(state, [1, state_shape[0]])
+            total_reward = 0
+
+            for time in range(100):
+                if np.random.rand() <= epsilon:
+                    action = random.randrange(action_size)
+                else:
+                    q_values = model.predict(state, verbose=0)
+                    action = np.argmax(q_values[0])
+
+                next_state, reward, done, _ = env.step(action)
+                next_state = np.reshape(next_state, [1, state_shape[0]])
+
+                # Update Q-values (train the model)
+                target = reward
+                if not done:
+                    target = reward + gamma * np.amax(model.predict(next_state, verbose=0)[0])
+
+                target_f = model.predict(state, verbose=0)
+                target_f[0][action] = target
+                model.fit(state, target_f, epochs=1, verbose=0)
+
+                state = next_state
+                total_reward += reward
+
+            # Decay epsilon to reduce exploration over time
+            if epsilon > epsilon_min:
+                epsilon *= epsilon_decay
+
+            print(f"Episode: {episode + 1}/{episodes}, Total Reward: {total_reward}, Epsilon: {epsilon}") 
