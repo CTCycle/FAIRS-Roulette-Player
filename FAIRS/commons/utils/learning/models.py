@@ -33,7 +33,8 @@ class FAIRSnet:
         self.decoders = [TransformerDecoder(self.embedding_dims, self.num_heads) for _ in range(self.num_decoders)]
         self.encoder_embeddings = PositionalEmbedding(self.embedding_dims, self.window_size, mask_zero=False) 
         self.decoder_embeddings = PositionalEmbedding(self.embedding_dims, self.window_size, mask_zero=False) 
-        self.classifier = SoftMaxClassifier(128, STATES)  
+
+        self.q_value_layer = layers.Dense(ACTION_SIZE, activation='linear')   
         
     # build model given the architecture
     #--------------------------------------------------------------------------

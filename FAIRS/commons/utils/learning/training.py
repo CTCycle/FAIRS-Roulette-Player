@@ -12,6 +12,51 @@ from FAIRS.commons.constants import CONFIG
 from FAIRS.commons.logger import logger
 
 
+
+
+
+# [TOOLS FOR TRAINING MACHINE LEARNING MODELS]
+###############################################################################
+class RLAgent:
+    def __init__(self, configuration, model, state_shape, action_size, 
+                 gamma=0.99, epsilon=1.0, epsilon_min=0.01, epsilon_decay=0.995):
+        
+        self.configuration = configuration
+        self.model = model
+        self.state_shape = state_shape
+        self.action_size = action_size
+        self.gamma = gamma
+        self.epsilon = epsilon
+        self.epsilon_min = epsilon_min
+        self.epsilon_decay = epsilon_decay        
+         
+    #--------------------------------------------------------------------------
+    def act(self, state):
+        if np.random.rand() <= self.epsilon:
+            return np.random.randrange(self.action_size)  # Explore
+        q_values = self.model.predict(state, verbose=0)
+        return np.argmax(q_values[0])  # Exploit (choose best action)
+
+    #--------------------------------------------------------------------------
+    def train(self, state, action, reward, next_state, done):
+        # Get Q-value predictions for the next state
+        target = reward
+        if not done:
+            target = reward + self.gamma * np.amax(self.model.predict(next_state, verbose=0)[0])
+        
+        # Update Q-values for the chosen action
+        target_f = self.model.predict(state, verbose=0)
+        target_f[0][action] = target
+        
+        # Fit the model on the current state and updated target Q-values
+        self.model.fit(state, target_f, epochs=1, verbose=0)
+
+        # Reduce epsilon (reduce exploration over time)
+        if self.epsilon > self.epsilon_min:
+            self.epsilon *= self.epsilon_decay
+
+
+
 # [TOOLS FOR TRAINING MACHINE LEARNING MODELS]
 ###############################################################################
 class ModelTraining:    
@@ -95,7 +140,7 @@ class ModelTraining:
 
 # [TOOLS FOR TRAINING MACHINE LEARNING MODELS]
 ###############################################################################
-class ReinforcementLearningCycle: 
+class ReinforcementLearningTraining: 
 
 
     def __init__(self):  
