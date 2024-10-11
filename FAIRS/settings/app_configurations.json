@@ -10,8 +10,15 @@
                "EMBEDDING_DIMS" : 200,               
                "SAVE_MODEL_PLOT" : true},
 
+    "agent" : {"DISCOUNT_RATE" : 4,
+               "EXPLORATION_RATE" : 3},
+
+    "environment" : {"INITIAL_CAPITAL": 1000,
+                     "BET_AMOUNT": 10,
+                     "MAX_STEPS": 100},
+
     "training" : {"EPOCHS" : 100,
-                  "ADDITIONAL_EPOCHS" : 2,
+                  "ADDITIONAL_EPOCHS" : 2,                  
                   "BATCH_SIZE" : 64,
                   "LEARNING_RATE" : 0.001,
                   "LOSS_PENALTY_FACTOR" : 0.005,

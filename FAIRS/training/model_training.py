@@ -13,7 +13,7 @@ from FAIRS.commons.utils.preprocessing.sequences import TimeSequencer
 from FAIRS.commons.utils.dataloader.generators import training_data_pipeline
 from FAIRS.commons.utils.dataloader.serializer import get_training_dataset, DataSerializer, ModelSerializer
 from FAIRS.commons.utils.learning.models import FAIRSnet
-from FAIRS.commons.utils.learning.training import ModelTraining
+from FAIRS.commons.utils.learning.training import DQNTraining
 from FAIRS.commons.constants import CONFIG, DATA_PATH, DATASET_NAME
 from FAIRS.commons.logger import logger
 
@@ -41,8 +41,8 @@ if __name__ == '__main__':
     train_data, validation_data = splitter.split_train_and_validation() 
 
     sequencer = TimeSequencer() 
-    train_inputs = sequencer.generate_shifted_sequences(train_data)
-    validation_inputs = sequencer.generate_shifted_sequences(validation_data)       
+    train_inputs = sequencer.generate_historical_sequences(train_data)
+    validation_inputs = sequencer.generate_historical_sequences(validation_data)       
 
     # 3. [SAVE PREPROCESSED DATA]
     #--------------------------------------------------------------------------
@@ -60,7 +60,7 @@ if __name__ == '__main__':
     # initialize training device 
     # allows changing device prior to initializing the generators
     logger.info('Building FAIRS model and data loaders')     
-    trainer = ModelTraining(CONFIG) 
+    trainer = DQNTraining(CONFIG) 
     trainer.set_device()    
        
     # create the tf.datasets using the previously initialized generators    
@@ -82,9 +82,9 @@ if __name__ == '__main__':
     logger.info(f'Epochs:                        {CONFIG["training"]["EPOCHS"]}')  
     logger.info('--------------------------------------------------------------\n')  
 
-    # build the autoencoder model     
-    classifier = FAIRSnet()
-    model = classifier.get_model(summary=True)
+    # build the FAIRSnet model and the DQNA agent     
+    learner = FAIRSnet()
+    model = learner.get_model(summary=True)    
     
     # generate graphviz plot fo the model layout         
     modelserializer.save_model_plot(model, model_folder_path)              

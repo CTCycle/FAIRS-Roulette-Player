@@ -1,74 +1,75 @@
 import os
 import numpy as np
+from collections import deque
 import keras
 import torch
 from torch.amp import GradScaler
 import tensorflow as tf
 
+from FAIRS.commons.utils.learning.models import FAIRSnet
 from FAIRS.commons.utils.learning.environment import RouletteEnvironment
 from FAIRS.commons.utils.learning.callbacks import RealTimeHistory, LoggingCallback
 from FAIRS.commons.utils.dataloader.serializer import ModelSerializer
-from FAIRS.commons.constants import CONFIG
+from FAIRS.commons.constants import CONFIG, STATES, COLORS
 from FAIRS.commons.logger import logger
 
 
 
-
-
 # [TOOLS FOR TRAINING MACHINE LEARNING MODELS]
 ###############################################################################
-class RLAgent:
-    def __init__(self, configuration, model, state_shape, action_size, 
-                 gamma=0.99, epsilon=1.0, epsilon_min=0.01, epsilon_decay=0.995):
-        
-        self.configuration = configuration
+class DQNAgent:
+    def __init__(self, model, configuration):
+
+        self.state_size = configuration["dataset"]["WINDOW_SIZE"]
+        self.action_size = STATES + COLORS + 1
+        self.memory = deque(maxlen=2000)
+        self.gamma = configuration['agent']['DISCOUNT_RATE'] 
+        self.epsilon = configuration['agent']['EXPLORATION_RATE']  
+        self.epsilon_min = 0.01
+        self.epsilon_decay = 0.995
         self.model = model
-        self.state_shape = state_shape
-        self.action_size = action_size
-        self.gamma = gamma
-        self.epsilon = epsilon
-        self.epsilon_min = epsilon_min
-        self.epsilon_decay = epsilon_decay        
-         
+    
     #--------------------------------------------------------------------------
     def act(self, state):
         if np.random.rand() <= self.epsilon:
-            return np.random.randrange(self.action_size)  # Explore
-        q_values = self.model.predict(state, verbose=0)
-        return np.argmax(q_values[0])  # Exploit (choose best action)
+            return np.random.randrange(self.action_size)  
+        q_values = self.model.predict(state)
+        return np.argmax(q_values[0])  
 
     #--------------------------------------------------------------------------
-    def train(self, state, action, reward, next_state, done):
-        # Get Q-value predictions for the next state
-        target = reward
-        if not done:
-            target = reward + self.gamma * np.amax(self.model.predict(next_state, verbose=0)[0])
-        
-        # Update Q-values for the chosen action
-        target_f = self.model.predict(state, verbose=0)
-        target_f[0][action] = target
-        
-        # Fit the model on the current state and updated target Q-values
-        self.model.fit(state, target_f, epochs=1, verbose=0)
-
-        # Reduce epsilon (reduce exploration over time)
+    def remember(self, state, action, reward, next_state, done):
+        self.memory.append((state, action, reward, next_state, done))
+    
+    #--------------------------------------------------------------------------
+    def replay(self, batch_size):
+        minibatch = np.random.sample(self.memory, batch_size)
+        for state, action, reward, next_state, done in minibatch:
+            target = reward
+            if not done:
+                target = reward + self.gamma * np.amax(self.model.predict(next_state)[0])
+            target_f = self.model.predict(state)
+            target_f[0][action] = target
+            self.model.fit(state, target_f, epochs=1, verbose=0)
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
 
 
-
 # [TOOLS FOR TRAINING MACHINE LEARNING MODELS]
 ###############################################################################
-class ModelTraining:    
-       
+class DQNTraining:
     def __init__(self, configuration):
+        
+        self.environment = RouletteEnvironment(configuration)
         self.configuration = configuration
+        self.episodes = configuration['training']['EPISODES']
+        self.batch_size = configuration['training']['BATCH_SIZE']        
+        
         np.random.seed(configuration["SEED"])
         torch.manual_seed(configuration["SEED"])
         tf.random.set_seed(configuration["SEED"])
         self.device = torch.device('cpu')
         self.scaler = GradScaler() if self.configuration["training"]["MIXED_PRECISION"] else None
-        self.set_device()        
+        self.set_device()                
 
     # set device
     #--------------------------------------------------------------------------
@@ -92,94 +93,77 @@ class ModelTraining:
             self.device = torch.device('cpu')
 
     #--------------------------------------------------------------------------
-    def train_model(self, model : keras.Model, train_data, validation_data, 
-                    current_checkpoint_path, from_checkpoint=False):
-        
-        # initialize model serializer
+    def train_model(self, model, train_data, validation_data, checkpoint_path, from_checkpoint=False):
+
+        # Initialize training parameters
+        current_checkpoint_path = checkpoint_path
         serializer = ModelSerializer()  
 
-        # perform different initialization duties based on state of session:
-        # training from scratch vs resumed training
-        # calculate number of epochs taking into account possible training resumption
-        if not from_checkpoint:            
-            epochs = self.configuration["training"]["EPOCHS"] 
-            from_epoch = 0
-            history = None
+        agent = DQNAgent(model, self.configuration)
+
+        if from_checkpoint:
+            # Load previous session if training is resumed from a checkpoint
+            _, history = serializer.load_session_configuration(current_checkpoint_path)
+            total_epochs = history['total_epochs']
+            epochs = total_epochs + CONFIG["training"]["ADDITIONAL_EPOCHS"]
+            start_episode = total_epochs
         else:
-            _, history = serializer.load_session_configuration(current_checkpoint_path)                     
-            epochs = history['total_epochs'] + CONFIG["training"]["ADDITIONAL_EPOCHS"] 
-            from_epoch = history['total_epochs']           
-        
-        # add logger callback for the training session
-        RTH_callback = RealTimeHistory(current_checkpoint_path, past_logs=history)
+            epochs = self.configuration['training']['EPOCHS']
+            start_episode = 0
+
+        # Initialize environment and agent's states
+        state_size = self.environment.observation_space.shape[0]
+        action_size = self.environment.action_space.n
+
+        # Setup callbacks
+        rth_callback = RealTimeHistory(current_checkpoint_path, past_logs=history)
         logger_callback = LoggingCallback()
-        # add all callbacks to the callback list
-        callbacks_list = [RTH_callback, logger_callback]
+        callbacks_list = [rth_callback, logger_callback]
 
-        # initialize tensorboard if requested    
         if CONFIG["training"]["USE_TENSORBOARD"]:
-            logger.debug('Using tensorboard during training')
-            log_path = os.path.join(current_checkpoint_path, 'tensorboard')
-            callbacks_list.append(keras.callbacks.TensorBoard(log_dir=log_path, histogram_freq=1))        
-        
-        # run model fit using keras API method
-        training = model.fit(train_data, epochs=epochs, validation_data=validation_data, 
-                             callbacks=callbacks_list, initial_epoch=from_epoch)
-        
-        # save model parameters in json files
-        history = {'history' : RTH_callback.history, 
-                   'val_history' : RTH_callback.val_history,
-                   'total_epochs' : epochs}
-        
-        serializer.save_pretrained_model(model, current_checkpoint_path)       
-        serializer.save_session_configuration(current_checkpoint_path, 
-                                              history, self.configuration)
+            log_dir = os.path.join(current_checkpoint_path, 'tensorboard')
+            callbacks_list.append(keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1))
 
-        
-
-
-# [TOOLS FOR TRAINING MACHINE LEARNING MODELS]
-###############################################################################
-class ReinforcementLearningTraining: 
-
-
-    def __init__(self):  
-
-
-        environment = RouletteEnvironment()
-        state_shape = (environment.observation_space.shape[0],)
-        action_size = environment.action_space.n
-        #model = create_model(state_shape, action_size)
-
-        for episode in range(episodes):
-            state = env.reset()
-            state = np.reshape(state, [1, state_shape[0]])
+        # Training loop for each episode
+        for episode in range(start_episode, self.episodes):
+            state = self.environment.reset()
+            state = np.reshape(state, [1, state_size])
             total_reward = 0
 
-            for time in range(100):
-                if np.random.rand() <= epsilon:
-                    action = random.randrange(action_size)
-                else:
-                    q_values = model.predict(state, verbose=0)
-                    action = np.argmax(q_values[0])
-
-                next_state, reward, done, _ = env.step(action)
-                next_state = np.reshape(next_state, [1, state_shape[0]])
-
-                # Update Q-values (train the model)
-                target = reward
-                if not done:
-                    target = reward + gamma * np.amax(model.predict(next_state, verbose=0)[0])
-
-                target_f = model.predict(state, verbose=0)
-                target_f[0][action] = target
-                model.fit(state, target_f, epochs=1, verbose=0)
-
-                state = next_state
+            for time_step in range(self.environment.max_steps):
+                action = agent.act(state)
+                next_state, reward, done, info = self.environment.step(action)
                 total_reward += reward
+                next_state = np.reshape(next_state, [1, state_size])
 
-            # Decay epsilon to reduce exploration over time
-            if epsilon > epsilon_min:
-                epsilon *= epsilon_decay
+                # Remember experience
+                agent.remember(state, action, reward, next_state, done)
+                state = next_state
 
-            print(f"Episode: {episode + 1}/{episodes}, Total Reward: {total_reward}, Epsilon: {epsilon}") 
+                # Perform replay if the memory size is sufficient
+                if len(agent.memory) > self.batch_size:
+                    agent.replay(self.batch_size)
+
+                if done:
+                    print(f"Episode {episode+1}/{self.episodes} - Time steps: {time_step+1} - Capital: {info['capital']} - Total Reward: {total_reward}")
+                    break
+
+            # Save progress at checkpoints (you can define a frequency or save every episode)
+            if episode % self.configuration['training']['SAVE_FREQUENCY'] == 0:
+                print(f"Saving model at episode {episode}")
+                serializer.save_pretrained_model(agent.model, current_checkpoint_path)
+                history = {'history': rth_callback.history, 'val_history': rth_callback.val_history, 'total_epochs': episode}
+                serializer.save_session_configuration(current_checkpoint_path, history, self.configuration)
+
+        # Save the final model at the end of training
+        serializer.save_pretrained_model(agent.model, current_checkpoint_path)
+        history = {'history': rth_callback.history, 'val_history': rth_callback.val_history, 'total_epochs': self.episodes}
+        serializer.save_session_configuration(current_checkpoint_path, history, self.configuration)
+
+        # Optional: Run validation if applicable
+        if validation_data is not None:
+            val_loss = model.evaluate(validation_data)
+            print(f"Validation loss: {val_loss}")
+
+
+

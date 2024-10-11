@@ -9,64 +9,51 @@ from FAIRS.commons.constants import CONFIG, STATES, COLORS
 from FAIRS.commons.logger import logger
 
 
-# [XREP CAPTIONING MODEL]
+# [FAIRS CAPTIONING MODEL]
 ###############################################################################
 class FAIRSnet: 
 
-    def __init__(self):         
-             
+    def __init__(self):  
+
+        
+       
         self.window_size = CONFIG["dataset"]["WINDOW_SIZE"] 
         self.embedding_dims = CONFIG["model"]["EMBEDDING_DIMS"]        
         self.num_heads = CONFIG["model"]["NUM_HEADS"]  
         self.num_encoders = CONFIG["model"]["NUM_ENCODERS"] 
         self.num_decoders = CONFIG["model"]["NUM_DECODERS"]
-        self.learning_rate = CONFIG["training"]["LEARNING_RATE"]             
+        self.learning_rate = CONFIG["training"]["LEARNING_RATE"] 
+
+        self.state_size = 1
+        self.action_size = 20                        
+
         self.xla_state = CONFIG["training"]["XLA_STATE"]  
 
         # initialize the image encoder and the transformers encoders and decoders
-        self.encoder_timeseries = layers.Input(shape=(self.window_size,), name='encoder_timeseries')
-        self.decoder_timeseries = layers.Input(shape=(self.window_size,), name='decoder_timeseries')
-        self.encoder_positions = layers.Input(shape=(self.window_size,), name='encoder_positions') 
-        self.decoder_positions = layers.Input(shape=(self.window_size,), name='decoder_positions')         
-                
-        self.encoders = [TransformerEncoder(self.embedding_dims, self.num_heads) for _ in range(self.num_encoders)]
-        self.decoders = [TransformerDecoder(self.embedding_dims, self.num_heads) for _ in range(self.num_decoders)]
-        self.encoder_embeddings = PositionalEmbedding(self.embedding_dims, self.window_size, mask_zero=False) 
-        self.decoder_embeddings = PositionalEmbedding(self.embedding_dims, self.window_size, mask_zero=False) 
-
-        self.q_value_layer = layers.Dense(ACTION_SIZE, activation='linear')   
+        self.positions = layers.Input(shape=(self.window_size,), name='positions')
+        self.timeseries = layers.Input(shape=(self.window_size,), name='timeseries')
+        self.colors = layers.Input(shape=(self.window_size,), name='colors')                    
+        
         
     # build model given the architecture
     #--------------------------------------------------------------------------
     def get_model(self, summary=True):                
        
-        # encode images using the convolutional encoder
-        pos_emb_encoder = self.encoder_embeddings(self.encoder_timeseries, self.encoder_positions) 
-        pos_emb_decoder = self.decoder_embeddings(self.decoder_timeseries, self.decoder_positions) 
-        
-        # handle the connections between transformers blocks        
-        encoder_output = pos_emb_encoder
-        decoder_output = pos_emb_decoder    
-        for encoder in self.encoders:
-            encoder_output = encoder(encoder_output, training=False)
-        for decoder in self.decoders:
-            decoder_output = decoder(decoder_output, encoder_output, 
-                                     training=False, mask=None)
+        layer = layers.Dense(24, activation='relu')(self.positions)
+        layer = layers.Dense(24, activation='relu')(layer)
 
-        # apply the softmax classifier layer
-        output = self.classifier(decoder_output)        
-        
-        # define the model from inputs and outputs
-        model = Model(inputs=[self.encoder_timeseries, self.encoder_positions,
-                              self.decoder_timeseries, self.decoder_positions], 
-                      outputs=output)     
+        # Output layer for Q-values, one for each possible action
+        q_values_output = layers.Dense(self.action_size, activation='linear')(layer)
+
+        # Define the model with input and output
+        model = Model(inputs=self.positions, outputs=q_values_output)         
 
         # define model compilation parameters such as learning rate, loss, metrics and optimizer
-        loss = [RouletteCategoricalCrossentropy(window_size=self.window_size, 
-                                                penalty_increase=CONFIG["training"]["LOSS_PENALTY_FACTOR"])] 
+        loss = losses.MeanSquaredError() 
         metric = [metrics.SparseCategoricalAccuracy()]
         opt = keras.optimizers.Adam(learning_rate=self.learning_rate)          
-        model.compile(loss=loss, optimizer=opt, metrics=metric, jit_compile=self.xla_state)         
+        model.compile(loss=loss, optimizer=opt, metrics=metric, jit_compile=self.xla_state)
+
         if summary:
             model.summary(expand_nested=True)
 
