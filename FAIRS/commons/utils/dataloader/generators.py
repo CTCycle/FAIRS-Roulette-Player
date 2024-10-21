@@ -1,6 +1,7 @@
 import numpy as np
-import tensorflow as tf
 
+from FAIRS.commons.utils.preprocessing.mapping import RouletteMapper
+from FAIRS.commons.utils.preprocessing.sequences import TimeSequencer
 from FAIRS.commons.constants import CONFIG
 from FAIRS.commons.logger import logger
     
@@ -10,45 +11,31 @@ from FAIRS.commons.logger import logger
 # Generate and preprocess input and output for the machine learning model and build
 # a tensor dataset with prefetching and batching
 ###############################################################################
-class DataGenerator():
+class RouletteGenerator():
 
-    def __init__(self):        
+    def __init__(self, data):        
         
+        self.data = data
         self.widows_size = CONFIG["dataset"]["WINDOW_SIZE"]         
-        self.batch_size = CONFIG["training"]["BATCH_SIZE"]  
-    
+        self.batch_size = CONFIG["training"]["BATCH_SIZE"] 
+        self.sequencer = TimeSequencer() 
+        self.mapper = RouletteMapper()       
+        
     # ...
     #--------------------------------------------------------------------------
-    def process_data(self, data): 
+    def process_data(self):
 
-        sequence, positions, colors = data[:, :, 0], data[:, :, 1], data[:, :, 2]             
+        logger.info('Encoding position and colors from raw number timeseries') 
+        roulette_dataset, color_encoder = self.mapper.encode_roulette_extractions(self.data)
+        logger.info('Generate windows of historical extractions')
+        train_data = self.sequencer.generate_historical_sequences(roulette_dataset)
+        sequence, positions, colors = train_data[:, 0], train_data[:, 1], train_data[:, 2]             
 
-        return sequence, positions, colors   
+        return sequence, positions, colors, color_encoder   
               
-    # effectively build the tf.dataset and apply preprocessing, batching and prefetching
-    #--------------------------------------------------------------------------
-    def build_tensor_dataset(self, data : np.array, buffer_size=tf.data.AUTOTUNE):
+    
 
-              
-        dataset = tf.data.Dataset.from_tensor_slices(data)
-        dataset = dataset.map(self.process_data, num_parallel_calls=buffer_size)                
-        dataset = dataset.batch(self.batch_size)
-        dataset = dataset.prefetch(buffer_size=buffer_size)
 
-        return dataset
-        
-
-# wrapper function to run the data pipeline from raw inputs to tensor dataset
-###############################################################################
-def training_data_pipeline(train_data, validation_data):    
-        
-        generator = DataGenerator() 
-        train_dataset = generator.build_tensor_dataset(train_data)
-        validation_dataset = generator.build_tensor_dataset(validation_data)        
-        for x, _, _ in train_dataset.take(1):
-            logger.debug(f'X batch shape is: {x.shape}')             
-
-        return train_dataset, validation_dataset
 
 
 

@@ -13,8 +13,10 @@ from FAIRS.commons.logger import logger
 ###############################################################################
 class RouletteEnvironment(gym.Env):
 
-    def __init__(self, configuration):
+    def __init__(self, data, configuration):
         super(RouletteEnvironment, self).__init__()
+
+        self.sequence, self.positions, self.colors = data[0], data[1], data[2]
 
         mapper = RouletteMapper()          
         self.window_size = configuration["dataset"]["WINDOW_SIZE"]
@@ -28,7 +30,6 @@ class RouletteEnvironment(gym.Env):
         
         # Actions: 0 (Red), 1 (Black), 2-37 for betting on a specific number
         self.action_space = spaces.Discrete(STATES + COLORS - 1)
-
         # Observation space is the last WINDOW_SIZE numbers that appeared on the wheel
         self.observation_space = spaces.Box(low=0, high=36, shape=(self.window_size,), dtype=np.int32)
         
@@ -42,7 +43,8 @@ class RouletteEnvironment(gym.Env):
     # Reset the state of the environment to an initial state
     #--------------------------------------------------------------------------
     def reset(self):
-        self.state = [np.random.randint(0, 37) for _ in range(self.window_size)]
+        # at reset, takes the first window of the timeseries
+        self.state = self.sequence
         self.capital = self.initial_capital
         self.steps = 0
         self.done = False

@@ -38,48 +38,11 @@ def get_predictions_dataset():
 class DataSerializer:
 
     def __init__(self):        
-        self.data_config = CONFIG["dataset"]    
-
-    # ...
-    #--------------------------------------------------------------------------
-    def save_preprocessed_data(self, train_data, validation_data, path=''): 
+        self.data_config = CONFIG["dataset"] 
         
-        # save the array as .npy files
-        np.save(os.path.join(path, 'train_inputs.npy'), train_data)   
-        np.save(os.path.join(path, 'validation_inputs.npy'), validation_data)           
-        logger.debug(f'Preprocessed train and validation data has been saved at {path}') 
-              
-        # save the preprocessing info as .json file in the dataset folder
-        processing_info = {'sample_size' : CONFIG["dataset"]["SAMPLE_SIZE"],
-                           'train_size' : 1.0 - CONFIG["dataset"]["VALIDATION_SIZE"],
-                           'validation_size' : CONFIG["dataset"]["VALIDATION_SIZE"],
-                           'window_size' : CONFIG["dataset"]["WINDOW_SIZE"],                           
-                           'date': datetime.now().strftime("%Y-%m-%d")}
-        
-        json_info_path = os.path.join(path, 'preprocessing_metadata.json')
-        with open(json_info_path, 'w') as file:
-            json.dump(processing_info, file, indent=4) 
-            logger.debug('Preprocessing info:\n%s', file)
+           
 
-    # ...
-    #--------------------------------------------------------------------------
-    def load_preprocessed_data(self, path):
- 
-        # load preprocessed train and validation data from .npy files
-        pp_path = os.path.join(path, 'data')
-        train_inputs_path = os.path.join(pp_path, 'train_inputs.npy')       
-        val_inputs_path = os.path.join(pp_path, 'validation_inputs.npy')    
-        train_data = np.load(train_inputs_path)       
-        validation_data = np.load(val_inputs_path)   
-
-        # Load preprocessing metadata from .json file
-        metadata_path = os.path.join(pp_path, 'preprocessing_metadata.json')
-        with open(metadata_path, 'r') as file:
-            metadata = json.load(file)        
-
-        return train_data, validation_data, metadata 
     
-
 # [MODEL SERIALIZATION]
 ###############################################################################
 class ModelSerializer:

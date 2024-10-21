@@ -18,7 +18,8 @@
                      "MAX_STEPS": 100},
 
     "training" : {"EPOCHS" : 100,
-                  "ADDITIONAL_EPOCHS" : 2,                  
+                  "ADDITIONAL_EPOCHS" : 2,
+                  "EPISODES" : 100,                  
                   "BATCH_SIZE" : 64,
                   "LEARNING_RATE" : 0.001,
                   "LOSS_PENALTY_FACTOR" : 0.005,
