@@ -1,6 +1,7 @@
 # [SET KERAS BACKEND]
 import os 
 os.environ["KERAS_BACKEND"] = "torch"
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 # [SETTING WARNINGS]
 import warnings
@@ -11,7 +12,8 @@ from FAIRS.commons.utils.dataloader.generators import RouletteGenerator
 from FAIRS.commons.utils.dataloader.serializer import get_training_dataset, ModelSerializer
 from FAIRS.commons.utils.learning.models import FAIRSnet
 from FAIRS.commons.utils.learning.training import DQNTraining
-from FAIRS.commons.constants import CONFIG, DATA_PATH, DATASET_NAME
+from FAIRS.commons.utils.validation.reports import log_training_report
+from FAIRS.commons.constants import CONFIG, DATA_PATH
 from FAIRS.commons.logger import logger
 
 
@@ -22,10 +24,9 @@ if __name__ == '__main__':
     # 1. [LOAD DATA]
     #--------------------------------------------------------------------------     
     # load data from csv, add paths to images 
-    logger.info(f'Loading FAIRS dataset from {DATA_PATH}')    
-    roulette_dataset = get_training_dataset()
-    generator = RouletteGenerator(roulette_dataset)    
-    sequence, positions, colors, color_encoder = generator.process_data()
+    logger.info(f'Loading FAIRS dataset from {DATA_PATH}')     
+    generator = RouletteGenerator()    
+    roulette_dataset, color_encoder = generator.prepare_roulette_dataset()
     
     # 2. [BUILD MODEL AND AGENTSL]  
     #-------------------------------------------------------------------------- 
@@ -52,18 +53,10 @@ if __name__ == '__main__':
     # use command prompt on the model folder and (upon activating environment), 
     # use the bash command: python -m tensorboard.main --logdir tensorboard/ 
     #--------------------------------------------------------------------------
-    logger.info('--------------------------------------------------------------')
-    logger.info('FAIRS training report')
-    logger.info('--------------------------------------------------------------')    
-    logger.info(f'Number of train samples:       {len(sequence)}')        
-    logger.info(f'Embedding dimensions:          {CONFIG["model"]["EMBEDDING_DIMS"]}')   
-    logger.info(f'Batch size:                    {CONFIG["training"]["BATCH_SIZE"]}')
-    logger.info(f'Epochs:                        {CONFIG["training"]["EPOCHS"]}')  
-    logger.info('--------------------------------------------------------------\n')  
+    log_training_report(roulette_dataset, CONFIG) 
 
-    # perform training and save model at the end
-    train_data = (sequence, positions, colors) 
-    trainer.train_model(model, train_data, model_folder_path)
+    # perform training and save model at the end    
+    trainer.train_model(model, roulette_dataset, model_folder_path)
 
 
 

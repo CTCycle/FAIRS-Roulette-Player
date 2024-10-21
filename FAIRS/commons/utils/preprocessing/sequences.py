@@ -13,7 +13,7 @@ class TimeSequencer:
 
         # Set the sizes for the train and validation datasets        
         self.validation_size = CONFIG["dataset"]["VALIDATION_SIZE"]
-        self.window_size = CONFIG["dataset"]["WINDOW_SIZE"]       
+        self.window_size = CONFIG["dataset"]["PERCEPTIVE_SIZE"]       
 
     #--------------------------------------------------------------------------
     def generate_historical_sequences(self, dataframe: pd.DataFrame):

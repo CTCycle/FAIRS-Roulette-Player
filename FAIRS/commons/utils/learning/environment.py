@@ -1,3 +1,4 @@
+import pandas as pd
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
@@ -13,13 +14,16 @@ from FAIRS.commons.logger import logger
 ###############################################################################
 class RouletteEnvironment(gym.Env):
 
-    def __init__(self, data, configuration):
-        super(RouletteEnvironment, self).__init__()
+    def __init__(self, data : np.array, configuration):
+        super(RouletteEnvironment, self).__init__()       
 
-        self.sequence, self.positions, self.colors = data[0], data[1], data[2]
+        self.timeseries = data[:, 0]
+        self.positions = data[:, 1]
+        self.colors = data[:, 2]
 
         mapper = RouletteMapper()          
-        self.window_size = configuration["dataset"]["WINDOW_SIZE"]
+        self.perceptive_size = configuration["dataset"]["PERCEPTIVE_SIZE"]
+        
         self.initial_capital = configuration["environment"]["INITIAL_CAPITAL"]
         self.bet_amount = configuration["environment"]["BET_AMOUNT"]
         self.max_steps = configuration["environment"]["MAX_STEPS"] 
@@ -31,10 +35,13 @@ class RouletteEnvironment(gym.Env):
         # Actions: 0 (Red), 1 (Black), 2-37 for betting on a specific number
         self.action_space = spaces.Discrete(STATES + COLORS - 1)
         # Observation space is the last WINDOW_SIZE numbers that appeared on the wheel
-        self.observation_space = spaces.Box(low=0, high=36, shape=(self.window_size,), dtype=np.int32)
+        self.observation_space = spaces.Box(low=0, high=36, shape=(self.perceptive_size,), dtype=np.int32)
         
-        # Initialize state, capital, steps, and reward
-        self.state = [np.random.randint(0, 37) for _ in range(self.window_size)]
+        # Initialize state, capital, steps, and reward  
+        self.extraction_index = 0 
+        self.state = np.zeros(shape=self.perceptive_size)      
+        self.state[-1] = self.timeseries[0]
+               
         self.capital = self.initial_capital
         self.steps = 0
         self.reward = 0
@@ -44,42 +51,47 @@ class RouletteEnvironment(gym.Env):
     #--------------------------------------------------------------------------
     def reset(self):
         # at reset, takes the first window of the timeseries
-        self.state = self.sequence
+        self.extraction_index = 0
+        self.state = np.zeros(shape=self.perceptive_size)      
+        self.state[-1] = self.timeseries[0]
+        
         self.capital = self.initial_capital
         self.steps = 0
         self.done = False
-        return np.array(self.state)
+        return self.state
 
     # Perform the action (0: Bet on Red, 1: Bet on Black, 2: Bet on Specific Number)
     #--------------------------------------------------------------------------
     def step(self, action):
-        next_extraction = np.random.randint(0, 37)
-        self.state.pop(0)
-        self.state.append(next_extraction)
+        self.extraction_index += 1
+        next_extraction = self.timeseries[self.extraction_index]
+        self.state = np.delete(self.state, 0)
+        self.state = np.append(self.state, next_extraction)
 
         # Calculate reward based on the action
-        if action == 0:  # Bet on Red
+        if 0 <= action <= 36:  # Bet on Specific Number            
+            if action == next_extraction:
+                self.reward = 35 * self.bet_amount  # Win 35 times the bet amount
+                self.capital += 35 * self.bet_amount
+            else:
+                self.reward = -self.bet_amount  # Lose
+                self.capital -= self.bet_amount 
+
+        elif action == 37:  # Bet on Red
             if next_extraction in self.red_numbers:
                 self.reward = self.bet_amount  # Win, gain bet amount
                 self.capital += self.bet_amount
             else:
                 self.reward = -self.bet_amount  # Lose, lose bet amount
-                self.capital -= self.bet_amount
-        elif action == 1:  # Bet on Black
+                self.capital -= self.bet_amount 
+
+        elif action == 38:  # Bet on Black
             if next_extraction in self.black_numbers:
                 self.reward = self.bet_amount  # Win
                 self.capital += self.bet_amount
             else:
                 self.reward = -self.bet_amount  # Lose
-                self.capital -= self.bet_amount
-        elif 2 <= action <= 37:  # Bet on Specific Number
-            bet_number = action - 2
-            if bet_number == next_extraction:
-                self.reward = 35 * self.bet_amount  # Win 35 times the bet amount
-                self.capital += 35 * self.bet_amount
-            else:
-                self.reward = -self.bet_amount  # Lose
-                self.capital -= self.bet_amount
+                self.capital -= self.bet_amount         
 
         self.steps += 1
 

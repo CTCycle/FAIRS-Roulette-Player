@@ -27,7 +27,7 @@ class RouletteGenerator:
         self.model = model 
         self.configuration = configuration
         self.sequences = sequences 
-        self.window_size = configuration["dataset"]["WINDOW_SIZE"] 
+        self.window_size = configuration["dataset"]["PERCEPTIVE_SIZE"] 
 
         self.layer_names = [layer.name for layer in model.layers]     
         self.encoder_layer_names = [x for x in self.layer_names if 'tranformer_encoder' in x] 

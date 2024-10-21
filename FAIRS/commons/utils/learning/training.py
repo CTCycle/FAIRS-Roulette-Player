@@ -20,7 +20,7 @@ from FAIRS.commons.logger import logger
 ###############################################################################
 class DQNAgent:
     def __init__(self, model, configuration):
-        self.state_size = configuration["dataset"]["WINDOW_SIZE"]
+        self.state_size = configuration["dataset"]["PERCEPTIVE_SIZE"]
         self.action_size = STATES + COLORS + 1
         self.memory = deque(maxlen=2000)
         self.gamma = configuration['agent']['DISCOUNT_RATE'] 
@@ -34,7 +34,7 @@ class DQNAgent:
         if np.random.rand() <= self.epsilon:
             return random.randrange(self.action_size)  
         q_values = self.model.predict(state)
-        return np.argmax(q_values[0])  
+        return keras.ops.argmax(q_values[0])  
 
     #--------------------------------------------------------------------------
     def remember(self, state, action, reward, next_state, done):
@@ -42,7 +42,7 @@ class DQNAgent:
     
     #--------------------------------------------------------------------------
     def replay(self, batch_size):
-        minibatch = random.sample(self.memory, batch_size)
+        minibatch = np.random.sample(self.memory, batch_size)
         for state, action, reward, next_state, done in minibatch:
             target = reward
             if not done:
@@ -65,33 +65,29 @@ class DQNTraining:
         self.configuration = configuration 
         
         # set seed for random operations
-        np.random.seed(configuration['SEED'])
-        torch.manual_seed(configuration['SEED'])
-        tf.random.set_seed(configuration['SEED'])
-        self.device = torch.device('cpu')
-        self.scaler = GradScaler() if self.configuration['training']['MIXED_PRECISION'] else None
-        self.set_device()                
+        keras.utils.set_random_seed(configuration["SEED"])  
+        self.selected_device = configuration["device"]["DEVICE"]
+        self.device_id = configuration["device"]["DEVICE_ID"]
+        self.mixed_precision = self.configuration["device"]["MIXED_PRECISION"]              
 
     # set device
     #--------------------------------------------------------------------------
     def set_device(self):
-        if CONFIG['training']['ML_DEVICE'] == 'GPU':
+        if self.selected_device == 'GPU':
             if not torch.cuda.is_available():
                 logger.info('No GPU found. Falling back to CPU')
                 self.device = torch.device('cpu')
             else:
-                self.device = torch.device('cuda:0')                
-                if self.configuration['training']['MIXED_PRECISION']:
-                    keras.mixed_precision.set_global_policy('mixed_float16')
-                    logger.info('Mixed precision policy is active during training')
-                torch.cuda.set_device(self.device)
-                logger.info('GPU is set as active device')
-        elif self.configuration['training']['ML_DEVICE'] == 'CPU':
-            self.device = torch.device('cpu')
-            logger.info('CPU is set as active device')             
+                self.device = torch.device(f'cuda:{self.device_id}')
+                torch.cuda.set_device(self.device)  
+                logger.info('GPU is set as active device')            
+                if self.mixed_precision:
+                    keras.mixed_precision.set_global_policy("mixed_float16")
+                    logger.info('Mixed precision policy is active during training')                   
         else:
-            logger.error(f"Unknown ML_DEVICE value: {self.configuration['training']['ML_DEVICE']}")
             self.device = torch.device('cpu')
+            logger.info('CPU is set as active device')  
+
 
     #--------------------------------------------------------------------------
     def train_model(self, model, data, checkpoint_path, from_checkpoint=False):

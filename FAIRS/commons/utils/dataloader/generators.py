@@ -1,5 +1,6 @@
 import numpy as np
 
+from FAIRS.commons.utils.dataloader.serializer import get_training_dataset
 from FAIRS.commons.utils.preprocessing.mapping import RouletteMapper
 from FAIRS.commons.utils.preprocessing.sequences import TimeSequencer
 from FAIRS.commons.constants import CONFIG
@@ -13,25 +14,24 @@ from FAIRS.commons.logger import logger
 ###############################################################################
 class RouletteGenerator():
 
-    def __init__(self, data):        
+    def __init__(self):        
         
-        self.data = data
-        self.widows_size = CONFIG["dataset"]["WINDOW_SIZE"]         
+        self.widows_size = CONFIG["dataset"]["PERCEPTIVE_SIZE"]         
         self.batch_size = CONFIG["training"]["BATCH_SIZE"] 
         self.sequencer = TimeSequencer() 
-        self.mapper = RouletteMapper()       
+        self.mapper = RouletteMapper() 
+        self.data = get_training_dataset()      
         
     # ...
     #--------------------------------------------------------------------------
-    def process_data(self):
+    def prepare_roulette_dataset(self):
 
         logger.info('Encoding position and colors from raw number timeseries') 
         roulette_dataset, color_encoder = self.mapper.encode_roulette_extractions(self.data)
-        logger.info('Generate windows of historical extractions')
-        train_data = self.sequencer.generate_historical_sequences(roulette_dataset)
-        sequence, positions, colors = train_data[:, 0], train_data[:, 1], train_data[:, 2]             
+        roulette_dataset = roulette_dataset.drop(columns=['color'], axis=1)
+        roulette_dataset = roulette_dataset.to_numpy()               
 
-        return sequence, positions, colors, color_encoder   
+        return roulette_dataset, color_encoder   
               
     
 
