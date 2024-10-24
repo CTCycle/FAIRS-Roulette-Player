@@ -9,7 +9,7 @@ warnings.simplefilter(action='ignore', category=Warning)
 
 # [IMPORT CUSTOM MODULES]
 from FAIRS.commons.utils.dataloader.generators import RouletteGenerator
-from FAIRS.commons.utils.dataloader.serializer import get_training_dataset, ModelSerializer
+from FAIRS.commons.utils.dataloader.serializer import ModelSerializer
 from FAIRS.commons.utils.learning.models import FAIRSnet
 from FAIRS.commons.utils.learning.training import DQNTraining
 from FAIRS.commons.utils.validation.reports import log_training_report
@@ -56,6 +56,7 @@ if __name__ == '__main__':
     log_training_report(roulette_dataset, CONFIG) 
 
     # perform training and save model at the end    
+    logger.info('Start training with reinforcement learning routine')
     trainer.train_model(model, roulette_dataset, model_folder_path)
 
 

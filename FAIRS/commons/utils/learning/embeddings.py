@@ -4,7 +4,7 @@ import keras
 import tensorflow as tf
 from keras import activations, layers 
 
-from FAIRS.commons.constants import CONFIG, STATES
+from FAIRS.commons.constants import CONFIG, NUMBERS
 from FAIRS.commons.logger import logger
       
 
@@ -20,7 +20,7 @@ class PositionalEmbedding(keras.layers.Layer):
         
         # calculate radiand values for the different position of each number on
         # the roulette wheel, as they will be used for positional embeddings
-        self.radiant_gap = (2 * np.pi)/STATES
+        self.radiant_gap = (2 * np.pi)/NUMBERS
         self.numbers_embedding = layers.Embedding(input_dim=self.sequence_length, 
                                                   output_dim=self.embedding_dims, 
                                                   mask_zero=mask_zero)

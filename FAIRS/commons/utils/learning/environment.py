@@ -6,7 +6,7 @@ import keras
 import tensorflow as tf
 
 from FAIRS.commons.utils.preprocessing.mapping import RouletteMapper
-from FAIRS.commons.constants import CONFIG, STATES, COLORS
+from FAIRS.commons.constants import CONFIG, NUMBERS, COLORS
 from FAIRS.commons.logger import logger
 
     
@@ -28,20 +28,19 @@ class RouletteEnvironment(gym.Env):
         self.bet_amount = configuration["environment"]["BET_AMOUNT"]
         self.max_steps = configuration["environment"]["MAX_STEPS"] 
         
-        self.numbers = list(range(STATES)) 
+        self.numbers = list(range(NUMBERS)) 
         self.red_numbers = mapper.color_map['red']
         self.black_numbers = mapper.color_map['black']
         
         # Actions: 0 (Red), 1 (Black), 2-37 for betting on a specific number
-        self.action_space = spaces.Discrete(STATES + COLORS - 1)
+        self.action_space = spaces.Discrete(NUMBERS + COLORS - 1)
         # Observation space is the last WINDOW_SIZE numbers that appeared on the wheel
         self.observation_space = spaces.Box(low=0, high=36, shape=(self.perceptive_size,), dtype=np.int32)
         
         # Initialize state, capital, steps, and reward  
         self.extraction_index = 0 
         self.state = np.zeros(shape=self.perceptive_size)      
-        self.state[-1] = self.timeseries[0]
-               
+                       
         self.capital = self.initial_capital
         self.steps = 0
         self.reward = 0
@@ -50,23 +49,24 @@ class RouletteEnvironment(gym.Env):
     # Reset the state of the environment to an initial state
     #--------------------------------------------------------------------------
     def reset(self):
-        # at reset, takes the first window of the timeseries
+        
         self.extraction_index = 0
         self.state = np.zeros(shape=self.perceptive_size)      
-        self.state[-1] = self.timeseries[0]
-        
+               
         self.capital = self.initial_capital
         self.steps = 0
         self.done = False
+
         return self.state
 
     # Perform the action (0: Bet on Red, 1: Bet on Black, 2: Bet on Specific Number)
     #--------------------------------------------------------------------------
     def step(self, action):
-        self.extraction_index += 1
-        next_extraction = self.timeseries[self.extraction_index]
+        
+        next_extraction = self.timeseries[self.extraction_index]        
         self.state = np.delete(self.state, 0)
         self.state = np.append(self.state, next_extraction)
+        self.extraction_index += 1
 
         # Calculate reward based on the action
         if 0 <= action <= 36:  # Bet on Specific Number            

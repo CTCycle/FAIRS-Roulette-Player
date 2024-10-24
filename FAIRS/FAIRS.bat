@@ -65,7 +65,7 @@ if "%env_exists%"=="true" (
         goto :cudacheck
     ) else (
         echo Selected custom environment '%custom_env_name%' does not exist.
-        echo Please select a valid environment or set use_custom_environment=false.
+        echo Please select a valid environment or set use_custom_environment=true.
         pause
         exit
     )

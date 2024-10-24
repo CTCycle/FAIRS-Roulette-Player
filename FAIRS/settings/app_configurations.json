@@ -18,7 +18,10 @@
                "JIT_BACKEND" : "inductor"},
 
     "agent" : {"DISCOUNT_RATE" : 0.025,
-               "EXPLORATION_RATE" : 0.05},
+               "EXPLORATION_RATE" : 0.25,
+               "EXPLORATION_RATE_DECAY" : 0.995,
+               "MIN_EXPLORATION_RATE" : 0.01,
+               "MAX_MEMORY": 10000},
 
     "environment" : {"INITIAL_CAPITAL": 1000,
                      "BET_AMOUNT": 10,
@@ -27,9 +30,10 @@
     "training" : {"EPOCHS" : 100,
                   "ADDITIONAL_EPOCHS" : 2,
                   "EPISODES" : 100,                  
-                  "BATCH_SIZE" : 1,
+                  "BATCH_SIZE" : 16,
                   "LEARNING_RATE" : 0.001,
-                  "LOSS_PENALTY_FACTOR" : 0.005,                 
+                  "LOSS_PENALTY_FACTOR" : 0.005,
+                  "SAVE_CHECKPOINTS": true,                    
                   "USE_TENSORBOARD" : false,                
                   "PLOT_EPOCH_GAP": 1},
                                     

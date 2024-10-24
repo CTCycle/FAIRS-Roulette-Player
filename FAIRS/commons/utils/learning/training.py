@@ -1,57 +1,15 @@
 import os
-import random
 import numpy as np
-from collections import deque
 import keras
 import torch
-from torch.amp import GradScaler
-import tensorflow as tf
 
-from FAIRS.commons.utils.learning.models import FAIRSnet
+from FAIRS.commons.utils.learning.callbacks import callbacks_handler
 from FAIRS.commons.utils.learning.environment import RouletteEnvironment
-from FAIRS.commons.utils.learning.callbacks import RealTimeHistory, LoggingCallback
+from FAIRS.commons.utils.learning.agents import DQNAgent
+from FAIRS.commons.utils.learning.callbacks import RealTimeHistory
 from FAIRS.commons.utils.dataloader.serializer import ModelSerializer
-from FAIRS.commons.constants import CONFIG, STATES, COLORS
+from FAIRS.commons.constants import CONFIG, NUMBERS, COLORS
 from FAIRS.commons.logger import logger
-
-
-
-# [TOOLS FOR TRAINING MACHINE LEARNING MODELS]
-###############################################################################
-class DQNAgent:
-    def __init__(self, model, configuration):
-        self.state_size = configuration["dataset"]["PERCEPTIVE_SIZE"]
-        self.action_size = STATES + COLORS + 1
-        self.memory = deque(maxlen=2000)
-        self.gamma = configuration['agent']['DISCOUNT_RATE'] 
-        self.epsilon = configuration['agent']['EXPLORATION_RATE']  
-        self.epsilon_min = 0.01
-        self.epsilon_decay = 0.995
-        self.model = model
-    
-    #--------------------------------------------------------------------------
-    def act(self, state):
-        if np.random.rand() <= self.epsilon:
-            return random.randrange(self.action_size)  
-        q_values = self.model.predict(state)
-        return keras.ops.argmax(q_values[0])  
-
-    #--------------------------------------------------------------------------
-    def remember(self, state, action, reward, next_state, done):
-        self.memory.append((state, action, reward, next_state, done))
-    
-    #--------------------------------------------------------------------------
-    def replay(self, batch_size):
-        minibatch = np.random.sample(self.memory, batch_size)
-        for state, action, reward, next_state, done in minibatch:
-            target = reward
-            if not done:
-                target = reward + self.gamma * np.argmax(self.model.predict(next_state)[0])
-            target_f = self.model.predict(state)
-            target_f[0][action] = target
-            self.model.fit(state, target_f, epochs=1, verbose=0)
-        if self.epsilon > self.epsilon_min:
-            self.epsilon *= self.epsilon_decay
 
 
 # [TOOLS FOR TRAINING MACHINE LEARNING MODELS]
@@ -86,7 +44,46 @@ class DQNTraining:
                     logger.info('Mixed precision policy is active during training')                   
         else:
             self.device = torch.device('cpu')
-            logger.info('CPU is set as active device')  
+            logger.info('CPU is set as active device') 
+
+    #--------------------------------------------------------------------------
+    def reinforcement_learning_routine(self, agent : DQNAgent, environment : RouletteEnvironment, 
+                                       start_episode, episodes, state_size, RTH_callback : RealTimeHistory,
+                                       callback_list, checkpoint_path):
+
+        # Training loop for each episode
+        for episode in range(start_episode, episodes):            
+            state = environment.reset()
+            state = np.reshape(state, [1, state_size])
+            total_reward = 0
+
+            for time_step in range(environment.max_steps):
+                action = agent.act(state)
+                next_state, reward, done, info = environment.step(action)
+                total_reward += reward
+                next_state = np.reshape(next_state, [1, state_size])
+
+                # Remember experience
+                agent.remember(state, action, reward, next_state, done)
+                state = next_state
+
+                # Perform replay if the memory size is sufficient
+                if len(agent.memory) > self.batch_size:
+                    agent.replay(self.batch_size, callback_list)
+
+                if done:
+                    logger.info(f"Episode {episode+1}/{episodes} - Time steps: {time_step+1} - Capital: {info['capital']} - Total Reward: {total_reward}")
+                    break
+
+            # Save progress at checkpoints (you can define a frequency or save every episode)
+            if self.configuration['training']['SAVE_CHECKPOINT']:
+                logger.info(f"Saving model at episode {episode}")
+                self.serializer.save_pretrained_model(agent.model, checkpoint_path)
+                history = {'history': RTH_callback.history, 'val_history': RTH_callback.val_history, 'total_epochs': episode}
+                self.serializer.save_session_configuration(checkpoint_path, history, self.configuration)
+
+        return agent, history 
+ 
 
 
     #--------------------------------------------------------------------------
@@ -110,49 +107,17 @@ class DQNTraining:
             from_epoch = history['total_epochs']
             start_episode = from_epoch        
 
-        # Initialize environment and agent's states
+        # Initialize environment and agent's NUMBERS
         state_size = environment.observation_space.shape[0]
         action_size = environment.action_space.n
+        
+        # add all callbacks to the callback list
+        RTH_callback, callbacks_list = callbacks_handler(self.configuration, checkpoint_path, history)      
 
-        # Setup callbacks
-        RTH_callback = RealTimeHistory(checkpoint_path, past_logs=history)
-        logger_callback = LoggingCallback()
-        callbacks_list = [RTH_callback, logger_callback]
-
-        if CONFIG['training']['USE_TENSORBOARD']:
-            log_dir = os.path.join(checkpoint_path, 'tensorboard')
-            callbacks_list.append(keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1))
-
-        # Training loop for each episode
-        for episode in range(start_episode, episodes):
-            state = environment.reset()
-            state = np.reshape(state, [1, state_size])
-            total_reward = 0
-
-            for time_step in range(environment.max_steps):
-                action = agent.act(state)
-                next_state, reward, done, info = environment.step(action)
-                total_reward += reward
-                next_state = np.reshape(next_state, [1, state_size])
-
-                # Remember experience
-                agent.remember(state, action, reward, next_state, done)
-                state = next_state
-
-                # Perform replay if the memory size is sufficient
-                if len(agent.memory) > self.batch_size:
-                    agent.replay(self.batch_size)
-
-                if done:
-                    logger.info(f"Episode {episode+1}/{episodes} - Time steps: {time_step+1} - Capital: {info['capital']} - Total Reward: {total_reward}")
-                    break
-
-            # Save progress at checkpoints (you can define a frequency or save every episode)
-            if episode % self.configuration['training']['SAVE_FREQUENCY'] == 0:
-                logger.info(f"Saving model at episode {episode}")
-                self.serializer.save_pretrained_model(agent.model, checkpoint_path)
-                history = {'history': RTH_callback.history, 'val_history': RTH_callback.val_history, 'total_epochs': episode}
-                self.serializer.save_session_configuration(checkpoint_path, history, self.configuration)
+        # run reinforcement learning routing        
+        agent, history = self.reinforcement_learning_routine(agent, environment, start_episode, episodes,
+                                                             state_size, RTH_callback, callbacks_list,
+                                                             checkpoint_path)
 
         # Save the final model at the end of training
         self.serializer.save_pretrained_model(agent.model, checkpoint_path)

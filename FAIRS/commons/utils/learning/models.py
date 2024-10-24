@@ -6,7 +6,7 @@ from FAIRS.commons.utils.learning.embeddings import PositionalEmbedding
 from FAIRS.commons.utils.learning.transformers import TransformerEncoder, TransformerDecoder
 from FAIRS.commons.utils.learning.classifiers import SoftMaxClassifier
 from FAIRS.commons.utils.learning.metrics import RouletteCategoricalCrossentropy, RouletteAccuracy
-from FAIRS.commons.constants import CONFIG, STATES, COLORS
+from FAIRS.commons.constants import CONFIG, NUMBERS, COLORS
 from FAIRS.commons.logger import logger
 
 
@@ -36,7 +36,7 @@ class OLDFAIRSnet:
         self.decoders = [TransformerDecoder(self.embedding_dims, self.num_heads) for _ in range(self.num_decoders)]
         self.encoder_embeddings = PositionalEmbedding(self.embedding_dims, self.window_size, mask_zero=False) 
         self.decoder_embeddings = PositionalEmbedding(self.embedding_dims, self.window_size, mask_zero=False) 
-        self.classifier = SoftMaxClassifier(128, STATES)  
+        self.classifier = SoftMaxClassifier(128, NUMBERS)  
         
     # build model given the architecture
     #--------------------------------------------------------------------------
@@ -91,7 +91,7 @@ class FAIRSnet:
         self.jit_backend = CONFIG["model"]["JIT_BACKEND"]
         self.learning_rate = CONFIG["training"]["LEARNING_RATE"] 
        
-        self.action_size = STATES + COLORS - 1                    
+        self.action_size = NUMBERS + COLORS - 1                    
 
         
                     
