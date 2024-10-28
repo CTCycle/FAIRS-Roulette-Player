@@ -10,8 +10,7 @@
                 "NUM_PROCESSORS": 6},
 
     "model" : {"NUM_HEADS" : 4,
-               "NUM_ENCODERS" : 3,  
-               "NUM_DECODERS" : 4,                 
+               "NUM_ENCODERS" : 3,                         
                "EMBEDDING_DIMS" : 200,               
                "SAVE_MODEL_PLOT" : true,
                "JIT_COMPILE" : false,

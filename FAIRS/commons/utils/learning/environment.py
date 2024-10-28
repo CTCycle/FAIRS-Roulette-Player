@@ -5,7 +5,7 @@ from gymnasium import spaces
 import keras
 import tensorflow as tf
 
-from FAIRS.commons.utils.preprocessing.mapping import RouletteMapper
+from FAIRS.commons.utils.process.mapping import RouletteMapper
 from FAIRS.commons.constants import CONFIG, NUMBERS, COLORS
 from FAIRS.commons.logger import logger
 
@@ -39,7 +39,7 @@ class RouletteEnvironment(gym.Env):
         
         # Initialize state, capital, steps, and reward  
         self.extraction_index = 0 
-        self.state = np.zeros(shape=self.perceptive_size)      
+        self.state = np.full(shape=self.perceptive_size, fill_value=-1)      
                        
         self.capital = self.initial_capital
         self.steps = 0
@@ -51,7 +51,7 @@ class RouletteEnvironment(gym.Env):
     def reset(self):
         
         self.extraction_index = 0
-        self.state = np.zeros(shape=self.perceptive_size)      
+        self.state = np.full(shape=self.perceptive_size, fill_value=-1)    
                
         self.capital = self.initial_capital
         self.steps = 0

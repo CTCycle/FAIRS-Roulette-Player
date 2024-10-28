@@ -1,8 +1,8 @@
 import numpy as np
 
 from FAIRS.commons.utils.dataloader.serializer import get_training_dataset
-from FAIRS.commons.utils.preprocessing.mapping import RouletteMapper
-from FAIRS.commons.utils.preprocessing.sequences import TimeSequencer
+from FAIRS.commons.utils.process.mapping import RouletteMapper
+from FAIRS.commons.utils.process.sequences import TimeSequencer
 from FAIRS.commons.constants import CONFIG
 from FAIRS.commons.logger import logger
     

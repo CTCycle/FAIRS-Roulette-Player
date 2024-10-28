@@ -7,8 +7,8 @@ import warnings
 warnings.simplefilter(action='ignore', category=Warning)
 
 # [IMPORT CUSTOM MODULES]
-from FAIRS.commons.utils.preprocessing.mapping import RouletteMapper
-from FAIRS.commons.utils.preprocessing.sequences import TimeSequencer
+from FAIRS.commons.utils.process.mapping import RouletteMapper
+from FAIRS.commons.utils.process.sequences import TimeSequencer
 from FAIRS.commons.utils.learning.inferencer import RouletteGenerator
 from FAIRS.commons.utils.dataloader.serializer import get_predictions_dataset, ModelSerializer
 from FAIRS.commons.constants import CONFIG, PRED_PATH

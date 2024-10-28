@@ -6,7 +6,7 @@ import tensorflow as tf
 import keras
 from tqdm import tqdm
 
-from FAIRS.commons.utils.preprocessing.mapping import RouletteMapper
+from FAIRS.commons.utils.process.mapping import RouletteMapper
 from FAIRS.commons.utils.dataloader.serializer import DataSerializer
 from FAIRS.commons.constants import CONFIG, PRED_PATH
 from FAIRS.commons.logger import logger
