@@ -1,9 +1,8 @@
 import keras
-from keras import losses, metrics, layers, Model
+from keras import losses, metrics, layers, Model, activations
 import torch
 
-from FAIRS.commons.utils.learning.embeddings import PositionalEmbedding
-from FAIRS.commons.utils.learning.transformers import RouletteTransformerEncoder
+from FAIRS.commons.utils.learning.embeddings import RouletteEmbedding
 from FAIRS.commons.utils.learning.logits import QScoreNet
 from FAIRS.commons.utils.learning.metrics import RouletteCategoricalCrossentropy, RouletteAccuracy
 from FAIRS.commons.constants import CONFIG, STATES
@@ -17,9 +16,7 @@ class FAIRSnet:
     def __init__(self):  
        
         self.perceptive_size = CONFIG["dataset"]["PERCEPTIVE_SIZE"] 
-        self.embedding_dims = CONFIG["model"]["EMBEDDING_DIMS"]        
-        self.num_heads = CONFIG["model"]["NUM_HEADS"]  
-        self.num_encoders = CONFIG["model"]["NUM_ENCODERS"]         
+        self.embedding_dims = CONFIG["model"]["EMBEDDING_DIMS"]                   
         self.jit_compile = CONFIG["model"]["JIT_COMPILE"]
         self.jit_backend = CONFIG["model"]["JIT_BACKEND"]
         self.learning_rate = CONFIG["training"]["LEARNING_RATE"]
@@ -27,9 +24,8 @@ class FAIRSnet:
        
         self.action_size = STATES
         self.timeseries = layers.Input(shape=(self.perceptive_size,), name='timeseries')                 
-        self.encoders = [RouletteTransformerEncoder(self.embedding_dims, self.num_heads, self.seed) 
-                                                    for _ in range(self.num_encoders)]
-        self.embedding = PositionalEmbedding(self.embedding_dims, self.perceptive_size, mask_negative=False)
+        
+        self.embedding = RouletteEmbedding(self.embedding_dims, self.perceptive_size, mask_negative=False)
         self.QNet = QScoreNet(512, self.action_size, self.seed)   
         
         
@@ -38,18 +34,23 @@ class FAIRSnet:
     def get_model(self, model_summary=True):    
 
         # initialize the image encoder and the transformers encoders and decoders      
-        timeseries = layers.Input(shape=(self.perceptive_size,), name='timeseries') 
+        timeseries = layers.Input(shape=(self.perceptive_size,), name='timeseries', dtype=torch.int32) 
 
         # encode images using the convolutional encoder
-        embeddings = self.embedding(timeseries)         
+        embeddings = self.embedding(timeseries)
+        layer = layers.Dense(self.embedding_dims, kernel_initializer='he_uniform')(embeddings)
+        layer = layers.BatchNormalization()(layer)
+        layer = activations.relu(layer)        
+        layer = layers.Dense(self.embedding_dims, kernel_initializer='he_uniform')(embeddings)
+        layer = layers.BatchNormalization()(layer)
+        layer = activations.relu(layer)
+        layer = keras.ops.reshape(layer, (-1, self.embedding_dims * self.perceptive_size))  
+        layer = layers.Dense(512, kernel_initializer='he_uniform')(layer)
+        layer = layers.BatchNormalization()(layer)
+        layer = activations.relu(layer)        
         
-        # handle the connections between transformers blocks        
-        encoder_output = embeddings           
-        for encoder in self.encoders:
-            encoder_output = encoder(encoder_output, training=False)       
-
         # apply the softmax classifier layer
-        output = self.QNet(encoder_output)   
+        output = self.QNet(layer)   
       
         
         # define the model from inputs and outputs

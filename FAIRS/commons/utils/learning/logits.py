@@ -1,4 +1,3 @@
-import os
 import keras
 from keras import activations, layers
 import torch
@@ -6,6 +5,44 @@ import torch
 from FAIRS.commons.constants import CONFIG
 from FAIRS.commons.logger import logger
 
+    
+# [ADD NORM LAYER]
+###############################################################################
+@keras.utils.register_keras_serializable(package='CustomLayers', name='AddNorm')
+class AddNorm(keras.layers.Layer):
+    def __init__(self, epsilon=10e-5, **kwargs):
+        super(AddNorm, self).__init__(**kwargs)
+        self.epsilon = epsilon
+        self.add = layers.Add()
+        self.layernorm = layers.LayerNormalization(epsilon=self.epsilon)    
+
+    # build method for the custom layer 
+    #--------------------------------------------------------------------------
+    def build(self, input_shape):        
+        super(AddNorm, self).build(input_shape)
+
+    # implement transformer encoder through call method  
+    #--------------------------------------------------------------------------        
+    def call(self, inputs):
+        x1, x2 = inputs
+        x_add = self.add([x1, x2])
+        x_norm = self.layernorm(x_add)
+
+        return x_norm
+    
+    # serialize layer for saving  
+    #--------------------------------------------------------------------------
+    def get_config(self):
+        config = super(AddNorm, self).get_config()
+        config.update({'epsilon' : self.epsilon})
+        return config
+
+    # deserialization method 
+    #--------------------------------------------------------------------------
+    @classmethod
+    def from_config(cls, config):
+        return cls(**config)
+    
     
 # [CLASSIFIER]
 ###############################################################################
@@ -18,12 +55,13 @@ class QScoreNet(keras.layers.Layer):
         self.seed = seed
         # apply the Q-score layers
         self.Q1 = layers.Dense(self.dense_units, kernel_initializer='he_uniform')
-        self.Q2 = layers.Dense(int(self.dense_units//2), kernel_initializer='he_uniform')
-        self.Q3 = layers.Dense(int(self.dense_units//4), kernel_initializer='he_uniform')
+        self.Q2 = layers.Dense(self.dense_units, kernel_initializer='he_uniform')
+        self.Q3 = layers.Dense(self.dense_units, kernel_initializer='he_uniform')
         self.Q4 = layers.Dense(self.output_size, kernel_initializer='he_uniform', dtype=torch.float32)
         self.batch_norm1 = layers.BatchNormalization()
         self.batch_norm2 = layers.BatchNormalization()
         self.batch_norm3 = layers.BatchNormalization()
+        self.addnorm = AddNorm()
         self.dropout = layers.Dropout(rate=0.2, seed=seed)
 
     # build method for the custom layer 
@@ -33,8 +71,8 @@ class QScoreNet(keras.layers.Layer):
 
     # implement transformer encoder through call method  
     #--------------------------------------------------------------------------    
-    def call(self, x, training=None):
-        x = self.Q1(x)
+    def call(self, inputs, training=None):
+        x = self.Q1(inputs)
         x = self.batch_norm1(x, training=training)
         x = activations.relu(x)
         x = self.Q2(x)
@@ -43,6 +81,7 @@ class QScoreNet(keras.layers.Layer):
         x = self.Q3(x)
         x = self.batch_norm3(x, training=training)
         x = activations.relu(x)
+        x = self.addnorm([x, inputs])
         x = self.dropout(x, training=training)
         output = self.Q4(x)                  
 
@@ -62,3 +101,5 @@ class QScoreNet(keras.layers.Layer):
     @classmethod
     def from_config(cls, config):
         return cls(**config)
+    
+

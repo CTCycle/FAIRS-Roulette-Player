@@ -3,7 +3,7 @@ import numpy as np
 from collections import deque
 import keras
 
-from FAIRS.commons.constants import CONFIG, NUMBERS, COLORS
+from FAIRS.commons.constants import CONFIG, STATES
 from FAIRS.commons.logger import logger
 
 
@@ -13,7 +13,7 @@ from FAIRS.commons.logger import logger
 class DQNAgent:
     def __init__(self, model : keras.Model, configuration):
         self.state_size = configuration["dataset"]["PERCEPTIVE_SIZE"]
-        self.action_size = NUMBERS + COLORS - 1        
+        self.action_size = STATES        
         self.gamma = configuration['agent']['DISCOUNT_RATE'] 
         self.epsilon = configuration['agent']['EXPLORATION_RATE']              
         self.epsilon_decay = configuration['agent']['EXPLORATION_RATE_DECAY'] 

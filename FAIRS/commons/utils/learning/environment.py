@@ -6,7 +6,7 @@ import keras
 import tensorflow as tf
 
 from FAIRS.commons.utils.process.mapping import RouletteMapper
-from FAIRS.commons.constants import CONFIG, NUMBERS, COLORS
+from FAIRS.commons.constants import CONFIG, STATES, NUMBERS
 from FAIRS.commons.logger import logger
 
     
@@ -33,7 +33,7 @@ class RouletteEnvironment(gym.Env):
         self.black_numbers = mapper.color_map['black']
         
         # Actions: 0 (Red), 1 (Black), 2-37 for betting on a specific number
-        self.action_space = spaces.Discrete(NUMBERS + COLORS - 1)
+        self.action_space = spaces.Discrete(STATES)
         # Observation space is the last WINDOW_SIZE numbers that appeared on the wheel
         self.observation_space = spaces.Box(low=0, high=36, shape=(self.perceptive_size,), dtype=np.int32)
         
@@ -51,8 +51,7 @@ class RouletteEnvironment(gym.Env):
     def reset(self):
         
         self.extraction_index = 0
-        self.state = np.full(shape=self.perceptive_size, fill_value=-1)    
-               
+        self.state = np.full(shape=self.perceptive_size, fill_value=-1)                  
         self.capital = self.initial_capital
         self.steps = 0
         self.done = False

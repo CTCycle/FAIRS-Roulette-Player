@@ -12,11 +12,11 @@ from FAIRS.commons.logger import logger
 ###############################################################################
 class RealTimeHistory(keras.callbacks.Callback):    
         
-    def __init__(self, plot_path, past_logs=None, **kwargs):
+    def __init__(self, plot_path, configuration, past_logs=None, **kwargs):
         super(RealTimeHistory, self).__init__(**kwargs)
         self.plot_path = plot_path 
         self.past_logs = past_logs       
-        self.plot_epoch_gap = CONFIG["training"]["PLOT_EPOCH_GAP"]
+        self.plot_epoch_gap = configuration["training"]["PLOT_EPOCH_GAP"]
                 
         # Initialize dictionaries to store history 
         self.history = {}

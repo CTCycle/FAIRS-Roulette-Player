@@ -1,7 +1,6 @@
 import numpy as np
 import torch
 import keras
-import tensorflow as tf
 from keras import activations, layers 
 
 from FAIRS.commons.constants import CONFIG, NUMBERS
@@ -10,14 +9,13 @@ from FAIRS.commons.logger import logger
 
 # [POSITIONAL EMBEDDING]
 ###############################################################################
-@keras.utils.register_keras_serializable(package='CustomLayers', name='PositionalEmbedding')
-class PositionalEmbedding(keras.layers.Layer):
+@keras.utils.register_keras_serializable(package='CustomLayers', name='RouletteEmbedding')
+class RouletteEmbedding(keras.layers.Layer):
     def __init__(self, embedding_dims, sequence_length, mask_negative=True, **kwargs):
-        super(PositionalEmbedding, self).__init__(**kwargs)
+        super(RouletteEmbedding, self).__init__(**kwargs)
         self.embedding_dims = embedding_dims
         self.sequence_length = sequence_length         
-        self.mask_negative = mask_negative
-        
+        self.mask_negative = mask_negative        
         
         # calculate radiand values for the different position of each number on
         # the roulette wheel, as they will be used for positional embeddings
@@ -25,33 +23,24 @@ class PositionalEmbedding(keras.layers.Layer):
         self.numbers_embedding = layers.Embedding(input_dim=self.sequence_length, 
                                                   output_dim=self.embedding_dims, 
                                                   mask_zero=mask_negative)
-        self.position_embedding = layers.Embedding(input_dim=self.sequence_length, 
-                                                   output_dim=self.embedding_dims)
         
         self.embedding_scale = keras.ops.sqrt(keras.ops.cast(self.embedding_dims, torch.float32)) 
-
        
     # implement positional embedding through call method  
     #--------------------------------------------------------------------------    
-    def call(self, inputs):        
+    def call(self, inputs):          
+        
+        # Get embeddings for the numbers
+        embedded_numbers = self.numbers_embedding(inputs)  
+        embedded_numbers *= self.embedding_scale        
 
-        length = keras.ops.shape(inputs)[-1] 
-        positions = keras.ops.arange(start=0, stop=length, step=1)
-        positions = keras.ops.cast(positions, dtype=inputs.dtype) 
-        
-        embedded_numbers = self.numbers_embedding(inputs)
-        embedded_numbers *= self.embedding_scale                
-        
-        embedded_positions = self.position_embedding(positions)       
-            
-        full_embedding = embedded_numbers + embedded_positions     
-        
+        # Apply mask if 'mask_negative' is True
         if self.mask_negative:
             mask = keras.ops.not_equal(inputs, -1)
             mask = keras.ops.expand_dims(keras.ops.cast(mask, torch.float32), axis=-1)
-            full_embedding *= mask
+            embedded_numbers *= mask
 
-        return full_embedding
+        return embedded_numbers
     
     # compute the mask for padded sequences  
     #--------------------------------------------------------------------------
@@ -63,7 +52,7 @@ class PositionalEmbedding(keras.layers.Layer):
     # serialize layer for saving  
     #--------------------------------------------------------------------------
     def get_config(self):
-        config = super(PositionalEmbedding, self).get_config()
+        config = super(RouletteEmbedding, self).get_config()
         config.update({'sequence_length': self.sequence_length,                       
                        'embedding_dims': self.embedding_dims,                       
                        'mask_negative': self.mask_negative})
