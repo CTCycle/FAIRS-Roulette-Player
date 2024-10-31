@@ -25,8 +25,8 @@ class FAIRSnet:
         self.action_size = STATES
         self.timeseries = layers.Input(shape=(self.perceptive_size,), name='timeseries')                 
         
-        self.embedding = RouletteEmbedding(self.embedding_dims, self.perceptive_size, mask_negative=True)
-        self.QNet = QScoreNet(512, self.action_size, self.seed)   
+        self.embedding = RouletteEmbedding(self.embedding_dims, self.action_size, mask_negative=True)
+        self.QNet = QScoreNet(128, self.action_size, self.seed)   
         
         
     # build model given the architecture
@@ -40,14 +40,14 @@ class FAIRSnet:
         embeddings = self.embedding(timeseries)
         layer = layers.Dense(self.embedding_dims, kernel_initializer='he_uniform')(embeddings)
         layer = layers.BatchNormalization()(layer)
-        layer = activations.relu(layer)        
+        layer = activations.elu(layer)        
         layer = layers.Dense(self.embedding_dims, kernel_initializer='he_uniform')(embeddings)
         layer = layers.BatchNormalization()(layer)
-        layer = activations.relu(layer)
+        layer = activations.elu(layer)
         layer = keras.ops.reshape(layer, (-1, self.embedding_dims * self.perceptive_size))  
-        layer = layers.Dense(512, kernel_initializer='he_uniform')(layer)
+        layer = layers.Dense(self.embedding_dims*2, kernel_initializer='he_uniform')(layer)
         layer = layers.BatchNormalization()(layer)
-        layer = activations.relu(layer)        
+        layer = activations.elu(layer)        
         
         # apply the softmax classifier layer
         output = self.QNet(layer)   
@@ -58,7 +58,7 @@ class FAIRSnet:
 
         # define model compilation parameters such as learning rate, loss, metrics and optimizer
         loss = losses.MeanSquaredError() 
-        metric = [metrics.SparseCategoricalAccuracy()]
+        metric = [metrics.MeanAbsolutePercentageError()]
         opt = keras.optimizers.Adam(learning_rate=self.learning_rate)          
         model.compile(loss=loss, optimizer=opt, metrics=metric, jit_compile=False)
 

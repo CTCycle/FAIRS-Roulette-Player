@@ -54,11 +54,11 @@ class DQNAgent:
         for state, action, reward, next_state, done in minibatch:            
             target = model.predict(state)
             target[0][action] = reward
-            if not done:
+            if not done:                
                 Q_future = np.max(model.predict(next_state)[0])
                 target[0][action] = reward + self.gamma * Q_future          
 
-            model.fit(state, target, epochs=1, verbose=1, batch_size=batch_size, callbacks=callback_list)
+            model.fit(state, target, epochs=1, verbose=1, callbacks=callback_list)
             if self.epsilon > self.epsilon_min:
                 self.epsilon *= self.epsilon_decay
 

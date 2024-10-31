@@ -11,20 +11,19 @@ from FAIRS.commons.logger import logger
 ###############################################################################
 @keras.utils.register_keras_serializable(package='CustomLayers', name='RouletteEmbedding')
 class RouletteEmbedding(keras.layers.Layer):
-    def __init__(self, embedding_dims, sequence_length, mask_negative=True, **kwargs):
+    def __init__(self, embedding_dims, states, mask_negative=True, **kwargs):
         super(RouletteEmbedding, self).__init__(**kwargs)
         self.embedding_dims = embedding_dims
-        self.sequence_length = sequence_length         
+        self.states = states        
         self.mask_negative = mask_negative        
         
         # calculate radiand values for the different position of each number on
-        # the roulette wheel, as they will be used for positional embeddings
-        self.radiant_gap = (2 * np.pi)/NUMBERS
-        self.numbers_embedding = layers.Embedding(input_dim=self.sequence_length, 
+        # the roulette wheel, as they will be used for positional embeddings        
+        self.numbers_embedding = layers.Embedding(input_dim=self.states, 
                                                   output_dim=self.embedding_dims, 
                                                   mask_zero=mask_negative)
         
-        self.embedding_scale = keras.ops.sqrt(keras.ops.cast(self.embedding_dims, torch.float32)) 
+        self.embedding_scale = keras.ops.sqrt(self.embedding_dims)
        
     # implement positional embedding through call method  
     #--------------------------------------------------------------------------    
@@ -53,7 +52,7 @@ class RouletteEmbedding(keras.layers.Layer):
     #--------------------------------------------------------------------------
     def get_config(self):
         config = super(RouletteEmbedding, self).get_config()
-        config.update({'sequence_length': self.sequence_length,                       
+        config.update({'states': self.states,                       
                        'embedding_dims': self.embedding_dims,                       
                        'mask_negative': self.mask_negative})
         return config

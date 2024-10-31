@@ -9,7 +9,7 @@
                 "MIXED_PRECISION" : false,                           
                 "NUM_PROCESSORS": 6},
 
-    "model" : {"EMBEDDING_DIMS" : 200,               
+    "model" : {"EMBEDDING_DIMS" : 64,               
                "SAVE_MODEL_PLOT" : true,
                "JIT_COMPILE" : false,
                "JIT_BACKEND" : "inductor"},
