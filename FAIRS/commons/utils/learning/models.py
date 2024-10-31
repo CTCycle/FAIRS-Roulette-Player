@@ -13,19 +13,19 @@ from FAIRS.commons.logger import logger
 ###############################################################################
 class FAIRSnet: 
 
-    def __init__(self):  
+    def __init__(self, configuration):  
        
-        self.perceptive_size = CONFIG["dataset"]["PERCEPTIVE_SIZE"] 
-        self.embedding_dims = CONFIG["model"]["EMBEDDING_DIMS"]                   
-        self.jit_compile = CONFIG["model"]["JIT_COMPILE"]
-        self.jit_backend = CONFIG["model"]["JIT_BACKEND"]
-        self.learning_rate = CONFIG["training"]["LEARNING_RATE"]
-        self.seed = CONFIG["SEED"]
+        self.perceptive_size = configuration["dataset"]["PERCEPTIVE_SIZE"] 
+        self.embedding_dims = configuration["model"]["EMBEDDING_DIMS"]                   
+        self.jit_compile = configuration["model"]["JIT_COMPILE"]
+        self.jit_backend = configuration["model"]["JIT_BACKEND"]
+        self.learning_rate = configuration["training"]["LEARNING_RATE"]
+        self.seed = configuration["SEED"]
        
         self.action_size = STATES
         self.timeseries = layers.Input(shape=(self.perceptive_size,), name='timeseries')                 
         
-        self.embedding = RouletteEmbedding(self.embedding_dims, self.perceptive_size, mask_negative=False)
+        self.embedding = RouletteEmbedding(self.embedding_dims, self.perceptive_size, mask_negative=True)
         self.QNet = QScoreNet(512, self.action_size, self.seed)   
         
         

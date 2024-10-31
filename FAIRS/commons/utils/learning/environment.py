@@ -1,9 +1,10 @@
-import pandas as pd
+import os
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
-import keras
-import tensorflow as tf
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 from FAIRS.commons.utils.process.mapping import RouletteMapper
 from FAIRS.commons.constants import CONFIG, STATES, NUMBERS
@@ -39,8 +40,7 @@ class RouletteEnvironment(gym.Env):
         
         # Initialize state, capital, steps, and reward  
         self.extraction_index = 0 
-        self.state = np.full(shape=self.perceptive_size, fill_value=-1)      
-                       
+        self.state = np.full(shape=self.perceptive_size, fill_value=-1)                       
         self.capital = self.initial_capital
         self.steps = 0
         self.reward = 0
@@ -48,10 +48,9 @@ class RouletteEnvironment(gym.Env):
     
     # Reset the state of the environment to an initial state
     #--------------------------------------------------------------------------
-    def reset(self):
-        
+    def reset(self):        
         self.extraction_index = 0
-        self.state = np.full(shape=self.perceptive_size, fill_value=-1)                  
+        self.state = np.full(shape=self.perceptive_size, fill_value=-1, dtype=np.int32)                  
         self.capital = self.initial_capital
         self.steps = 0
         self.done = False
@@ -62,7 +61,7 @@ class RouletteEnvironment(gym.Env):
     #--------------------------------------------------------------------------
     def step(self, action):
         
-        next_extraction = self.timeseries[self.extraction_index]        
+        next_extraction = np.int32(self.timeseries[self.extraction_index])        
         self.state = np.delete(self.state, 0)
         self.state = np.append(self.state, next_extraction)
         self.extraction_index += 1
@@ -100,11 +99,40 @@ class RouletteEnvironment(gym.Env):
         else:
             self.done = False
 
-        return np.array(self.state), self.reward, self.done, {"capital": self.capital}
+        return self.state, self.reward, self.done, {"capital": self.capital}
     
 
     # Render the environment to the screen 
     #--------------------------------------------------------------------------
-    def render(self, mode='human'):
-        print(f"Current state: {self.state}, Last extracted: {self.state[-1]}")
-        print(f"Current capital: {self.capital}, Reward: {self.reward}")
+    def render(self, path):
+
+        # Roulette layout: red, black, green (for 0)
+        colors = ['green'] + ['red', 'black'] * 18
+        labels = list(range(NUMBERS))
+
+        # Set up plot
+        fig, ax = plt.subplots(figsize=(6, 6), subplot_kw={'projection': 'polar'})
+        theta = np.linspace(0, 2 * np.pi, 37, endpoint=False)
+
+        bars = ax.bar(theta, np.ones_like(theta), width=2 * np.pi / 37, color=colors, edgecolor='white', align='edge')
+        for i, bar in enumerate(bars):
+            bar.set_facecolor(colors[i])
+            
+        # Highlight the last extracted number by changing its color or enlarging it
+        extracted_number = 0 if np.all(self.state == -1) else self.state[-1]
+        bars[extracted_number].set_facecolor('yellow')  # Highlight the extracted number
+        bars[extracted_number].set_alpha(0.7)           # Increase opacity for emphasis
+
+        # Add labels for each segment
+        for i, (label, angle) in enumerate(zip(labels, theta)):
+            ax.text(angle, 1.05, str(label), ha='center', va='center', color='white', fontsize=8, rotation_mode='anchor')
+
+        # Add title and display current capital and reward below the wheel
+        plt.title("Roulette Wheel - Current Spin")
+        plt.figtext(0.5, 0.05, f"Current capital: {self.capital} | Reward: {self.reward}", ha="center", fontsize=12)
+        plt.figtext(0.5, 0.01, f"Last extracted number: {extracted_number}", ha="center", fontsize=10)
+        
+        plt.tight_layout()
+        fig_path = os.path.join(path, 'environment_rendering.jpeg')
+        plt.savefig(fig_path, bbox_inches='tight', format='jpeg', dpi=300)
+        plt.close()

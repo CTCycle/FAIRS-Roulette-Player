@@ -73,12 +73,11 @@ class LoggingCallback(keras.callbacks.Callback):
             logger.debug(f"Epoch {epoch + 1}: {logs}")
 
 
-
 # add logger callback for the training session
 ###############################################################################
 def callbacks_handler(configuration, checkpoint_path, history):
 
-    RTH_callback = RealTimeHistory(checkpoint_path, past_logs=history)
+    RTH_callback = RealTimeHistory(checkpoint_path, configuration, past_logs=history)
     logger_callback = LoggingCallback()   
     callbacks_list = [RTH_callback, logger_callback]
 

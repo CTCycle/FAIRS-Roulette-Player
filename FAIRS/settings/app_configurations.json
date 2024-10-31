@@ -2,7 +2,7 @@
     "SEED" : 54,   
     "dataset": {"SAMPLE_SIZE" : 1.0,
                 "VALIDATION_SIZE" : 0.1,
-                "PERCEPTIVE_SIZE": 120}, 
+                "PERCEPTIVE_SIZE": 32}, 
 
     "device" : {"DEVICE" : "GPU",
                 "DEVICE_ID" : 0,
@@ -15,7 +15,7 @@
                "JIT_BACKEND" : "inductor"},
 
     "agent" : {"DISCOUNT_RATE" : 0.2,
-               "EXPLORATION_RATE" : 0.5,
+               "EXPLORATION_RATE" : 0.35,
                "EXPLORATION_RATE_DECAY" : 0.995,
                "MIN_EXPLORATION_RATE" : 0.01,
                "MAX_MEMORY": 10000},
@@ -26,8 +26,8 @@
 
     "training" : {"EPOCHS" : 100,
                   "ADDITIONAL_EPOCHS" : 2,
-                  "EPISODES" : 100,                  
-                  "BATCH_SIZE" : 32,
+                  "EPISODES" : 5,                  
+                  "BATCH_SIZE" : 3,
                   "LEARNING_RATE" : 0.00005,                  
                   "SAVE_CHECKPOINTS": true,                    
                   "USE_TENSORBOARD" : false,                

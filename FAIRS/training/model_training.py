@@ -25,7 +25,7 @@ if __name__ == '__main__':
     #--------------------------------------------------------------------------     
     # load data from csv, add paths to images 
     logger.info(f'Loading FAIRS dataset from {DATA_PATH}')     
-    generator = RouletteGenerator()    
+    generator = RouletteGenerator(CONFIG)    
     roulette_dataset, color_encoder = generator.prepare_roulette_dataset()
     
     # 2. [BUILD MODEL AND AGENTSL]  
@@ -41,7 +41,7 @@ if __name__ == '__main__':
     model_folder_path = modelserializer.create_checkpoint_folder()  
 
     # build the FAIRSnet model and the DQNA agent     
-    learner = FAIRSnet()
+    learner = FAIRSnet(CONFIG)
     model = learner.get_model(model_summary=True)    
     
     # generate graphviz plot fo the model layout         

@@ -14,11 +14,11 @@ from FAIRS.commons.logger import logger
 ###############################################################################
 class RouletteGenerator():
 
-    def __init__(self):        
+    def __init__(self, configuration):        
         
-        self.widows_size = CONFIG["dataset"]["PERCEPTIVE_SIZE"]         
-        self.batch_size = CONFIG["training"]["BATCH_SIZE"] 
-        self.sequencer = TimeSequencer() 
+        self.widows_size = configuration["dataset"]["PERCEPTIVE_SIZE"]         
+        self.batch_size = configuration["training"]["BATCH_SIZE"] 
+        self.sequencer = TimeSequencer(configuration) 
         self.mapper = RouletteMapper() 
         self.data = get_training_dataset()      
         
@@ -29,7 +29,7 @@ class RouletteGenerator():
         logger.info('Encoding position and colors from raw number timeseries') 
         roulette_dataset, color_encoder = self.mapper.encode_roulette_extractions(self.data)
         roulette_dataset = roulette_dataset.drop(columns=['color'], axis=1)
-        roulette_dataset = roulette_dataset.to_numpy()               
+        roulette_dataset = roulette_dataset.to_numpy(dtype=np.int32)               
 
         return roulette_dataset, color_encoder   
               
