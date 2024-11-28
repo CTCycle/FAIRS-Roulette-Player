@@ -17,9 +17,9 @@ DATASET_NAME = 'FAIRS_dataset.csv'
 
 # [CONFIGURATIONS]
 ###############################################################################
-NUMBERS = 37
+NUMBERS = 36
 COLORS = 3
-STATES = NUMBERS + COLORS - 1
+STATES = NUMBERS + COLORS 
 
 CONFIG_PATH = join(PROJECT_DIR, 'settings', 'app_configurations.json')
 with open(CONFIG_PATH, 'r') as file:

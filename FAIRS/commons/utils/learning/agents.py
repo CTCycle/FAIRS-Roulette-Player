@@ -49,8 +49,7 @@ class DQNAgent:
     #--------------------------------------------------------------------------
     def replay(self, model : keras.Model, batch_size, callback_list):
 
-        minibatch = random.sample(self.memory, batch_size)
-        
+        minibatch = random.sample(self.memory, batch_size)        
         for state, action, reward, next_state, done in minibatch:            
             target = model.predict(state)
             target[0][action] = reward

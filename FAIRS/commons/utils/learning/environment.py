@@ -33,7 +33,7 @@ class RouletteEnvironment(gym.Env):
         
         self.numbers = list(range(NUMBERS)) 
         self.red_numbers = mapper.color_map['red']
-        self.black_numbers = mapper.color_map['black']
+        self.black_numbers = mapper.color_map['black']        
         
         # Actions: 0 (Red), 1 (Black), 2-37 for betting on a specific number
         self.action_space = spaces.Discrete(STATES)
@@ -91,7 +91,11 @@ class RouletteEnvironment(gym.Env):
                 self.capital += self.bet_amount
             else:
                 self.reward = -self.bet_amount  
-                self.capital -= self.bet_amount         
+                self.capital -= self.bet_amount
+
+        elif action == 39: # pass the turn  
+                self.reward = 0  
+                self.capital -= 0       
 
         self.steps += 1
 
@@ -109,8 +113,7 @@ class RouletteEnvironment(gym.Env):
     def render(self, path):
 
         # Roulette layout: assigning colors to each number
-        colors = ['green'] + ['red', 'black'] * 18
-        colors = colors[:NUMBERS]  # Ensure the list has the correct length
+        colors = ['green'] + ['red', 'black'] * 18        
         labels = list(range(NUMBERS))
 
         # Set up plot
@@ -158,7 +161,6 @@ class RouletteEnvironment(gym.Env):
 
         # Remove tight_layout since it may cause clipping in polar plots
         # plt.tight_layout()
-
         fig_path = os.path.join(path, 'environment_rendering.jpeg')
         plt.savefig(fig_path, bbox_inches='tight', format='jpeg', dpi=300)
         plt.close()

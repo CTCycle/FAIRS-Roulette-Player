@@ -9,7 +9,8 @@
                 "MIXED_PRECISION" : false,                           
                 "NUM_PROCESSORS": 6},
 
-    "model" : {"EMBEDDING_DIMS" : 64,               
+    "model" : {"EMBEDDING_DIMS" : 64,
+               "UNITS" : 256,               
                "SAVE_MODEL_PLOT" : true,
                "JIT_COMPILE" : false,
                "JIT_BACKEND" : "inductor"},
@@ -18,20 +19,19 @@
                "EXPLORATION_RATE" : 0.35,
                "EXPLORATION_RATE_DECAY" : 0.995,
                "MIN_EXPLORATION_RATE" : 0.01,
-               "MAX_MEMORY": 10000},
+               "MAX_MEMORY": 2000},
 
     "environment" : {"INITIAL_CAPITAL": 1000,
                      "BET_AMOUNT": 10,
-                     "MAX_STEPS": 1000},
+                     "MAX_STEPS": 40},
 
-    "training" : {"EPOCHS" : 100,
+    "training" : {"EPOCHS" : 10,
                   "ADDITIONAL_EPOCHS" : 2,
-                  "EPISODES" : 5,                  
-                  "BATCH_SIZE" : 3,
-                  "LEARNING_RATE" : 0.00005,                  
-                  "SAVE_CHECKPOINTS": true,                    
-                  "USE_TENSORBOARD" : false,                
-                  "PLOT_EPOCH_GAP": 1},
+                  "EPISODES" : 10, 
+                  "LEARNING_RATE" : 0.00001,                 
+                  "BATCH_SIZE" : 16,                                                      
+                  "USE_TENSORBOARD" : false,
+                  "SAVE_CHECKPOINTS": true},
                                     
     "inference" : {"TEMPERATURE" : 1.0},
 
