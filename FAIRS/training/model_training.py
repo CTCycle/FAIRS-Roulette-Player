@@ -42,10 +42,11 @@ if __name__ == '__main__':
 
     # build the FAIRSnet model and the DQNA agent     
     learner = FAIRSnet(CONFIG)
-    model = learner.get_model(model_summary=True)    
+    Q_model = learner.get_model(model_summary=True)
+    target_model = learner.get_model(model_summary=True)    
     
     # generate graphviz plot fo the model layout         
-    modelserializer.save_model_plot(model, model_folder_path)              
+    modelserializer.save_model_plot(Q_model, model_folder_path)              
    
     # 3. [BUILD MODEL AND AGENT]  
     #--------------------------------------------------------------------------  
@@ -57,7 +58,7 @@ if __name__ == '__main__':
 
     # perform training and save model at the end    
     logger.info('Start training with reinforcement learning routine')
-    trainer.train_model(model, roulette_dataset, model_folder_path)
+    trainer.train_model(Q_model, target_model, roulette_dataset, model_folder_path)
 
 
 

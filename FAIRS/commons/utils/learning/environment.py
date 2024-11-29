@@ -3,7 +3,7 @@ import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
 import matplotlib
-matplotlib.use('Agg')
+matplotlib.use('TkAgg') 
 import matplotlib.pyplot as plt
 
 from FAIRS.commons.utils.process.mapping import RouletteMapper
@@ -30,6 +30,7 @@ class RouletteEnvironment(gym.Env):
         self.initial_capital = configuration["environment"]["INITIAL_CAPITAL"]
         self.bet_amount = configuration["environment"]["BET_AMOUNT"]
         self.max_steps = configuration["environment"]["MAX_STEPS"] 
+        self.render_environment = configuration["environment"]["RENDERING"]
         
         self.numbers = list(range(NUMBERS)) 
         self.red_numbers = mapper.color_map['red']
@@ -47,7 +48,18 @@ class RouletteEnvironment(gym.Env):
         self.steps = 0
         self.reward = 0
         self.done = False
-    
+        
+        if self.render_environment:
+            plt.ion()  # Turn on interactive mode
+            self.fig, self.ax = plt.subplots(figsize=(6, 6), subplot_kw={'projection': 'polar'})
+            self.fig.canvas.manager.set_window_title('Roulette Wheel')  # Set window title
+            plt.show(block=False)  # Display the window once
+
+            # Store references to text objects for updating
+            self.title_text = self.ax.set_title("Roulette Wheel - Current Spin")
+            self.capital_text = self.fig.text(0.5, 0.05, "", ha="center", fontsize=12)
+            self.extraction_text = self.fig.text(0.5, 0.01, "", ha="center", fontsize=10)
+        
     # Reset the state of the environment to an initial state
     #--------------------------------------------------------------------------
     def reset(self):        
@@ -110,19 +122,19 @@ class RouletteEnvironment(gym.Env):
 
     # Render the environment to the screen 
     #--------------------------------------------------------------------------
-    def render(self, path):
+    def render(self):
+
+        self.ax.clear()
 
         # Roulette layout: assigning colors to each number
-        colors = ['green'] + ['red', 'black'] * 18        
+        colors = ['green'] + ['red', 'black'] * 18
         labels = list(range(NUMBERS))
 
-        # Set up plot
-        fig, ax = plt.subplots(figsize=(6, 6), subplot_kw={'projection': 'polar'})
         theta = np.linspace(0, 2 * np.pi, NUMBERS, endpoint=False)
         width = 2 * np.pi / NUMBERS
 
         # Create bars
-        bars = ax.bar(theta, np.ones(NUMBERS), width=width, color=colors, edgecolor='white', align='edge')
+        bars = self.ax.bar(theta, np.ones(NUMBERS), width=width, color=colors, edgecolor='white', align='edge')
 
         # Highlight the last extracted number
         extracted_number = 0 if np.all(self.state == -1) else self.state[-1]
@@ -139,28 +151,24 @@ class RouletteEnvironment(gym.Env):
                 angle_deg -= 360  # Normalize angle between -90 and 270 degrees
             # Text rotation
             rotation = angle_deg
-            ax.text(x, y, str(label),
-                    rotation=rotation, rotation_mode='anchor',
-                    ha='center', va='center', color='black', fontsize=8,
-                    clip_on=False)
+            self.ax.text(x, y, str(label),
+                         rotation=rotation, rotation_mode='anchor',
+                         ha='center', va='center', color='black', fontsize=8,
+                         clip_on=False)
 
         # Remove the grid and axis labels
-        ax.grid(False)
-        ax.set_xticks([])
-        ax.set_yticks([])
+        self.ax.grid(False)
+        self.ax.set_xticks([])
+        self.ax.set_yticks([])
 
         # Set the radius limit to include the labels
-        ax.set_ylim(0, 1.15)
+        self.ax.set_ylim(0, 1.15)
 
-        # Add title and display current capital and reward below the wheel
-        plt.title("Roulette Wheel - Current Spin")
-        plt.figtext(0.5, 0.05, f"Current capital: {self.capital} | Reward: {self.reward}",
-                    ha="center", fontsize=12)
-        plt.figtext(0.5, 0.01, f"Last extracted number: {extracted_number}",
-                    ha="center", fontsize=10)
+        # Update title and texts without creating new ones
+        self.title_text.set_text("Roulette Wheel - Current Spin")
+        self.capital_text.set_text(f"Current capital: {self.capital} | Reward: {self.reward}")
+        self.extraction_text.set_text(f"Last extracted number: {extracted_number}")
 
-        # Remove tight_layout since it may cause clipping in polar plots
-        # plt.tight_layout()
-        fig_path = os.path.join(path, 'environment_rendering.jpeg')
-        plt.savefig(fig_path, bbox_inches='tight', format='jpeg', dpi=300)
-        plt.close()
+        # Draw the updated plot
+        self.fig.canvas.draw()
+        self.fig.canvas.flush_events()        

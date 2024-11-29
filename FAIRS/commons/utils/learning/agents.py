@@ -19,7 +19,7 @@ class DQNAgent:
         self.epsilon_decay = configuration['agent']['EXPLORATION_RATE_DECAY'] 
         self.epsilon_min = configuration['agent']['MIN_EXPLORATION_RATE'] 
         self.memory_size = configuration['agent']['MAX_MEMORY'] 
-        self.memory = deque(maxlen=self.memory_size)          
+        self.memory = deque(maxlen=self.memory_size)              
     
     #--------------------------------------------------------------------------
     def act(self, model : keras.Model, state):
@@ -32,7 +32,7 @@ class DQNAgent:
             return random_action
         # if the random value is above the exploration rate, the action will
         # be predicted by the current model snapshot
-        q_values = model.predict(state)
+        q_values = model.predict(state, verbose=0)
         best_q = np.int32(np.argmax(q_values))
 
         return best_q 
@@ -47,18 +47,36 @@ class DQNAgent:
     # The highest predicted value represents the action that the agent believes 
     # will lead to the highest reward in the future.
     #--------------------------------------------------------------------------
-    def replay(self, model : keras.Model, batch_size, callback_list):
+    def replay(self, model : keras.Model, target_model : keras.Model, batch_size, callback_list):
 
-        minibatch = random.sample(self.memory, batch_size)        
-        for state, action, reward, next_state, done in minibatch:            
-            target = model.predict(state)
-            target[0][action] = reward
-            if not done:                
-                Q_future = np.max(model.predict(next_state)[0])
-                target[0][action] = reward + self.gamma * Q_future          
+        minibatch = random.sample(self.memory, batch_size)
 
-            model.fit(state, target, epochs=1, verbose=1, callbacks=callback_list)
-            if self.epsilon > self.epsilon_min:
-                self.epsilon *= self.epsilon_decay
+        # minibatch is composed of multiple tuples, each containing state, action, reqard, next state and status
+        # arrays of shape (batch size, item shape) are created. Both state and next state have shape (1, perceptive field)
+        # therefor their single dimension must be squeezed out while creating the stacked array
+        states = np.array([np.squeeze(state) for state, action, reward, next_state, done in minibatch])
+        actions = np.array([action for state, action, reward, next_state, done in minibatch])
+        rewards = np.array([reward for state, action, reward, next_state, done in minibatch])
+        next_states = np.array([np.squeeze(next_state) for state, action, reward, next_state, done in minibatch])
+        dones = np.array([done for state, action, reward, next_state, done in minibatch]).astype(int)
+
+        # Predict Q-values for current states and next states
+        targets = model.predict(states)
+        Q_futures = target_model.predict(next_states)
+        Q_future_max = np.max(Q_futures, axis=1)
+
+        # Compute updated target values
+        updated_targets = rewards + self.gamma * Q_future_max * (1 - dones)
+
+        # Update targets for the taken actions
+        batch_indices = np.arange(batch_size, dtype=np.int32)
+        targets[batch_indices, actions] = updated_targets
+
+        # Fit the model on the entire batch
+        model.fit(states, targets, epochs=1, verbose=1, callbacks=callback_list)
+
+        # Update epsilon
+        if self.epsilon > self.epsilon_min:
+            self.epsilon *= self.epsilon_decay
 
 

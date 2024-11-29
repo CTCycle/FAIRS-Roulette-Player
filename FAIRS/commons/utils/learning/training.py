@@ -2,6 +2,7 @@ import os
 import numpy as np
 import keras
 import torch
+from tqdm import tqdm
 
 from FAIRS.commons.utils.learning.callbacks import callbacks_handler
 from FAIRS.commons.utils.learning.environment import RouletteEnvironment
@@ -19,7 +20,8 @@ class DQNTraining:
     def __init__(self, configuration):        
               
         self.serializer = ModelSerializer()
-        self.batch_size = configuration['training']['BATCH_SIZE']       
+        self.batch_size = configuration['training']['BATCH_SIZE']
+        self.update_frequency = configuration['training']['UPDATE_FREQUENCY']       
         self.configuration = configuration 
         
         # set seed for random operations
@@ -31,14 +33,17 @@ class DQNTraining:
     # set device
     #--------------------------------------------------------------------------
     def set_device(self):
+        
         if self.selected_device == 'GPU':
+            # fallback to CPU if no GPU is available
             if not torch.cuda.is_available():
                 logger.info('No GPU found. Falling back to CPU')
                 self.device = torch.device('cpu')
             else:
                 self.device = torch.device(f'cuda:{self.device_id}')
                 torch.cuda.set_device(self.device)  
-                logger.info('GPU is set as active device')            
+                logger.info('GPU is set as active device')
+                # set global policy as mixed precision if selected            
                 if self.mixed_precision:
                     keras.mixed_precision.set_global_policy("mixed_float16")
                     logger.info('Mixed precision policy is active during training')                   
@@ -47,50 +52,59 @@ class DQNTraining:
             logger.info('CPU is set as active device') 
 
     #--------------------------------------------------------------------------
-    def reinforcement_learning_routine(self, model : keras.Model, agent : DQNAgent, 
+    def reinforcement_learning_routine(self, model : keras.Model, target_model : keras.Model,
+                                       agent : DQNAgent, 
                                        environment : RouletteEnvironment, 
                                        start_episode, episodes, state_size, 
                                        RTH_callback : RealTimeHistory,
                                        callback_list, checkpoint_path):
-
-        # Training loop for each episode
-        for episode in range(start_episode, episodes):            
+        
+        # Training loop for each episode        
+        for episode in range(start_episode, episodes):                    
             state = environment.reset()
             state = np.reshape(state, newshape=(1, state_size))
             total_reward = 0
 
             for time_step in range(environment.max_steps):
+                logger.info(f'Timestep {time_step + 1} - Episode {episode+1}/{episodes}')   
+                # action is always performed using the Q model
                 action = agent.act(model, state)
                 next_state, reward, done, info = environment.step(action)
                 total_reward += reward
                 next_state = np.reshape(next_state, [1, state_size])
 
-                # render environment                
-                environment.render(checkpoint_path)
+                # render environment 
+                if environment.render_environment:               
+                    environment.render()
 
                 # Remember experience
                 agent.remember(state, action, reward, next_state, done)
                 state = next_state
 
                 # Perform replay if the memory size is sufficient
+                # use both the Q model and the target model
                 if len(agent.memory) > self.batch_size:
-                    agent.replay(model, self.batch_size, callback_list)
+                    agent.replay(model, target_model, self.batch_size, callback_list)
 
                 if done:
                     logger.info(f"Episode {episode+1}/{episodes} - Time steps: {time_step+1} - Capital: {info['capital']} - Total Reward: {total_reward}")
                     break
+            
+            # Update target network periodically
+            if episode % self.update_frequency == 0:
+                target_model.set_weights(model.get_weights())
 
             # Save progress at checkpoints (you can define a frequency or save every episode)
+            history = {'history': RTH_callback.history, 'val_history': RTH_callback.val_history, 'total_epochs': episode}
             if self.configuration['training']['SAVE_CHECKPOINTS']:
                 logger.info(f"Saving model at episode {episode}")
-                self.serializer.save_pretrained_model(model, checkpoint_path)
-                history = {'history': RTH_callback.history, 'val_history': RTH_callback.val_history, 'total_epochs': episode}
+                self.serializer.save_pretrained_model(model, checkpoint_path)                
                 self.serializer.save_session_configuration(checkpoint_path, history, self.configuration)
 
         return agent, history 
  
     #--------------------------------------------------------------------------
-    def train_model(self, model, data, checkpoint_path, from_checkpoint=False):
+    def train_model(self, model, target_model, data, checkpoint_path, from_checkpoint=False):
 
         environment = RouletteEnvironment(data, self.configuration)   
         agent = DQNAgent(self.configuration)
@@ -98,24 +112,23 @@ class DQNTraining:
         # perform different initialization duties based on state of session:
         # training from scratch vs resumed training
         # calculate number of epochs taking into account possible training resumption
-        if not from_checkpoint:            
-            epochs = self.configuration['training']['EPOCHS'] 
+        if not from_checkpoint:               
             episodes = self.configuration['training']['EPISODES']
-            from_epoch = 0
+            from_episode = 0
             start_episode = 0
             history = None
         else:
             _, history = self.serializer.load_session_configuration(checkpoint_path)                     
-            epochs = history['total_epochs'] + CONFIG['training']['ADDITIONAL_EPOCHS'] 
-            from_epoch = history['total_epochs']
-            start_episode = from_epoch        
+            episodes = history['total_epochs'] + CONFIG['training']['ADDITIONAL_EPISODES'] 
+            from_episode = history['total_epochs']
+            start_episode = from_episode       
         
         # add all callbacks to the callback list
         RTH_callback, callbacks_list = callbacks_handler(self.configuration, checkpoint_path, history)      
 
         # run reinforcement learning routing        
         state_size = environment.observation_space.shape[0] 
-        agent, history = self.reinforcement_learning_routine(model, agent, environment, start_episode, episodes,
+        agent, history = self.reinforcement_learning_routine(model, target_model, agent, environment, start_episode, episodes,
                                                              state_size, RTH_callback, callbacks_list,
                                                              checkpoint_path)
 
