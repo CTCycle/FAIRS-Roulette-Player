@@ -81,7 +81,7 @@ class DQNTraining:
                     break
 
             # Save progress at checkpoints (you can define a frequency or save every episode)
-            if self.configuration['training']['SAVE_CHECKPOINT']:
+            if self.configuration['training']['SAVE_CHECKPOINTS']:
                 logger.info(f"Saving model at episode {episode}")
                 self.serializer.save_pretrained_model(model, checkpoint_path)
                 history = {'history': RTH_callback.history, 'val_history': RTH_callback.val_history, 'total_epochs': episode}

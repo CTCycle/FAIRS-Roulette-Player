@@ -19,13 +19,13 @@ class FAIRSnet:
         self.neurons = configuration["model"]["UNITS"]                   
         self.jit_compile = configuration["model"]["JIT_COMPILE"]
         self.jit_backend = configuration["model"]["JIT_BACKEND"]
-        self.learning_rate = configuration["training"]["LEARNING_RATE"]
+        self.learning_rate = configuration["training"]["LEARNING_RATE"]       
         self.seed = configuration["SEED"]
        
         self.action_size = STATES
         self.timeseries = layers.Input(shape=(self.perceptive_size,), name='timeseries')        
         self.embedding = RouletteEmbedding(self.embedding_dims, self.action_size, mask_negative=True)
-        self.QNet = QScoreNet(self.neurons//2, self.action_size, self.seed)   
+        self.QNet = QScoreNet(self.neurons, self.action_size, self.seed)   
         
         
     # build model given the architecture
@@ -33,34 +33,34 @@ class FAIRSnet:
     def get_model(self, model_summary=True):    
 
         # initialize the image encoder and the transformers encoders and decoders      
-        timeseries = layers.Input(shape=(self.perceptive_size,), name='timeseries', dtype=torch.int32) 
-
+        timeseries = layers.Input(shape=(self.perceptive_size,), name='timeseries', dtype=torch.int32)
+               
         # add layer for frequency embedding
        
         embeddings = self.embedding(timeseries)
         layer = layers.Dense(self.neurons, kernel_initializer='he_uniform')(embeddings)
         res = activations.relu(layer)
-        layer = layers.Dense(self.neurons, kernel_initializer='he_uniform')(res)
+        layer = layers.Dense(self.neurons, kernel_initializer='he_uniform')(res)          
         layer = activations.relu(layer)
-        add = AddNorm()([res, layer])
-        
-        layer = layers.Dense(self.neurons, kernel_initializer='he_uniform')(add)        
-        res = activations.elu(layer)        
-        layer = layers.Dense(self.neurons, kernel_initializer='he_uniform')(layer)
         layer = AddNorm()([res, layer])
-        layer = activations.elu(layer)  
+        
+        layer = layers.Dense(self.neurons, kernel_initializer='he_uniform')(layer)        
+        res = activations.relu(layer)        
+        layer = layers.Dense(self.neurons, kernel_initializer='he_uniform')(res)
+        layer = AddNorm()([res, layer])
+        layer = activations.relu(layer)  
 
-        layer = layers.Dense(self.neurons//2, kernel_initializer='he_uniform')(add)        
-        res = activations.elu(layer)        
         layer = layers.Dense(self.neurons//2, kernel_initializer='he_uniform')(layer)        
+        res = activations.relu(layer)        
+        layer = layers.Dense(self.neurons//2, kernel_initializer='he_uniform')(res)        
         layer = AddNorm()([res, layer])
-        layer = activations.elu(layer)       
+        layer = activations.relu(layer)       
         
-        layer = keras.ops.reshape(layer, (-1, self.embedding_dims * self.perceptive_size))  
+        layer = layers.Flatten()(layer)
+        layer = layers.Dense(self.neurons, kernel_initializer='he_uniform')(layer)    
         layer = layers.Dense(self.neurons//2, kernel_initializer='he_uniform')(layer)        
-        layer = activations.elu(layer)     
-        output = self.QNet(layer)   
-      
+        layer = activations.relu(layer)     
+        output = self.QNet(layer)         
         
         # define the model from inputs and outputs
         model = Model(inputs=timeseries, outputs=output)                

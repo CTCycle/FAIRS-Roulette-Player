@@ -18,20 +18,20 @@
     "agent" : {"DISCOUNT_RATE" : 0.2,
                "EXPLORATION_RATE" : 0.35,
                "EXPLORATION_RATE_DECAY" : 0.995,
-               "MIN_EXPLORATION_RATE" : 0.01,
+               "MIN_EXPLORATION_RATE" : 0.05,
                "MAX_MEMORY": 2000},
 
     "environment" : {"INITIAL_CAPITAL": 1000,
                      "BET_AMOUNT": 10,
-                     "MAX_STEPS": 40},
+                     "MAX_STEPS": 20},
 
     "training" : {"EPOCHS" : 10,
-                  "ADDITIONAL_EPOCHS" : 2,
+                  "ADDITIONAL_EPOCHS" : 10,
                   "EPISODES" : 10, 
                   "LEARNING_RATE" : 0.00001,                 
-                  "BATCH_SIZE" : 16,                                                      
+                  "BATCH_SIZE" : 8,                                                      
                   "USE_TENSORBOARD" : false,
-                  "SAVE_CHECKPOINTS": true},
+                  "SAVE_CHECKPOINTS": false},
                                     
     "inference" : {"TEMPERATURE" : 1.0},
 

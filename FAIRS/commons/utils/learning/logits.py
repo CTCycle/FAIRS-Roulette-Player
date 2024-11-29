@@ -55,13 +55,8 @@ class QScoreNet(keras.layers.Layer):
         self.seed = seed
         # apply the Q-score layers
         self.Q1 = layers.Dense(self.dense_units, kernel_initializer='he_uniform')
-        self.Q2 = layers.Dense(self.dense_units, kernel_initializer='he_uniform')
-        self.Q3 = layers.Dense(self.dense_units, kernel_initializer='he_uniform')
-        self.Q4 = layers.Dense(self.output_size, kernel_initializer='he_uniform', dtype=torch.float32)
-        self.batch_norm1 = layers.BatchNormalization()
-        self.batch_norm2 = layers.BatchNormalization()
-        self.batch_norm3 = layers.BatchNormalization()
-        self.addnorm = AddNorm()
+        self.Q2 = layers.Dense(self.output_size, kernel_initializer='he_uniform', dtype=torch.float32)
+        self.batch_norm = layers.BatchNormalization()    
         self.dropout = layers.Dropout(rate=0.2, seed=seed)
 
     # build method for the custom layer 
@@ -73,17 +68,10 @@ class QScoreNet(keras.layers.Layer):
     #--------------------------------------------------------------------------    
     def call(self, inputs, training=None):
         x = self.Q1(inputs)
-        x = self.batch_norm1(x, training=training)
-        x = activations.elu(x)
-        x = self.Q2(x)
-        x = self.batch_norm2(x, training=training)
-        x = activations.elu(x)
-        x = self.Q3(x)
-        x = self.batch_norm3(x, training=training)
-        x = activations.elu(x)
-        x = self.addnorm([x, inputs])
+        x = self.batch_norm(x, training=training)
+        x = activations.relu(x)        
         x = self.dropout(x, training=training)
-        output = self.Q4(x)                  
+        output = self.Q2(x)                  
 
         return output
     
