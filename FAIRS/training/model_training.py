@@ -36,14 +36,14 @@ if __name__ == '__main__':
     trainer = DQNTraining(CONFIG) 
     trainer.set_device()    
        
-    # create subfolder for preprocessing data    
+    # create subfolder for saving the checkpoint    
     modelserializer = ModelSerializer()
     model_folder_path = modelserializer.create_checkpoint_folder()  
 
     # build the FAIRSnet model and the DQNA agent     
     learner = FAIRSnet(CONFIG)
     Q_model = learner.get_model(model_summary=True)
-    target_model = learner.get_model(model_summary=True)    
+    target_model = learner.get_model(model_summary=False)    
     
     # generate graphviz plot fo the model layout         
     modelserializer.save_model_plot(Q_model, model_folder_path)              

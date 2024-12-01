@@ -1,8 +1,9 @@
 {   
     "SEED" : 54,   
-    "dataset": {"SAMPLE_SIZE" : 1.0,
+    "dataset": {"FROM_GENERATOR" : null,
+                "SAMPLE_SIZE" : 1.0,
                 "VALIDATION_SIZE" : 0.1,
-                "PERCEPTIVE_SIZE": 32}, 
+                "PERCEPTIVE_SIZE": 50}, 
 
     "device" : {"DEVICE" : "GPU",
                 "DEVICE_ID" : 0,
@@ -10,8 +11,7 @@
                 "NUM_PROCESSORS": 6},
 
     "model" : {"EMBEDDING_DIMS" : 64,
-               "UNITS" : 256,               
-               "SAVE_MODEL_PLOT" : true,
+               "UNITS" : 256,             
                "JIT_COMPILE" : false,
                "JIT_BACKEND" : "inductor"},
 
@@ -19,18 +19,19 @@
                "EXPLORATION_RATE" : 0.45,
                "EXPLORATION_RATE_DECAY" : 0.998,
                "MIN_EXPLORATION_RATE" : 0.1,
+               "REPLAY_BUFFER" : 3,
                "MAX_MEMORY": 10000},
 
     "environment" : {"INITIAL_CAPITAL": 2000,
                      "BET_AMOUNT": 5,
-                     "MAX_STEPS": 10,
+                     "MAX_STEPS": 10,                     
                      "RENDERING" : true},
 
     "training" : {"EPISODES" : 10,
                   "ADDITIONAL_EPISODES" : 10,                   
-                  "LEARNING_RATE" : 0.00005,                 
-                  "BATCH_SIZE" : 4,
-                  "UPDATE_FREQUENCY" : 1,                                                      
+                  "LEARNING_RATE" : 0.0001,                 
+                  "BATCH_SIZE" : 8,
+                  "UPDATE_FREQUENCY" : 10,                                                      
                   "USE_TENSORBOARD" : false,
                   "SAVE_CHECKPOINTS": false},
                                     

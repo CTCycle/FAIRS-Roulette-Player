@@ -1,8 +1,6 @@
-import os
 import numpy as np
 import keras
 import torch
-from tqdm import tqdm
 
 from FAIRS.commons.utils.learning.callbacks import callbacks_handler
 from FAIRS.commons.utils.learning.environment import RouletteEnvironment
@@ -17,18 +15,22 @@ from FAIRS.commons.logger import logger
 ###############################################################################
 class DQNTraining:
 
-    def __init__(self, configuration):        
-              
+    def __init__(self, configuration):                
         self.serializer = ModelSerializer()
-        self.batch_size = configuration['training']['BATCH_SIZE']
-        self.update_frequency = configuration['training']['UPDATE_FREQUENCY']       
+        self.batch_size = configuration['training']['BATCH_SIZE']        
+        self.update_frequency = configuration['training']['UPDATE_FREQUENCY'] 
+        self.replay_size = configuration['agent']['REPLAY_BUFFER']     
         self.configuration = configuration 
         
         # set seed for random operations
         keras.utils.set_random_seed(configuration["SEED"])  
         self.selected_device = configuration["device"]["DEVICE"]
         self.device_id = configuration["device"]["DEVICE_ID"]
-        self.mixed_precision = self.configuration["device"]["MIXED_PRECISION"]              
+        self.mixed_precision = self.configuration["device"]["MIXED_PRECISION"]  
+
+        # initialize variables
+        self.session = []        
+                    
 
     # set device
     #--------------------------------------------------------------------------
@@ -52,19 +54,17 @@ class DQNTraining:
             logger.info('CPU is set as active device') 
 
     #--------------------------------------------------------------------------
-    def reinforcement_learning_routine(self, model : keras.Model, target_model : keras.Model,
+    def reinforcement_learning_pipeline(self, model : keras.Model, target_model : keras.Model,
                                        agent : DQNAgent, 
                                        environment : RouletteEnvironment, 
                                        start_episode, episodes, state_size, 
-                                       RTH_callback : RealTimeHistory,
-                                       callback_list, checkpoint_path):
+                                       checkpoint_path):
         
         # Training loop for each episode        
         for episode in range(start_episode, episodes):                    
             state = environment.reset()
             state = np.reshape(state, newshape=(1, state_size))
             total_reward = 0
-
             for time_step in range(environment.max_steps):
                 logger.info(f'Timestep {time_step + 1} - Episode {episode+1}/{episodes}')   
                 # action is always performed using the Q model
@@ -83,25 +83,32 @@ class DQNTraining:
 
                 # Perform replay if the memory size is sufficient
                 # use both the Q model and the target model
-                if len(agent.memory) > self.batch_size:
-                    agent.replay(model, target_model, self.batch_size, callback_list)
+                if len(agent.memory) > self.replay_size:
+                    scores = agent.replay(model, target_model, self.batch_size)
+                    loss = scores.get('loss', None)
+                    metric = scores.get('mean_absolute_percentage_error', None)                   
+                    self.session.append({'episode': episode,
+                                        'time_step': time_step,
+                                        'loss': loss.item() if not None else 0,
+                                        'metrics': metric.item() if not None else 0,
+                                        'reward': reward,
+                                        'total_reward': total_reward})
 
                 if done:
                     logger.info(f"Episode {episode+1}/{episodes} - Time steps: {time_step+1} - Capital: {info['capital']} - Total Reward: {total_reward}")
                     break
             
-            # Update target network periodically
-            if episode % self.update_frequency == 0:
-                target_model.set_weights(model.get_weights())
+                # Update target network periodically
+                if time_step % self.update_frequency == 0:
+                    target_model.set_weights(model.get_weights())
 
-            # Save progress at checkpoints (you can define a frequency or save every episode)
-            history = {'history': RTH_callback.history, 'val_history': RTH_callback.val_history, 'total_epochs': episode}
+            # Save progress at checkpoints (you can define a frequency or save every episode)            
             if self.configuration['training']['SAVE_CHECKPOINTS']:
                 logger.info(f"Saving model at episode {episode}")
                 self.serializer.save_pretrained_model(model, checkpoint_path)                
-                self.serializer.save_session_configuration(checkpoint_path, history, self.configuration)
+                self.serializer.save_session_configuration(checkpoint_path, None, self.configuration)
 
-        return agent, history 
+        return agent
  
     #--------------------------------------------------------------------------
     def train_model(self, model, target_model, data, checkpoint_path, from_checkpoint=False):
@@ -121,20 +128,15 @@ class DQNTraining:
             _, history = self.serializer.load_session_configuration(checkpoint_path)                     
             episodes = history['total_epochs'] + CONFIG['training']['ADDITIONAL_EPISODES'] 
             from_episode = history['total_epochs']
-            start_episode = from_episode       
-        
-        # add all callbacks to the callback list
-        RTH_callback, callbacks_list = callbacks_handler(self.configuration, checkpoint_path, history)      
+            start_episode = from_episode                    
 
         # run reinforcement learning routing        
         state_size = environment.observation_space.shape[0] 
-        agent, history = self.reinforcement_learning_routine(model, target_model, agent, environment, start_episode, episodes,
-                                                             state_size, RTH_callback, callbacks_list,
-                                                             checkpoint_path)
+        agent, history = self.reinforcement_learning_pipeline(model, target_model, agent, environment, start_episode, episodes,
+                                                             state_size, checkpoint_path)
 
         # Save the final model at the end of training
-        self.serializer.save_pretrained_model(model, checkpoint_path)
-        history = {'history': RTH_callback.history, 'val_history': RTH_callback.val_history, 'total_epochs': episodes}
+        self.serializer.save_pretrained_model(model, checkpoint_path)        
         self.serializer.save_session_configuration(checkpoint_path, history, self.configuration)
 
 

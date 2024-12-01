@@ -9,7 +9,7 @@ warnings.simplefilter(action='ignore', category=Warning)
 # [IMPORT CUSTOM MODULES]
 from FAIRS.commons.utils.process.mapping import RouletteMapper
 from FAIRS.commons.utils.process.sequences import TimeSequencer
-from FAIRS.commons.utils.learning.inferencer import RouletteGenerator
+from FAIRS.commons.utils.learning.inference import RouletteGenerator
 from FAIRS.commons.utils.dataloader.serializer import get_predictions_dataset, ModelSerializer
 from FAIRS.commons.constants import CONFIG, PRED_PATH
 from FAIRS.commons.logger import logger
@@ -34,28 +34,23 @@ if __name__ == '__main__':
     # 3. [GENERATE ROLLING SEQUENCES]
     #--------------------------------------------------------------------------
     sequencer = TimeSequencer() 
-    shifted_sequences = sequencer.generate_shifted_sequences(predictions_data)    
+    shifted_sequences = sequencer.generate_historical_sequences(predictions_data)    
       
     # 4. [LOAD MODEL]
     #--------------------------------------------------------------------------  
     # selected and load the pretrained model, then print the summary 
+    # selected and load the pretrained model, then print the summary 
     modelserializer = ModelSerializer()         
-    model, configuration, history = modelserializer.select_and_load_checkpoint()
-    model_folder = modelserializer.loaded_model_folder
-    model.summary(expand_nested=True)      
+    model, configuration, history, checkpoint_path = modelserializer.select_and_load_checkpoint()    
+    model.summary(expand_nested=True)   
+    print()     
  
     # 5. [GENERATE EXTRACTION SEQUENCES]
     #--------------------------------------------------------------------------    
     generator = RouletteGenerator(model, configuration, shifted_sequences) 
     logger.info('Generating roulette series from last window')   
-    generated_timeseries = generator.generate_sequence_by_greed_search()
+    generated_timeseries = generator.generate_sequences()
 
     
 
-    # 3. [PERFORM PREDICTIONS]
-    #--------------------------------------------------------------------------
-    # predict extractions using the pretrained ColorCode model, generate a dataframe
-    # containing original values and predictions
-    
-    logger.info('Perform prediction using the loaded model')
     

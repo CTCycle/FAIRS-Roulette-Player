@@ -44,25 +44,13 @@ class RouletteGenerator:
         return last_extractions, last_positions, start_extraction, start_position       
     
     #--------------------------------------------------------------------------    
-    def generate_sequence_by_greed_search(self):
+    def generate_sequences(self):
   
         inverted_position_mapping = {v : k for k, v in self.mapper.position_map.items()}     
-        last_extractions, last_positions, sequence_start, pos_start = self.get_prediction_window()
-            
-        decoder_sequence = keras.ops.zeros((1, self.window_size), dtype=torch.int32)   
-        decoder_position = keras.ops.zeros((1, self.window_size), dtype=torch.int32)        
-        decoder_sequence[0, 0] = sequence_start 
-        decoder_position[0, 0] = pos_start
-
-        for i in tqdm(range(1, self.window_size)):                
-            predictions = self.model.predict([last_extractions, last_positions, 
-                                                decoder_sequence, decoder_position], verbose=0)                
-            next_position = keras.ops.argmax(predictions[0, i-1, :], axis=-1).item()  
-            next_extraction = inverted_position_mapping[next_position]           
-            decoder_position[0, i] = next_position
-            decoder_sequence[0, i] = next_extraction       
+        last_extractions, last_positions, sequence_start, pos_start = self.get_prediction_window()    
            
-        return decoder_position
+           
+        return last_extractions
     
 
     #--------------------------------------------------------------------------    

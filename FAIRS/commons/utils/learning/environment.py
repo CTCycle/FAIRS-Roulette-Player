@@ -25,8 +25,7 @@ class RouletteEnvironment(gym.Env):
         self.colors = data[:, 2]
 
         mapper = RouletteMapper()          
-        self.perceptive_size = configuration["dataset"]["PERCEPTIVE_SIZE"]
-        
+        self.perceptive_size = configuration["dataset"]["PERCEPTIVE_SIZE"]        
         self.initial_capital = configuration["environment"]["INITIAL_CAPITAL"]
         self.bet_amount = configuration["environment"]["BET_AMOUNT"]
         self.max_steps = configuration["environment"]["MAX_STEPS"] 
@@ -50,15 +49,7 @@ class RouletteEnvironment(gym.Env):
         self.done = False
         
         if self.render_environment:
-            plt.ion()  # Turn on interactive mode
-            self.fig, self.ax = plt.subplots(figsize=(6, 6), subplot_kw={'projection': 'polar'})
-            self.fig.canvas.manager.set_window_title('Roulette Wheel')  # Set window title
-            plt.show(block=False)  # Display the window once
-
-            # Store references to text objects for updating
-            self.title_text = self.ax.set_title("Roulette Wheel - Current Spin")
-            self.capital_text = self.fig.text(0.5, 0.05, "", ha="center", fontsize=12)
-            self.extraction_text = self.fig.text(0.5, 0.01, "", ha="center", fontsize=10)
+            self._build_rendering_canvas()            
         
     # Reset the state of the environment to an initial state
     #--------------------------------------------------------------------------
@@ -74,6 +65,9 @@ class RouletteEnvironment(gym.Env):
     # Perform the action (0: Bet on Red, 1: Bet on Black, 2: Bet on Specific Number)
     #--------------------------------------------------------------------------
     def step(self, action):
+
+        if self.extraction_index >= self.timeseries.shape[0]:
+            state = self.reset()
         
         next_extraction = np.int32(self.timeseries[self.extraction_index])        
         self.state = np.delete(self.state, 0)
@@ -105,9 +99,10 @@ class RouletteEnvironment(gym.Env):
                 self.reward = -self.bet_amount  
                 self.capital -= self.bet_amount
 
-        elif action == 39: # pass the turn  
+        elif action == 39: # pass the turn and stop playing 
                 self.reward = 0  
-                self.capital -= 0       
+                self.capital -= 0 
+                self.done = True      
 
         self.steps += 1
 
@@ -118,6 +113,18 @@ class RouletteEnvironment(gym.Env):
             self.done = False
 
         return self.state, self.reward, self.done, {"capital": self.capital}
+    
+    # Render the environment to the screen 
+    #--------------------------------------------------------------------------
+    def _build_rendering_canvas(self):
+        plt.ion()  # Turn on interactive mode
+        self.fig, self.ax = plt.subplots(figsize=(6, 6), subplot_kw={'projection': 'polar'})
+        self.fig.canvas.manager.set_window_title('Roulette Wheel')  # Set window title
+        plt.show(block=False)  
+        # Store references to text objects for updating
+        self.title_text = self.ax.set_title("Roulette Wheel - Current Spin")
+        self.capital_text = self.fig.text(0.5, 0.05, "", ha="center", fontsize=12)
+        self.extraction_text = self.fig.text(0.5, 0.01, "", ha="center", fontsize=10)
     
 
     # Render the environment to the screen 
@@ -138,8 +145,8 @@ class RouletteEnvironment(gym.Env):
 
         # Highlight the last extracted number
         extracted_number = 0 if np.all(self.state == -1) else self.state[-1]
-        bars[extracted_number].set_facecolor('yellow')  # Highlight the extracted number
-        bars[extracted_number].set_alpha(0.7)           # Increase opacity for emphasis
+        bars[extracted_number].set_facecolor('yellow')  
+        bars[extracted_number].set_alpha(0.7)           
 
         # Adjust the position of the labels to be on the outer edge
         for i, (label, angle) in enumerate(zip(labels, theta)):

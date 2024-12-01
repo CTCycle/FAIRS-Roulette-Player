@@ -19,6 +19,7 @@ class DQNAgent:
         self.epsilon_decay = configuration['agent']['EXPLORATION_RATE_DECAY'] 
         self.epsilon_min = configuration['agent']['MIN_EXPLORATION_RATE'] 
         self.memory_size = configuration['agent']['MAX_MEMORY'] 
+        self.replay_size = configuration['agent']['REPLAY_BUFFER']   
         self.memory = deque(maxlen=self.memory_size)              
     
     #--------------------------------------------------------------------------
@@ -47,8 +48,10 @@ class DQNAgent:
     # The highest predicted value represents the action that the agent believes 
     # will lead to the highest reward in the future.
     #--------------------------------------------------------------------------
-    def replay(self, model : keras.Model, target_model : keras.Model, batch_size, callback_list):
+    def replay(self, model : keras.Model, target_model : keras.Model, batch_size):
 
+        # this prevents an error if the batch size is larger than the replay buffer size
+        batch_size = min(batch_size, self.replay_size)
         minibatch = random.sample(self.memory, batch_size)
 
         # minibatch is composed of multiple tuples, each containing state, action, reqard, next state and status
@@ -61,8 +64,8 @@ class DQNAgent:
         dones = np.array([done for state, action, reward, next_state, done in minibatch]).astype(int)
 
         # Predict Q-values for current states and next states
-        targets = model.predict(states)
-        Q_futures = target_model.predict(next_states)
+        targets = model.predict(states, verbose=0)
+        Q_futures = target_model.predict(next_states, verbose=0)
         Q_future_max = np.max(Q_futures, axis=1)
 
         # Compute updated target values
@@ -72,11 +75,14 @@ class DQNAgent:
         batch_indices = np.arange(batch_size, dtype=np.int32)
         targets[batch_indices, actions] = updated_targets
 
-        # Fit the model on the entire batch
-        model.fit(states, targets, epochs=1, verbose=1, callbacks=callback_list)
+        # Fit the model on the entire batch using train on batch method
+        logs = model.train_on_batch(states, targets, return_dict=True)        
+        logger.info(f'Loss = {logs["loss"]} - mean absolute % error = {logs["mean_absolute_percentage_error"]}')
 
         # Update epsilon
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
+
+        return logs
 
 
