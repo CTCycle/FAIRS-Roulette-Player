@@ -35,7 +35,7 @@ class RouletteEmbedding(keras.layers.Layer):
 
         # Apply mask if 'mask_negative' is True
         if self.mask_negative:
-            mask = keras.ops.not_equal(inputs, -1)
+            mask = self.compute_mask(inputs)
             mask = keras.ops.expand_dims(keras.ops.cast(mask, torch.float32), axis=-1)
             embedded_numbers *= mask
 

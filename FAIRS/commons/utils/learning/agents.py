@@ -76,7 +76,7 @@ class DQNAgent:
         targets[batch_indices, actions] = updated_targets
 
         # Fit the model on the entire batch using train on batch method
-        logs = model.train_on_batch(states, targets, return_dict=True)        
+        logs = model.train_on_batch(states, targets, return_dict=True) 
         logger.info(f'Loss = {logs["loss"]} - mean absolute % error = {logs["mean_absolute_percentage_error"]}')
 
         # Update epsilon

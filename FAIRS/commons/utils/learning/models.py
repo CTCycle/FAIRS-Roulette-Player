@@ -38,28 +38,21 @@ class FAIRSnet:
         # add layer for frequency embedding
        
         embeddings = self.embedding(timeseries)
-        layer = layers.Dense(self.neurons, kernel_initializer='he_uniform')(embeddings)
-        res = activations.relu(layer)
-        layer = layers.Dense(self.neurons, kernel_initializer='he_uniform')(res)          
-        layer = activations.relu(layer)
-        layer = AddNorm()([res, layer])
-        
-        layer = layers.Dense(self.neurons, kernel_initializer='he_uniform')(layer)        
-        res = activations.relu(layer)        
-        layer = layers.Dense(self.neurons, kernel_initializer='he_uniform')(res)
+        res = layers.Dense(self.neurons, kernel_initializer='he_uniform')(embeddings)             
+        layer = layers.Dense(self.neurons, kernel_initializer='he_uniform')(res)                      
         layer = AddNorm()([res, layer])
         layer = activations.relu(layer)  
 
-        layer = layers.Dense(self.neurons//2, kernel_initializer='he_uniform')(layer)        
-        res = activations.relu(layer)        
-        layer = layers.Dense(self.neurons//2, kernel_initializer='he_uniform')(res)        
+        res = layers.Dense(self.neurons//2, kernel_initializer='he_uniform')(layer)             
+        layer = layers.Dense(self.neurons//2, kernel_initializer='he_uniform')(res)                      
         layer = AddNorm()([res, layer])
-        layer = activations.relu(layer)       
+        layer = activations.relu(layer)      
         
         layer = layers.Flatten()(layer)
-        layer = layers.Dense(self.neurons, kernel_initializer='he_uniform')(layer)    
-        layer = layers.Dense(self.neurons//2, kernel_initializer='he_uniform')(layer)        
-        layer = activations.relu(layer)     
+        res = layers.Dense(self.neurons*2, kernel_initializer='he_uniform')(layer)    
+        layer = layers.Dense(self.neurons*2, kernel_initializer='he_uniform')(res)
+        layer = AddNorm()([res, layer])
+        layer = activations.relu(layer)              
         output = self.QNet(layer)         
         
         # define the model from inputs and outputs

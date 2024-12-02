@@ -74,39 +74,55 @@ class LoggingCallback(keras.callbacks.Callback):
 
 
 
+
+
 # add logger callback for the training session
 ###############################################################################
-def callbacks_handler(configuration, checkpoint_path, history):
+class CallbacksWrapper:
 
-    RTH_callback = RealTimeHistory(checkpoint_path, configuration, past_logs=history)
-    logger_callback = LoggingCallback()   
-    callbacks_list = [RTH_callback, logger_callback]
+    def __init__(self, configuration):
+        self.configuration = configuration
 
-    # initialize tensorboard if requested    
-    if configuration["training"]["USE_TENSORBOARD"]:
+    #--------------------------------------------------------------------------
+    def real_time_history(self, configuration, checkpoint_path, history):
+        RTH_callback = RealTimeHistory(checkpoint_path, configuration, past_logs=history)
+        logger_callback = LoggingCallback()          
+        
+        return RTH_callback, logger_callback
+    
+    #--------------------------------------------------------------------------
+    def _start_tensorboard(self, log_dir):    
+        tensorboard_command = ["tensorboard", "--logdir", log_dir, "--port", "6006"]
+        subprocess.Popen(tensorboard_command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)      
+        time.sleep(4)            
+        webbrowser.open("http://localhost:6006")  
+
+    #--------------------------------------------------------------------------
+    def tensorboard_callback(self, checkpoint_path, model) -> keras.callbacks.TensorBoard:        
         logger.debug('Using tensorboard during training')
         log_path = os.path.join(checkpoint_path, 'tensorboard')
-        callbacks_list.append(keras.callbacks.TensorBoard(log_dir=log_path, histogram_freq=1))  
-        start_tensorboard(log_path) 
+        tb_callback = keras.callbacks.TensorBoard(log_dir=log_path, update_freq=20, 
+                                         histogram_freq=1) 
 
-    # Add a checkpoint saving callback
-    if configuration["training"]["SAVE_CHECKPOINTS"]:
+        tb_callback.set_model(model)              
+        self._start_tensorboard(log_path)        
+
+        return tb_callback 
+    
+    #--------------------------------------------------------------------------
+    def checkpoints_saving(self, checkpoint_path):
+       
         logger.debug('Adding checkpoint saving callback')
         checkpoint_filepath = os.path.join(checkpoint_path, 'model_checkpoint.keras')
-        callbacks_list.append(keras.callbacks.ModelCheckpoint(filepath=checkpoint_filepath,
-                                                              save_weights_only=False,  
-                                                              monitor='val_loss',       
-                                                              save_best_only=True,      
-                                                              mode='auto',              
-                                                              verbose=1))
+        chkp_save = keras.callbacks.ModelCheckpoint(filepath=checkpoint_filepath,
+                                                    save_weights_only=True,  
+                                                    monitor='loss',       
+                                                    save_best_only=True,      
+                                                    mode='auto',              
+                                                    verbose=1)
 
-    return RTH_callback, callbacks_list
-
-
-###############################################################################
-def start_tensorboard(log_dir):
+        return chkp_save
     
-    tensorboard_command = ["tensorboard", "--logdir", log_dir, "--port", "6006"]
-    subprocess.Popen(tensorboard_command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)      
-    time.sleep(4)            
-    webbrowser.open("http://localhost:6006")  
+   
+
+

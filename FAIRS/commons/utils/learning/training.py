@@ -2,7 +2,7 @@ import numpy as np
 import keras
 import torch
 
-from FAIRS.commons.utils.learning.callbacks import callbacks_handler
+from FAIRS.commons.utils.learning.callbacks import CallbacksWrapper
 from FAIRS.commons.utils.learning.environment import RouletteEnvironment
 from FAIRS.commons.utils.learning.agents import DQNAgent
 from FAIRS.commons.utils.learning.callbacks import RealTimeHistory
@@ -29,7 +29,8 @@ class DQNTraining:
         self.mixed_precision = self.configuration["device"]["MIXED_PRECISION"]  
 
         # initialize variables
-        self.session = []        
+        self.session = []
+        self.callback_wrapper = CallbacksWrapper(configuration)               
                     
 
     # set device
@@ -53,14 +54,32 @@ class DQNTraining:
             self.device = torch.device('cpu')
             logger.info('CPU is set as active device') 
 
+    # set device
+    #--------------------------------------------------------------------------
+    def update_session_stats(self, scores, episode, time_step, reward, total_reward):
+        loss = scores.get('loss', None)
+        metric = scores.get('mean_absolute_percentage_error', None)                   
+        self.session.append({'episode': episode,
+                            'time_step': time_step,
+                            'loss': loss.item() if not None else 0,
+                            'metrics': metric.item() if not None else 0,
+                            'reward': reward,
+                            'total_reward': total_reward})
+        
+
     #--------------------------------------------------------------------------
     def reinforcement_learning_pipeline(self, model : keras.Model, target_model : keras.Model,
-                                       agent : DQNAgent, 
-                                       environment : RouletteEnvironment, 
-                                       start_episode, episodes, state_size, 
-                                       checkpoint_path):
-        
-        # Training loop for each episode        
+                                       agent : DQNAgent, environment : RouletteEnvironment, 
+                                       start_episode, episodes, state_size, checkpoint_path):
+
+        # if tensorboard is selected, an instance of the tb callback is built
+        # the dashboard is set on the Q model and tensorboard is launched automatically
+        tensorboard = None
+        if self.configuration["training"]["USE_TENSORBOARD"]:
+            tensorboard = self.callback_wrapper.tensorboard_callback(checkpoint_path, model)            
+               
+        # Training loop for each episode 
+        scores = None       
         for episode in range(start_episode, episodes):                    
             state = environment.reset()
             state = np.reshape(state, newshape=(1, state_size))
@@ -84,30 +103,21 @@ class DQNTraining:
                 # Perform replay if the memory size is sufficient
                 # use both the Q model and the target model
                 if len(agent.memory) > self.replay_size:
-                    scores = agent.replay(model, target_model, self.batch_size)
-                    loss = scores.get('loss', None)
-                    metric = scores.get('mean_absolute_percentage_error', None)                   
-                    self.session.append({'episode': episode,
-                                        'time_step': time_step,
-                                        'loss': loss.item() if not None else 0,
-                                        'metrics': metric.item() if not None else 0,
-                                        'reward': reward,
-                                        'total_reward': total_reward})
+                    scores = agent.replay(model, target_model, self.batch_size)                    
+                    self.update_session_stats(scores, episode, time_step, reward, total_reward)
 
-                if done:
-                    logger.info(f"Episode {episode+1}/{episodes} - Time steps: {time_step+1} - Capital: {info['capital']} - Total Reward: {total_reward}")
-                    break
-            
+                # call on_epoch_end method of selected callbacks             
+                if tensorboard is not None and scores is not None:                    
+                    tensorboard.on_epoch_end(epoch=episode, logs=scores)                
+
                 # Update target network periodically
                 if time_step % self.update_frequency == 0:
                     target_model.set_weights(model.get_weights())
 
-            # Save progress at checkpoints (you can define a frequency or save every episode)            
-            if self.configuration['training']['SAVE_CHECKPOINTS']:
-                logger.info(f"Saving model at episode {episode}")
-                self.serializer.save_pretrained_model(model, checkpoint_path)                
-                self.serializer.save_session_configuration(checkpoint_path, None, self.configuration)
-
+                if done:
+                    logger.info(f"Episode {episode+1}/{episodes} - Time steps: {time_step+1} - Capital: {info['capital']} - Total Reward: {total_reward}")
+                    break
+                     
         return agent
  
     #--------------------------------------------------------------------------
@@ -130,10 +140,10 @@ class DQNTraining:
             from_episode = history['total_epochs']
             start_episode = from_episode                    
 
-        # run reinforcement learning routing        
-        state_size = environment.observation_space.shape[0] 
-        agent, history = self.reinforcement_learning_pipeline(model, target_model, agent, environment, start_episode, episodes,
-                                                             state_size, checkpoint_path)
+        # determine state size as the observation space size       
+        state_size = environment.observation_space.shape[0]         
+        agent = self.reinforcement_learning_pipeline(model, target_model, agent, environment, 
+                                                              start_episode, episodes, state_size, checkpoint_path)
 
         # Save the final model at the end of training
         self.serializer.save_pretrained_model(model, checkpoint_path)        

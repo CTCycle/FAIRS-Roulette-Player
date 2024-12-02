@@ -179,14 +179,12 @@ class ModelSerializer:
         return model_folders 
 
     #--------------------------------------------------------------------------
-    def save_model_plot(self, model, path):
-
-        if CONFIG["model"]["SAVE_MODEL_PLOT"]:
-            logger.debug('Generating model architecture graph')
-            plot_path = os.path.join(path, 'model_layout.png')       
-            keras.utils.plot_model(model, to_file=plot_path, show_shapes=True, 
-                       show_layer_names=True, show_layer_activations=True, 
-                       expand_nested=True, rankdir='TB', dpi=400)
+    def save_model_plot(self, model, path):        
+        logger.debug('Generating model architecture graph')
+        plot_path = os.path.join(path, 'model_layout.png')       
+        keras.utils.plot_model(model, to_file=plot_path, show_shapes=True, 
+                    show_layer_names=True, show_layer_activations=True, 
+                    expand_nested=True, rankdir='TB', dpi=400)
             
     #--------------------------------------------------------------------------
     def load_checkpoint(self, checkpoint_name):           
