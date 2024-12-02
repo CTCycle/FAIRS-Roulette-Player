@@ -6,7 +6,7 @@ import pandas as pd
 from datetime import datetime
 import keras
 
-from FAIRS.commons.constants import CONFIG, DATA_PATH, PRED_PATH, DATASET_NAME, CHECKPOINT_PATH
+from FAIRS.commons.constants import CONFIG, DATA_PATH, DATASET_NAME, CHECKPOINT_PATH
 from FAIRS.commons.logger import logger
 
 
@@ -38,7 +38,7 @@ def checkpoint_selection_menu(models_list):
 def get_training_dataset(sample_size=None):     
 
     if sample_size is None:
-        sample_size =  CONFIG["dataset"]["SAMPLE_SIZE"]
+        sample_size = CONFIG["dataset"]["SAMPLE_SIZE"]
     file_loc = os.path.join(DATA_PATH, DATASET_NAME) 
     dataset = pd.read_csv(file_loc, encoding='utf-8', sep=';')
     num_samples = int(dataset.shape[0] * sample_size)
@@ -46,22 +46,40 @@ def get_training_dataset(sample_size=None):
 
     return dataset
 
-# get FAIRS data for predictions
-###############################################################################
-def get_predictions_dataset():
-
-    file_loc = os.path.join(PRED_PATH, 'FAIRS_predictions.csv') 
-    dataset = pd.read_csv(file_loc, encoding='utf-8', sep=';')    
-
-    return dataset
-    
+   
 
 # [DATA SERIALIZATION]
 ###############################################################################
 class DataSerializer:
 
-    def __init__(self):        
-        self.data_config = CONFIG["dataset"] 
+    def __init__(self, configuration):         
+        self.configuration = configuration   
+
+    #--------------------------------------------------------------------------
+    def save_preprocessed_data(self, data : pd.DataFrame, path):          
+        
+        data_path = os.path.join(path, 'data', 'train_data.csv')        
+        data.to_csv(data_path, index=False, sep=';', encoding='utf-8')        
+        logger.debug(f'Preprocessed data has been saved at {path}')
+
+    #--------------------------------------------------------------------------
+    def load_preprocessed_data(self, path):
+
+        # load preprocessed train and validation data
+        train_file_path = os.path.join(path, 'XREPORT_train.csv') 
+        val_file_path = os.path.join(path, 'XREPORT_validation.csv')
+        train_data = pd.read_csv(train_file_path, encoding='utf-8', sep=';', low_memory=False)
+        validation_data = pd.read_csv(val_file_path, encoding='utf-8', sep=';', low_memory=False)
+
+        # transform text strings into array of words
+        train_data['tokens'] = train_data['tokens'].apply(lambda x : [int(f) for f in x.split()])
+        validation_data['tokens'] = validation_data['tokens'].apply(lambda x : [int(f) for f in x.split()])
+        # load preprocessing metadata
+        metadata_path = os.path.join(path, 'preprocessing_metadata.json')
+        with open(metadata_path, 'r') as file:
+            metadata = json.load(file)
+        
+        return train_data, validation_data, metadata   
         
            
 
@@ -76,28 +94,17 @@ class ModelSerializer:
     # function to create a folder where to save model checkpoints
     #--------------------------------------------------------------------------
     def create_checkpoint_folder(self):
-
-        '''
-        Creates a folder with the current date and time to save the model.
-
-        Keyword arguments:
-            None
-
-        Returns:
-            str: A string containing the path of the folder where the model will be saved.
-        
-        '''        
+     
         today_datetime = datetime.now().strftime('%Y%m%dT%H%M%S')        
-        checkpoint_folder_path = os.path.join(CHECKPOINT_PATH, f'{self.model_name}_{today_datetime}')         
-        os.makedirs(checkpoint_folder_path, exist_ok=True)        
-        os.makedirs(os.path.join(checkpoint_folder_path, 'data'), exist_ok=True)
-        logger.debug(f'Created checkpoint folder at {checkpoint_folder_path}')
+        checkpoint_path = os.path.join(CHECKPOINT_PATH, f'{self.model_name}_{today_datetime}')         
+        os.makedirs(checkpoint_path, exist_ok=True)        
+        os.makedirs(os.path.join(checkpoint_path, 'data'), exist_ok=True)
+        logger.debug(f'Created checkpoint folder at {checkpoint_path}')
         
-        return checkpoint_folder_path 
+        return checkpoint_path    
 
     #--------------------------------------------------------------------------
     def save_pretrained_model(self, model : keras.Model, path):
-
         model_files_path = os.path.join(path, 'saved_model.keras')
         model.save(model_files_path)
         logger.info(f'Training session is over. Model has been saved in folder {path}')
@@ -105,19 +112,6 @@ class ModelSerializer:
     #--------------------------------------------------------------------------
     def save_session_configuration(self, path, history : dict, configurations : dict):
 
-        '''
-        Saves the model parameters to a JSON file. The parameters are provided 
-        as a dictionary and are written to a file named 'model_parameters.json' 
-        in the specified directory.
-
-        Keyword arguments:
-            parameters_dict (dict): A dictionary containing the parameters to be saved.
-            path (str): The directory path where the parameters will be saved.
-
-        Returns:
-            None  
-
-        '''
         config_folder = os.path.join(path, 'configurations')
         os.makedirs(config_folder, exist_ok=True)
 
@@ -189,8 +183,8 @@ class ModelSerializer:
     #--------------------------------------------------------------------------
     def load_checkpoint(self, checkpoint_name):           
 
-        model_folder_path = os.path.join(CHECKPOINT_PATH, checkpoint_name)
-        model_path = os.path.join(model_folder_path, 'saved_model.keras') 
+        checkpoint_path = os.path.join(CHECKPOINT_PATH, checkpoint_name)
+        model_path = os.path.join(checkpoint_path, 'saved_model.keras') 
         model = keras.models.load_model(model_path) 
         
         return model

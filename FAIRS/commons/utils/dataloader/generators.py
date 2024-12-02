@@ -14,13 +14,14 @@ from FAIRS.commons.logger import logger
 ###############################################################################
 class RouletteGenerator():
 
-    def __init__(self, configuration):        
+    def __init__(self, configuration, path):        
         
         self.widows_size = configuration["dataset"]["PERCEPTIVE_SIZE"]         
         self.batch_size = configuration["training"]["BATCH_SIZE"] 
+        self.sample_size = configuration["dataset"]["SAMPLE_SIZE"]
         self.sequencer = TimeSequencer(configuration) 
         self.mapper = RouletteMapper() 
-        self.data = get_training_dataset()      
+        self.data = get_training_dataset(self.sample_size)      
         
     # ...
     #--------------------------------------------------------------------------

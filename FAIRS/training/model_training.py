@@ -9,7 +9,7 @@ warnings.simplefilter(action='ignore', category=Warning)
 
 # [IMPORT CUSTOM MODULES]
 from FAIRS.commons.utils.dataloader.generators import RouletteGenerator
-from FAIRS.commons.utils.dataloader.serializer import ModelSerializer
+from FAIRS.commons.utils.dataloader.serializer import DataSerializer, ModelSerializer
 from FAIRS.commons.utils.learning.models import FAIRSnet
 from FAIRS.commons.utils.learning.training import DQNTraining
 from FAIRS.commons.utils.validation.reports import log_training_report
@@ -26,9 +26,9 @@ if __name__ == '__main__':
     # load data from csv, add paths to images 
     logger.info(f'Loading FAIRS dataset from {DATA_PATH}')     
     generator = RouletteGenerator(CONFIG)    
-    roulette_dataset, color_encoder = generator.prepare_roulette_dataset()
+    roulette_dataset, color_encoder = generator.prepare_roulette_dataset()    
     
-    # 2. [BUILD MODEL AND AGENTSL]  
+    # 2. [BUILD MODEL AND AGENTS]  
     #-------------------------------------------------------------------------- 
     # initialize training device 
     # allows changing device prior to initializing the generators
@@ -38,7 +38,12 @@ if __name__ == '__main__':
        
     # create subfolder for saving the checkpoint    
     modelserializer = ModelSerializer()
-    model_folder_path = modelserializer.create_checkpoint_folder()  
+    checkpoint_path = modelserializer.create_checkpoint_folder()  
+    logger.info(f'Saving roulette extraction data in {checkpoint_path}')
+
+    # save preprocessed data references
+    dataserializer = DataSerializer(CONFIG)
+    dataserializer.save_preprocessed_data(roulette_dataset, checkpoint_path)  
 
     # build the FAIRSnet model and the DQNA agent     
     learner = FAIRSnet(CONFIG)
@@ -46,7 +51,7 @@ if __name__ == '__main__':
     target_model = learner.get_model(model_summary=False)    
     
     # generate graphviz plot fo the model layout         
-    modelserializer.save_model_plot(Q_model, model_folder_path)              
+    modelserializer.save_model_plot(Q_model, checkpoint_path)              
    
     # 3. [BUILD MODEL AND AGENT]  
     #--------------------------------------------------------------------------  
@@ -57,8 +62,8 @@ if __name__ == '__main__':
     log_training_report(roulette_dataset, CONFIG) 
 
     # perform training and save model at the end    
-    logger.info('Start training with reinforcement learning routine')
-    trainer.train_model(Q_model, target_model, roulette_dataset, model_folder_path)
+    logger.info('Start training with reinforcement learning pipeline')
+    trainer.train_model(Q_model, target_model, roulette_dataset, checkpoint_path)
 
 
 

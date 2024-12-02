@@ -64,17 +64,8 @@ class RouletteEnvironment(gym.Env):
 
     # Perform the action (0: Bet on Red, 1: Bet on Black, 2: Bet on Specific Number)
     #--------------------------------------------------------------------------
-    def step(self, action):
+    def get_rewards(self, action, next_extraction):         
 
-        if self.extraction_index >= self.timeseries.shape[0]:
-            state = self.reset()
-        
-        next_extraction = np.int32(self.timeseries[self.extraction_index])        
-        self.state = np.delete(self.state, 0)
-        self.state = np.append(self.state, next_extraction)
-        self.extraction_index += 1
-
-        # Calculate reward based on the action
         if 0 <= action <= 36:  # Bet on Specific Number            
             if action == next_extraction:
                 self.reward = 35 * self.bet_amount 
@@ -103,7 +94,21 @@ class RouletteEnvironment(gym.Env):
                 self.reward = 0  
                 self.capital -= 0 
                 self.done = True      
+    
 
+    # Perform the action (0: Bet on Red, 1: Bet on Black, 2: Bet on Specific Number)
+    #--------------------------------------------------------------------------
+    def step(self, action):
+
+        if self.extraction_index >= self.timeseries.shape[0]:
+            self.state = self.reset()
+        
+        next_extraction = np.int32(self.timeseries[self.extraction_index])        
+        self.state = np.delete(self.state, 0)
+        self.state = np.append(self.state, next_extraction)
+        self.extraction_index += 1
+
+        self.get_rewards(action, next_extraction)
         self.steps += 1
 
         # Check if the episode should end
@@ -112,24 +117,24 @@ class RouletteEnvironment(gym.Env):
         else:
             self.done = False
 
-        return self.state, self.reward, self.done, {"capital": self.capital}
+        return self.state, self.reward, self.done, {"capital": self.capital}, next_extraction
     
     # Render the environment to the screen 
     #--------------------------------------------------------------------------
     def _build_rendering_canvas(self):
         plt.ion()  # Turn on interactive mode
-        self.fig, self.ax = plt.subplots(figsize=(6, 6), subplot_kw={'projection': 'polar'})
+        self.fig, self.ax = plt.subplots(figsize=(10,10), subplot_kw={'projection': 'polar'})
         self.fig.canvas.manager.set_window_title('Roulette Wheel')  # Set window title
         plt.show(block=False)  
         # Store references to text objects for updating
         self.title_text = self.ax.set_title("Roulette Wheel - Current Spin")
+        self.episode_text = self.fig.text(0.5, 0.08, "", ha="center", fontsize=12)
         self.capital_text = self.fig.text(0.5, 0.05, "", ha="center", fontsize=12)
-        self.extraction_text = self.fig.text(0.5, 0.01, "", ha="center", fontsize=10)
-    
+        self.extraction_text = self.fig.text(0.5, 0.02, "", ha="center", fontsize=10)    
 
     # Render the environment to the screen 
     #--------------------------------------------------------------------------
-    def render(self):
+    def render(self, episode, time_step, action, extracted_number):
 
         self.ax.clear()
 
@@ -143,10 +148,24 @@ class RouletteEnvironment(gym.Env):
         # Create bars
         bars = self.ax.bar(theta, np.ones(NUMBERS), width=width, color=colors, edgecolor='white', align='edge')
 
+        # Highlight the action and related bars
+        if 0 <= action <= 36:  # Specific number
+            bars[action].set_facecolor('blue')  # Blue for the selected number
+            bars[action].set_alpha(0.7)
+
+        elif action == 37:  # Bet on red
+            for red_number in self.red_numbers:
+                bars[red_number].set_facecolor('blue')  # Highlight all red numbers
+                bars[red_number].set_alpha(0.7)
+
+        elif action == 38:  # Bet on black
+            for black_number in self.black_numbers:
+                bars[black_number].set_facecolor('blue')  # Highlight all black numbers
+                bars[black_number].set_alpha(0.7)
+
         # Highlight the last extracted number
-        extracted_number = 0 if np.all(self.state == -1) else self.state[-1]
-        bars[extracted_number].set_facecolor('yellow')  
-        bars[extracted_number].set_alpha(0.7)           
+        bars[extracted_number].set_facecolor('yellow')
+        bars[extracted_number].set_alpha(0.7)
 
         # Adjust the position of the labels to be on the outer edge
         for i, (label, angle) in enumerate(zip(labels, theta)):
@@ -173,6 +192,7 @@ class RouletteEnvironment(gym.Env):
 
         # Update title and texts without creating new ones
         self.title_text.set_text("Roulette Wheel - Current Spin")
+        self.episode_text.set_text(f"Episode {episode} | Time step {time_step}")
         self.capital_text.set_text(f"Current capital: {self.capital} | Reward: {self.reward}")
         self.extraction_text.set_text(f"Last extracted number: {extracted_number}")
 

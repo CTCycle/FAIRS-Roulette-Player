@@ -88,13 +88,13 @@ class DQNTraining:
                 logger.info(f'Timestep {time_step + 1} - Episode {episode+1}/{episodes}')   
                 # action is always performed using the Q model
                 action = agent.act(model, state)
-                next_state, reward, done, info = environment.step(action)
+                next_state, reward, done, info, extraction = environment.step(action)
                 total_reward += reward
                 next_state = np.reshape(next_state, [1, state_size])
 
                 # render environment 
                 if environment.render_environment:               
-                    environment.render()
+                    environment.render(episode, time_step, action, extraction)
 
                 # Remember experience
                 agent.remember(state, action, reward, next_state, done)

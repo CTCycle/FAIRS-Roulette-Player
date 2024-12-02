@@ -4,7 +4,6 @@ import torch
 
 from FAIRS.commons.utils.learning.embeddings import RouletteEmbedding
 from FAIRS.commons.utils.learning.logits import QScoreNet, AddNorm
-from FAIRS.commons.utils.learning.metrics import RouletteCategoricalCrossentropy, RouletteAccuracy
 from FAIRS.commons.constants import CONFIG, STATES
 from FAIRS.commons.logger import logger
 

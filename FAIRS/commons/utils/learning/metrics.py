@@ -2,7 +2,6 @@ import torch
 import keras
 import tensorflow as tf
 
-from FAIRS.commons.utils.process.mapping import RouletteMapper
 from FAIRS.commons.constants import CONFIG
 from FAIRS.commons.logger import logger
 
