@@ -2,8 +2,7 @@
     "SEED" : 54,   
     "dataset": {"FROM_GENERATOR" : null,
                 "SAMPLE_SIZE" : 1.0,
-                "VALIDATION_SIZE" : 0.1,
-                "PERCEPTIVE_SIZE": 64}, 
+                "VALIDATION_SIZE" : 0.1}, 
 
     "device" : {"DEVICE" : "GPU",
                 "DEVICE_ID" : 0,
@@ -11,7 +10,8 @@
                 "NUM_PROCESSORS": 6},
 
     "model" : {"EMBEDDING_DIMS" : 64,
-               "UNITS" : 200,             
+               "UNITS" : 200, 
+               "PERCEPTIVE_FIELD": 64,            
                "JIT_COMPILE" : false,
                "JIT_BACKEND" : "inductor"},
 

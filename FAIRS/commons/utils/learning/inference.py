@@ -12,19 +12,17 @@ from FAIRS.commons.logger import logger
 
 
 ###############################################################################
-class RouletteForecaster:
+class RoulettePlayer:
 
     def __init__(self, model : keras.Model, configuration, sequences : np.array):        
 
-        np.random.seed(configuration["SEED"])
-        torch.manual_seed(configuration["SEED"])
-        tf.random.set_seed(configuration["SEED"])
+        keras.utils.set_random_seed(configuration["SEED"])  
         self.mapper = RouletteMapper()        
               
         self.model = model 
         self.configuration = configuration
         self.sequences = sequences 
-        self.window_size = configuration["dataset"]["PERCEPTIVE_SIZE"] 
+        self.perceptive_field = configuration["model"]["PERCEPTIVE_FIELD"] 
 
         self.layer_names = [layer.name for layer in model.layers]  
         logger.debug(f'model layers detected: {self.layer_names}')

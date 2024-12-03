@@ -12,7 +12,7 @@ from FAIRS.commons.logger import logger
 ###############################################################################
 class DQNAgent:
     def __init__(self, configuration):
-        self.state_size = configuration["dataset"]["PERCEPTIVE_SIZE"]
+        self.state_size = configuration["model"]["PERCEPTIVE_FIELD"]
         self.action_size = STATES        
         self.gamma = configuration['agent']['DISCOUNT_RATE'] 
         self.epsilon = configuration['agent']['EXPLORATION_RATE']              

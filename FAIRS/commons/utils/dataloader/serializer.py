@@ -35,12 +35,11 @@ def checkpoint_selection_menu(models_list):
 
 # get FAIRS data for training
 ###############################################################################
-def get_training_dataset(sample_size=None):     
+def get_extraction_dataset(path, sample_size=None):     
 
     if sample_size is None:
-        sample_size = CONFIG["dataset"]["SAMPLE_SIZE"]
-    file_loc = os.path.join(DATA_PATH, DATASET_NAME) 
-    dataset = pd.read_csv(file_loc, encoding='utf-8', sep=';')
+        sample_size = CONFIG["dataset"]["SAMPLE_SIZE"]    
+    dataset = pd.read_csv(path, encoding='utf-8', sep=';')
     num_samples = int(dataset.shape[0] * sample_size)
     dataset = dataset[(dataset.shape[0] - num_samples):]
 
