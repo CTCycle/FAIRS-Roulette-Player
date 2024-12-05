@@ -54,12 +54,11 @@ class DataSerializer:
     def __init__(self, configuration):         
         self.configuration = configuration   
 
+    # save preprocessed roulette series as serialized numpy array
     #--------------------------------------------------------------------------
-    def save_preprocessed_data(self, data : pd.DataFrame, path):          
-        
-        data_path = os.path.join(path, 'data', 'train_data.csv')        
-        data.to_csv(data_path, index=False, sep=';', encoding='utf-8')        
-        logger.debug(f'Preprocessed data has been saved at {path}')
+    def save_preprocessed_data(self, data : np.array, path):              
+        data_path = os.path.join(path, 'data', 'train_data.npy')        
+        np.save(data_path, data)       
 
     #--------------------------------------------------------------------------
     def load_preprocessed_data(self, path):

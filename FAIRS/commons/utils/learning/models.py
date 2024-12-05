@@ -13,7 +13,7 @@ from FAIRS.commons.logger import logger
 class FAIRSnet: 
 
     def __init__(self, configuration):         
-        self.PERCEPTIVE_FIELD = configuration["model"]["PERCEPTIVE_FIELD"] 
+        self.perceptive_field = configuration["model"]["PERCEPTIVE_FIELD"] 
         self.embedding_dims = configuration["model"]["EMBEDDING_DIMS"] 
         self.neurons = configuration["model"]["UNITS"]                   
         self.jit_compile = configuration["model"]["JIT_COMPILE"]
@@ -22,7 +22,7 @@ class FAIRSnet:
         self.seed = configuration["SEED"]
        
         self.action_size = STATES
-        self.timeseries = layers.Input(shape=(self.PERCEPTIVE_FIELD,), name='timeseries')        
+        self.timeseries = layers.Input(shape=(self.perceptive_field,), name='timeseries')        
         self.embedding = RouletteEmbedding(self.embedding_dims, self.action_size, mask_negative=True)
         self.QNet = QScoreNet(self.neurons, self.action_size, self.seed)   
         
@@ -32,7 +32,7 @@ class FAIRSnet:
     def get_model(self, model_summary=True):    
 
         # initialize the image encoder and the transformers encoders and decoders      
-        timeseries = layers.Input(shape=(self.PERCEPTIVE_FIELD,), name='timeseries', dtype=torch.int32)
+        timeseries = layers.Input(shape=(self.perceptive_field,), name='timeseries', dtype=torch.int32)
                
         # add layer for frequency embedding
        

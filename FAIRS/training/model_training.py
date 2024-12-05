@@ -22,30 +22,33 @@ from FAIRS.commons.logger import logger
 if __name__ == '__main__':
 
     # 1. [LOAD DATA]
-    #--------------------------------------------------------------------------     
-    # load data from csv, add paths to images 
-    logger.info(f'Loading FAIRS dataset from {DATA_PATH}')     
+    #-------------------------------------------------------------------------- 
+    # use the roulette generator to process raw extractions and retrieve 
+    # sequence of positions and color-encoded values        
+    logger.info(f'Loading FAIRS dataset from {DATA_PATH}')           
     generator = RouletteGenerator(CONFIG)    
-    roulette_dataset, color_encoder = generator.prepare_roulette_dataset()    
+    dataset_path = os.path.join(DATA_PATH, 'FAIRS_dataset.csv') 
+    roulette_dataset = generator.prepare_roulette_dataset(dataset_path)    
     
     # 2. [BUILD MODEL AND AGENTS]  
     #-------------------------------------------------------------------------- 
-    # initialize training device 
-    # allows changing device prior to initializing the generators
+    # activate DQN agent initialize training device based on given configurations    
     logger.info('Building FAIRS model and data loaders')     
     trainer = DQNTraining(CONFIG) 
     trainer.set_device()    
        
-    # create subfolder for saving the checkpoint    
+    # create folder for saving the new checkpoint    
     modelserializer = ModelSerializer()
     checkpoint_path = modelserializer.create_checkpoint_folder()  
     logger.info(f'Saving roulette extraction data in {checkpoint_path}')
 
-    # save preprocessed data references
+    # save preprocessed roulette data into the checkpoint folder
     dataserializer = DataSerializer(CONFIG)
     dataserializer.save_preprocessed_data(roulette_dataset, checkpoint_path)  
 
-    # build the FAIRSnet model and the DQNA agent     
+    # build the target model and Q model based on FAIRSnet specifics
+    # Q model is the main trained model, while target model is used to predict 
+    # next state Q scores and is updated based on the Q model weights     
     learner = FAIRSnet(CONFIG)
     Q_model = learner.get_model(model_summary=True)
     target_model = learner.get_model(model_summary=False)    

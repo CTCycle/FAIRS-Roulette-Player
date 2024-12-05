@@ -64,8 +64,7 @@ class DQNTraining:
                             'loss': loss.item() if not None else 0,
                             'metrics': metric.item() if not None else 0,
                             'reward': reward,
-                            'total_reward': total_reward})
-        
+                            'total_reward': total_reward})        
 
     #--------------------------------------------------------------------------
     def reinforcement_learning_pipeline(self, model : keras.Model, target_model : keras.Model,
@@ -103,7 +102,8 @@ class DQNTraining:
                 # Perform replay if the memory size is sufficient
                 # use both the Q model and the target model
                 if len(agent.memory) > self.replay_size:
-                    scores = agent.replay(model, target_model, self.batch_size)                    
+                    scores = agent.replay(model, target_model, environment, self.batch_size)     
+                    logger.info(f'Loss = {scores["loss"]} - mean absolute % error = {scores["mean_absolute_percentage_error"]}')               
                     self.update_session_stats(scores, episode, time_step, reward, total_reward)
 
                 # call on_epoch_end method of selected callbacks             

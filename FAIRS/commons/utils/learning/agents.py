@@ -3,6 +3,7 @@ import numpy as np
 from collections import deque
 import keras
 
+from FAIRS.commons.utils.learning.environment import RouletteEnvironment
 from FAIRS.commons.constants import CONFIG, STATES
 from FAIRS.commons.logger import logger
 
@@ -48,7 +49,7 @@ class DQNAgent:
     # The highest predicted value represents the action that the agent believes 
     # will lead to the highest reward in the future.
     #--------------------------------------------------------------------------
-    def replay(self, model : keras.Model, target_model : keras.Model, batch_size):
+    def replay(self, model : keras.Model, target_model : keras.Model, environment : RouletteEnvironment, batch_size):
 
         # this prevents an error if the batch size is larger than the replay buffer size
         batch_size = min(batch_size, self.replay_size)
@@ -57,11 +58,11 @@ class DQNAgent:
         # minibatch is composed of multiple tuples, each containing state, action, reqard, next state and status
         # arrays of shape (batch size, item shape) are created. Both state and next state have shape (1, perceptive field)
         # therefor their single dimension must be squeezed out while creating the stacked array
-        states = np.array([np.squeeze(state) for state, action, reward, next_state, done in minibatch])
-        actions = np.array([action for state, action, reward, next_state, done in minibatch])
-        rewards = np.array([reward for state, action, reward, next_state, done in minibatch])
-        next_states = np.array([np.squeeze(next_state) for state, action, reward, next_state, done in minibatch])
-        dones = np.array([done for state, action, reward, next_state, done in minibatch]).astype(int)
+        states = np.array([np.squeeze(state) for state, action, reward, next_state, done in minibatch], dtype=np.int32)
+        actions = np.array([action for state, action, reward, next_state, done in minibatch], dtype=np.int32)
+        rewards = np.array([reward for state, action, reward, next_state, done in minibatch], dtype=np.float32)
+        next_states = np.array([np.squeeze(next_state) for state, action, reward, next_state, done in minibatch], dtype=np.int32)
+        dones = np.array([done for state, action, reward, next_state, done in minibatch], dtype=np.int32)
 
         # Predict Q-values for current states and next states
         targets = model.predict(states, verbose=0)
@@ -69,15 +70,15 @@ class DQNAgent:
         Q_future_max = np.max(Q_futures, axis=1)
 
         # Compute updated target values
-        updated_targets = rewards + self.gamma * Q_future_max * (1 - dones)
+        scaled_rewards = environment.scale_rewards(rewards)
+        updated_targets = scaled_rewards + self.gamma * Q_future_max * (1 - dones)
 
         # Update targets for the taken actions
         batch_indices = np.arange(batch_size, dtype=np.int32)
         targets[batch_indices, actions] = updated_targets
 
         # Fit the model on the entire batch using train on batch method
-        logs = model.train_on_batch(states, targets, return_dict=True) 
-        logger.info(f'Loss = {logs["loss"]} - mean absolute % error = {logs["mean_absolute_percentage_error"]}')
+        logs = model.train_on_batch(states, targets, return_dict=True)         
 
         # Update epsilon
         if self.epsilon > self.epsilon_min:

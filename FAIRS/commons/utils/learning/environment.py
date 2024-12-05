@@ -25,7 +25,7 @@ class RouletteEnvironment(gym.Env):
         self.colors = data[:, 2]
 
         mapper = RouletteMapper()          
-        self.PERCEPTIVE_FIELD = configuration["model"]["PERCEPTIVE_FIELD"]        
+        self.perceptive_field = configuration["model"]["PERCEPTIVE_FIELD"]        
         self.initial_capital = configuration["environment"]["INITIAL_CAPITAL"]
         self.bet_amount = configuration["environment"]["BET_AMOUNT"]
         self.max_steps = configuration["environment"]["MAX_STEPS"] 
@@ -33,16 +33,16 @@ class RouletteEnvironment(gym.Env):
         
         self.numbers = list(range(NUMBERS)) 
         self.red_numbers = mapper.color_map['red']
-        self.black_numbers = mapper.color_map['black']        
-        
+        self.black_numbers = mapper.color_map['black'] 
+                
         # Actions: 0 (Red), 1 (Black), 2-37 for betting on a specific number
         self.action_space = spaces.Discrete(STATES)
         # Observation space is the last perceptive_field numbers that appeared on the wheel
-        self.observation_space = spaces.Box(low=0, high=36, shape=(self.PERCEPTIVE_FIELD,), dtype=np.int32)
+        self.observation_space = spaces.Box(low=0, high=36, shape=(self.perceptive_field,), dtype=np.int32)
         
         # Initialize state, capital, steps, and reward  
         self.extraction_index = 0 
-        self.state = np.full(shape=self.PERCEPTIVE_FIELD, fill_value=-1)                       
+        self.state = np.full(shape=self.perceptive_field, fill_value=-1)                       
         self.capital = self.initial_capital
         self.steps = 0
         self.reward = 0
@@ -55,12 +55,22 @@ class RouletteEnvironment(gym.Env):
     #--------------------------------------------------------------------------
     def reset(self):        
         self.extraction_index = 0
-        self.state = np.full(shape=self.PERCEPTIVE_FIELD, fill_value=-1, dtype=np.int32)                  
+        self.state = np.full(shape=self.perceptive_field, fill_value=-1, dtype=np.int32)                  
         self.capital = self.initial_capital
         self.steps = 0
         self.done = False
 
         return self.state
+    
+    # Reset the state of the environment to an initial state
+    #--------------------------------------------------------------------------
+    def scale_rewards(self, rewards): 
+        # Scale negative rewards to [-1, 0] and scale positive rewards to [0, 1]
+        negative_scaled = ((rewards - (-self.bet_amount)) / (0 - (-self.bet_amount))) * (0 - (-1)) + (-1)        
+        positive_scaled = ((rewards - 0) / (self.bet_amount * 35)) * (1 - 0) + 0        
+        scaled_rewards = np.where(rewards < 0, negative_scaled, positive_scaled)
+
+        return scaled_rewards
 
     # Perform the action (0: Bet on Red, 1: Bet on Black, 2: Bet on Specific Number)
     #--------------------------------------------------------------------------
@@ -93,10 +103,8 @@ class RouletteEnvironment(gym.Env):
         elif action == 39: # pass the turn and stop playing 
                 self.reward = 0  
                 self.capital -= 0 
-                self.done = True      
-    
-
-    # Perform the action (0: Bet on Red, 1: Bet on Black, 2: Bet on Specific Number)
+                self.done = True    
+   
     #--------------------------------------------------------------------------
     def step(self, action):
 
@@ -117,9 +125,8 @@ class RouletteEnvironment(gym.Env):
         else:
             self.done = False
 
-        return self.state, self.reward, self.done, {"capital": self.capital}, next_extraction
-    
-    # Render the environment to the screen 
+        return self.state, self.reward, self.done, {"capital": self.capital}, next_extraction    
+
     #--------------------------------------------------------------------------
     def _build_rendering_canvas(self):
         plt.ion()  # Turn on interactive mode
@@ -192,7 +199,7 @@ class RouletteEnvironment(gym.Env):
 
         # Update title and texts without creating new ones
         self.title_text.set_text("Roulette Wheel - Current Spin")
-        self.episode_text.set_text(f"Episode {episode} | Time step {time_step}")
+        self.episode_text.set_text(f"Episode {episode+1} | Time step {time_step+1}")
         self.capital_text.set_text(f"Current capital: {self.capital} | Reward: {self.reward}")
         self.extraction_text.set_text(f"Last extracted number: {extracted_number}")
 

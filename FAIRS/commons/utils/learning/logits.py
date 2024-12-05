@@ -53,11 +53,10 @@ class QScoreNet(keras.layers.Layer):
         self.dense_units = dense_units
         self.output_size = output_size
         self.seed = seed
-        # apply the Q-score layers
+        # define Q score layers as Dense layers with linear activation
         self.Q1 = layers.Dense(self.dense_units, kernel_initializer='he_uniform')
         self.Q2 = layers.Dense(self.output_size, kernel_initializer='he_uniform', dtype=torch.float32)
-        self.batch_norm = layers.BatchNormalization()    
-        self.dropout = layers.Dropout(rate=0.2, seed=seed)
+        self.batch_norm = layers.BatchNormalization()         
 
     # build method for the custom layer 
     #--------------------------------------------------------------------------
@@ -68,9 +67,7 @@ class QScoreNet(keras.layers.Layer):
     #--------------------------------------------------------------------------    
     def call(self, inputs, training=None):
         x = self.Q1(inputs)
-        x = self.batch_norm(x, training=training)
-        x = activations.elu(x)        
-        x = self.dropout(x, training=training)
+        x = self.batch_norm(x, training=training)       
         output = self.Q2(x)                  
 
         return output

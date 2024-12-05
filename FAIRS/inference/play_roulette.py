@@ -28,8 +28,11 @@ if __name__ == '__main__':
    
     # 1. [LOAD DATA]
     #-------------------------------------------------------------------------- 
-    generator = RouletteGenerator(CONFIG)    
-    roulette_dataset, color_encoder = generator.prepare_roulette_dataset() 
+    # load the timeseries for predictions and use the roulette generator to process 
+    # raw extractions and retrieve sequence of positions and color-encoded values  
+    generator = RouletteGenerator(configuration)    
+    dataset_path = os.path.join(PRED_PATH, 'FAIRS_predictions.csv')
+    prediction_dataset = generator.prepare_roulette_dataset(dataset_path) 
  
     # 2. [GENERATE EXTRACTION SEQUENCES]
     #--------------------------------------------------------------------------    

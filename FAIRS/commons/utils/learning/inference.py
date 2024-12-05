@@ -14,19 +14,17 @@ from FAIRS.commons.logger import logger
 ###############################################################################
 class RoulettePlayer:
 
-    def __init__(self, model : keras.Model, configuration, sequences : np.array):        
+    def __init__(self, model : keras.Model, configuration):        
 
         keras.utils.set_random_seed(configuration["SEED"])  
         self.mapper = RouletteMapper()        
               
         self.model = model 
-        self.configuration = configuration
-        self.sequences = sequences 
+        self.configuration = configuration        
         self.perceptive_field = configuration["model"]["PERCEPTIVE_FIELD"] 
 
         self.layer_names = [layer.name for layer in model.layers]  
         logger.debug(f'model layers detected: {self.layer_names}')
-
         self.encoder_layer_names = [x for x in self.layer_names if 'tranformer_encoder' in x] 
         self.decoder_layer_names = [x for x in self.layer_names if 'tranformer_decoder' in x]        
 
