@@ -3,6 +3,9 @@ import keras
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import webbrowser
+import subprocess
+import time
 
 from FAIRS.commons.constants import CONFIG
 from FAIRS.commons.logger import logger
@@ -16,8 +19,7 @@ class RealTimeHistory(keras.callbacks.Callback):
         super(RealTimeHistory, self).__init__(**kwargs)
         self.plot_path = plot_path 
         self.past_logs = past_logs       
-        self.plot_epoch_gap = CONFIG["training"]["PLOT_EPOCH_GAP"]
-                
+                       
         # Initialize dictionaries to store history 
         self.history = {}
         self.val_history = {}
@@ -41,9 +43,7 @@ class RealTimeHistory(keras.callbacks.Callback):
                     self.history[key] = []
                 self.history[key].append(value)
         
-        # Update plots if necessary
-        if epoch % self.plot_epoch_gap == 0:
-            self.plot_training_history()
+        self.plot_training_history()
 
     #--------------------------------------------------------------------------
     def plot_training_history(self):
@@ -61,7 +61,7 @@ class RealTimeHistory(keras.callbacks.Callback):
             plt.xlabel('Epoch')
         
         plt.tight_layout()
-        plt.savefig(fig_path, bbox_inches='tight', format='jpeg', dpi=300)
+        plt.savefig(fig_path, bbox_inches='tight', format='jpeg', dpi=300)       
         plt.close()
 
 
@@ -74,4 +74,55 @@ class LoggingCallback(keras.callbacks.Callback):
 
 
 
+
+
+# add logger callback for the training session
+###############################################################################
+class CallbacksWrapper:
+
+    def __init__(self, configuration):
+        self.configuration = configuration
+
+    #--------------------------------------------------------------------------
+    def real_time_history(self, configuration, checkpoint_path, history):
+        RTH_callback = RealTimeHistory(checkpoint_path, configuration, past_logs=history)
+        logger_callback = LoggingCallback()          
+        
+        return RTH_callback, logger_callback
     
+    #--------------------------------------------------------------------------
+    def _start_tensorboard(self, log_dir):    
+        tensorboard_command = ["tensorboard", "--logdir", log_dir, "--port", "6006"]
+        subprocess.Popen(tensorboard_command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)      
+        time.sleep(4)            
+        webbrowser.open("http://localhost:6006")  
+
+    #--------------------------------------------------------------------------
+    def tensorboard_callback(self, checkpoint_path, model) -> keras.callbacks.TensorBoard:        
+        logger.debug('Using tensorboard during training')
+        log_path = os.path.join(checkpoint_path, 'tensorboard')
+        tb_callback = keras.callbacks.TensorBoard(log_dir=log_path, update_freq=20, 
+                                         histogram_freq=1) 
+
+        tb_callback.set_model(model)              
+        self._start_tensorboard(log_path)        
+
+        return tb_callback 
+    
+    #--------------------------------------------------------------------------
+    def checkpoints_saving(self, checkpoint_path):
+       
+        logger.debug('Adding checkpoint saving callback')
+        checkpoint_filepath = os.path.join(checkpoint_path, 'model_checkpoint.keras')
+        chkp_save = keras.callbacks.ModelCheckpoint(filepath=checkpoint_filepath,
+                                                    save_weights_only=True,  
+                                                    monitor='loss',       
+                                                    save_best_only=True,      
+                                                    mode='auto',              
+                                                    verbose=1)
+
+        return chkp_save
+    
+   
+
+

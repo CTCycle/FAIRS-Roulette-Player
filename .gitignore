@@ -1,9 +1,6 @@
 __pycache__
-FAIRS/resources/dataset/*
-FAIRS/inference/predictions/*
 FAIRS/resources/checkpoints/*
 
 *.egg-info
 *.log
-*.npy
 !.gitkeep

@@ -1,76 +1,74 @@
 import keras
-from keras import losses, metrics, layers, Model
+from keras import losses, metrics, layers, Model, activations
+import torch
 
-from FAIRS.commons.utils.learning.embeddings import PositionalEmbedding
-from FAIRS.commons.utils.learning.transformers import TransformerEncoder, TransformerDecoder
-from FAIRS.commons.utils.learning.classifiers import SoftMaxClassifier
-from FAIRS.commons.utils.learning.metrics import RouletteCategoricalCrossentropy, RouletteAccuracy
-from FAIRS.commons.constants import CONFIG, STATES, COLORS
+from FAIRS.commons.utils.learning.embeddings import RouletteEmbedding
+from FAIRS.commons.utils.learning.logits import QScoreNet, AddNorm
+from FAIRS.commons.constants import CONFIG, STATES
 from FAIRS.commons.logger import logger
 
 
-# [XREP CAPTIONING MODEL]
+# [FAIRS MODEL]
 ###############################################################################
 class FAIRSnet: 
 
-    def __init__(self):         
-             
-        self.window_size = CONFIG["dataset"]["WINDOW_SIZE"] 
-        self.embedding_dims = CONFIG["model"]["EMBEDDING_DIMS"]        
-        self.num_heads = CONFIG["model"]["NUM_HEADS"]  
-        self.num_encoders = CONFIG["model"]["NUM_ENCODERS"] 
-        self.num_decoders = CONFIG["model"]["NUM_DECODERS"]
-        self.learning_rate = CONFIG["training"]["LEARNING_RATE"]             
-        self.xla_state = CONFIG["training"]["XLA_STATE"]  
-
-        # initialize the image encoder and the transformers encoders and decoders
-        self.encoder_timeseries = layers.Input(shape=(self.window_size,), name='encoder_timeseries')
-        self.decoder_timeseries = layers.Input(shape=(self.window_size,), name='decoder_timeseries')
-        self.encoder_positions = layers.Input(shape=(self.window_size,), name='encoder_positions') 
-        self.decoder_positions = layers.Input(shape=(self.window_size,), name='decoder_positions')         
-                
-        self.encoders = [TransformerEncoder(self.embedding_dims, self.num_heads) for _ in range(self.num_encoders)]
-        self.decoders = [TransformerDecoder(self.embedding_dims, self.num_heads) for _ in range(self.num_decoders)]
-        self.encoder_embeddings = PositionalEmbedding(self.embedding_dims, self.window_size, mask_zero=False) 
-        self.decoder_embeddings = PositionalEmbedding(self.embedding_dims, self.window_size, mask_zero=False) 
-        self.classifier = SoftMaxClassifier(128, STATES)  
+    def __init__(self, configuration):         
+        self.perceptive_size = configuration["model"]["PERCEPTIVE_FIELD"] 
+        self.embedding_dims = configuration["model"]["EMBEDDING_DIMS"] 
+        self.neurons = configuration["model"]["UNITS"]                   
+        self.jit_compile = configuration["model"]["JIT_COMPILE"]
+        self.jit_backend = configuration["model"]["JIT_BACKEND"]
+        self.learning_rate = configuration["training"]["LEARNING_RATE"]       
+        self.seed = configuration["SEED"]
+       
+        self.action_size = STATES
+        self.timeseries = layers.Input(shape=(self.perceptive_size,), name='timeseries')        
+        self.embedding = RouletteEmbedding(self.embedding_dims, self.action_size, mask_negative=True)
+        self.QNet = QScoreNet(self.neurons, self.action_size, self.seed)   
+        
         
     # build model given the architecture
     #--------------------------------------------------------------------------
-    def get_model(self, summary=True):                
-       
-        # encode images using the convolutional encoder
-        pos_emb_encoder = self.encoder_embeddings(self.encoder_timeseries, self.encoder_positions) 
-        pos_emb_decoder = self.decoder_embeddings(self.decoder_timeseries, self.decoder_positions) 
-        
-        # handle the connections between transformers blocks        
-        encoder_output = pos_emb_encoder
-        decoder_output = pos_emb_decoder    
-        for encoder in self.encoders:
-            encoder_output = encoder(encoder_output, training=False)
-        for decoder in self.decoders:
-            decoder_output = decoder(decoder_output, encoder_output, 
-                                     training=False, mask=None)
+    def get_model(self, model_summary=True):    
 
-        # apply the softmax classifier layer
-        output = self.classifier(decoder_output)        
+        # initialize the image encoder and the transformers encoders and decoders      
+        timeseries = layers.Input(shape=(self.perceptive_size,), name='timeseries', dtype=torch.int32)
+               
+        # add layer for frequency embedding
+       
+        embeddings = self.embedding(timeseries)
+        res = layers.Dense(self.neurons, kernel_initializer='he_uniform')(embeddings)             
+        layer = layers.Dense(self.neurons, kernel_initializer='he_uniform')(res)                      
+        layer = AddNorm()([res, layer])
+        layer = activations.relu(layer)  
+
+        res = layers.Dense(self.neurons//2, kernel_initializer='he_uniform')(layer)             
+        layer = layers.Dense(self.neurons//2, kernel_initializer='he_uniform')(res)                      
+        layer = AddNorm()([res, layer])
+        layer = activations.relu(layer)      
+        
+        layer = layers.Flatten()(layer)
+        res = layers.Dense(self.neurons*2, kernel_initializer='he_uniform')(layer)    
+        layer = layers.Dense(self.neurons*2, kernel_initializer='he_uniform')(res)
+        layer = AddNorm()([res, layer])
+        layer = activations.relu(layer)              
+        output = self.QNet(layer)         
         
         # define the model from inputs and outputs
-        model = Model(inputs=[self.encoder_timeseries, self.encoder_positions,
-                              self.decoder_timeseries, self.decoder_positions], 
-                      outputs=output)     
+        model = Model(inputs=timeseries, outputs=output)                
 
         # define model compilation parameters such as learning rate, loss, metrics and optimizer
-        loss = [RouletteCategoricalCrossentropy(window_size=self.window_size, 
-                                                penalty_increase=CONFIG["training"]["LOSS_PENALTY_FACTOR"])] 
-        metric = [metrics.SparseCategoricalAccuracy()]
+        loss = losses.MeanSquaredError() 
+        metric = [metrics.MeanAbsolutePercentageError()]
         opt = keras.optimizers.Adam(learning_rate=self.learning_rate)          
-        model.compile(loss=loss, optimizer=opt, metrics=metric, jit_compile=self.xla_state)         
-        if summary:
+        model.compile(loss=loss, optimizer=opt, metrics=metric, jit_compile=False)
+
+        if self.jit_compile:
+            model = torch.compile(model, backend=self.jit_backend, mode='default')
+
+        if model_summary:
             model.summary(expand_nested=True)
 
-        return model
+        return model           
        
-
-
-
+       

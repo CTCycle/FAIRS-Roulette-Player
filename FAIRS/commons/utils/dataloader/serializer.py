@@ -6,80 +6,82 @@ import pandas as pd
 from datetime import datetime
 import keras
 
-from FAIRS.commons.constants import CONFIG, DATA_PATH, PRED_PATH, DATASET_NAME, CHECKPOINT_PATH
+from FAIRS.commons.constants import CONFIG, DATA_PATH, DATASET_NAME, CHECKPOINT_PATH
 from FAIRS.commons.logger import logger
+
+
+
+###############################################################################
+def checkpoint_selection_menu(models_list):
+
+    index_list = [idx + 1 for idx, item in enumerate(models_list)]     
+    print('Currently available pretrained models:')             
+    for i, directory in enumerate(models_list):
+        print(f'{i + 1} - {directory}')                         
+    while True:
+        try:
+            selection_index = int(input('\nSelect the pretrained model: '))
+            print()
+        except ValueError:
+            logger.error('Invalid choice for the pretrained model, asking again')
+            continue
+        if selection_index in index_list:
+            break
+        else:
+            logger.warning('Model does not exist, please select a valid index')
+
+    return selection_index
 
 
 # get FAIRS data for training
 ###############################################################################
-def get_training_dataset(sample_size=None):     
+def get_extraction_dataset(path, sample_size=None):     
 
     if sample_size is None:
-        sample_size =  CONFIG["dataset"]["SAMPLE_SIZE"]
-    file_loc = os.path.join(DATA_PATH, DATASET_NAME) 
-    dataset = pd.read_csv(file_loc, encoding='utf-8', sep=';')
+        sample_size = CONFIG["dataset"]["SAMPLE_SIZE"]    
+    dataset = pd.read_csv(path, encoding='utf-8', sep=';')
     num_samples = int(dataset.shape[0] * sample_size)
     dataset = dataset[(dataset.shape[0] - num_samples):]
 
     return dataset
 
-# get FAIRS data for predictions
-###############################################################################
-def get_predictions_dataset():
-
-    file_loc = os.path.join(PRED_PATH, 'FAIRS_predictions.csv') 
-    dataset = pd.read_csv(file_loc, encoding='utf-8', sep=';')    
-
-    return dataset
-    
+   
 
 # [DATA SERIALIZATION]
 ###############################################################################
 class DataSerializer:
 
-    def __init__(self):        
-        self.data_config = CONFIG["dataset"]    
+    def __init__(self, configuration):         
+        self.configuration = configuration   
 
-    # ...
+    # save preprocessed roulette series as serialized numpy array
     #--------------------------------------------------------------------------
-    def save_preprocessed_data(self, train_data, validation_data, path=''): 
-        
-        # save the array as .npy files
-        np.save(os.path.join(path, 'train_inputs.npy'), train_data)   
-        np.save(os.path.join(path, 'validation_inputs.npy'), validation_data)           
-        logger.debug(f'Preprocessed train and validation data has been saved at {path}') 
-              
-        # save the preprocessing info as .json file in the dataset folder
-        processing_info = {'sample_size' : CONFIG["dataset"]["SAMPLE_SIZE"],
-                           'train_size' : 1.0 - CONFIG["dataset"]["VALIDATION_SIZE"],
-                           'validation_size' : CONFIG["dataset"]["VALIDATION_SIZE"],
-                           'window_size' : CONFIG["dataset"]["WINDOW_SIZE"],                           
-                           'date': datetime.now().strftime("%Y-%m-%d")}
-        
-        json_info_path = os.path.join(path, 'preprocessing_metadata.json')
-        with open(json_info_path, 'w') as file:
-            json.dump(processing_info, file, indent=4) 
-            logger.debug('Preprocessing info:\n%s', file)
+    def save_preprocessed_data(self, data : np.array, path):              
+        data_path = os.path.join(path, 'data', 'train_data.npy')        
+        np.save(data_path, data)       
 
-    # ...
     #--------------------------------------------------------------------------
     def load_preprocessed_data(self, path):
- 
-        # load preprocessed train and validation data from .npy files
-        pp_path = os.path.join(path, 'data')
-        train_inputs_path = os.path.join(pp_path, 'train_inputs.npy')       
-        val_inputs_path = os.path.join(pp_path, 'validation_inputs.npy')    
-        train_data = np.load(train_inputs_path)       
-        validation_data = np.load(val_inputs_path)   
 
-        # Load preprocessing metadata from .json file
-        metadata_path = os.path.join(pp_path, 'preprocessing_metadata.json')
+        # load preprocessed train and validation data
+        train_file_path = os.path.join(path, 'XREPORT_train.csv') 
+        val_file_path = os.path.join(path, 'XREPORT_validation.csv')
+        train_data = pd.read_csv(train_file_path, encoding='utf-8', sep=';', low_memory=False)
+        validation_data = pd.read_csv(val_file_path, encoding='utf-8', sep=';', low_memory=False)
+
+        # transform text strings into array of words
+        train_data['tokens'] = train_data['tokens'].apply(lambda x : [int(f) for f in x.split()])
+        validation_data['tokens'] = validation_data['tokens'].apply(lambda x : [int(f) for f in x.split()])
+        # load preprocessing metadata
+        metadata_path = os.path.join(path, 'preprocessing_metadata.json')
         with open(metadata_path, 'r') as file:
-            metadata = json.load(file)        
+            metadata = json.load(file)
+        
+        return train_data, validation_data, metadata   
+        
+           
 
-        return train_data, validation_data, metadata 
     
-
 # [MODEL SERIALIZATION]
 ###############################################################################
 class ModelSerializer:
@@ -90,28 +92,17 @@ class ModelSerializer:
     # function to create a folder where to save model checkpoints
     #--------------------------------------------------------------------------
     def create_checkpoint_folder(self):
-
-        '''
-        Creates a folder with the current date and time to save the model.
-
-        Keyword arguments:
-            None
-
-        Returns:
-            str: A string containing the path of the folder where the model will be saved.
-        
-        '''        
+     
         today_datetime = datetime.now().strftime('%Y%m%dT%H%M%S')        
-        checkpoint_folder_path = os.path.join(CHECKPOINT_PATH, f'{self.model_name}_{today_datetime}')         
-        os.makedirs(checkpoint_folder_path, exist_ok=True)        
-        os.makedirs(os.path.join(checkpoint_folder_path, 'data'), exist_ok=True)
-        logger.debug(f'Created checkpoint folder at {checkpoint_folder_path}')
+        checkpoint_path = os.path.join(CHECKPOINT_PATH, f'{self.model_name}_{today_datetime}')         
+        os.makedirs(checkpoint_path, exist_ok=True)        
+        os.makedirs(os.path.join(checkpoint_path, 'data'), exist_ok=True)
+        logger.debug(f'Created checkpoint folder at {checkpoint_path}')
         
-        return checkpoint_folder_path 
+        return checkpoint_path    
 
     #--------------------------------------------------------------------------
     def save_pretrained_model(self, model : keras.Model, path):
-
         model_files_path = os.path.join(path, 'saved_model.keras')
         model.save(model_files_path)
         logger.info(f'Training session is over. Model has been saved in folder {path}')
@@ -119,19 +110,6 @@ class ModelSerializer:
     #--------------------------------------------------------------------------
     def save_session_configuration(self, path, history : dict, configurations : dict):
 
-        '''
-        Saves the model parameters to a JSON file. The parameters are provided 
-        as a dictionary and are written to a file named 'model_parameters.json' 
-        in the specified directory.
-
-        Keyword arguments:
-            parameters_dict (dict): A dictionary containing the parameters to be saved.
-            path (str): The directory path where the parameters will be saved.
-
-        Returns:
-            None  
-
-        '''
         config_folder = os.path.join(path, 'configurations')
         os.makedirs(config_folder, exist_ok=True)
 
@@ -181,44 +159,39 @@ class ModelSerializer:
         with open(history_path, 'r') as f:
             history = json.load(f)
 
-        return configurations, history   
+        return configurations, history  
 
-    #--------------------------------------------------------------------------
-    def save_model_plot(self, model, path):
-
-        if CONFIG["model"]["SAVE_MODEL_PLOT"]:
-            logger.debug('Generating model architecture graph')
-            plot_path = os.path.join(path, 'model_layout.png')       
-            keras.utils.plot_model(model, to_file=plot_path, show_shapes=True, 
-                       show_layer_names=True, show_layer_activations=True, 
-                       expand_nested=True, rankdir='TB', dpi=400)
-            
     #-------------------------------------------------------------------------- 
-    def load_pretrained_model(self): 
-
-        '''
-        Load a pretrained Keras model from the specified directory. If multiple model 
-        directories are found, the user is prompted to select one. If only one model 
-        directory is found, that model is loaded directly. If a 'model_parameters.json' 
-        file is present in the selected directory, the function also loads the model 
-        parameters.
-
-        Keyword arguments:
-            path (str): The directory path where the pretrained models are stored.
-            load_parameters (bool, optional): If True, the function also loads the 
-                                            model parameters from a JSON file. 
-                                            Default is True.
-
-        Returns:
-            model (keras.Model): The loaded Keras model.
-            configuration (dict): The loaded model parameters, or None if the parameters file is not found.
-
-        '''  
-        # look into checkpoint folder to get pretrained model names      
+    def scan_checkpoints_folder(self):
         model_folders = []
         for entry in os.scandir(CHECKPOINT_PATH):
             if entry.is_dir():
                 model_folders.append(entry.name)
+        
+        return model_folders 
+
+    #--------------------------------------------------------------------------
+    def save_model_plot(self, model, path):        
+        logger.debug('Generating model architecture graph')
+        plot_path = os.path.join(path, 'model_layout.png')       
+        keras.utils.plot_model(model, to_file=plot_path, show_shapes=True, 
+                    show_layer_names=True, show_layer_activations=True, 
+                    expand_nested=True, rankdir='TB', dpi=400)
+            
+    #--------------------------------------------------------------------------
+    def load_checkpoint(self, checkpoint_name):           
+
+        checkpoint_path = os.path.join(CHECKPOINT_PATH, checkpoint_name)
+        model_path = os.path.join(checkpoint_path, 'saved_model.keras') 
+        model = keras.models.load_model(model_path) 
+        
+        return model
+            
+    #-------------------------------------------------------------------------- 
+    def select_and_load_checkpoint(self): 
+
+        # look into checkpoint folder to get pretrained model names      
+        model_folders = self.scan_checkpoints_folder()
 
         # quit the script if no pretrained models are found 
         if len(model_folders) == 0:
@@ -227,42 +200,20 @@ class ModelSerializer:
 
         # select model if multiple checkpoints are available
         if len(model_folders) > 1:
-            model_folders.sort()
-            index_list = [idx + 1 for idx, item in enumerate(model_folders)]     
-            print('Currently available pretrained models:')             
-            for i, directory in enumerate(model_folders):
-                print(f'{i + 1} - {directory}')                         
-            while True:
-                try:
-                    dir_index = int(input('\nSelect the pretrained model: '))
-                    print()
-                except ValueError:
-                    logger.error('Invalid choice for the pretrained model, asking again')
-                    continue
-                if dir_index in index_list:
-                    break
-                else:
-                    logger.warning('Model does not exist, please select a valid index')
-                    
-            self.loaded_model_folder = os.path.join(CHECKPOINT_PATH, model_folders[dir_index - 1])
+            selection_index = checkpoint_selection_menu(model_folders)                    
+            checkpoint_path = os.path.join(CHECKPOINT_PATH, model_folders[selection_index-1])
 
         # load directly the pretrained model if only one is available 
         elif len(model_folders) == 1:
-            logger.info('Loading pretrained model directly as only one is available')
-            self.loaded_model_folder = os.path.join(CHECKPOINT_PATH, model_folders[0])                 
-            
-        # Set dictionary of custom objects     
-        # custom_objects = {'RouletteCategoricalCrossentropy': RouletteCategoricalCrossentropy}          
-        
+            checkpoint_path = os.path.join(CHECKPOINT_PATH, model_folders[0])
+            logger.info(f'Since only checkpoint {os.path.basename(checkpoint_path)} is available, it will be loaded directly')
+                          
         # effectively load the model using keras builtin method
-        # Load the model with the custom objects 
-        model_path = os.path.join(self.loaded_model_folder, 'saved_model.keras')         
-        model = keras.models.load_model(model_path, custom_objects=None) 
-
         # load configuration data from .json file in checkpoint folder
-        configuration, history = self.load_session_configuration(self.loaded_model_folder)          
+        model = self.load_checkpoint(checkpoint_path)       
+        configuration, history = self.load_session_configuration(checkpoint_path)           
             
-        return model, configuration, history
+        return model, configuration, history, checkpoint_path
 
              
     

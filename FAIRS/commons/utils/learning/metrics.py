@@ -2,7 +2,6 @@ import torch
 import keras
 import tensorflow as tf
 
-from FAIRS.commons.utils.preprocessing.mapping import RouletteMapper
 from FAIRS.commons.constants import CONFIG
 from FAIRS.commons.logger import logger
 
@@ -11,12 +10,12 @@ from FAIRS.commons.logger import logger
 class RouletteCategoricalCrossentropy(keras.losses.Loss):
     
     def __init__(self, name='RouletteCategoricalCrossentropy', penalty_increase=0.05, 
-                 window_size=10, **kwargs):
+                 perceptive_field=10, **kwargs):
         super(RouletteCategoricalCrossentropy, self).__init__(name=name, **kwargs)        
         self.penalty_increase = penalty_increase
-        self.window_size = window_size
+        self.perceptive_size = perceptive_field
         # Define penalty_scores as per the increasing factor
-        self.penalty_scores = [1 + (i - 1) * self.penalty_increase for i in range(1, self.window_size + 1)]
+        self.penalty_scores = [1 + (i - 1) * self.penalty_increase for i in range(1, self.perceptive_size + 1)]
         self.penalty_scores = keras.ops.convert_to_tensor(self.penalty_scores, dtype=tf.float32)  
         # Use reduction='none' to get per-sample loss
         self.loss = keras.losses.SparseCategoricalCrossentropy(from_logits=False, reduction='none')   
@@ -34,7 +33,7 @@ class RouletteCategoricalCrossentropy(keras.losses.Loss):
     #--------------------------------------------------------------------------    
     def get_config(self):
         base_config = super(RouletteCategoricalCrossentropy, self).get_config()
-        return {**base_config, 'name': self.name, 'window_size' : self.window_size,
+        return {**base_config, 'name': self.name, 'perceptive_field' : self.perceptive_size,
                 'penalty_increase': self.penalty_increase}
     
     @classmethod
@@ -72,7 +71,7 @@ class RouletteAccuracy(keras.metrics.Metric):
         return self.total / (self.count + keras.backend.epsilon())
     
     #--------------------------------------------------------------------------
-    def reset_states(self):
+    def reset_NUMBERS(self):
         self.total.assign(0)
         self.count.assign(0)
 

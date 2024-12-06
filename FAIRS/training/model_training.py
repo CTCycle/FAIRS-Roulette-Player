@@ -1,20 +1,19 @@
 # [SET KERAS BACKEND]
 import os 
 os.environ["KERAS_BACKEND"] = "torch"
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 # [SETTING WARNINGS]
 import warnings
 warnings.simplefilter(action='ignore', category=Warning)
 
 # [IMPORT CUSTOM MODULES]
-from FAIRS.commons.utils.preprocessing.mapping import RouletteMapper
-from FAIRS.commons.utils.preprocessing.splitting import DatasetSplit
-from FAIRS.commons.utils.preprocessing.sequences import TimeSequencer
-from FAIRS.commons.utils.dataloader.generators import training_data_pipeline
-from FAIRS.commons.utils.dataloader.serializer import get_training_dataset, DataSerializer, ModelSerializer
+from FAIRS.commons.utils.dataloader.generators import RouletteGenerator
+from FAIRS.commons.utils.dataloader.serializer import DataSerializer, ModelSerializer
 from FAIRS.commons.utils.learning.models import FAIRSnet
-from FAIRS.commons.utils.learning.training import ModelTraining
-from FAIRS.commons.constants import CONFIG, DATA_PATH, DATASET_NAME
+from FAIRS.commons.utils.learning.training import DQNTraining
+from FAIRS.commons.utils.validation.reports import log_training_report
+from FAIRS.commons.constants import CONFIG, DATA_PATH
 from FAIRS.commons.logger import logger
 
 
@@ -23,74 +22,51 @@ from FAIRS.commons.logger import logger
 if __name__ == '__main__':
 
     # 1. [LOAD DATA]
-    #--------------------------------------------------------------------------     
-    # load data from csv, add paths to images 
-    logger.info(f'Loading FAIRS dataset from {DATA_PATH}')    
-    df_FAIRS = get_training_dataset()
-
-    # 2. [MAP DATA TO ROULETTE POSITIONS AND COLORS]
-    #--------------------------------------------------------------------------    
-    mapper = RouletteMapper()
-    logger.info('Encoding position and colors from raw number timeseries')    
-    df_FAIRS, color_encoder = mapper.encode_roulette_extractions(df_FAIRS)
+    #-------------------------------------------------------------------------- 
+    # use the roulette generator to process raw extractions and retrieve 
+    # sequence of positions and color-encoded values        
+    logger.info(f'Loading FAIRS dataset from {DATA_PATH}')           
+    generator = RouletteGenerator(CONFIG)    
+    dataset_path = os.path.join(DATA_PATH, 'FAIRS_dataset.csv') 
+    roulette_dataset = generator.prepare_roulette_dataset(dataset_path)    
     
-    # 3. [SPLIT DATASET]
-    #--------------------------------------------------------------------------
-    # split dataset into train and test and generate window-dataset   
-    splitter = DatasetSplit(df_FAIRS)    
-    train_data, validation_data = splitter.split_train_and_validation() 
-
-    sequencer = TimeSequencer() 
-    train_inputs = sequencer.generate_shifted_sequences(train_data)
-    validation_inputs = sequencer.generate_shifted_sequences(validation_data)       
-
-    # 3. [SAVE PREPROCESSED DATA]
-    #--------------------------------------------------------------------------
-    # create subfolder for preprocessing data    
-    modelserializer = ModelSerializer()
-    model_folder_path = modelserializer.create_checkpoint_folder()  
-
-    # save preprocessed data using data serializer
-    dataserializer = DataSerializer()
-    processed_data_path = os.path.join(model_folder_path, 'data')   
-    dataserializer.save_preprocessed_data(train_inputs, validation_inputs, processed_data_path)      
-
-    # 4. [DEFINE GENERATOR AND BUILD TF.DATASET]
-    #--------------------------------------------------------------------------
-    # initialize training device 
-    # allows changing device prior to initializing the generators
+    # 2. [BUILD MODEL AND AGENTS]  
+    #-------------------------------------------------------------------------- 
+    # activate DQN agent initialize training device based on given configurations    
     logger.info('Building FAIRS model and data loaders')     
-    trainer = ModelTraining(CONFIG) 
+    trainer = DQNTraining(CONFIG) 
     trainer.set_device()    
        
-    # create the tf.datasets using the previously initialized generators    
-    train_dataset, validation_dataset = training_data_pipeline(train_inputs, validation_inputs)   
+    # create folder for saving the new checkpoint    
+    modelserializer = ModelSerializer()
+    checkpoint_path = modelserializer.create_checkpoint_folder()  
+    logger.info(f'Saving roulette extraction data in {checkpoint_path}')
+
+    # save preprocessed roulette data into the checkpoint folder
+    dataserializer = DataSerializer(CONFIG)
+    dataserializer.save_preprocessed_data(roulette_dataset, checkpoint_path)  
+
+    # build the target model and Q model based on FAIRSnet specifics
+    # Q model is the main trained model, while target model is used to predict 
+    # next state Q scores and is updated based on the Q model weights     
+    learner = FAIRSnet(CONFIG)
+    Q_model = learner.get_model(model_summary=True)
+    target_model = learner.get_model(model_summary=False)    
+    
+    # generate graphviz plot fo the model layout         
+    modelserializer.save_model_plot(Q_model, checkpoint_path)              
    
-    # 3. [TRAINING MODEL]  
+    # 3. [BUILD MODEL AND AGENT]  
     #--------------------------------------------------------------------------  
     # Setting callbacks and training routine for the features extraction model 
     # use command prompt on the model folder and (upon activating environment), 
     # use the bash command: python -m tensorboard.main --logdir tensorboard/ 
     #--------------------------------------------------------------------------
-    logger.info('--------------------------------------------------------------')
-    logger.info('FAIRS training report')
-    logger.info('--------------------------------------------------------------')    
-    logger.info(f'Number of train samples:       {len(train_data)}')
-    logger.info(f'Number of validation samples:  {len(validation_data)}')      
-    logger.info(f'Embedding dimensions:          {CONFIG["model"]["EMBEDDING_DIMS"]}')   
-    logger.info(f'Batch size:                    {CONFIG["training"]["BATCH_SIZE"]}')
-    logger.info(f'Epochs:                        {CONFIG["training"]["EPOCHS"]}')  
-    logger.info('--------------------------------------------------------------\n')  
+    log_training_report(roulette_dataset, CONFIG) 
 
-    # build the autoencoder model     
-    classifier = FAIRSnet()
-    model = classifier.get_model(summary=True)
-    
-    # generate graphviz plot fo the model layout         
-    modelserializer.save_model_plot(model, model_folder_path)              
-
-    # perform training and save model at the end
-    trainer.train_model(model, train_dataset, validation_dataset, model_folder_path)
+    # perform training and save model at the end    
+    logger.info('Start training with reinforcement learning pipeline')
+    trainer.train_model(Q_model, target_model, roulette_dataset, checkpoint_path)
 
 
 
