@@ -34,11 +34,13 @@ if __name__ == '__main__':
     dataset_path = os.path.join(PRED_PATH, 'FAIRS_predictions.csv')
     prediction_dataset = generator.prepare_roulette_dataset(dataset_path) 
  
-    # 2. [GENERATE EXTRACTION SEQUENCES]
-    #--------------------------------------------------------------------------    
-    generator = RoulettePlayer(model, configuration) 
-    logger.info('Generating roulette series from last window')   
-    generated_timeseries = generator.generate_sequences()
+    # 2. [START PREDICTIONS]
+    #--------------------------------------------------------------------------
+    logger.info('Generating roulette series from last window')    
+    generator = RoulettePlayer(model, configuration)       
+    generated_timeseries = generator.play_roulette_game(prediction_dataset, fraction=0.05)
+
+    pass
 
     
 

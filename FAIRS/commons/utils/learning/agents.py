@@ -58,20 +58,29 @@ class DQNAgent:
         # minibatch is composed of multiple tuples, each containing state, action, reqard, next state and status
         # arrays of shape (batch size, item shape) are created. Both state and next state have shape (1, perceptive field)
         # therefor their single dimension must be squeezed out while creating the stacked array
-        states = np.array([np.squeeze(state) for state, action, reward, next_state, done in minibatch], dtype=np.int32)
-        actions = np.array([action for state, action, reward, next_state, done in minibatch], dtype=np.int32)
-        rewards = np.array([reward for state, action, reward, next_state, done in minibatch], dtype=np.float32)
-        next_states = np.array([np.squeeze(next_state) for state, action, reward, next_state, done in minibatch], dtype=np.int32)
-        dones = np.array([done for state, action, reward, next_state, done in minibatch], dtype=np.int32)
+        states = np.array([np.squeeze(s) for s, a, r, ns, d in minibatch], dtype=np.int32)
+        actions = np.array([a for s, a, r, ns, d in minibatch], dtype=np.int32)
+        rewards = np.array([r for s, a, r, ns, d in minibatch], dtype=np.float32)
+        next_states = np.array([np.squeeze(ns) for s, a, r, ns, d in minibatch], dtype=np.int32)
+        dones = np.array([d for s, a, r, ns, d in minibatch], dtype=np.int32)
 
-        # Predict Q-values for current states and next states
+        # Predict current Q-values
         targets = model.predict(states, verbose=0)
-        Q_futures = target_model.predict(next_states, verbose=0)
-        Q_future_max = np.max(Q_futures, axis=1)
 
-        # Compute updated target values
+        # Double DQN next action selection via the online model
+        # 1. Get Q-values for next states from the online model
+        next_action_selection = model.predict(next_states, verbose=0) # shape: (batch_size, action_size)
+        best_next_actions = np.argmax(next_action_selection, axis=1)
+
+        # 2. Evaluate those actions using the target model
+        Q_futures_target = target_model.predict(next_states, verbose=0) # shape: (batch_size, action_size)
+        Q_future_selected = Q_futures_target[np.arange(batch_size), best_next_actions]
+
+        # Scale rewards if your environment uses scaled rewards
         scaled_rewards = environment.scale_rewards(rewards)
-        updated_targets = scaled_rewards + self.gamma * Q_future_max * (1 - dones)
+
+        # Compute updated targets using Double DQN logic
+        updated_targets = scaled_rewards + (1 - dones) * self.gamma * Q_future_selected
 
         # Update targets for the taken actions
         batch_indices = np.arange(batch_size, dtype=np.int32)

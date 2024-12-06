@@ -83,8 +83,7 @@ class DQNTraining:
             state = environment.reset()
             state = np.reshape(state, newshape=(1, state_size))
             total_reward = 0
-            for time_step in range(environment.max_steps):
-                logger.info(f'Timestep {time_step + 1} - Episode {episode+1}/{episodes}')   
+            for time_step in range(environment.max_steps):                 
                 # action is always performed using the Q model
                 action = agent.act(model, state)
                 next_state, reward, done, info, extraction = environment.step(action)
@@ -102,9 +101,11 @@ class DQNTraining:
                 # Perform replay if the memory size is sufficient
                 # use both the Q model and the target model
                 if len(agent.memory) > self.replay_size:
-                    scores = agent.replay(model, target_model, environment, self.batch_size)     
-                    logger.info(f'Loss = {scores["loss"]} - mean absolute % error = {scores["mean_absolute_percentage_error"]}')               
+                    scores = agent.replay(model, target_model, environment, self.batch_size)                   
                     self.update_session_stats(scores, episode, time_step, reward, total_reward)
+                    if time_step % 10 == 0:
+                        logger.info(f'Loss: {scores["loss"]} | mean absolute % error: {scores["mean_absolute_percentage_error"]}') 
+                        logger.info(f'Episode {episode+1}/{episodes} - Time steps: {time_step} - Capital: {info["capital"]} - Total Reward: {total_reward}')                             
 
                 # call on_epoch_end method of selected callbacks             
                 if tensorboard is not None and scores is not None:                    
@@ -115,7 +116,6 @@ class DQNTraining:
                     target_model.set_weights(model.get_weights())
 
                 if done:
-                    logger.info(f"Episode {episode+1}/{episodes} - Time steps: {time_step+1} - Capital: {info['capital']} - Total Reward: {total_reward}")
                     break
                      
         return agent

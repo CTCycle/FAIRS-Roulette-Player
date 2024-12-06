@@ -10,8 +10,6 @@ from FAIRS.commons.utils.process.mapping import RouletteMapper
 from FAIRS.commons.constants import CONFIG, STATES, NUMBERS
 from FAIRS.commons.logger import logger
 
-
-
     
 # [ROULETTE RL ENVIRONMENT]
 ###############################################################################
