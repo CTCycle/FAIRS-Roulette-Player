@@ -25,10 +25,11 @@ if %ERRORLEVEL%==0 (
 :dependencies
 echo.
 echo Install python libraries and packages
-call pip install torch==2.4.0+cu124 torchvision==0.19.0+cu124 --extra-index-url https://download.pytorch.org/whl/cu124
-call pip install tensorflow-cpu==2.17.0 keras==3.6.0 transformers==4.43.3
-call pip install scikit-learn==1.5.2 matplotlib==3.9.0 
-call pip install numpy==1.26.4 pandas==2.2.3 openpyxl==3.1.5 tqdm==4.66.4 
+call pip install torch==2.5.0+cu124 torchvision==0.20.0+cu124 --extra-index-url https://download.pytorch.org/whl/cu124
+call pip install tensorflow-cpu==2.18.0 keras==3.6.0 
+call pip install -U tensorboard-plugin-profile==2.17.0
+call pip install scikit-learn==1.5.2 matplotlib==3.9.2 
+call pip install numpy==2.1.2 pandas==2.2.3 tqdm==4.66.4 
 call pip install jupyter==1.1.1
 
 :: [INSTALL TRITON] 
@@ -37,7 +38,7 @@ call pip install jupyter==1.1.1
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 echo Installing triton from windows wheel
 cd triton
-call pip install triton-3.0.0-cp311-cp311-win_amd64.whl
+call pip install triton-3.1.0-cp311-cp311-win_amd64.whl
 cd ..
 
 :: [INSTALLATION OF PYDOT/PYDOTPLUS]
