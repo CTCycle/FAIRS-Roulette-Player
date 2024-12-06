@@ -9,7 +9,7 @@ from FAIRS.commons.logger import logger
 
 # [VALIDATION OF DATA]
 ###############################################################################
-class RouletteDataValidation:
+class RouletteSeriesValidation:
 
     def __init__(self, train_data, validation_data):
         self.DPI = 400

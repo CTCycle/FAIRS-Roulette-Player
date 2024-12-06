@@ -1,46 +1,11 @@
 import os
 import keras
-import tensorflow as tf
 import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.metrics import confusion_matrix
 
 from FAIRS.commons.constants import CONFIG
-from FAIRS.commons.logger import logger
-
-    
-# [BASELINE MODELS]
-###############################################################################
-class BaselineModels:  
-
-    def __init__(self):      
-        pass   
-    
-    #--------------------------------------------------------------------------
-    def model_accuracy(self, model, train_data, test_data):
-
-        X_train, Y_train = train_data[0], train_data[1]  
-        X_test, Y_test = test_data[0], test_data[1] 
-        y_train_pred = model.predict(X_train)
-        y_test_pred = model.predict(X_test)
-        train_accuracy = accuracy_score(Y_train, y_train_pred)
-        test_accuracy = accuracy_score(Y_test, y_test_pred) 
-
-        return train_accuracy, test_accuracy
-
-    #--------------------------------------------------------------------------
-    def DecisionTree_classifier(self, train_data, seed=None):
-        X_train, Y_train = train_data[0], train_data[1]
-        model = DecisionTreeClassifier(random_state=seed)
-        model.fit(X_train, Y_train)
-
-        return model
-
-    #--------------------------------------------------------------------------     
-    def RandomForest_classifier(self, train_data, estimators, seed):
-        X_train, Y_train = train_data[0], train_data[1]         
-        model = RandomForestClassifier(n_estimators=estimators, random_state=seed)
-        model.fit(X_train, Y_train)              
-
-        return model   
+from FAIRS.commons.logger import logger    
 
 
 
@@ -96,32 +61,7 @@ class BetsAccuracy:
         plt.savefig(plot_loc, bbox_inches='tight', format='jpeg', dpi = dpi)
         plt.show(block=False)
 
-    # comparison of data distribution using statistical methods 
-    #--------------------------------------------------------------------------
-    def plot_multi_ROC(Y_real, predictions, class_dict, path, dpi):
     
-        Y_real_bin = label_binarize(Y_real, classes=list(class_dict.values()))
-        n_classes = Y_real_bin.shape[1]        
-        fpr = dict()
-        tpr = dict()
-        roc_auc = dict()
-        for i in range(n_classes):
-            fpr[i], tpr[i], _ = roc_curve(Y_real_bin[:, i], predictions[:, i])
-            roc_auc[i] = auc(fpr[i], tpr[i])    
-        plt.figure()
-        for i in range(n_classes):
-            plt.plot(fpr[i], tpr[i], label='ROC curve of class {0} (area = {1:0.2f})'
-                 ''.format(list(class_dict.keys())[i], roc_auc[i]))
-        plt.plot([0, 1], [0, 1], 'k--')
-        plt.xlim([0.0, 1.0])
-        plt.ylim([0.0, 1.05])
-        plt.xlabel('False Positive Rate')
-        plt.ylabel('True Positive Rate')
-        plt.title('Some extension of Receiver operating characteristic to multi-class')
-        plt.legend(loc='lower right')       
-        plot_loc = os.path.join(path, 'multi_ROC.jpeg')
-        plt.savefig(plot_loc, bbox_inches='tight', format='jpeg', dpi=dpi)
-        plt.show(block=False)        
         
 
               

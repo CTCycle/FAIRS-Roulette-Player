@@ -17,8 +17,8 @@ class DQNAgent:
         self.action_size = STATES        
         self.gamma = configuration['agent']['DISCOUNT_RATE'] 
         self.epsilon = configuration['agent']['EXPLORATION_RATE']              
-        self.epsilon_decay = configuration['agent']['EXPLORATION_RATE_DECAY'] 
-        self.epsilon_min = configuration['agent']['MIN_EXPLORATION_RATE'] 
+        self.epsilon_decay = configuration['agent']['ER_DECAY'] 
+        self.epsilon_min = configuration['agent']['MINIMUM_ER'] 
         self.memory_size = configuration['agent']['MAX_MEMORY'] 
         self.replay_size = configuration['agent']['REPLAY_BUFFER']   
         self.memory = deque(maxlen=self.memory_size)              

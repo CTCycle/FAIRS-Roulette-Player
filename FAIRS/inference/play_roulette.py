@@ -8,7 +8,7 @@ warnings.simplefilter(action='ignore', category=Warning)
 
 # [IMPORT CUSTOM MODULES]
 from FAIRS.commons.utils.dataloader.generators import RouletteGenerator
-from FAIRS.commons.utils.learning.inference import RoulettePlayer
+from FAIRS.commons.utils.learning.inference import RoulettePlayer, save_predictions_to_csv
 from FAIRS.commons.utils.dataloader.serializer import ModelSerializer
 from FAIRS.commons.constants import CONFIG, PRED_PATH
 from FAIRS.commons.logger import logger
@@ -36,11 +36,15 @@ if __name__ == '__main__':
  
     # 2. [START PREDICTIONS]
     #--------------------------------------------------------------------------
-    logger.info('Generating roulette series from last window')    
+    logger.info('Start predicting most rewarding actions with the selected model')    
     generator = RoulettePlayer(model, configuration)       
-    generated_timeseries = generator.play_roulette_game(prediction_dataset, fraction=0.05)
+    roulette_predictions = generator.play_past_roulette_games(prediction_dataset)
 
-    pass
+    if CONFIG['inference']['ONLINE']:
+        roulette_predictions = generator.play_real_time_roulette()
+
+    # save predictions as .csv file in the predictions folder
+    save_predictions_to_csv(roulette_predictions, os.path.basename(checkpoint_path))
 
     
 

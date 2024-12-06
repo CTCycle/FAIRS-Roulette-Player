@@ -13,9 +13,9 @@ class RouletteCategoricalCrossentropy(keras.losses.Loss):
                  perceptive_field=10, **kwargs):
         super(RouletteCategoricalCrossentropy, self).__init__(name=name, **kwargs)        
         self.penalty_increase = penalty_increase
-        self.perceptive_field = perceptive_field
+        self.perceptive_size = perceptive_field
         # Define penalty_scores as per the increasing factor
-        self.penalty_scores = [1 + (i - 1) * self.penalty_increase for i in range(1, self.perceptive_field + 1)]
+        self.penalty_scores = [1 + (i - 1) * self.penalty_increase for i in range(1, self.perceptive_size + 1)]
         self.penalty_scores = keras.ops.convert_to_tensor(self.penalty_scores, dtype=tf.float32)  
         # Use reduction='none' to get per-sample loss
         self.loss = keras.losses.SparseCategoricalCrossentropy(from_logits=False, reduction='none')   
@@ -33,7 +33,7 @@ class RouletteCategoricalCrossentropy(keras.losses.Loss):
     #--------------------------------------------------------------------------    
     def get_config(self):
         base_config = super(RouletteCategoricalCrossentropy, self).get_config()
-        return {**base_config, 'name': self.name, 'perceptive_field' : self.perceptive_field,
+        return {**base_config, 'name': self.name, 'perceptive_field' : self.perceptive_size,
                 'penalty_increase': self.penalty_increase}
     
     @classmethod

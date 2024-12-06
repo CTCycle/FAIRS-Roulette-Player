@@ -23,7 +23,7 @@ class RouletteEnvironment(gym.Env):
         self.colors = data[:, 2]
 
         mapper = RouletteMapper()          
-        self.perceptive_field = configuration["model"]["PERCEPTIVE_FIELD"]        
+        self.perceptive_size = configuration["model"]["PERCEPTIVE_FIELD"]        
         self.initial_capital = configuration["environment"]["INITIAL_CAPITAL"]
         self.bet_amount = configuration["environment"]["BET_AMOUNT"]
         self.max_steps = configuration["environment"]["MAX_STEPS"] 
@@ -36,11 +36,11 @@ class RouletteEnvironment(gym.Env):
         # Actions: 0 (Red), 1 (Black), 2-37 for betting on a specific number
         self.action_space = spaces.Discrete(STATES)
         # Observation space is the last perceptive_field numbers that appeared on the wheel
-        self.observation_space = spaces.Box(low=0, high=36, shape=(self.perceptive_field,), dtype=np.int32)
+        self.observation_space = spaces.Box(low=0, high=36, shape=(self.perceptive_size,), dtype=np.int32)
         
         # Initialize state, capital, steps, and reward  
         self.extraction_index = 0 
-        self.state = np.full(shape=self.perceptive_field, fill_value=-1)                       
+        self.state = np.full(shape=self.perceptive_size, fill_value=-1)                       
         self.capital = self.initial_capital
         self.steps = 0
         self.reward = 0
@@ -53,7 +53,7 @@ class RouletteEnvironment(gym.Env):
     #--------------------------------------------------------------------------
     def reset(self):        
         self.extraction_index = 0
-        self.state = np.full(shape=self.perceptive_field, fill_value=-1, dtype=np.int32)                  
+        self.state = np.full(shape=self.perceptive_size, fill_value=-1, dtype=np.int32)                  
         self.capital = self.initial_capital
         self.steps = 0
         self.done = False

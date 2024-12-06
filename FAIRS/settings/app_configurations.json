@@ -9,33 +9,34 @@
                 "MIXED_PRECISION" : false,                           
                 "NUM_PROCESSORS": 6},
 
-    "model" : {"EMBEDDING_DIMS" : 100,
-               "UNITS" : 200, 
-               "PERCEPTIVE_FIELD": 60,            
+    "model" : {"EMBEDDING_DIMS" : 64,
+               "UNITS" : 128, 
+               "PERCEPTIVE_FIELD": 40,            
                "JIT_COMPILE" : false,
                "JIT_BACKEND" : "inductor"},
 
-    "agent" : {"DISCOUNT_RATE" : 0.75,
-               "EXPLORATION_RATE" : 0.25,
-               "EXPLORATION_RATE_DECAY" : 0.998,
-               "MIN_EXPLORATION_RATE" : 0.15,
-               "REPLAY_BUFFER" : 512,
-               "MAX_MEMORY": 20000},
+    "agent" : {"DISCOUNT_RATE" : 0.25,
+               "EXPLORATION_RATE" : 0.5,
+               "ER_DECAY" : 0.997,
+               "MINIMUM_ER" : 0.10,
+               "REPLAY_BUFFER" : 2000,
+               "MAX_MEMORY": 30000},
 
     "environment" : {"INITIAL_CAPITAL": 2000,
                      "BET_AMOUNT": 10,
                      "MAX_STEPS": 500,                     
                      "RENDERING" : false},
 
-    "training" : {"EPISODES" : 50,
+    "training" : {"EPISODES" : 5,
                   "ADDITIONAL_EPISODES" : 10,                   
-                  "LEARNING_RATE" : 0.00005,                 
-                  "BATCH_SIZE" : 80,
-                  "UPDATE_FREQUENCY" : 10,                                                      
+                  "LEARNING_RATE" : 0.0001,                 
+                  "BATCH_SIZE" : 32,
+                  "UPDATE_FREQUENCY" : 20,                                                      
                   "USE_TENSORBOARD" : false,
                   "SAVE_CHECKPOINTS": false},
                                     
-    "inference" : {"TEMPERATURE" : 1.0},
+    "inference" : {"DATA_FRACTION" : 0.1,
+                   "ONLINE" : true},
 
     "evaluation" : {"BATCH_SIZE" : 20}    
       
