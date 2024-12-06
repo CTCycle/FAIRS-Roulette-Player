@@ -40,18 +40,22 @@ class FAIRSnet:
         res = layers.Dense(self.neurons, kernel_initializer='he_uniform')(embeddings)             
         layer = layers.Dense(self.neurons, kernel_initializer='he_uniform')(res)                      
         layer = AddNorm()([res, layer])
-        layer = activations.relu(layer)  
+        layer = activations.relu(layer) 
+        layer = layers.Dropout(rate=0.2, seed=self.seed)(layer) 
 
         res = layers.Dense(self.neurons//2, kernel_initializer='he_uniform')(layer)             
         layer = layers.Dense(self.neurons//2, kernel_initializer='he_uniform')(res)                      
         layer = AddNorm()([res, layer])
-        layer = activations.relu(layer)      
+        layer = activations.relu(layer)   
+        layer = layers.Dropout(rate=0.2, seed=self.seed)(layer)   
         
         layer = layers.Flatten()(layer)
         res = layers.Dense(self.neurons*2, kernel_initializer='he_uniform')(layer)    
         layer = layers.Dense(self.neurons*2, kernel_initializer='he_uniform')(res)
         layer = AddNorm()([res, layer])
-        layer = activations.relu(layer)              
+        layer = activations.relu(layer)  
+        layer = layers.Dropout(rate=0.3, seed=self.seed)(layer) 
+
         output = self.QNet(layer)         
         
         # define the model from inputs and outputs
@@ -59,8 +63,8 @@ class FAIRSnet:
 
         # define model compilation parameters such as learning rate, loss, metrics and optimizer
         loss = losses.MeanSquaredError() 
-        metric = [metrics.MeanAbsolutePercentageError()]
-        opt = keras.optimizers.Adam(learning_rate=self.learning_rate)          
+        metric = [metrics.RootMeanSquaredError()]
+        opt = keras.optimizers.AdamW(learning_rate=self.learning_rate)          
         model.compile(loss=loss, optimizer=opt, metrics=metric, jit_compile=False)
 
         if self.jit_compile:

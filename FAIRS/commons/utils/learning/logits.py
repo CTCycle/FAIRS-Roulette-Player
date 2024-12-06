@@ -68,7 +68,7 @@ class QScoreNet(keras.layers.Layer):
     def call(self, inputs, training=None):
         x = self.Q1(inputs)
         x = self.batch_norm(x, training=training)       
-        output = self.Q2(x)                  
+        output = self.Q2(x)                         
 
         return output
     

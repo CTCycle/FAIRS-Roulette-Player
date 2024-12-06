@@ -58,7 +58,7 @@ class DQNTraining:
     #--------------------------------------------------------------------------
     def update_session_stats(self, scores, episode, time_step, reward, total_reward):
         loss = scores.get('loss', None)
-        metric = scores.get('mean_absolute_percentage_error', None)                   
+        metric = scores.get('root_mean_squared_error', None)                   
         self.session.append({'episode': episode,
                             'time_step': time_step,
                             'loss': loss.item() if not None else 0,
@@ -104,7 +104,7 @@ class DQNTraining:
                     scores = agent.replay(model, target_model, environment, self.batch_size)                   
                     self.update_session_stats(scores, episode, time_step, reward, total_reward)
                     if time_step % 10 == 0:
-                        logger.info(f'Loss: {scores["loss"]} | mean absolute % error: {scores["mean_absolute_percentage_error"]}') 
+                        logger.info(f'Loss: {scores["loss"]} | RMSE: {scores["root_mean_squared_error"]}') 
                         logger.info(f'Episode {episode+1}/{episodes} - Time steps: {time_step} - Capital: {info["capital"]} - Total Reward: {total_reward}')                             
 
                 # call on_epoch_end method of selected callbacks             
