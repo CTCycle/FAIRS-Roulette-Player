@@ -27,10 +27,10 @@
                      "MAX_STEPS": 1000,                     
                      "RENDERING" : false},
 
-    "training" : {"EPISODES" : 100,
+    "training" : {"EPISODES" : 50,
                   "ADDITIONAL_EPISODES" : 10,                   
                   "LEARNING_RATE" : 0.00001,                 
-                  "BATCH_SIZE" : 48,
+                  "BATCH_SIZE" : 64,
                   "UPDATE_FREQUENCY" : 10,                                                      
                   "USE_TENSORBOARD" : false,
                   "SAVE_CHECKPOINTS": false},

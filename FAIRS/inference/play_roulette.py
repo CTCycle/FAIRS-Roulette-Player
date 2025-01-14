@@ -41,7 +41,7 @@ if __name__ == '__main__':
     roulette_predictions = generator.play_past_roulette_games(prediction_dataset)
 
     if CONFIG['inference']['ONLINE']:
-        roulette_predictions = generator.play_real_time_roulette()
+        real_time_game = generator.play_real_time_roulette()
 
     # save predictions as .csv file in the predictions folder
     save_predictions_to_csv(roulette_predictions, os.path.basename(checkpoint_path))

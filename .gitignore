@@ -1,6 +1,9 @@
 __pycache__
 FAIRS/resources/checkpoints/*
 
+setup/environment/*
+setup/miniconda/*
+
 *.egg-info
 *.log
 !.gitkeep

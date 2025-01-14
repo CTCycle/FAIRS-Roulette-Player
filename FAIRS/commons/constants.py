@@ -22,7 +22,7 @@ COLORS = 3
 SPECIALS = 1
 STATES = NUMBERS + COLORS + SPECIALS - 1
 
-CONFIG_PATH = join(PROJECT_DIR, 'settings', 'app_configurations.json')
+CONFIG_PATH = join(PROJECT_DIR, 'settings', 'configurations.json')
 with open(CONFIG_PATH, 'r') as file:
     CONFIG = json.load(file)
 

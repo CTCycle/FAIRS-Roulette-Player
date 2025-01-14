@@ -9,13 +9,11 @@ During training, the DQN agent learns to identify patterns within these sequence
 FAIRSnet is a custom neural network architecture tailored for time series forecasting in roulette prediction. It combines dense layers, frequency-based embeddings, and dual Q-Networks to capture sequential dependencies. The model takes a perceived field of historical outcomes as input, passing these sequences through a frequency-based embedding layer. While roulette outcomes are theoretically random, some online platforms may use algorithms that exhibit patterns or slight autoregressive tendencies. The architecture employs multiple dense layers with ReLU activation to learn relationships between past states and actions with the highest expected rewards. It is trained on a dataset built from past experiences, using reinforcement learning to optimize decision-making through DQN policy. The Q-Network head predicts Q-values that represents the confidence level for each possible outcome (suggested action). The model is trained using the Mean Squared Error (MSE) loss function, while tracking the Mean Absolute Percentage Error (MAPE) as a key metric. 
 
 ## 3. Installation
-The installation process on Windows has been designed for simplicity and ease of use. To begin, simply run `FAIRS.bat`. On its first execution, the installation procedure will automatically start with minimal user input required. The script will check if either Anaconda or Miniconda is installed on your system. If neither is found, you will need to install it manually. You can download and install Miniconda by following the instructions here: https://docs.anaconda.com/miniconda/.
-
-After setting up Anaconda/Miniconda, the installation script will install all the necessary Python dependencies. This includes Keras 3 (with PyTorch support as the backend) and the required CUDA dependencies (CUDA 12.1) to enable GPU acceleration. If you'd prefer to handle the installation process separately, you can run the standalone installer by executing `setup/FAIRS_installer.bat`. You can also use a custom python environment by modifying `settings/launcher_configurations.ini` and setting use_custom_environment as true, while specifying the name of your custom environment.
+The installation process on Windows has been designed for simplicity and ease of use. To begin, simply run *start_on_windows.bat.* On its first execution, the installation procedure will automatically start with minimal user input required. The script will check if either Anaconda or Miniconda is installed on your system. If neither is found, it will automatically download and install the latest Miniconda release from https://docs.anaconda.com/miniconda/. After setting up Anaconda/Miniconda, the installation script will proceed with the installation of all necessary Python dependencies. This includes Keras 3 (with PyTorch support as the backend) and the required CUDA dependencies (CUDA 12.1) to enable GPU acceleration. If you'd prefer to handle the installation process separately, you can run the standalone installer by executing *setup/install_on_windows.bat*.
 
 **Important:** After installation, if the project folder is moved or its path is changed, the application will no longer function correctly. To fix this, you can either:
 
-- Open the main menu, select "FAIRS setup," and choose "Install project packages"
+- Open the main menu, select *Setup and maintentance* and choose *Install project in editable mode*
 - Manually run the following commands in the terminal, ensuring the project folder is set as the current working directory (CWD):
 
     `conda activate FAIRS`
@@ -26,30 +24,30 @@ After setting up Anaconda/Miniconda, the installation script will install all th
 This project leverages Just-In-Time model compilation through `torch.compile`, enhancing model performance by tracing the computation graph and applying advanced optimizations like kernel fusion and graph lowering. This approach significantly reduces computation time during both training and inference. The default backend, TorchInductor, is designed to maximize performance on both CPUs and GPUs. Additionally, the installation includes Triton, which generates highly optimized GPU kernels for even faster computation on NVIDIA hardware. For Windows users, a precompiled Triton wheel is bundled with the installation, ensuring seamless integration and performance improvements.
 
 ## 4. How to use
-On Windows, run `FAIRS.bat` to launch the main navigation menu and browse through the various options. Alternatively, you can run each file separately using `python path/filename.py` or `jupyter path/notebook.ipynb`. 
+On Windows, run *start_on_windows.bat* to launch the main navigation menu and browse through the various options. Alternatively, each file can be executed individually by running *python path/filename.py* for Python scripts or *jupyter notebook path/notebook.ipynb* for Jupyter notebooks. Please note that some antivirus software, such as Avast, may flag or quarantine python.exe when called by the .bat file. If you encounter unusual behavior, consider adding an exception for your Anaconda or Miniconda environments in your antivirus settings.
 
 ### 4.1 Navigation menu
 
-**1) Data analysis:** run `validation/data_validation.ipynb` to perform data validation using a series of metrics to analyze roulette extractions. 
+**1) Data analysis:** run *validation/data_validation.ipynb* to perform data validation using a series of metrics to analyze roulette extractions. 
 
 **2) Model training and evaluation:** open the machine learning menu to explore various options for model training and validation. Once the menu is open, you will see different options:
-- **train from scratch:** runs `training/model_training.py` to start training the FAIRS model using reinforcement learning in a roulette-based environment. This option starts a training from scratch using either true roulette extraction series or a random number generator. 
-- **train from checkpoint:** runs `training/train_from_checkpoint.py` to start training a pretrained FAIRS checkpoint for an additional amount of episodes, using the pretrained model settings and data.  
-- **model evaluation:** run `validation/model_validation.ipynb` to evaluate the performance of pretrained model checkpoints using different metrics. 
+- **train from scratch:** runs *training/model_training.py* to start training the FAIRS model using reinforcement learning in a roulette-based environment. This option starts a training from scratch using either true roulette extraction series or a random number generator. 
+- **train from checkpoint:** runs *training/train_from_checkpoint.py* to start training a pretrained FAIRS checkpoint for an additional amount of episodes, using the pretrained model settings and data.  
+- **model evaluation:** run *validation/model_evaluation.ipynb* to evaluate the performance of pretrained model checkpoints using different metrics. 
 
-**3) Predict roulette extractions:** runs `inference/roulette_forecasting.py` to predict the future roulette extractions based on the historical timeseries, and also start the real time playing mode.  
+**3) Predict roulette extractions:** runs *inference/roulette_forecasting.py* to predict the future roulette extractions based on the historical timeseries, and also start the real time playing mode.  
 
-**4) FAIRS setup:** allows running some options command such as **install project packages** to run the developer model project installation, and **remove logs** to remove all logs saved in `resources/logs`. 
+**4) Setup and Maintenance:** allows running some options command such as *install project in editable mode* to run the developer model project installation, and *remove logs* to remove all logs saved in *resources/logs*.  
 
-**5) Exit and close** 
+**5) Exit:** close the program immediately 
 
 ### 4.2 Resources
 
 - **checkpoints:**  pretrained model checkpoints are stored here, and can be used either for resuming training or performing inference with an already trained model.
 
-- **dataset:** load any available roulette extractions series in the file `FAIRS_dataset.csv`.
+- **dataset:** load any available roulette extractions series in the file *FAIRS_dataset.csv*.
 
-- **predictions:** this is where roulette predictions are stored in .csv format, and where the file holding past extraction to start predictions from is stored (`FAIRS_predictions.csv`). 
+- **predictions:** this is where roulette predictions are stored in .csv format, and where the file holding past extraction to start predictions from is stored (*FAIRS_predictions.csv*). 
 
 - **logs:** the application logs are saved within this folder
 
@@ -57,7 +55,7 @@ On Windows, run `FAIRS.bat` to launch the main navigation menu and browse throug
 
 
 ## 5. Configurations
-For customization, you can modify the main configuration parameters using `settings/app_configurations.json` 
+For customization, you can modify the main configuration parameters using *settings/configurations.json* 
 
 #### Dataset Configuration
 

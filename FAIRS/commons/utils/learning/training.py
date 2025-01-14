@@ -5,9 +5,8 @@ import torch
 from FAIRS.commons.utils.learning.callbacks import CallbacksWrapper
 from FAIRS.commons.utils.learning.environment import RouletteEnvironment
 from FAIRS.commons.utils.learning.agents import DQNAgent
-from FAIRS.commons.utils.learning.callbacks import RealTimeHistory
 from FAIRS.commons.utils.dataloader.serializer import ModelSerializer
-from FAIRS.commons.constants import CONFIG, NUMBERS, COLORS
+from FAIRS.commons.constants import CONFIG
 from FAIRS.commons.logger import logger
 
 

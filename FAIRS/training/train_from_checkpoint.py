@@ -8,7 +8,7 @@ warnings.simplefilter(action='ignore', category=Warning)
 
 # [IMPORT CUSTOM MODULES]
 from FAIRS.commons.utils.learning.training import DQNTraining
-from FAIRS.commons.utils.dataloader.generators import training_data_pipeline
+from FAIRS.commons.utils.dataloader.generators import ML_model_dataloader
 from FAIRS.commons.utils.dataloader.serializer import DataSerializer, ModelSerializer
 from FAIRS.commons.utils.learning.training import ModelTraining
 from FAIRS.commons.constants import CONFIG
@@ -49,7 +49,7 @@ if __name__ == '__main__':
     # initialize the TensorDataSet class with the generator instances
     # create the tf.datasets using the previously initialized generators   
     logger.info('Building data loaders') 
-    train_dataset, validation_dataset = training_data_pipeline(train_data, validation_data)
+    train_dataset, validation_dataset = ML_model_dataloader(train_data, validation_data)
     
     # 3. [TRAINING MODEL]  
     #--------------------------------------------------------------------------  
