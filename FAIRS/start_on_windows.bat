@@ -5,6 +5,7 @@ for /f "delims=" %%i in ("%~dp0..") do set "project_folder=%%~fi"
 set "env_name=FAIRS"
 set "project_name=FAIRS"
 set "env_path=%project_folder%\setup\environment\%env_name%"
+set "app_path=%project_folder%\%project_name%"
 set "conda_path=%project_folder%\setup\miniconda"
 set "setup_path=%project_folder%\setup"
 
@@ -100,7 +101,6 @@ if "%choice%"=="4" goto :setup_menu
 if "%choice%"=="5" goto exit
 
 echo Invalid option, try again.
-pause
 goto :main_menu
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -108,7 +108,7 @@ goto :main_menu
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :datanalysis
 cls
-start cmd /k "call conda activate %env_path% && jupyter notebook .\validation\roulette_series_validation.ipynb"
+start cmd /k "call conda activate "%env_path%" && jupyter notebook "%app_path%"\validation\roulette_series_validation.ipynb"
 goto :main_menu
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -116,7 +116,7 @@ goto :main_menu
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :inference
 cls
-call conda activate "%env_path%" && python .\inference\roulette_forecasting.py
+start cmd /k "call conda activate "%env_path%" && python "%app_path%"\inference\roulette_forecasting.py"
 goto :main_menu
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -139,7 +139,6 @@ if "%sub_choice%"=="2" goto :train_ckpt
 if "%sub_choice%"=="3" goto :modeleval
 if "%sub_choice%"=="4" goto :main_menu
 echo Invalid option, try again.
-pause
 goto :ML_menu
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -147,7 +146,7 @@ goto :ML_menu
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :train_fs
 cls
-call conda activate "%env_path%" && python .\training\model_training.py
+start cmd /k "call conda activate "%env_path%" && python "%app_path%"\training\model_training.py"
 pause
 goto :ML_menu
 
@@ -156,7 +155,7 @@ goto :ML_menu
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :train_ckpt
 cls
-call conda activate "%env_path%" && python .\training\train_from_checkpoint.py
+start cmd /k "call conda activate "%env_path%" && python "%app_path%"\training\train_from_checkpoint.py"
 goto :ML_menu
 
 
@@ -165,7 +164,7 @@ goto :ML_menu
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :modeleval
 cls
-start cmd /k "call conda activate %env_path% && jupyter notebook .\validation\model_evaluation.ipynb"
+start cmd /k "call conda activate "%env_path%" && jupyter notebook "%app_path%"\validation\model_evaluation.ipynb"
 goto :ML_menu
 
 
@@ -178,26 +177,43 @@ echo =======================================
 echo         Setup and Maintenance
 echo =======================================
 echo 1. Install project in editable mode
-echo 2. Remove logs
-echo 3. Back to main menu
+echo 2. Update project
+echo 3. Remove logs
+echo 4. Back to main menu
 echo.
-set /p sub_choice="Select an option (1-3): "
+set /p sub_choice="Select an option (1-4): "
 
 if "%sub_choice%"=="1" goto :eggs
-if "%sub_choice%"=="2" goto :logs
-if "%sub_choice%"=="3" goto :main_menu
+if "%sub_choice%"=="2" goto :update
+if "%sub_choice%"=="3" goto :logs
+if "%sub_choice%"=="4" goto :main_menu
 echo Invalid option, try again.
-pause
 goto :setup_menu
 
 :eggs
-call conda activate "%env_path%" && cd .. && pip install -e . --use-pep517 && cd "%project_name%"
+call conda activate "%env_path%" && cd "%project_folder%" && pip install -e . --use-pep517
+pause
+goto :setup_menu
+
+:update
+cd "%project_folder%"
+call git pull
+if errorlevel 1 (
+    echo Error: Git pull failed.
+    pause
+    goto :setup_menu
+)
 pause
 goto :setup_menu
 
 :logs
-cd "%project_folder%\%project_name%\resources\logs"
+cd "%app_path%\resources\logs" 
+if not exist *.log (
+    echo No log files found.
+    pause
+    goto :setup_menu
+)
 del *.log /q
-cd "%project_name%"
+echo Log files deleted.
 pause
 goto :setup_menu
