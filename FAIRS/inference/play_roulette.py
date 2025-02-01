@@ -8,7 +8,7 @@ warnings.simplefilter(action='ignore', category=Warning)
 
 # [IMPORT CUSTOM MODULES]
 from FAIRS.commons.utils.dataloader.generators import RouletteGenerator
-from FAIRS.commons.utils.learning.inference import RoulettePlayer, save_predictions_to_csv
+from FAIRS.commons.utils.inference.player import RoulettePlayer, save_predictions_to_csv
 from FAIRS.commons.utils.dataloader.serializer import ModelSerializer
 from FAIRS.commons.constants import CONFIG, PRED_PATH
 from FAIRS.commons.logger import logger

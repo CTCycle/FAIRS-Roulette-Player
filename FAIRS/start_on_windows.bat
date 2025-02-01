@@ -83,9 +83,9 @@ if %ERRORLEVEL% neq 0 (
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :main_menu
 echo.
-echo =======================================
-echo                 FAIRS 
-echo =======================================
+echo ==========================================================================
+echo            FAIRS: Fabulous Automated Intelligent Roulette System 
+echo ==========================================================================
 echo 1. Data analysis
 echo 2. Model training and evaluation
 echo 3. Predict roulette extractions
@@ -124,9 +124,9 @@ goto :main_menu
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :ML_menu
 cls
-echo =======================================
+echo ==========================================================================
 echo              FAIRS ML
-echo =======================================
+echo ==========================================================================
 echo 1. Train from scratch
 echo 2. Train from checkpoint
 echo 3. Evaluate model performances
@@ -173,9 +173,9 @@ goto :ML_menu
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :setup_menu
 cls
-echo =======================================
-echo         Setup and Maintenance
-echo =======================================
+echo ==========================================================================
+echo                         Setup  and Maintenance                          
+echo ==========================================================================
 echo 1. Install project in editable mode
 echo 2. Update project
 echo 3. Remove logs
