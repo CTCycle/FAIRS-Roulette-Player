@@ -14,17 +14,14 @@ from FAIRS.commons.logger import logger
 class RouletteGenerator():
 
     def __init__(self, configuration):        
-        
         self.widows_size = configuration["model"]["PERCEPTIVE_FIELD"]         
         self.batch_size = configuration["training"]["BATCH_SIZE"] 
         self.sample_size = configuration["dataset"]["SAMPLE_SIZE"]         
         self.mapper = RouletteMapper()   
-        self.color_encoder = None            
-        
-    # ...
+        self.color_encoder = None        
+
     #--------------------------------------------------------------------------
-    def prepare_roulette_dataset(self, path):
-        
+    def prepare_roulette_dataset(self, path):        
         self.data = get_extraction_dataset(path, self.sample_size) 
         roulette_dataset, self.color_encoder = self.mapper.encode_roulette_extractions(self.data)
         roulette_dataset = roulette_dataset.drop(columns=['color'], axis=1)

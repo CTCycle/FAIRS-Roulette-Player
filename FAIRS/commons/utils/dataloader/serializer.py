@@ -110,12 +110,12 @@ class ModelSerializer:
     #--------------------------------------------------------------------------
     def save_session_configuration(self, path, history : dict, configurations : dict):
 
-        config_folder = os.path.join(path, 'configurations')
-        os.makedirs(config_folder, exist_ok=True)
+        
+        os.makedirs(os.path.join(path, 'configurations'), exist_ok=True) 
 
         # Paths to the JSON files
-        config_path = os.path.join(config_folder, 'configurations.json')
-        history_path = os.path.join(config_folder, 'session_history.json')
+        config_path = os.path.join(path, 'configurations', 'configurations.json')
+        history_path = os.path.join(path, 'configurations', 'session_history.json')
 
         # Function to merge dictionaries
         def merge_dicts(original, new_data):
@@ -130,7 +130,7 @@ class ModelSerializer:
                 else:
                     original[key] = value    
 
-        # Save the merged configurations
+        # Save training and model configurations
         with open(config_path, 'w') as f:
             json.dump(configurations, f)
 
@@ -142,7 +142,7 @@ class ModelSerializer:
         else:
             existing_history = history
 
-        # Save the merged session history
+        # Save session history
         with open(history_path, 'w') as f:
             json.dump(existing_history, f)
 

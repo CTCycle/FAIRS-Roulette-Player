@@ -1,9 +1,10 @@
 import json
-from os.path import join, dirname, abspath 
+from os.path import join, abspath 
 
 # [PATHS]
 ###############################################################################
-PROJECT_DIR = dirname(dirname(abspath(__file__)))
+ROOT_DIR = abspath(join(__file__, "../../.."))
+PROJECT_DIR = abspath(join(__file__, "../.."))
 RSC_PATH = join(PROJECT_DIR, 'resources')
 DATA_PATH = join(RSC_PATH, 'dataset')
 PRED_PATH = join(RSC_PATH, 'predictions')
@@ -11,9 +12,7 @@ CHECKPOINT_PATH = join(RSC_PATH, 'checkpoints')
 LOGS_PATH = join(PROJECT_DIR, 'resources', 'logs')
 DATASET_NAME = 'FAIRS_dataset.csv'
 
-# [FILENAMES]
-###############################################################################
-# add filenames here
+
 
 # [CONFIGURATIONS]
 ###############################################################################
