@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 
-for /f "delims=" %%i in ("%~dp0..") do set "project_folder=%%~fi"
+for /f "delims=" %%i in ("%~dp0.") do set "project_folder=%%~fi"
 set "env_name=FAIRS"
 set "project_name=FAIRS"
 set "setup_path=%project_folder%\setup"
@@ -41,7 +41,7 @@ echo.
 echo Checking git installation
 git --version >nul 2>&1
 if errorlevel 1 (
-    echo Git not found. Installing git using conda...
+    echo Git not found. Installing git using conda..
     call conda install -y git
 ) else (
     echo Git is already installed.
@@ -68,13 +68,13 @@ call pip install jupyter==1.1.1
 echo Installing triton from windows wheel
 cd triton
 call cd  "%setup_path%\triton" && pip install triton-3.2.0-cp312-cp312-win_amd64.whl
-cd ..
+cd .
 
 :: [INSTALLATION OF PYDOT/PYDOTPLUS]
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Install pydot/pydotplus for graphic model visualization
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: 
-echo Installing pydot and pydotplus...
+echo Installing pydot and pydotplus..
 call conda install pydot -y
 call conda install pydotplus -y
 
