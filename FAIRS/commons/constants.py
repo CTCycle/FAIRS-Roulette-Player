@@ -8,10 +8,9 @@ PROJECT_DIR = abspath(join(__file__, "../.."))
 RSC_PATH = join(PROJECT_DIR, 'resources')
 DATA_PATH = join(RSC_PATH, 'dataset')
 PRED_PATH = join(RSC_PATH, 'predictions')
+VALIDATION_PATH = join(RSC_PATH, 'validation')
 CHECKPOINT_PATH = join(RSC_PATH, 'checkpoints')
 LOGS_PATH = join(PROJECT_DIR, 'resources', 'logs')
-DATASET_NAME = 'FAIRS_dataset.csv'
-
 
 
 # [CONFIGURATIONS]
