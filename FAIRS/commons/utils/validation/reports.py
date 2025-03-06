@@ -11,11 +11,11 @@ def evaluation_report(model : keras.Model, train_dataset, validation_dataset):
     train_eval = model.evaluate(train_dataset, verbose=1)
     validation_eval = model.evaluate(validation_dataset, verbose=1)
     logger.info('Train dataset:')
-    logger.info(f'Loss: {train_eval[0]}')    
-    logger.info(f'Metric: {train_eval[1]}')  
+    logger.info(f'Loss: {train_eval[0]:.3f}')    
+    logger.info(f'Metric: {train_eval[1]:.3f}')  
     logger.info('Test dataset:')
-    logger.info(f'Loss: {validation_eval[0]}')    
-    logger.info(f'Metric: {validation_eval[1]}')
+    logger.info(f'Loss: {validation_eval[0]:.3f}')    
+    logger.info(f'Metric: {validation_eval[1]:.3f}')
 
 ###############################################################################
 def log_training_report(train_data, config : dict):

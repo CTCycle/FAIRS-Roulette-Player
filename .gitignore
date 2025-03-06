@@ -3,6 +3,7 @@ FAIRS/resources/checkpoints/*
 
 setup/environment/*
 setup/miniconda/*
+setup/variables/*
 
 *.egg-info
 *.log

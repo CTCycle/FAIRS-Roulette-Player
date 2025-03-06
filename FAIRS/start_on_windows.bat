@@ -107,7 +107,7 @@ goto :main_menu
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :datanalysis
 cls
-start cmd /k "call conda activate "%env_path%" && jupyter notebook "%app_path%"\validation\roulette_series_validation.ipynb"
+start cmd /k "call conda activate "%env_path%" && python "%app_path%"\validation\roulette_series_validation.py"
 goto :main_menu
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -163,7 +163,7 @@ goto :ML_menu
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :modeleval
 cls
-start cmd /k "call conda activate "%env_path%" && jupyter notebook "%app_path%"\validation\model_evaluation.ipynb"
+start cmd /k "call conda activate "%env_path%" && python "%app_path%"\validation\model_evaluation.py"
 goto :ML_menu
 
 
