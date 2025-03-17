@@ -3,7 +3,7 @@
 ## 1. Project Overview
 FAIRS is a research project dedicated to predicting upcoming outcomes in online roulette through a Deep Q-Network (DQN) agent. Instead of relying solely on immediate, isolated results, FAIRS utilizes sequences of past roulette spins, incorporating a perceptive field of historical outcomes as input. This approach allows the model to detect temporal patterns that might influence future events. Additionally, random number generation can be used to simulate a genuinely unpredictable game environment, mirroring the behavior of a real roulette wheel.
 
-During training, the DQN agent learns to identify patterns within these sequences and to select the actions associated with the highest Q-scores—signals of potentially more rewarding decisions. In doing so, FAIRS adapts sequence modeling techniques to the inherently random and structured nature of roulette outcomes, aiming to refine predictive accuracy in an environment defined by uncertainty.
+During training, the DQN agent learns to identify patterns within these sequences, and to select the actions associated with the highest Q-scores—signals of potentially more rewarding decisions. In doing so, FAIRS adapts sequence modeling techniques to the inherently random and structured nature of roulette outcomes, aiming to refine predictive accuracy in an environment defined by uncertainty.
 
 ## 2. FAIRSnet model
 FAIRSnet is a custom neural network architecture tailored for time series forecasting in roulette prediction. It combines dense layers, frequency-based embeddings, and dual Q-Networks to capture sequential dependencies. The model takes a perceived field of historical outcomes as input, passing these sequences through a frequency-based embedding layer. While roulette outcomes are theoretically random, some online platforms may use algorithms that exhibit patterns or slight autoregressive tendencies. The architecture employs multiple dense layers with ReLU activation to learn relationships between past states and actions with the highest expected rewards. It is trained on a dataset built from past experiences, using reinforcement learning to optimize decision-making through DQN policy. The Q-Network head predicts Q-values that represents the confidence level for each possible outcome (suggested action). The model is trained using the Mean Squared Error (MSE) loss function, while tracking the Mean Absolute Percentage Error (MAPE) as a key metric. 
@@ -28,14 +28,14 @@ On Windows, run *start_on_windows.bat* to launch the main navigation menu and br
 
 ### 4.1 Navigation menu
 
-**1) Data analysis:** run *validation/data_validation.ipynb* to perform data validation using a series of metrics to analyze roulette extractions. 
+**1) Data analysis:** performs data validation using a series of metrics to analyze roulette extractions. 
 
 **2) Model training and evaluation:** open the machine learning menu to explore various options for model training and validation. Once the menu is open, you will see different options:
-- **train from scratch:** runs *training/model_training.py* to start training the FAIRS model using reinforcement learning in a roulette-based environment. This option starts a training from scratch using either true roulette extraction series or a random number generator. 
-- **train from checkpoint:** runs *training/train_from_checkpoint.py* to start training a pretrained FAIRS checkpoint for an additional amount of episodes, using the pretrained model settings and data (CURRENTLY NOT IMPLEMENTED!) 
-- **model evaluation:** run *validation/model_evaluation.ipynb* to evaluate the performance of pretrained model checkpoints using different metrics. 
+- **train from scratch:** start training the FAIRS model using reinforcement learning in a roulette-based environment. This option starts a training from scratch using either true roulette extraction series or a random number generator. 
+- **train from checkpoint:** start training a pretrained FAIRS checkpoint for an additional amount of episodes, using the pretrained model settings and data (CURRENTLY NOT IMPLEMENTED!) 
+- **model evaluation:** evaluate the performance of pretrained model checkpoints using different metrics. 
 
-**3) Predict roulette extractions:** runs *inference/roulette_forecasting.py* to predict the future roulette extractions based on the historical timeseries, and also start the real time playing mode.  
+**3) Predict roulette extractions:** predict the future roulette extractions based on the historical timeseries, and also start the real time playing mode.  
 
 **4) Setup and Maintenance:** execute optional commands such as *Install project into environment* to reinstall the project within your environment, *update project* to pull the last updates from github, and *remove logs* to remove all logs saved in *resources/logs*.  
 
@@ -45,7 +45,7 @@ On Windows, run *start_on_windows.bat* to launch the main navigation menu and br
 
 - **checkpoints:**  pretrained model checkpoints are stored here, and can be used either for resuming training or performing inference with an already trained model.
 
-- **dataset:** load any available roulette extractions series in the file *FAIRS_dataset.csv*.
+- **dataset:** stores roulette extraction series through the file *FAIRS_dataset.csv*.
 
 - **predictions:** this is where roulette predictions are stored in .csv format, and where the file holding past extraction to start predictions from is stored (*FAIRS_predictions.csv*). 
 
@@ -125,11 +125,21 @@ For customization, you can modify the main configuration parameters using *setti
 | DATA_FRACTION      | Fraction of past data to start the predictions from      | 
 | ONLINE             | Toggle the real time playing mode on or off              |
 
-#### Evaluation Configuration
+#### Validation Configuration
 
 | Parameter          | Description                                              |
 |--------------------|----------------------------------------------------------|
-| BATCH_SIZE         | Number of samples per batch during evaluation            | 
+| BATCH_SIZE         | Number of samples per batch                              |
+| NUM_IMAGES         | Max number of images to compare during evaluation        |
+| DPI                | Resolution of figures from validation                    |
+
+
+**Environmental variables** are stored in *setup/variables/.env*. For security reasons, this file is typically not uploaded to GitHub. Instead, you must create this file manually by copying the template from *resources/templates/.env* and placing it in the *setup/variables* directory.
+
+| Variable              | Description                                              |
+|-----------------------|----------------------------------------------------------|
+| KERAS_BACKEND         | Sets the backend for Keras, default is PyTorch           |
+| TF_CPP_MIN_LOG_LEVEL  | TensorFlow logging verbosity                             |
 
 ## 6. License
 This project is licensed under the terms of the MIT license. See the LICENSE file for details.

@@ -38,6 +38,8 @@
     "inference" : {"DATA_FRACTION" : 0.1,
                    "ONLINE" : true},
 
-    "evaluation" : {"BATCH_SIZE" : 20}    
+    "validation" : {"BATCH_SIZE" : 20,
+                    "NUM_IMAGES" : 6,
+                    "DPI" : 400}     
       
 }

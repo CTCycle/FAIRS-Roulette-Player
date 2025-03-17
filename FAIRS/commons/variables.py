@@ -1,8 +1,8 @@
 import os
 from dotenv import load_dotenv
 
-from FEXT.commons.constants import ROOT_DIR
-from FEXT.commons.logger import logger
+from FAIRS.commons.constants import ROOT_DIR
+from FAIRS.commons.logger import logger
 
 # [IMPORT CUSTOM MODULES]
 ###############################################################################
