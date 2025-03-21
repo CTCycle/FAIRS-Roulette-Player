@@ -4,14 +4,14 @@ from os.path import join, abspath
 # [PATHS]
 ###############################################################################
 ROOT_DIR = abspath(join(__file__, "../../.."))
-PROJECT_DIR = abspath(join(__file__, "../.."))
+PROJECT_DIR = join(ROOT_DIR, 'FAIRS')
 RSC_PATH = join(PROJECT_DIR, 'resources')
-DATA_PATH = join(RSC_PATH, 'dataset')
-PRED_PATH = join(RSC_PATH, 'predictions')
-VALIDATION_PATH = join(RSC_PATH, 'validation')
+DATA_PATH = join(RSC_PATH, 'database')
+METADATA_PATH = join(DATA_PATH, 'metadata')
+INFERENCE_PATH = join(RSC_PATH, 'inference')
+VALIDATION_PATH = join(DATA_PATH, 'validation')
 CHECKPOINT_PATH = join(RSC_PATH, 'checkpoints')
-LOGS_PATH = join(PROJECT_DIR, 'resources', 'logs')
-
+LOGS_PATH = join(RSC_PATH, 'logs')
 
 # [CONFIGURATIONS]
 ###############################################################################

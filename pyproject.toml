@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "FAIRS"
-version = "1.4"
+version = "1.5"
 
 [tool.setuptools.packages.find]
 where = ["."]

@@ -1,14 +1,14 @@
-# [SET KERAS BACKEND]
-import os 
-os.environ["KERAS_BACKEND"] = "torch"
+# [SETTING ENVIRONMENT VARIABLES]
+from FAIRS.commons.variables import EnvironmentVariables
+EV = EnvironmentVariables()
 
 # [SETTING WARNINGS]
 import warnings
 warnings.simplefilter(action='ignore', category=Warning)
 
 # [IMPORT CUSTOM MODULES]
-from FAIRS.commons.utils.dataloader.generators import RouletteGenerator
-from FAIRS.commons.utils.dataloader.serializer import DataSerializer, ModelSerializer
+
+from FAIRS.commons.utils.data.serializer import DataSerializer, ModelSerializer
 from FAIRS.commons.utils.learning.models import FAIRSnet
 from FAIRS.commons.utils.learning.training import DQNTraining
 from FAIRS.commons.utils.validation.reports import log_training_report
@@ -25,8 +25,7 @@ if __name__ == '__main__':
     # use the roulette generator to process raw extractions and retrieve 
     # sequence of positions and color-encoded values        
     logger.info(f'Loading FAIRS dataset from {DATA_PATH}')           
-    generator = RouletteGenerator(CONFIG)    
-    dataset_path = os.path.join(DATA_PATH, 'FAIRS_dataset.csv') 
+    generator = RouletteGenerator(CONFIG)     
     roulette_dataset = generator.prepare_roulette_dataset(dataset_path)    
     
     # 2. [BUILD MODEL AND AGENTS]  

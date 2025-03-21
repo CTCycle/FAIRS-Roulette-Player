@@ -7,7 +7,7 @@ import warnings
 warnings.simplefilter(action='ignore', category=Warning)
 
 # [IMPORT CUSTOM MODULES]
-from FAIRS.commons.utils.validation.reports import DataAnalysisPDF
+from FAIRS.commons.utils.data.serializer import DataSerializer
 from FAIRS.commons.utils.validation.timeseries import RouletteSeriesValidation
 from FAIRS.commons.constants import CONFIG
 from FAIRS.commons.logger import logger
@@ -18,7 +18,6 @@ if __name__ == '__main__':
 
     # 1. [LOAD DATASET]
     #--------------------------------------------------------------------------  
-    
-    # 2. [INITIALIZE PDF REPORT]
-    #--------------------------------------------------------------------------
-    report = DataAnalysisPDF()
+    serializer = DataSerializer(CONFIG)     
+    images_paths = serializer.get_images_path(IMG_PATH)  
+    logger.info(f'The image dataset is composed of {len(images_paths)} images')  

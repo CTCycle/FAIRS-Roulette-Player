@@ -2,8 +2,9 @@ import os
 import shutil
 import pandas as pd
 
-from FAIRS.commons.utils.dataloader.serializer import ModelSerializer
-from FAIRS.commons.constants import CONFIG, CHECKPOINT_PATH, VALIDATION_PATH
+from FAIRS.commons.utils.data.database import FAIRSDatabase
+from FAIRS.commons.utils.data.serializer import ModelSerializer
+from FAIRS.commons.constants import CONFIG, CHECKPOINT_PATH, DATA_PATH
 from FAIRS.commons.logger import logger
 
 
@@ -12,11 +13,14 @@ from FAIRS.commons.logger import logger
 ################################################################################
 class ModelEvaluationSummary:
 
-    def __init__(self, remove_invalid=False):
+    def __init__(self, configuration, remove_invalid=False):
         self.remove_invalid = remove_invalid
         self.serializer = ModelSerializer()
-        self.summary_path = os.path.join(VALIDATION_PATH, 'checkpoints')
-        os.makedirs(self.summary_path, exist_ok=True)
+
+        self.csv_kwargs = {'index': 'False', 'sep': ';', 'encoding': 'utf-8'}
+        self.database = FAIRSDatabase(configuration)
+        self.save_as_csv = configuration["dataset"]["SAVE_CSV"]
+        self.configurations = configuration     
 
     #---------------------------------------------------------------------------
     def scan_checkpoint_folder(self):
@@ -42,7 +46,7 @@ class ModelEvaluationSummary:
             model_name = os.path.basename(model_path) 
             # Extract model name and training type                       
             device_config = configuration["device"]
-            precision = 16 if device_config.get("use_mixed_precision", 'NA') == True else 32
+            precision = 16 if device_config.get("MIXED_PRECISION", 'NA') == True else 32
             chkp_config = {'Checkpoint name': model_name,                                                 
                            'Sample size': configuration["dataset"].get("SAMPLE_SIZE", 'NA'),
                            'Validation size': configuration["dataset"].get("VALIDATION_SIZE", 'NA'),
@@ -53,7 +57,7 @@ class ModelEvaluationSummary:
                            'Batch size': configuration["training"].get("BATCH_SIZE", 'NA'),                          
                            'Normalize': configuration["dataset"].get("IMG_NORMALIZE", 'NA'),
                            'Split seed': configuration["dataset"].get("SPLIT_SEED", 'NA'),
-                           'Image augment': configuration["dataset"].get("IMG_AUGMENT", 'NA'),                          
+                           'Image augment': configuration["dataset"].get("IMG_AUGMENTATION", 'NA'),                          
                            'Residuals': configuration["model"].get("RESIDUAL_CONNECTIONS", 'NA'),
                            'JIT Compile': configuration["model"].get("JIT_COMPILE", 'NA'),
                            'JIT Backend': configuration["model"].get("JIT_BACKEND", 'NA'),
@@ -64,10 +68,13 @@ class ModelEvaluationSummary:
 
             model_parameters.append(chkp_config)
 
-        # Define the CSV path
         dataframe = pd.DataFrame(model_parameters)
-        csv_path = os.path.join(self.summary_path, 'checkpoints_summary.csv')     
-        dataframe.to_csv(csv_path, index=False, sep=';', encoding='utf-8')        
+        self.database.save_checkpoints_summary(dataframe)
+
+        if self.save_as_csv:
+            logger.info('Export to CSV requested. Now saving checkpoint summary to CSV file')             
+            csv_path = os.path.join(DATA_PATH, 'checkpoints_summary.csv')     
+            dataframe.to_csv(csv_path, index=False, **self.csv_kwargs)        
             
         return dataframe
     

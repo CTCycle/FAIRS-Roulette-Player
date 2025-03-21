@@ -6,7 +6,8 @@ import pandas as pd
 from datetime import datetime
 import keras
 
-from FAIRS.commons.constants import CONFIG, DATA_PATH, DATASET_NAME, CHECKPOINT_PATH
+from FAIRS.commons.utils.data.database import FAIRSDatabase
+from FAIRS.commons.constants import CONFIG, DATA_PATH, METADATA_PATH, CHECKPOINT_PATH
 from FAIRS.commons.logger import logger
 
 
@@ -33,51 +34,60 @@ def checkpoint_selection_menu(models_list):
     return selection_index
 
 
-# get FAIRS data for training
-###############################################################################
-def get_extraction_dataset(path, sample_size=None):     
-
-    if sample_size is None:
-        sample_size = CONFIG["dataset"]["SAMPLE_SIZE"]    
-    dataset = pd.read_csv(path, encoding='utf-8', sep=';')
-    num_samples = int(dataset.shape[0] * sample_size)
-    dataset = dataset[(dataset.shape[0] - num_samples):]
-
-    return dataset
-
-   
-
 # [DATA SERIALIZATION]
 ###############################################################################
 class DataSerializer:
 
     def __init__(self, configuration):         
-        self.configuration = configuration   
+        self.metadata_path = os.path.join(METADATA_PATH, 'FAIRS_metadata.json') 
+        self.csv_kwargs = {'sep': ';', 'encoding': 'utf-8'}
+        self.database = FAIRSDatabase(configuration)       
 
-    # save preprocessed roulette series as serialized numpy array
+        self.seed = configuration['SEED']   
+        self.parameters = configuration["dataset"]
+        self.save_as_csv = self.parameters["SAVE_CSV"]
+        self.configuration = configuration
+
     #--------------------------------------------------------------------------
-    def save_preprocessed_data(self, data : np.array, path):              
-        data_path = os.path.join(path, 'data', 'train_data.npy')        
-        np.save(data_path, data)       
+    def load_roulette_dataset(self, sample_size=None):
+        # load source data from database (if available) else load it from csv file 
+        try: 
+            dataset = self.database.load_roulette_series()
+        except:
+            dataset_path = os.path.join(DATA_PATH, 'FAIRS_dataset.csv')   
+            dataset = pd.read_csv(dataset_path, **self.csv_kwargs)
+            # if the source data is not found in the database, save it as a new table
+            self.database.save_roulette_series(dataset)
+
+        sample_size = self.parameters["SAMPLE_SIZE"] if sample_size is None else sample_size        
+        dataset = dataset.sample(frac=sample_size, random_state=self.seed)     
+
+        return dataset
 
     #--------------------------------------------------------------------------
-    def load_preprocessed_data(self, path):
+    def save_preprocessed_data(self, processed_data : pd.DataFrame):               
+        self.database.save_preprocessed_roulette_series(processed_data)      
+        metadata = {'seed' : self.configuration['SEED'], 
+                    'dataset' : self.configuration['dataset'],
+                    'date' : datetime.now().strftime("%Y-%m-%d")}
+                
+        with open(self.metadata_path, 'w') as file:
+            json.dump(metadata, file, indent=4)  
 
-        # load preprocessed train and validation data
-        train_file_path = os.path.join(path, 'XREPORT_train.csv') 
-        val_file_path = os.path.join(path, 'XREPORT_validation.csv')
-        train_data = pd.read_csv(train_file_path, encoding='utf-8', sep=';', low_memory=False)
-        validation_data = pd.read_csv(val_file_path, encoding='utf-8', sep=';', low_memory=False)
+        # save the preprocessed data as .csv if requested by configurations
+        if self.save_as_csv:            
+            csv_path = os.path.join(DATA_PATH, 'FAIRS_processed_dataset.csv')             
+            processed_data.to_csv(csv_path, index=False, **self.csv_kwargs) 
 
-        # transform text strings into array of words
-        train_data['tokens'] = train_data['tokens'].apply(lambda x : [int(f) for f in x.split()])
-        validation_data['tokens'] = validation_data['tokens'].apply(lambda x : [int(f) for f in x.split()])
-        # load preprocessing metadata
-        metadata_path = os.path.join(path, 'preprocessing_metadata.json')
-        with open(metadata_path, 'r') as file:
-            metadata = json.load(file)
-        
-        return train_data, validation_data, metadata   
+    #--------------------------------------------------------------------------
+    def load_preprocessed_data(self): 
+        # load preprocessed data from database and convert joint strings to list 
+        processed_data = self.database.load_preprocessed_roulette_series()      
+
+        with open(self.metadata_path, 'r') as file:
+            metadata = json.load(file)        
+       
+        return processed_data, metadata 
         
            
 
@@ -91,10 +101,10 @@ class ModelSerializer:
 
     # function to create a folder where to save model checkpoints
     #--------------------------------------------------------------------------
-    def create_checkpoint_folder(self):
-     
+    def create_checkpoint_folder(self):     
         today_datetime = datetime.now().strftime('%Y%m%dT%H%M%S')        
-        checkpoint_path = os.path.join(CHECKPOINT_PATH, f'{self.model_name}_{today_datetime}')         
+        checkpoint_path = os.path.join(
+            CHECKPOINT_PATH, f'{self.model_name}_{today_datetime}')         
         os.makedirs(checkpoint_path, exist_ok=True)        
         os.makedirs(os.path.join(checkpoint_path, 'data'), exist_ok=True)
         logger.debug(f'Created checkpoint folder at {checkpoint_path}')
@@ -108,49 +118,23 @@ class ModelSerializer:
         logger.info(f'Training session is over. Model has been saved in folder {path}')
 
     #--------------------------------------------------------------------------
-    def save_session_configuration(self, path, history : dict, configurations : dict):
-
-        
-        os.makedirs(os.path.join(path, 'configurations'), exist_ok=True) 
-
-        # Paths to the JSON files
+    def save_session_configuration(self, path, history : dict, configurations : dict):        
+        os.makedirs(os.path.join(path, 'configurations'), exist_ok=True)         
         config_path = os.path.join(path, 'configurations', 'configurations.json')
-        history_path = os.path.join(path, 'configurations', 'session_history.json')
-
-        # Function to merge dictionaries
-        def merge_dicts(original, new_data):
-            for key, value in new_data.items():
-                if key in original:
-                    if isinstance(value, dict) and isinstance(original[key], dict):
-                        merge_dicts(original[key], value)
-                    elif isinstance(value, list) and isinstance(original[key], list):
-                        original[key].extend(value)
-                    else:
-                        original[key] = value
-                else:
-                    original[key] = value    
+        history_path = os.path.join(path, 'configurations', 'session_history.json')        
 
         # Save training and model configurations
         with open(config_path, 'w') as f:
-            json.dump(configurations, f)
-
-        # Load existing session history if the file exists and merge
-        if os.path.exists(history_path):
-            with open(history_path, 'r') as f:
-                existing_history = json.load(f)
-            merge_dicts(existing_history, history)
-        else:
-            existing_history = history
+            json.dump(configurations, f)       
 
         # Save session history
         with open(history_path, 'w') as f:
-            json.dump(existing_history, f)
+            json.dump(history, f)
 
-        logger.debug(f'Model configuration and session history have been saved and merged at {path}')      
+        logger.debug(f'Model configuration and session history saved for {os.path.basename(path)}')
 
     #--------------------------------------------------------------------------
     def load_session_configuration(self, path): 
-
         config_path = os.path.join(path, 'configurations', 'configurations.json')        
         with open(config_path, 'r') as f:
             configurations = json.load(f)        
@@ -179,8 +163,7 @@ class ModelSerializer:
                     expand_nested=True, rankdir='TB', dpi=400)
             
     #--------------------------------------------------------------------------
-    def load_checkpoint(self, checkpoint_name):           
-
+    def load_checkpoint(self, checkpoint_name):
         checkpoint_path = os.path.join(CHECKPOINT_PATH, checkpoint_name)
         model_path = os.path.join(checkpoint_path, 'saved_model.keras') 
         model = keras.models.load_model(model_path) 
@@ -188,11 +171,9 @@ class ModelSerializer:
         return model
             
     #-------------------------------------------------------------------------- 
-    def select_and_load_checkpoint(self): 
-
+    def select_and_load_checkpoint(self):
         # look into checkpoint folder to get pretrained model names      
         model_folders = self.scan_checkpoints_folder()
-
         # quit the script if no pretrained models are found 
         if len(model_folders) == 0:
             logger.error('No pretrained model checkpoints in resources')
@@ -201,7 +182,8 @@ class ModelSerializer:
         # select model if multiple checkpoints are available
         if len(model_folders) > 1:
             selection_index = checkpoint_selection_menu(model_folders)                    
-            checkpoint_path = os.path.join(CHECKPOINT_PATH, model_folders[selection_index-1])
+            checkpoint_path = os.path.join(
+                CHECKPOINT_PATH, model_folders[selection_index-1])
 
         # load directly the pretrained model if only one is available 
         elif len(model_folders) == 1:

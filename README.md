@@ -9,14 +9,16 @@ During training, the DQN agent learns to identify patterns within these sequence
 FAIRSnet is a custom neural network architecture tailored for time series forecasting in roulette prediction. It combines dense layers, frequency-based embeddings, and dual Q-Networks to capture sequential dependencies. The model takes a perceived field of historical outcomes as input, passing these sequences through a frequency-based embedding layer. While roulette outcomes are theoretically random, some online platforms may use algorithms that exhibit patterns or slight autoregressive tendencies. The architecture employs multiple dense layers with ReLU activation to learn relationships between past states and actions with the highest expected rewards. It is trained on a dataset built from past experiences, using reinforcement learning to optimize decision-making through DQN policy. The Q-Network head predicts Q-values that represents the confidence level for each possible outcome (suggested action). The model is trained using the Mean Squared Error (MSE) loss function, while tracking the Mean Absolute Percentage Error (MAPE) as a key metric. 
 
 ## 3. Installation
-The installation process on Windows has been designed to be fully automated. To begin, simply run *start_on_windows.bat.* On its first execution, the installation procedure will execute with minimal user input required. The script will check if either Anaconda or Miniconda is installed and can be accessed from your system path. If neither is found, it will automatically download and install the latest Miniconda release from https://docs.anaconda.com/miniconda/. Following this step, the script will proceed with the installation of all necessary Python dependencies. This includes Keras 3 (with PyTorch support as the backend) and the required CUDA dependencies (CUDA 12.4) to enable GPU acceleration. Should you prefer to handle the installation process separately, you can run the standalone installer by running *setup/install_on_windows.bat*.
+The installation process on Windows has been designed to be fully automated. To begin, simply run *start_on_windows.bat.* On its first execution, the installation procedure will execute with minimal user input required. The script will check if either Anaconda or Miniconda is installed and can be accessed from your system path. If neither is found, it will automatically download and install the latest Miniconda release from https://docs.anaconda.com/miniconda/. Following this step, the script will proceed with the installation of all necessary Python dependencies. 
+
+This includes Keras 3 (with PyTorch support as the backend) and the required CUDA dependencies (CUDA 12.4) to enable GPU acceleration. Should you prefer to handle the installation process separately, you can run the standalone installer by running *setup/install_on_windows.bat*.
 
 **Important:** After installation, if the project folder is moved or its path is changed, the application will no longer function correctly. To fix this, you can either:
 
 - Open the main menu, select *Setup and maintentance* and choose *Install project in editable mode*
 - Manually run the following commands in the terminal, ensuring the project folder is set as the current working directory (CWD):
 
-    `conda activate FAIRS`
+    `conda activate FEXT`
 
     `pip install -e . --use-pep517` 
 
@@ -42,17 +44,19 @@ On Windows, run *start_on_windows.bat* to launch the main navigation menu and br
 **5) Exit:** close the program immediately 
 
 ### 4.2 Resources
+This folder organizes data and results across various stages of the project, such as data validation, model training, and evaluation. By default, all data is stored within an SQLite database; however, users have the option to export data into separate CSV files if desired. To visualize and interact with SQLite database files, we recommend downloading and installing the DB Browser for SQLite, available at: https://sqlitebrowser.org/dl/.
+
+The directory structure includes the following folders:
 
 - **checkpoints:**  pretrained model checkpoints are stored here, and can be used either for resuming training or performing inference with an already trained model.
 
-- **dataset:** stores roulette extraction series through the file *FAIRS_dataset.csv*.
+- **database:** Processed data and validation results will be stored centrally within the main database *FEXT_database.db*. All associated metadata will be promptly stored in *database/metadata*. For image training data, ensure all image files are placed in *database/images*, adhering to specified formats (.jpeg or .png). Graphical validation outputs will be saved separately within *database/validation*. Stores roulette extraction series through the file *FAIRS_dataset.csv*.
 
-- **predictions:** this is where roulette predictions are stored in .csv format, and where the file holding past extraction to start predictions from is stored (*FAIRS_predictions.csv*). 
+- **inference:** this is where roulette predictions are stored in .csv format, and where the file holding past extraction to start predictions from is stored (*FAIRS_predictions.csv*).
 
 - **logs:** log files are saved here
 
-- **validation:** Used to save the results of data validation processes. This helps in keeping track of validation metrics and logs.
-
+- **templates:** reference template files can be found here
 
 ## 5. Configurations
 For customization, you can modify the main configuration parameters using *settings/configurations.json* 
@@ -65,7 +69,6 @@ For customization, you can modify the main configuration parameters using *setti
 | SAMPLE_SIZE        | Number of samples to use from the dataset                |
 | VALIDATION_SIZE    | Proportion of the dataset to use for validation          |
 | PERCEPTIVE_SIZE    | Size of the perceptive field of past extractions         |
-
 
 #### Model Configuration
 

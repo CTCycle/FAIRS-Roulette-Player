@@ -1,10 +1,13 @@
-__pycache__
 FAIRS/resources/checkpoints/*
+FAIRS/resources/database/metadata/*
+FAIRS/resources/inference/*
 
 setup/environment/*
 setup/miniconda/*
 setup/variables/.env
 
+__pycache__
 *.egg-info
+*.db
 *.log
 !.gitkeep

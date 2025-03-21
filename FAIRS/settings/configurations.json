@@ -2,7 +2,8 @@
     "SEED" : 54,   
     "dataset": {"FROM_GENERATOR" : null,
                 "SAMPLE_SIZE" : 1.0,
-                "VALIDATION_SIZE" : 0.1}, 
+                "VALIDATION_SIZE" : 0.1,
+                "SAVE_CSV" : false}, 
 
     "device" : {"DEVICE" : "GPU",
                 "DEVICE_ID" : 0,

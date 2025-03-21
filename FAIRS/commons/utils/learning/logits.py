@@ -1,5 +1,5 @@
 import keras
-from keras import activations, layers
+from keras import layers
 import torch
 
 from FAIRS.commons.constants import CONFIG

@@ -2,10 +2,10 @@ import numpy as np
 import keras
 import torch
 
+from FAIRS.commons.utils.data.serializer import ModelSerializer
 from FAIRS.commons.utils.learning.callbacks import CallbacksWrapper
 from FAIRS.commons.utils.learning.environment import RouletteEnvironment
 from FAIRS.commons.utils.learning.agents import DQNAgent
-from FAIRS.commons.utils.dataloader.serializer import ModelSerializer
 from FAIRS.commons.constants import CONFIG
 from FAIRS.commons.logger import logger
 
@@ -29,8 +29,7 @@ class DQNTraining:
 
         # initialize variables
         self.session = []
-        self.callback_wrapper = CallbacksWrapper(configuration)               
-                    
+        self.callback_wrapper = CallbacksWrapper(configuration)                   
 
     # set device
     #--------------------------------------------------------------------------
@@ -74,7 +73,8 @@ class DQNTraining:
         # the dashboard is set on the Q model and tensorboard is launched automatically
         tensorboard = None
         if self.configuration["training"]["USE_TENSORBOARD"]:
-            tensorboard = self.callback_wrapper.tensorboard_callback(checkpoint_path, model)            
+            tensorboard = self.callback_wrapper.tensorboard_callback(
+                checkpoint_path, model)            
                
         # Training loop for each episode 
         scores = None       
@@ -100,8 +100,10 @@ class DQNTraining:
                 # Perform replay if the memory size is sufficient
                 # use both the Q model and the target model
                 if len(agent.memory) > self.replay_size:
-                    scores = agent.replay(model, target_model, environment, self.batch_size)                   
-                    self.update_session_stats(scores, episode, time_step, reward, total_reward)
+                    scores = agent.replay(
+                        model, target_model, environment, self.batch_size)                   
+                    self.update_session_stats(
+                        scores, episode, time_step, reward, total_reward)
                     if time_step % 10 == 0:
                         logger.info(f'Loss: {scores["loss"]} | RMSE: {scores["root_mean_squared_error"]}') 
                         logger.info(f'Episode {episode+1}/{episodes} - Time steps: {time_step} - Capital: {info["capital"]} - Total Reward: {total_reward}')                             
@@ -121,10 +123,8 @@ class DQNTraining:
  
     #--------------------------------------------------------------------------
     def train_model(self, model, target_model, data, checkpoint_path, from_checkpoint=False):
-
         environment = RouletteEnvironment(data, self.configuration)   
         agent = DQNAgent(self.configuration)
-
         # perform different initialization duties based on state of session:
         # training from scratch vs resumed training
         # calculate number of epochs taking into account possible training resumption
@@ -141,11 +141,13 @@ class DQNTraining:
 
         # determine state size as the observation space size       
         state_size = environment.observation_space.shape[0]         
-        agent = self.reinforcement_learning_pipeline(model, target_model, agent, environment, 
-                                                              start_episode, episodes, state_size, checkpoint_path)
+        agent = self.reinforcement_learning_pipeline(
+            model, target_model, agent, environment, start_episode, episodes, 
+            state_size, checkpoint_path)
 
         # Save the final model at the end of training
         self.serializer.save_pretrained_model(model, checkpoint_path)        
-        self.serializer.save_session_configuration(checkpoint_path, history, self.configuration)
+        self.serializer.save_session_configuration(
+            checkpoint_path, history, self.configuration)
 
 

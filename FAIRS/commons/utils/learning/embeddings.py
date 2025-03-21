@@ -1,7 +1,6 @@
-import numpy as np
 import torch
 import keras
-from keras import activations, layers 
+from keras import layers 
 
 from FAIRS.commons.constants import CONFIG, NUMBERS
 from FAIRS.commons.logger import logger

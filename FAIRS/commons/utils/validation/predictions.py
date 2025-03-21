@@ -1,4 +1,5 @@
 import os
+import numpy as np
 import keras
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -16,19 +17,14 @@ class BetsAccuracy:
     def __init__(self, model : keras.Model):
         self.DPI = 400
         self.file_type = 'jpeg'        
-        self.model = model   
-
+        self.model = model  
 
     # comparison of data distribution using statistical methods 
     #--------------------------------------------------------------------------     
     def plot_timeseries_prediction(self, values, name, path, dpi=400):
-        
-
         train_data = values['train']
         test_data = values['test']
-
-        plt.figure(figsize=(12, 10))
-        
+        plt.figure(figsize=(12, 10))        
         plt.scatter(train_data[0], train_data[1], label='True train', color='blue')
         plt.scatter(test_data[0], test_data[1], label='True test', color='cyan')        
         plt.scatter(train_data[0], train_data[2], label='Predicted train', color='orange')
@@ -42,7 +38,7 @@ class BetsAccuracy:
         plt.tight_layout()
         plot_loc = os.path.join(path, f'{name}.jpeg')
         plt.savefig(plot_loc, bbox_inches='tight', format='jpeg', dpi=dpi)
-        plt.show(block=False)
+        plt.close()
     
     # comparison of data distribution using statistical methods 
     #--------------------------------------------------------------------------     
@@ -58,8 +54,8 @@ class BetsAccuracy:
         plt.yticks(np.arange(len(class_names)) + 0.5, class_names, rotation=0, fontsize=12, va="center")          
         plt.tight_layout()
         plot_loc = os.path.join(path, f'{name}.jpeg')
-        plt.savefig(plot_loc, bbox_inches='tight', format='jpeg', dpi = dpi)
-        plt.show(block=False)
+        plt.savefig(plot_loc, bbox_inches='tight', format='jpeg', dpi=self.DPI)
+        plt.close()
 
     
         
