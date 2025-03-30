@@ -56,7 +56,7 @@ if __name__ == '__main__':
    
     # 3. [BUILD MODEL AND AGENT]  
     #--------------------------------------------------------------------------  
-    # Setting callbacks and training routine for the features extraction model 
+    # Setting callbacks and training routine for the machine learning model 
     # use command prompt on the model folder and (upon activating environment), 
     # use the bash command: python -m tensorboard.main --logdir tensorboard/ 
     #--------------------------------------------------------------------------

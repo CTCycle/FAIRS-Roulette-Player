@@ -8,7 +8,7 @@ warnings.simplefilter(action='ignore', category=Warning)
 
 # [IMPORT CUSTOM MODULES]
 from FAIRS.commons.utils.data.serializer import DataSerializer
-from FAIRS.commons.utils.process.mapping import RouletteMapper
+from FAIRS.commons.utils.data.process.mapping import RouletteMapper
 from FAIRS.commons.constants import CONFIG
 from FAIRS.commons.logger import logger
 

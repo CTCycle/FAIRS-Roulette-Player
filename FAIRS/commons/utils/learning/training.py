@@ -23,8 +23,8 @@ class DQNTraining:
         
         # set seed for random operations
         keras.utils.set_random_seed(configuration["SEED"])  
-        self.selected_device = configuration["device"]["DEVICE"]
-        self.device_id = configuration["device"]["DEVICE_ID"]
+        self.selected_device = CONFIG["device"]["DEVICE"]
+        self.device_id = CONFIG["device"]["DEVICE_ID"]
         self.mixed_precision = self.configuration["device"]["MIXED_PRECISION"]  
 
         # initialize variables
