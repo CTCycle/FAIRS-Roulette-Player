@@ -1,6 +1,8 @@
 FAIRS/resources/checkpoints/*
+FAIRS/resources/database/dataset/*
 FAIRS/resources/database/metadata/*
-FAIRS/resources/inference/*
+FAIRS/resources/database/validation/*
+FAIRS/resources/database/inference/*
 
 setup/environment/*
 setup/miniconda/*

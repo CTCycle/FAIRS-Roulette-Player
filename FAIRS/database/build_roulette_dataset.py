@@ -34,7 +34,6 @@ if __name__ == '__main__':
     #--------------------------------------------------------------------------
     # save preprocessed data using data serializer 
     logger.info(f'Dataset includes {roulette_dataset.shape[0]} roulette extractions')     
-    logger.info('Saving preprocessed data to FAIRS database')     
     dataserializer.save_preprocessed_data(roulette_dataset) 
 
   
