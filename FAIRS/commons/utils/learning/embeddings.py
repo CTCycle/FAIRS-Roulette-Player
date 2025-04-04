@@ -8,7 +8,7 @@ from FAIRS.commons.logger import logger
 
 # [POSITIONAL EMBEDDING]
 ###############################################################################
-@keras.utils.register_keras_serializable(package='CustomLayers', name='RouletteEmbedding')
+@keras.saving.register_keras_serializable(package='CustomLayers', name='RouletteEmbedding')
 class RouletteEmbedding(keras.layers.Layer):
     def __init__(self, embedding_dims, states, mask_negative=True, **kwargs):
         super(RouletteEmbedding, self).__init__(**kwargs)

@@ -50,9 +50,7 @@ The directory structure includes the following folders:
 
 - **checkpoints:**  pretrained model checkpoints are stored here, and can be used either for resuming training or performing inference with an already trained model.
 
-- **database:** Processed data and validation results will be stored centrally within the main database *FEXT_database.db*. All associated metadata will be promptly stored in *database/metadata*. For image training data, ensure all image files are placed in *database/images*, adhering to specified formats (.jpeg or .png). Graphical validation outputs will be saved separately within *database/validation*. Stores roulette extraction series through the file *FAIRS_dataset.csv*.
-
-- **inference:** this is where roulette predictions are stored in .csv format, and where the file holding past extraction to start predictions from is stored (*FAIRS_predictions.csv*).
+- **database:** collected adsorption data, processed data and validation results will be stored centrally within the main database *FAIRS_database.db*. All associated metadata will be promptly stored in *database/metadata*. Graphical validation outputs will be saved separately within *database/validation*. Data used for inference with a pretrained checkpoint is located in *database/inference* (a template of the expected dataset columns is available at *resources/templates/FAIRS_predictions.csv*). 
 
 - **logs:** log files are saved here
 

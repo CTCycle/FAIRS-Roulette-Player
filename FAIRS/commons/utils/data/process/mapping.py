@@ -41,8 +41,8 @@ class RouletteMapper:
         # map roulette numbers to their positional indices        
         dataframe = self.map_roulette_positions(dataframe)
         # map roulette numbers to their corresponding colors
-        dataframe = self.map_roulette_colors(dataframe)                             
-
+        dataframe = self.map_roulette_colors(dataframe) 
+                
         return dataframe
     
 

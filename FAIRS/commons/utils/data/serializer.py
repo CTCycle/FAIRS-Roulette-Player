@@ -39,26 +39,15 @@ def checkpoint_selection_menu(models_list):
 class DataSerializer:
 
     def __init__(self, configuration):         
-        self.metadata_path = os.path.join(METADATA_PATH, 'FAIRS_metadata.json') 
-        self.csv_kwargs = {'sep': ';', 'encoding': 'utf-8'}
-        self.database = FAIRSDatabase(configuration)       
-
-        self.seed = configuration['SEED']   
-        self.parameters = configuration["dataset"]
-        self.save_as_csv = self.parameters["SAVE_CSV"]
+        self.metadata_path = os.path.join(METADATA_PATH, 'FAIRS_metadata.json')    
+        self.database = FAIRSDatabase(configuration)  
+        self.seed = configuration['SEED']
+        self.parameters = configuration['dataset']          
         self.configuration = configuration
 
     #--------------------------------------------------------------------------
-    def load_roulette_dataset(self, sample_size=None):
-        # load source data from database (if available) else load it from csv file 
-        try: 
-            dataset = self.database.load_roulette_series()
-        except:
-            dataset_path = os.path.join(DATA_PATH, 'FAIRS_dataset.csv')   
-            dataset = pd.read_csv(dataset_path, **self.csv_kwargs)
-            # if the source data is not found in the database, save it as a new table
-            self.database.save_roulette_series(dataset)
-
+    def load_roulette_dataset(self, sample_size=None):        
+        dataset = self.database.load_source_data_table()
         sample_size = self.parameters["SAMPLE_SIZE"] if sample_size is None else sample_size        
         dataset = dataset.sample(frac=sample_size, random_state=self.seed)     
 
@@ -66,23 +55,17 @@ class DataSerializer:
 
     #--------------------------------------------------------------------------
     def save_preprocessed_data(self, processed_data : pd.DataFrame):               
-        self.database.save_preprocessed_roulette_series(processed_data)      
+        self.database.save_preprocessed_data_table(processed_data)      
         metadata = {'seed' : self.configuration['SEED'], 
                     'dataset' : self.configuration['dataset'],
                     'date' : datetime.now().strftime("%Y-%m-%d")}
                 
         with open(self.metadata_path, 'w') as file:
-            json.dump(metadata, file, indent=4)  
-
-        # save the preprocessed data as .csv if requested by configurations
-        if self.save_as_csv:            
-            csv_path = os.path.join(DATA_PATH, 'FAIRS_processed_dataset.csv')             
-            processed_data.to_csv(csv_path, index=False, **self.csv_kwargs) 
+            json.dump(metadata, file, indent=4)     
 
     #--------------------------------------------------------------------------
-    def load_preprocessed_data(self): 
-        # load preprocessed data from database and convert joint strings to list 
-        processed_data = self.database.load_preprocessed_roulette_series()      
+    def load_preprocessed_data(self):         
+        processed_data = self.database.load_preprocessed_data_table()     
 
         with open(self.metadata_path, 'r') as file:
             metadata = json.load(file)        

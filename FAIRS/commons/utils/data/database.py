@@ -150,7 +150,7 @@ class CheckpointSummaryTable:
             );
             '''  
         
-        cursor.execute(query)    
+        cursor.execute(query)   
 
 
 
@@ -161,7 +161,7 @@ class FAIRSDatabase:
     def __init__(self, configuration):             
         self.db_path = os.path.join(DATA_PATH, 'FAIRS_database.db') 
         self.source_path = os.path.join(SOURCE_PATH, 'FAIRS_dataset.csv')  
-        self.inference_path = os.path.join(INFERENCE_PATH, 'FAIRS_predictions.csv.csv')        
+        self.inference_path = os.path.join(INFERENCE_PATH, 'FAIRS_predictions.csv')        
         self.configuration = configuration
         self.source_data = RouletteSeriesTable()
         self.processed_data = ProcessedDataTable()
@@ -172,7 +172,6 @@ class FAIRSDatabase:
 
     #--------------------------------------------------------------------------       
     def initialize_database(self):        
-        # Connect to the SQLite database and create the database if does not exist
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         self.source_data.create_table(cursor)  
@@ -187,12 +186,11 @@ class FAIRSDatabase:
     def update_database(self):               
         source_data = pd.read_csv(self.source_path, sep=';', encoding='utf-8')      
         inference_data = pd.read_csv(self.inference_path, sep=';', encoding='utf-8')    
-        self.save_roulette_series(source_data)
+        self.save_source_data_table(source_data)
         self.save_inference_data_table(inference_data)
 
     #--------------------------------------------------------------------------
-    def load_roulette_series(self): 
-        # Connect to the database and select roulette series data table               
+    def load_source_data_table(self):                   
         conn = sqlite3.connect(self.db_path)        
         data = pd.read_sql_query(
             f"SELECT * FROM {self.source_data.name}", conn)
@@ -201,8 +199,7 @@ class FAIRSDatabase:
         return data 
 
     #--------------------------------------------------------------------------
-    def load_preprocessed_data(self, data : pd.DataFrame): 
-        # Connect to the database and select roulette series data table               
+    def load_preprocessed_data_table(self, data : pd.DataFrame):                       
         conn = sqlite3.connect(self.db_path)        
         data = pd.read_sql_query(
             f"SELECT * FROM {self.processed_data.name}", conn)
@@ -211,37 +208,36 @@ class FAIRSDatabase:
         return data      
 
     #--------------------------------------------------------------------------
-    def save_roulette_series(self, data : pd.DataFrame): 
-        # connect to sqlite database and save the roulette series as table
+    def save_source_data_table(self, data : pd.DataFrame):                 
         conn = sqlite3.connect(self.db_path)         
-        data.to_sql(self.source_data.name, conn, if_exists='replace',
+        data.to_sql(self.source_data.name, conn, if_exists='replace', index=False,
                     dtype=self.source_data.get_dtypes())
         conn.commit()
         conn.close()
 
     #--------------------------------------------------------------------------
-    def save_preprocessed_roulette_series(self, data : pd.DataFrame): 
-        # connect to sqlite database and save the roulette series as table
+    def save_preprocessed_data_table(self, data : pd.DataFrame):                
         conn = sqlite3.connect(self.db_path)         
-        data.to_sql(self.processed_data.name, conn, if_exists='replace',
-                    dtype=self.processed_data.get_dtypes())
+        data.to_sql(
+            self.processed_data.name, conn, if_exists='replace', index=False,
+            dtype=self.processed_data.get_dtypes())
         conn.commit()
         conn.close() 
 
     #--------------------------------------------------------------------------
     def save_inference_data_table(self, data : pd.DataFrame):         
         conn = sqlite3.connect(self.db_path)         
-        data.to_sql(self.inference_data.name, conn, if_exists='replace',
-                    dtype=self.inference_data.get_dtypes())
+        data.to_sql(
+            self.inference_data.name, conn, if_exists='replace', index=False,
+            dtype=self.inference_data.get_dtypes())
         conn.commit()
         conn.close()    
 
     #--------------------------------------------------------------------------
-    def save_checkpoints_summary_table(self, data : pd.DataFrame): 
-        # connect to sqlite database and save the preprocessed data as table
+    def save_checkpoints_summary_table(self, data : pd.DataFrame):        
         conn = sqlite3.connect(self.db_path)         
         data.to_sql(
-            self.checkpoints_summary.name, conn, if_exists='replace',
+            self.checkpoints_summary.name, conn, if_exists='replace', index=False,
             dtype=self.checkpoints_summary.get_dtypes())
         conn.commit()
         conn.close() 

@@ -7,7 +7,6 @@ import warnings
 warnings.simplefilter(action='ignore', category=Warning)
 
 # [IMPORT CUSTOM MODULES]
-
 from FAIRS.commons.utils.data.serializer import DataSerializer, ModelSerializer
 from FAIRS.commons.utils.learning.models import FAIRSnet
 from FAIRS.commons.utils.learning.training import DQNTraining
