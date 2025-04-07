@@ -4,7 +4,7 @@ from collections import deque
 import keras
 
 from FAIRS.commons.utils.learning.environment import RouletteEnvironment
-from FAIRS.commons.constants import CONFIG, STATES, PAD_VALUE
+from FAIRS.commons.constants import CONFIG, STATES, NUMBERS, PAD_VALUE
 from FAIRS.commons.logger import logger
 
 
@@ -22,7 +22,7 @@ class DQNAgent:
         self.epsilon_min = configuration['agent']['MINIMUM_ER'] 
         self.memory_size = configuration['agent']['MAX_MEMORY'] 
         self.replay_size = configuration['agent']['REPLAY_BUFFER']   
-        self.memory = deque(maxlen=self.memory_size) if memory is None else memory              
+        self.memory = deque(maxlen=self.memory_size) if memory is None else memory         
     
     #--------------------------------------------------------------------------
     def act(self, model : keras.Model, state, capital):

@@ -177,8 +177,20 @@ class RouletteEnvironment(gym.Env):
         self.bet_amount = configuration["environment"]["BET_AMOUNT"]
         self.max_steps = configuration["environment"]["MAX_STEPS"] 
         self.render_environment = configuration["environment"]["RENDERING"]
+
+        self.player = BetsAndRewards(configuration)  
+
+        self.black_numbers = self.player.black_numbers
+        self.red_numbers = self.player.red_numbers
+        self.odd_numbers = [n for n in range(1, NUMBERS) if n % 2 != 0]
+        self.even_numbers = [n for n in range(1, NUMBERS) if n % 2 == 0]
+        self.low_numbers = list(range(1, 19))       # Numbers 1-18
+        self.high_numbers = list(range(19, 37))     # Numbers 19-36
+        self.first_dozen_numbers = list(range(1, 13)) # Numbers 1-12
+        self.second_dozen_numbers = list(range(13, 25))# Numbers 13-24
+        self.third_dozen_numbers = list(range(25, 37)) # Numbers 25-36             
         
-        self.player = BetsAndRewards(configuration)       
+             
                 
         # Actions: 0 (Red), 1 (Black), 2-37 for betting on a specific number
         self.numbers = list(range(NUMBERS))  
@@ -276,19 +288,66 @@ class RouletteEnvironment(gym.Env):
             theta, np.ones(NUMBERS), width=width, color=colors, edgecolor='white', align='edge')
 
         # Highlight the action and related bars
-        if 0 <= action <= 36:  # Specific number
-            bars[action].set_facecolor('blue')  # Blue for the selected number
-            bars[action].set_alpha(0.7)
+        highlight_color = 'blue'
+        highlight_alpha = 0.7
+        if 0 <= action <= 36:  # Bet on a specific number
+            if action < len(bars): # Safety check
+                bars[action].set_facecolor(highlight_color)
+                bars[action].set_alpha(highlight_alpha)
 
-        elif action == 37:  # Bet on red
+        elif action == 37:  # Bet on Red
             for red_number in self.red_numbers:
-                bars[red_number].set_facecolor('blue')  # Highlight all red numbers
-                bars[red_number].set_alpha(0.7)
+                if red_number < len(bars): # Safety check
+                    bars[red_number].set_facecolor(highlight_color)
+                    bars[red_number].set_alpha(highlight_alpha)
 
-        elif action == 38:  # Bet on black
+        elif action == 38:  # Bet on Black
             for black_number in self.black_numbers:
-                bars[black_number].set_facecolor('blue')  # Highlight all black numbers
-                bars[black_number].set_alpha(0.7)
+                if black_number < len(bars): # Safety check
+                    bars[black_number].set_facecolor(highlight_color)
+                    bars[black_number].set_alpha(highlight_alpha)
+
+        elif action == 40:  # Bet on Odd
+            for odd_number in self.odd_numbers:
+                if odd_number < len(bars): # Safety check
+                    bars[odd_number].set_facecolor(highlight_color)
+                    bars[odd_number].set_alpha(highlight_alpha)
+
+        elif action == 41:  # Bet on Even
+            for even_number in self.even_numbers:
+                if even_number < len(bars): # Safety check
+                    bars[even_number].set_facecolor(highlight_color)
+                    bars[even_number].set_alpha(highlight_alpha)
+
+        elif action == 42:  # Bet on Low (1-18)
+            for low_number in self.low_numbers:
+                if low_number < len(bars): # Safety check
+                    bars[low_number].set_facecolor(highlight_color)
+                    bars[low_number].set_alpha(highlight_alpha)
+
+        elif action == 43:  # Bet on High (19-36)
+            for high_number in self.high_numbers:
+                if high_number < len(bars): # Safety check
+                    bars[high_number].set_facecolor(highlight_color)
+                    bars[high_number].set_alpha(highlight_alpha)
+
+        elif action == 44:  # Bet on First Dozen (1-12)
+            for first_dozen_number in self.first_dozen_numbers:
+                if first_dozen_number < len(bars): # Safety check
+                    bars[first_dozen_number].set_facecolor(highlight_color)
+                    bars[first_dozen_number].set_alpha(highlight_alpha)
+
+        elif action == 45:  # Bet on Second Dozen (13-24)
+            for second_dozen_number in self.second_dozen_numbers:
+                if second_dozen_number < len(bars): # Safety check
+                    bars[second_dozen_number].set_facecolor(highlight_color)
+                    bars[second_dozen_number].set_alpha(highlight_alpha)
+
+        elif action == 46:  # Bet on Third Dozen (25-36)
+            for third_dozen_number in self.third_dozen_numbers:
+                if third_dozen_number < len(bars): # Safety check
+                    bars[third_dozen_number].set_facecolor(highlight_color)
+                    bars[third_dozen_number].set_alpha(highlight_alpha)
 
         # Highlight the last extracted number
         bars[extracted_number].set_facecolor('yellow')

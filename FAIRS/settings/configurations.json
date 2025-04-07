@@ -26,7 +26,7 @@
     "environment" : {"INITIAL_CAPITAL": 3000,
                      "BET_AMOUNT": 10,
                      "MAX_STEPS": 1000,                     
-                     "RENDERING" : false},
+                     "RENDERING" : true},
 
     "training" : {"EPISODES" : 50,
                   "ADDITIONAL_EPISODES" : 10,                   
