@@ -14,43 +14,40 @@ from FAIRS.commons.logger import logger
 ###############################################################################
 class DQNTraining:
 
-    def __init__(self, configuration):                
-        self.serializer = ModelSerializer()
+    def __init__(self, configuration, metadata):     
+        keras.utils.set_random_seed(configuration["SEED"])         
         self.batch_size = configuration['training']['BATCH_SIZE']        
         self.update_frequency = configuration['training']['UPDATE_FREQUENCY'] 
-        self.replay_size = configuration['agent']['REPLAY_BUFFER']     
-        self.configuration = configuration 
-        
-        # set seed for random operations
-        keras.utils.set_random_seed(configuration["SEED"])  
+        self.replay_size = configuration['agent']['REPLAY_BUFFER']           
         self.selected_device = CONFIG["device"]["DEVICE"]
         self.device_id = CONFIG["device"]["DEVICE_ID"]
-        self.mixed_precision = self.configuration["device"]["MIXED_PRECISION"]  
+        self.mixed_precision = configuration["device"]["MIXED_PRECISION"]  
+        self.configuration = configuration 
+        self.metadata = metadata 
 
         # initialize variables
         self.session = []
-        self.callback_wrapper = CallbacksWrapper(configuration)                   
+        self.callback_wrapper = CallbacksWrapper(configuration) 
+        self.serializer = ModelSerializer()           
+        self.agent = DQNAgent(self.configuration)                 
 
     # set device
     #--------------------------------------------------------------------------
     def set_device(self):
-        
         if self.selected_device == 'GPU':
-            # fallback to CPU if no GPU is available
             if not torch.cuda.is_available():
                 logger.info('No GPU found. Falling back to CPU')
                 self.device = torch.device('cpu')
             else:
                 self.device = torch.device(f'cuda:{self.device_id}')
                 torch.cuda.set_device(self.device)  
-                logger.info('GPU is set as active device')
-                # set global policy as mixed precision if selected            
+                logger.info('GPU is set as active device')            
                 if self.mixed_precision:
                     keras.mixed_precision.set_global_policy("mixed_float16")
                     logger.info('Mixed precision policy is active during training')                   
         else:
             self.device = torch.device('cpu')
-            logger.info('CPU is set as active device') 
+            logger.info('CPU is set as active device')  
 
     # set device
     #--------------------------------------------------------------------------
@@ -66,8 +63,8 @@ class DQNTraining:
 
     #--------------------------------------------------------------------------
     def reinforcement_learning_pipeline(self, model : keras.Model, target_model : keras.Model,
-                                       agent : DQNAgent, environment : RouletteEnvironment, 
-                                       start_episode, episodes, state_size, checkpoint_path):
+                                        environment : RouletteEnvironment, start_episode, 
+                                        episodes, state_size, checkpoint_path):
 
         # if tensorboard is selected, an instance of the tb callback is built
         # the dashboard is set on the Q model and tensorboard is launched automatically
@@ -77,15 +74,16 @@ class DQNTraining:
                 checkpoint_path, model)            
                
         # Training loop for each episode 
-        scores = None       
+        scores = None    
+        capital = environment.capital   
         for episode in range(start_episode, episodes):                    
             state = environment.reset()
             state = np.reshape(state, newshape=(1, state_size))
             total_reward = 0
             for time_step in range(environment.max_steps):                 
                 # action is always performed using the Q model
-                action = agent.act(model, state)
-                next_state, reward, done, info, extraction = environment.step(action)
+                action = self.agent.act(model, state, capital)
+                next_state, reward, done, capital, extraction = environment.step(action)
                 total_reward += reward
                 next_state = np.reshape(next_state, [1, state_size])
 
@@ -94,19 +92,21 @@ class DQNTraining:
                     environment.render(episode, time_step, action, extraction)
 
                 # Remember experience
-                agent.remember(state, action, reward, next_state, done)
+                self.agent.remember(state, action, reward, next_state, done)
                 state = next_state
 
                 # Perform replay if the memory size is sufficient
                 # use both the Q model and the target model
-                if len(agent.memory) > self.replay_size:
-                    scores = agent.replay(
+                if len(self.agent.memory) > self.replay_size:
+                    scores = self.agent.replay(
                         model, target_model, environment, self.batch_size)                   
                     self.update_session_stats(
                         scores, episode, time_step, reward, total_reward)
                     if time_step % 10 == 0:
-                        logger.info(f'Loss: {scores["loss"]} | RMSE: {scores["root_mean_squared_error"]}') 
-                        logger.info(f'Episode {episode+1}/{episodes} - Time steps: {time_step} - Capital: {info["capital"]} - Total Reward: {total_reward}')                             
+                        logger.info(
+                            f'Loss: {scores["loss"]} | RMSE: {scores["root_mean_squared_error"]}') 
+                        logger.info(
+                            f'Episode {episode+1}/{episodes} - Time steps: {time_step} - Capital: {environment.capital} - Total Reward: {total_reward}')                             
 
                 # call on_epoch_end method of selected callbacks             
                 if tensorboard is not None and scores is not None:                    
@@ -119,12 +119,11 @@ class DQNTraining:
                 if done:
                     break
                      
-        return agent
+        return self.agent
  
     #--------------------------------------------------------------------------
     def train_model(self, model, target_model, data, checkpoint_path, from_checkpoint=False):
-        environment = RouletteEnvironment(data, self.configuration)   
-        agent = DQNAgent(self.configuration)
+        environment = RouletteEnvironment(data, self.configuration)
         # perform different initialization duties based on state of session:
         # training from scratch vs resumed training
         # calculate number of epochs taking into account possible training resumption
@@ -134,7 +133,7 @@ class DQNTraining:
             start_episode = 0
             history = None
         else:
-            _, history = self.serializer.load_session_configuration(checkpoint_path)                     
+            _, self.metadata, history = self.serializer.load_session_configuration(checkpoint_path)                     
             episodes = history['total_epochs'] + CONFIG['training']['ADDITIONAL_EPISODES'] 
             from_episode = history['total_epochs']
             start_episode = from_episode                    
@@ -142,12 +141,12 @@ class DQNTraining:
         # determine state size as the observation space size       
         state_size = environment.observation_space.shape[0]         
         agent = self.reinforcement_learning_pipeline(
-            model, target_model, agent, environment, start_episode, episodes, 
+            model, target_model, environment, start_episode, episodes, 
             state_size, checkpoint_path)
 
         # Save the final model at the end of training
         self.serializer.save_pretrained_model(model, checkpoint_path)        
         self.serializer.save_session_configuration(
-            checkpoint_path, history, self.configuration)
+            checkpoint_path, history, self.configuration, self.metadata)
 
 

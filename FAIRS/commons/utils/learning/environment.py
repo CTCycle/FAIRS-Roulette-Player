@@ -1,4 +1,4 @@
-import os
+import pandas as pd
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
@@ -6,41 +6,190 @@ import matplotlib
 matplotlib.use('TkAgg') 
 import matplotlib.pyplot as plt
 
-from FAIRS.commons.utils.process.mapping import RouletteMapper
-from FAIRS.commons.constants import CONFIG, STATES, NUMBERS
+from FAIRS.commons.utils.data.process.mapping import RouletteMapper
+from FAIRS.commons.constants import CONFIG, STATES, NUMBERS, PAD_VALUE
 from FAIRS.commons.logger import logger
+
+
+
+# [ROULETTE RL ENVIRONMENT]
+###############################################################################
+class BetsAndRewards:
+
+    def __init__(self, configuration):
+        self.seed = configuration["SEED"]         
+        self.bet_amount = configuration["environment"]["BET_AMOUNT"]
+
+        mapper = RouletteMapper(configuration)   
+        self.numbers = list(range(NUMBERS)) 
+        self.red_numbers = mapper.color_map['red']
+        self.black_numbers = mapper.color_map['black'] 
+
+    #--------------------------------------------------------------------------
+    # Define the action space with additional bets:
+    # 0-36: Bet on a specific number,
+    # 37: Bet on Red,
+    # 38: Bet on Black,
+    # 39: Pass,
+    # 40: Bet on Odd,
+    # 41: Bet on Even,
+    # 42: Bet on Low (1-18),
+    # 43: Bet on High (19-36),
+    # 44: Bet on First Dozen (1-12),
+    # 45: Bet on Second Dozen (13-24),
+    # 46: Bet on Third Dozen (25-36)
+    #--------------------------------------------------------------------------
+    def bet_on_number(self, action: int, next_extraction: int):       
+        if action == next_extraction:
+            reward = 35 * self.bet_amount
+        else:
+            reward = -self.bet_amount
+
+        return reward, False
+
+    #--------------------------------------------------------------------------
+    def bet_on_red(self, next_extraction: int):     
+        if next_extraction in self.red_numbers:
+            reward = self.bet_amount
+        else:
+            reward = -self.bet_amount
+
+        return reward, False
+
+    #--------------------------------------------------------------------------
+    def bet_on_black(self, next_extraction: int):       
+        if next_extraction in self.black_numbers:
+            reward = self.bet_amount
+        else:
+            reward = -self.bet_amount
+
+        return reward, False
+    
+    #--------------------------------------------------------------------------
+    def bet_on_odd(self, next_extraction: int):        
+        if next_extraction != 0 and next_extraction % 2 == 1:
+            reward = self.bet_amount
+        else:
+            reward = -self.bet_amount
+
+        return reward, False
+
+    #--------------------------------------------------------------------------
+    def bet_on_even(self, next_extraction: int):        
+        if next_extraction != 0 and next_extraction % 2 == 0:
+            reward = self.bet_amount
+        else:
+            reward = -self.bet_amount
+        return reward, False
+
+    #--------------------------------------------------------------------------
+    def bet_on_low(self, next_extraction: int):        
+        if 1 <= next_extraction <= 18:
+            reward = self.bet_amount
+        else:
+            reward = -self.bet_amount
+
+        return reward, False
+
+    #--------------------------------------------------------------------------
+    def bet_on_high(self, next_extraction: int):        
+        if 19 <= next_extraction <= 36:
+            reward = self.bet_amount
+        else:
+            reward = -self.bet_amount
+
+        return reward, False
+
+    #--------------------------------------------------------------------------
+    def bet_on_first_dozen(self, next_extraction: int):       
+        if 1 <= next_extraction <= 12:
+            reward = 2 * self.bet_amount
+        else:
+            reward = -self.bet_amount
+
+        return reward, False
+
+    #--------------------------------------------------------------------------
+    def bet_on_second_dozen(self, next_extraction: int):        
+        if 13 <= next_extraction <= 24:
+            reward = 2 * self.bet_amount
+        else:
+            reward = -self.bet_amount
+
+        return reward, False
+
+    #--------------------------------------------------------------------------
+    def bet_on_third_dozen(self, next_extraction: int):        
+        if 25 <= next_extraction <= 36:
+            reward = 2 * self.bet_amount
+        else:
+            reward = -self.bet_amount
+        return reward, False
+    
+    #--------------------------------------------------------------------------
+    def pass_turn(self):
+        reward = 0       
+        return reward, True
+
+    #--------------------------------------------------------------------------
+    def interact_and_get_rewards(self, action: int, next_extraction: int, capital : int):       
+        done = False
+        if 0 <= action <= 36:
+            reward, done = self.bet_on_number(action, next_extraction)
+        elif action == 37:
+            reward, done = self.bet_on_red(next_extraction)
+        elif action == 38:
+            reward, done = self.bet_on_black(next_extraction)
+        elif action == 39:
+            reward, done = self.pass_turn()
+        elif action == 40:
+            reward, done = self.bet_on_odd(next_extraction)
+        elif action == 41:
+            reward, done = self.bet_on_even(next_extraction)
+        elif action == 42:
+            reward, done = self.bet_on_low(next_extraction)
+        elif action == 43:
+            reward, done = self.bet_on_high(next_extraction)
+        elif action == 44:
+            reward, done = self.bet_on_first_dozen(next_extraction)
+        elif action == 45:
+            reward, done = self.bet_on_second_dozen(next_extraction)
+        elif action == 46:
+            reward, done = self.bet_on_third_dozen(next_extraction)
+        
+        capital += reward
+
+        return reward, capital, done       
 
     
 # [ROULETTE RL ENVIRONMENT]
 ###############################################################################
 class RouletteEnvironment(gym.Env):
 
-    def __init__(self, data : np.array, configuration):
-        super(RouletteEnvironment, self).__init__()       
-
-        self.timeseries = data[:, 0]
-        self.positions = data[:, 1]
-        self.colors = data[:, 2]
-
-        mapper = RouletteMapper()          
+    def __init__(self, data : pd.DataFrame, configuration):
+        super(RouletteEnvironment, self).__init__() 
+        self.timeseries = data['timeseries'].values
+        self.positions = data['position'].values
+        self.colors = data['color_code'].values
+               
         self.perceptive_size = configuration["model"]["PERCEPTIVE_FIELD"]        
         self.initial_capital = configuration["environment"]["INITIAL_CAPITAL"]
         self.bet_amount = configuration["environment"]["BET_AMOUNT"]
         self.max_steps = configuration["environment"]["MAX_STEPS"] 
         self.render_environment = configuration["environment"]["RENDERING"]
         
-        self.numbers = list(range(NUMBERS)) 
-        self.red_numbers = mapper.color_map['red']
-        self.black_numbers = mapper.color_map['black'] 
+        self.player = BetsAndRewards(configuration)       
                 
         # Actions: 0 (Red), 1 (Black), 2-37 for betting on a specific number
+        self.numbers = list(range(NUMBERS))  
         self.action_space = spaces.Discrete(STATES)
         # Observation space is the last perceptive_field numbers that appeared on the wheel
-        self.observation_space = spaces.Box(low=0, high=36, shape=(self.perceptive_size,), dtype=np.int32)
+        self.observation_space = spaces.Box(
+            low=0, high=36, shape=(self.perceptive_size,), dtype=np.int32)
         
         # Initialize state, capital, steps, and reward  
         self.extraction_index = 0 
-        self.state = np.full(shape=self.perceptive_size, fill_value=-1)                       
+        self.state = np.full(shape=self.perceptive_size, fill_value=PAD_VALUE)                       
         self.capital = self.initial_capital
         self.steps = 0
         self.reward = 0
@@ -53,7 +202,8 @@ class RouletteEnvironment(gym.Env):
     #--------------------------------------------------------------------------
     def reset(self):        
         self.extraction_index = 0
-        self.state = np.full(shape=self.perceptive_size, fill_value=-1, dtype=np.int32)                  
+        self.state = np.full(
+            shape=self.perceptive_size, fill_value=PAD_VALUE, dtype=np.int32)                  
         self.capital = self.initial_capital
         self.steps = 0
         self.done = False
@@ -63,49 +213,23 @@ class RouletteEnvironment(gym.Env):
     # Reset the state of the environment to an initial state
     #--------------------------------------------------------------------------
     def scale_rewards(self, rewards): 
-        # Scale negative rewards to [-1, 0] and scale positive rewards to [0, 1]
-        negative_scaled = ((rewards - (-self.bet_amount)) / (0 - (-self.bet_amount))) * (0 - (-1)) + (-1)        
-        positive_scaled = ((rewards - 0) / (self.bet_amount * 35)) * (1 - 0) + 0        
+        # Scale negative rewards to [-1, 0] and positive rewards to [0, 1]
+        negative_scaled = (
+            (rewards - (-self.bet_amount)) / (0 - (-self.bet_amount))) * (0 - (-1)) + (-1)        
+        positive_scaled = (
+            (rewards - 0) / (self.bet_amount * 35)) * (1 - 0) + 0        
         scaled_rewards = np.where(rewards < 0, negative_scaled, positive_scaled)
 
         return scaled_rewards
 
     # Perform the action (0: Bet on Red, 1: Bet on Black, 2: Bet on Specific Number)
     #--------------------------------------------------------------------------
-    def get_rewards(self, action, next_extraction):         
-
-        if 0 <= action <= 36:  # Bet on Specific Number            
-            if action == next_extraction:
-                self.reward = 35 * self.bet_amount 
-                self.capital += 35 * self.bet_amount
-            else:
-                self.reward = -self.bet_amount  
-                self.capital -= self.bet_amount 
-
-        elif action == 37:  # Bet on Red
-            if next_extraction in self.red_numbers:
-                self.reward = self.bet_amount  
-                self.capital += self.bet_amount
-            else:
-                self.reward = -self.bet_amount  
-                self.capital -= self.bet_amount 
-
-        elif action == 38:  # Bet on Black
-            if next_extraction in self.black_numbers:
-                self.reward = self.bet_amount 
-                self.capital += self.bet_amount
-            else:
-                self.reward = -self.bet_amount  
-                self.capital -= self.bet_amount
-
-        elif action == 39: # pass the turn and stop playing 
-                self.reward = 0  
-                self.capital -= 0 
-                self.done = True    
+    def update_rewards(self, action, next_extraction):
+        self.reward, self.capital, self.done = self.player.interact_and_get_rewards(
+                action, next_extraction, self.capital)        
    
     #--------------------------------------------------------------------------
     def step(self, action):
-
         if self.extraction_index >= self.timeseries.shape[0]:
             self.state = self.reset()
         
@@ -114,7 +238,7 @@ class RouletteEnvironment(gym.Env):
         self.state = np.append(self.state, next_extraction)
         self.extraction_index += 1
 
-        self.get_rewards(action, next_extraction)
+        self.update_rewards(action, next_extraction)
         self.steps += 1
 
         # Check if the episode should end
@@ -123,7 +247,7 @@ class RouletteEnvironment(gym.Env):
         else:
             self.done = False
 
-        return self.state, self.reward, self.done, {"capital": self.capital}, next_extraction    
+        return self.state, self.reward, self.done, self.capital, next_extraction    
 
     #--------------------------------------------------------------------------
     def _build_rendering_canvas(self):
@@ -140,18 +264,16 @@ class RouletteEnvironment(gym.Env):
     # Render the environment to the screen 
     #--------------------------------------------------------------------------
     def render(self, episode, time_step, action, extracted_number):
-
         self.ax.clear()
-
-        # Roulette layout: assigning colors to each number
+        # Assigning colors to each number to create the roulette layout
         colors = ['green'] + ['red', 'black'] * 18
         labels = list(range(NUMBERS))
-
+        # create equal slices of the wheel to get 36 different sections
         theta = np.linspace(0, 2 * np.pi, NUMBERS, endpoint=False)
         width = 2 * np.pi / NUMBERS
-
-        # Create bars
-        bars = self.ax.bar(theta, np.ones(NUMBERS), width=width, color=colors, edgecolor='white', align='edge')
+        # Create edges for the drawn slices
+        bars = self.ax.bar(
+            theta, np.ones(NUMBERS), width=width, color=colors, edgecolor='white', align='edge')
 
         # Highlight the action and related bars
         if 0 <= action <= 36:  # Specific number

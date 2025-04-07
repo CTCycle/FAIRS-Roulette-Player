@@ -199,7 +199,7 @@ class FAIRSDatabase:
         return data 
 
     #--------------------------------------------------------------------------
-    def load_preprocessed_data_table(self, data : pd.DataFrame):                       
+    def load_preprocessed_data_table(self):                       
         conn = sqlite3.connect(self.db_path)        
         data = pd.read_sql_query(
             f"SELECT * FROM {self.processed_data.name}", conn)

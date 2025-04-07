@@ -3,7 +3,7 @@ from keras import losses, metrics, layers, Model, activations
 import torch
 
 from FAIRS.commons.utils.learning.embeddings import RouletteEmbedding
-from FAIRS.commons.utils.learning.logits import QScoreNet, AddNorm
+from FAIRS.commons.utils.learning.logits import BatchNormDense, InverseFrequency, QScoreNet, AddNorm
 from FAIRS.commons.constants import CONFIG, STATES
 from FAIRS.commons.logger import logger
 
@@ -22,40 +22,36 @@ class FAIRSnet:
         self.seed = configuration["SEED"]
        
         self.action_size = STATES
-        self.timeseries = layers.Input(shape=(self.perceptive_size,), name='timeseries')        
-        self.embedding = RouletteEmbedding(self.embedding_dims, self.action_size, mask_negative=True)
-        self.QNet = QScoreNet(self.neurons, self.action_size, self.seed)   
+        self.timeseries = layers.Input(
+            shape=(self.perceptive_size,), name='timeseries')        
+        self.embedding = RouletteEmbedding(
+            self.embedding_dims, self.action_size, mask_negative=True)
+        
+        self.q_neurons = self.neurons * 2
+        self.QNet = QScoreNet(self.q_neurons, self.action_size, self.seed)   
         
         
     # build model given the architecture
     #--------------------------------------------------------------------------
-    def get_model(self, model_summary=True):    
-
+    def get_model(self, model_summary=True): 
         # initialize the image encoder and the transformers encoders and decoders      
-        timeseries = layers.Input(shape=(self.perceptive_size,), name='timeseries', dtype=torch.int32)
-               
-        # add layer for frequency embedding
-       
-        embeddings = self.embedding(timeseries)
-        res = layers.Dense(self.neurons, kernel_initializer='he_uniform')(embeddings)             
-        layer = layers.Dense(self.neurons, kernel_initializer='he_uniform')(res)                      
-        layer = AddNorm()([res, layer])
-        layer = activations.relu(layer) 
-        layer = layers.Dropout(rate=0.2, seed=self.seed)(layer) 
+        timeseries = layers.Input(
+            shape=(self.perceptive_size,), name='timeseries', dtype=torch.int32)  
 
-        res = layers.Dense(self.neurons//2, kernel_initializer='he_uniform')(layer)             
-        layer = layers.Dense(self.neurons//2, kernel_initializer='he_uniform')(res)                      
-        layer = AddNorm()([res, layer])
-        layer = activations.relu(layer)   
-        layer = layers.Dropout(rate=0.2, seed=self.seed)(layer)   
+        inverse_freq = InverseFrequency()(timeseries)
+        inverse_freq = keras.ops.expand_dims(inverse_freq, axis=-1)  
+        inverse_freq = BatchNormDense(self.neurons)(inverse_freq)
+                
+        embeddings = self.embedding(timeseries)
+        layer = BatchNormDense(self.neurons)(embeddings)
+        layer = BatchNormDense(self.neurons)(layer)  
+        layer = BatchNormDense(self.neurons)(layer) 
+
+        layer = AddNorm([layer, inverse_freq])      
         
         layer = layers.Flatten()(layer)
-        res = layers.Dense(self.neurons*2, kernel_initializer='he_uniform')(layer)    
-        layer = layers.Dense(self.neurons*2, kernel_initializer='he_uniform')(res)
-        layer = AddNorm()([res, layer])
-        layer = activations.relu(layer)  
+        layer = BatchNormDense(self.q_neurons)(layer)
         layer = layers.Dropout(rate=0.3, seed=self.seed)(layer) 
-
         output = self.QNet(layer)         
         
         # define the model from inputs and outputs
@@ -67,11 +63,13 @@ class FAIRSnet:
         opt = keras.optimizers.AdamW(learning_rate=self.learning_rate)          
         model.compile(loss=loss, optimizer=opt, metrics=metric, jit_compile=False)
 
+        if model_summary:
+            model.summary(expand_nested=True)
+            
         if self.jit_compile:
             model = torch.compile(model, backend=self.jit_backend, mode='default')
 
-        if model_summary:
-            model.summary(expand_nested=True)
+        
 
         return model           
        

@@ -21,27 +21,18 @@ if __name__ == '__main__':
 
     # 1. [LOAD DATA]
     #-------------------------------------------------------------------------- 
-    # use the roulette generator to process raw extractions and retrieve 
-    # sequence of positions and color-encoded values        
-    logger.info(f'Loading FAIRS dataset from {DATA_PATH}')           
-    generator = RouletteGenerator(CONFIG)     
-    roulette_dataset = generator.prepare_roulette_dataset(dataset_path)    
-    
-    # 2. [BUILD MODEL AND AGENTS]  
-    #-------------------------------------------------------------------------- 
-    # activate DQN agent initialize training device based on given configurations    
-    logger.info('Building FAIRS model and data loaders')     
-    trainer = DQNTraining(CONFIG) 
-    trainer.set_device()    
-       
-    # create folder for saving the new checkpoint    
+    dataserializer = DataSerializer(CONFIG)
+    roulette_dataset, metadata = dataserializer.load_preprocessed_data()  
+
     modelserializer = ModelSerializer()
     checkpoint_path = modelserializer.create_checkpoint_folder()  
-    logger.info(f'Saving roulette extraction data in {checkpoint_path}')
-
-    # save preprocessed roulette data into the checkpoint folder
-    dataserializer = DataSerializer(CONFIG)
-    dataserializer.save_preprocessed_data(roulette_dataset, checkpoint_path)  
+   
+    # 3. [SET DEVICE]
+    #-------------------------------------------------------------------------- 
+    # activate DQN agent initialize training device based on given configurations    
+    logger.info('Setting device for training operations based on user configurations')   
+    trainer = DQNTraining(CONFIG, metadata) 
+    trainer.set_device()   
 
     # build the target model and Q model based on FAIRSnet specifics
     # Q model is the main trained model, while target model is used to predict 

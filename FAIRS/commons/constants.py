@@ -17,9 +17,8 @@ LOGS_PATH = join(RSC_PATH, 'logs')
 # [CONFIGURATIONS]
 ###############################################################################
 NUMBERS = 37
-COLORS = 3
-SPECIALS = 1
-STATES = NUMBERS + COLORS + SPECIALS - 1
+STATES = 47
+PAD_VALUE = -1
 
 CONFIG_PATH = join(PROJECT_DIR, 'settings', 'configurations.json')
 with open(CONFIG_PATH, 'r') as file:
