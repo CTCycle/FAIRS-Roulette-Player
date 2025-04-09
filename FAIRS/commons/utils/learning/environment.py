@@ -93,7 +93,7 @@ class BetsAndRewards:
 
     #--------------------------------------------------------------------------
     def bet_on_high(self, next_extraction: int):        
-        if 19 <= next_extraction <= 36:
+        if 19 <= next_extraction <= (NUMBERS - 1):
             reward = self.bet_amount
         else:
             reward = -self.bet_amount
@@ -120,7 +120,7 @@ class BetsAndRewards:
 
     #--------------------------------------------------------------------------
     def bet_on_third_dozen(self, next_extraction: int):        
-        if 25 <= next_extraction <= 36:
+        if 25 <= next_extraction <= (NUMBERS - 1):
             reward = 2 * self.bet_amount
         else:
             reward = -self.bet_amount
@@ -139,23 +139,23 @@ class BetsAndRewards:
         elif action == 37:
             reward, done = self.bet_on_red(next_extraction)
         elif action == 38:
-            reward, done = self.bet_on_black(next_extraction)
+            reward, done = self.bet_on_black(next_extraction)        
         elif action == 39:
-            reward, done = self.pass_turn()
-        elif action == 40:
             reward, done = self.bet_on_odd(next_extraction)
-        elif action == 41:
+        elif action == 40:
             reward, done = self.bet_on_even(next_extraction)
-        elif action == 42:
+        elif action == 41:
             reward, done = self.bet_on_low(next_extraction)
-        elif action == 43:
+        elif action == 42:
             reward, done = self.bet_on_high(next_extraction)
-        elif action == 44:
+        elif action == 43:
             reward, done = self.bet_on_first_dozen(next_extraction)
-        elif action == 45:
+        elif action == 44:
             reward, done = self.bet_on_second_dozen(next_extraction)
-        elif action == 46:
+        elif action == 45:
             reward, done = self.bet_on_third_dozen(next_extraction)
+        elif action == 46:
+            reward, done = self.pass_turn()
         
         capital += reward
 
@@ -184,13 +184,11 @@ class RouletteEnvironment(gym.Env):
         self.red_numbers = self.player.red_numbers
         self.odd_numbers = [n for n in range(1, NUMBERS) if n % 2 != 0]
         self.even_numbers = [n for n in range(1, NUMBERS) if n % 2 == 0]
-        self.low_numbers = list(range(1, 19))       # Numbers 1-18
-        self.high_numbers = list(range(19, 37))     # Numbers 19-36
-        self.first_dozen_numbers = list(range(1, 13)) # Numbers 1-12
-        self.second_dozen_numbers = list(range(13, 25))# Numbers 13-24
-        self.third_dozen_numbers = list(range(25, 37)) # Numbers 25-36             
-        
-             
+        self.low_numbers = list(range(1, 19))       
+        self.high_numbers = list(range(19, NUMBERS))  
+        self.first_dozen_numbers = list(range(1, 13)) 
+        self.second_dozen_numbers = list(range(13, 25))
+        self.third_dozen_numbers = list(range(25, NUMBERS))               
                 
         # Actions: 0 (Red), 1 (Black), 2-37 for betting on a specific number
         self.numbers = list(range(NUMBERS))  

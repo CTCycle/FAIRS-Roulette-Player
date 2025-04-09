@@ -21,7 +21,7 @@ class DQNTraining:
         self.replay_size = configuration['agent']['REPLAY_BUFFER']           
         self.selected_device = CONFIG["device"]["DEVICE"]
         self.device_id = CONFIG["device"]["DEVICE_ID"]
-        self.mixed_precision = configuration["device"]["MIXED_PRECISION"]  
+        self.mixed_precision = CONFIG["device"]["MIXED_PRECISION"]  
         self.configuration = configuration 
         self.metadata = metadata 
 
@@ -62,9 +62,9 @@ class DQNTraining:
                             'total_reward': total_reward})        
 
     #--------------------------------------------------------------------------
-    def reinforcement_learning_pipeline(self, model : keras.Model, target_model : keras.Model,
-                                        environment : RouletteEnvironment, start_episode, 
-                                        episodes, state_size, checkpoint_path):
+    def train_with_reinforcement_learning(self, model : keras.Model, target_model : keras.Model,
+                                          environment : RouletteEnvironment, start_episode, 
+                                          episodes, state_size, checkpoint_path):
 
         # if tensorboard is selected, an instance of the tb callback is built
         # the dashboard is set on the Q model and tensorboard is launched automatically
@@ -140,7 +140,7 @@ class DQNTraining:
 
         # determine state size as the observation space size       
         state_size = environment.observation_space.shape[0]         
-        agent = self.reinforcement_learning_pipeline(
+        agent = self.train_with_reinforcement_learning(
             model, target_model, environment, start_episode, episodes, 
             state_size, checkpoint_path)
 

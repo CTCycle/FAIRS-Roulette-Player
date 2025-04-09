@@ -122,6 +122,7 @@ class BatchNormDense(layers.Layer):
     def from_config(cls, config):
         return cls(**config)
     
+    
 ###############################################################################
 @keras.saving.register_keras_serializable(package='CustomLayers', name='InverseFrequency')   
 class InverseFrequency(layers.Layer):
@@ -132,18 +133,17 @@ class InverseFrequency(layers.Layer):
     #--------------------------------------------------------------------------
     def compute_inverse_freq(self, sample):
         # sample: 1-D tensor of integers for a single batch element
-        unique, idx, count = keras.ops.bincount(sample)
+        count = keras.ops.bincount(sample)
         # Compute inverse frequency for each unique element
-        inv_counts = 1.0 / keras.ops.cast(count, torch.float32)
-        # Map each element in the sample to its inverse frequency
-        frequencies = keras.ops.take(inv_counts, idx, axis=-1)
+        inverse_counts = 1.0 / keras.ops.cast(count, torch.float32)      
 
-        return frequencies
+        return inverse_counts
 
     #--------------------------------------------------------------------------
     def call(self, inputs, training=None):        
         inputs = keras.ops.cast(inputs, torch.int32)
-        inverse_frequencies = keras.ops.map(self.compute_inverse_freq, inputs)
+        inverse_frequencies = self.compute_inverse_freq(inputs)
+        #inverse_frequencies = keras.ops.map(inverse_frequencies, inputs)
 
         return inverse_frequencies
 

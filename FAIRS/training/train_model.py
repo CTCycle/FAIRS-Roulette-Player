@@ -22,7 +22,7 @@ if __name__ == '__main__':
     # 1. [LOAD DATA]
     #-------------------------------------------------------------------------- 
     dataserializer = DataSerializer(CONFIG)
-    roulette_dataset, metadata = dataserializer.load_preprocessed_data()  
+    roulette_dataset, metadata = dataserializer.load_processed_data()  
 
     modelserializer = ModelSerializer()
     checkpoint_path = modelserializer.create_checkpoint_folder()  
@@ -53,7 +53,7 @@ if __name__ == '__main__':
     log_training_report(roulette_dataset, CONFIG) 
 
     # perform training and save model at the end    
-    logger.info('Start training with reinforcement learning pipeline')
+    logger.info('Start training with reinforcement learning model')
     trainer.train_model(Q_model, target_model, roulette_dataset, checkpoint_path)
 
 

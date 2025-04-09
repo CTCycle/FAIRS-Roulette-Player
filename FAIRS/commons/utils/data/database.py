@@ -21,8 +21,7 @@ class RouletteSeriesTable:
     #--------------------------------------------------------------------------
     def create_table(self, cursor):
         query = f'''
-        CREATE TABLE IF NOT EXISTS {self.name} (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+        CREATE TABLE IF NOT EXISTS {self.name} (            
             timeseries INTEGER            
             );
             '''  
@@ -46,8 +45,7 @@ class ProcessedDataTable:
     #--------------------------------------------------------------------------
     def create_table(self, cursor):
         query = f'''
-        CREATE TABLE IF NOT EXISTS {self.name} (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+        CREATE TABLE IF NOT EXISTS {self.name} (            
             timeseries INTEGER,
             color VARCHAR,
             color_code INTEGER           
@@ -75,8 +73,7 @@ class PredictedGameTable:
     #--------------------------------------------------------------------------
     def create_table(self, cursor):
         query = f'''
-        CREATE TABLE IF NOT EXISTS {self.name} (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+        CREATE TABLE IF NOT EXISTS {self.name} (            
             timeseries INTEGER,
             color VARCHAR,
             color_code INTEGER,
@@ -123,8 +120,7 @@ class CheckpointSummaryTable:
     #--------------------------------------------------------------------------
     def create_table(self, cursor):
         query = f'''
-        CREATE TABLE IF NOT EXISTS {self.name} (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+        CREATE TABLE IF NOT EXISTS {self.name} (            
             checkpoint_name VARCHAR,
             sample_size FLOAT,
             validation_size FLOAT,
@@ -199,7 +195,7 @@ class FAIRSDatabase:
         return data 
 
     #--------------------------------------------------------------------------
-    def load_preprocessed_data_table(self):                       
+    def load_processed_data_table(self):                       
         conn = sqlite3.connect(self.db_path)        
         data = pd.read_sql_query(
             f"SELECT * FROM {self.processed_data.name}", conn)

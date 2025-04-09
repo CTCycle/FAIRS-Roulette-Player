@@ -6,19 +6,25 @@ FAIRS is a research project dedicated to predicting upcoming outcomes in online 
 During training, the DQN agent learns to identify patterns within these sequences, and to select the actions associated with the highest Q-scores—signals of potentially more rewarding decisions. In doing so, FAIRS adapts sequence modeling techniques to the inherently random and structured nature of roulette outcomes, aiming to refine predictive accuracy in an environment defined by uncertainty.
 
 ## 2. FAIRSnet model
-FAIRSnet is a custom neural network architecture tailored for time series forecasting in roulette prediction. It combines dense layers, frequency-based embeddings, and dual Q-Networks to capture sequential dependencies. The model takes a perceived field of historical outcomes as input, passing these sequences through a frequency-based embedding layer. While roulette outcomes are theoretically random, some online platforms may use algorithms that exhibit patterns or slight autoregressive tendencies. The architecture employs multiple dense layers with ReLU activation to learn relationships between past states and actions with the highest expected rewards. It is trained on a dataset built from past experiences, using reinforcement learning to optimize decision-making through DQN policy. The Q-Network head predicts Q-values that represents the confidence level for each possible outcome (suggested action). The model is trained using the Mean Squared Error (MSE) loss function, while tracking the Mean Absolute Percentage Error (MAPE) as a key metric. 
+FAIRSnet is a specialized neural network designed for roulette prediction within reinforcement learning contexts. Its core objective is forecasting the action most likely to yield the highest reward by analyzing the current state of the game, represented by a predefined series of recent outcomes (the perceived field). The model learns through interactions with the roulette environment, exploring multiple strategic betting options, including:
+
+- Betting on a specific number (0–36)
+- Betting on color outcomes (red or black)
+- Betting on numerical ranges (high or low)
+- Betting on specific dozen ranges
+- Choosing to abstain from betting and exit the game
+
+ While roulette outcomes are theoretically random, some online platforms may use algorithms that exhibit patterns or slight autoregressive tendencies. The model is trained on a dataset built from past experiences, using reinforcement learning to optimize decision-making through DQN policy. The Q-Network head predicts Q-values that represents the confidence level for each possible outcome (suggested action). The model is trained using the Mean Squared Error (MSE) loss function, while tracking the Mean Absolute Percentage Error (MAPE) as a key metric. 
 
 ## 3. Installation
-The installation process on Windows has been designed to be fully automated. To begin, simply run *start_on_windows.bat.* On its first execution, the installation procedure will execute with minimal user input required. The script will check if either Anaconda or Miniconda is installed and can be accessed from your system path. If neither is found, it will automatically download and install the latest Miniconda release from https://docs.anaconda.com/miniconda/. Following this step, the script will proceed with the installation of all necessary Python dependencies. 
-
-This includes Keras 3 (with PyTorch support as the backend) and the required CUDA dependencies (CUDA 12.4) to enable GPU acceleration. Should you prefer to handle the installation process separately, you can run the standalone installer by running *setup/install_on_windows.bat*.
+The installation process on Windows has been designed to be fully automated. To begin, simply run *start_on_windows.bat.* On its first execution, the installation procedure will execute with minimal user input required. The script will check if either Anaconda or Miniconda is installed and can be accessed from your system path. If neither is found, it will automatically download and install the latest Miniconda release from https://docs.anaconda.com/miniconda/. Following this step, the script will proceed with the installation of all necessary Python dependencies. This includes Keras 3 (with PyTorch support as the backend) and the required CUDA dependencies (CUDA 12.4) to enable GPU acceleration. Should you prefer to handle the installation process separately, you can run the standalone installer by running *setup/install_on_windows.bat*.
 
 **Important:** After installation, if the project folder is moved or its path is changed, the application will no longer function correctly. To fix this, you can either:
 
 - Open the main menu, select *Setup and maintentance* and choose *Install project in editable mode*
 - Manually run the following commands in the terminal, ensuring the project folder is set as the current working directory (CWD):
 
-    `conda activate FEXT`
+    `conda activate FAIRS`
 
     `pip install -e . --use-pep517` 
 
@@ -33,24 +39,25 @@ On Windows, run *start_on_windows.bat* to launch the main navigation menu and br
 **1) Data analysis:** performs data validation using a series of metrics to analyze roulette extractions. 
 
 **2) Model training and evaluation:** open the machine learning menu to explore various options for model training and validation. Once the menu is open, you will see different options:
+
 - **train from scratch:** start training the FAIRS model using reinforcement learning in a roulette-based environment. This option starts a training from scratch using either true roulette extraction series or a random number generator. 
+
 - **train from checkpoint:** start training a pretrained FAIRS checkpoint for an additional amount of episodes, using the pretrained model settings and data (CURRENTLY NOT IMPLEMENTED!) 
+
 - **model evaluation:** evaluate the performance of pretrained model checkpoints using different metrics. 
 
-**3) Predict roulette extractions:** predict the future roulette extractions based on the historical timeseries, and also start the real time playing mode.  
+**3) Predict roulette extractions:** predict the future roulette extractions based on the historical timeseries and start the real time playing mode (if selected).  
 
 **4) Setup and Maintenance:** execute optional commands such as *Install project into environment* to reinstall the project within your environment, *update project* to pull the last updates from github, and *remove logs* to remove all logs saved in *resources/logs*.  
 
 **5) Exit:** close the program immediately 
 
 ### 4.2 Resources
-This folder organizes data and results across various stages of the project, such as data validation, model training, and evaluation. By default, all data is stored within an SQLite database; however, users have the option to export data into separate CSV files if desired. To visualize and interact with SQLite database files, we recommend downloading and installing the DB Browser for SQLite, available at: https://sqlitebrowser.org/dl/.
-
-The directory structure includes the following folders:
+This folder organizes data and results across various stages of the project, such as data validation, model training, and evaluation. By default, all data is stored within an SQLite database; however, users have the option to export data into separate CSV files if desired. To visualize and interact with SQLite database files, we recommend downloading and installing the DB Browser for SQLite, available at: https://sqlitebrowser.org/dl/. The directory structure includes the following folders:
 
 - **checkpoints:**  pretrained model checkpoints are stored here, and can be used either for resuming training or performing inference with an already trained model.
 
-- **database:** collected adsorption data, processed data and validation results will be stored centrally within the main database *FAIRS_database.db*. All associated metadata will be promptly stored in *database/metadata*. Graphical validation outputs will be saved separately within *database/validation*. Data used for inference with a pretrained checkpoint is located in *database/inference* (a template of the expected dataset columns is available at *resources/templates/FAIRS_predictions.csv*). 
+- **database:** collected adsorption data, processed data and validation results will be stored centrally within the main database *FAIRS_database.db*. All associated metadata will be promptly stored in *database/metadata*. Validation outputs will be saved separately within *database/validation*. Data used for inference with a pretrained checkpoint is located in *database/inference* (a template of the expected dataset columns is available at *resources/templates/FAIRS_predictions.csv*). 
 
 - **logs:** log files are saved here
 

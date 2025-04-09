@@ -107,7 +107,7 @@ goto :main_menu
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :datanalysis
 cls
-start cmd /k "call conda activate "%env_path%" && python "%app_path%"\validation\roulette_series_validation.py"
+start cmd /k "call conda activate "%env_path%" && python "%app_path%"\validation\validate_roulette_series.py"
 goto :main_menu
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -115,7 +115,7 @@ goto :main_menu
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :inference
 cls
-start cmd /k "call conda activate "%env_path%" && python "%app_path%"\inference\roulette_forecasting.py"
+start cmd /k "call conda activate "%env_path%" && python "%app_path%"\inference\predict_roulette_extractions.py"
 goto :main_menu
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -145,7 +145,7 @@ goto :ML_menu
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :train_fs
 cls
-start cmd /k "call conda activate "%env_path%" && python "%app_path%"\training\model_training.py"
+start cmd /k "call conda activate "%env_path%" && python "%app_path%"\training\train_model.py"
 pause
 goto :ML_menu
 
@@ -163,7 +163,7 @@ goto :ML_menu
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :modeleval
 cls
-start cmd /k "call conda activate "%env_path%" && python "%app_path%"\validation\model_evaluation.py"
+start cmd /k "call conda activate "%env_path%" && python "%app_path%"\validation\evaluate_model.py"
 goto :ML_menu
 
 

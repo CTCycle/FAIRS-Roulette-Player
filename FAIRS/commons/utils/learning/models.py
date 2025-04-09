@@ -26,28 +26,30 @@ class FAIRSnet:
             shape=(self.perceptive_size,), name='timeseries')        
         self.embedding = RouletteEmbedding(
             self.embedding_dims, self.action_size, mask_negative=True)
+        self.inverse_freq = InverseFrequency() 
+        self.add_norm = AddNorm()
         
         self.q_neurons = self.neurons * 2
-        self.QNet = QScoreNet(self.q_neurons, self.action_size, self.seed)   
+        self.QNet = QScoreNet(self.q_neurons, self.action_size, self.seed) 
+
+        self.inputs = layers.Input(
+            shape=(self.perceptive_size,), name='timeseries', dtype=torch.int32)  
+  
         
         
     # build model given the architecture
     #--------------------------------------------------------------------------
     def get_model(self, model_summary=True): 
-        # initialize the image encoder and the transformers encoders and decoders      
-        timeseries = layers.Input(
-            shape=(self.perceptive_size,), name='timeseries', dtype=torch.int32)  
-
-        inverse_freq = InverseFrequency()(timeseries)
+        inverse_freq = self.inverse_freq(self.inputs)
         inverse_freq = keras.ops.expand_dims(inverse_freq, axis=-1)  
         inverse_freq = BatchNormDense(self.neurons)(inverse_freq)
                 
-        embeddings = self.embedding(timeseries)
+        embeddings = self.embedding(self.inputs)
         layer = BatchNormDense(self.neurons)(embeddings)
         layer = BatchNormDense(self.neurons)(layer)  
         layer = BatchNormDense(self.neurons)(layer) 
 
-        layer = AddNorm([layer, inverse_freq])      
+        layer = self.add_norm([layer, inverse_freq])      
         
         layer = layers.Flatten()(layer)
         layer = BatchNormDense(self.q_neurons)(layer)

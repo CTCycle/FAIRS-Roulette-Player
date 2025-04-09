@@ -1,11 +1,12 @@
 import os
 import keras
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
 import webbrowser
 import subprocess
 import time
+
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 from FAIRS.commons.constants import CONFIG
 from FAIRS.commons.logger import logger

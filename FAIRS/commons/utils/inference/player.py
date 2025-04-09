@@ -3,8 +3,8 @@ import pandas as pd
 import numpy as np
 import keras
 
-from FAIRS.commons.utils.process.mapping import RouletteMapper
-from FAIRS.commons.constants import CONFIG, PRED_PATH
+from FAIRS.commons.utils.data.process.mapping import RouletteMapper
+from FAIRS.commons.constants import CONFIG, INFERENCE_PATH
 from FAIRS.commons.logger import logger
 
 

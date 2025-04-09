@@ -64,8 +64,8 @@ class DataSerializer:
             json.dump(metadata, file, indent=4)     
 
     #--------------------------------------------------------------------------
-    def load_preprocessed_data(self):         
-        processed_data = self.database.load_preprocessed_data_table()     
+    def load_processed_data(self):         
+        processed_data = self.database.load_processed_data_table()     
 
         with open(self.metadata_path, 'r') as file:
             metadata = json.load(file)        
@@ -129,8 +129,7 @@ class ModelSerializer:
         
         with open(config_path, 'r') as f:
             configurations = json.load(f) 
-
-        # Load metadata
+   
         with open(metadata_path, 'r') as f:
             metadata = json.load(f)        
 
@@ -187,9 +186,9 @@ class ModelSerializer:
         # effectively load the model using keras builtin method
         # load configuration data from .json file in checkpoint folder
         model = self.load_checkpoint(checkpoint_path)       
-        configuration, history = self.load_session_configuration(checkpoint_path)           
+        configuration, metadata, history = self.load_session_configuration(checkpoint_path)           
             
-        return model, configuration, history, checkpoint_path
+        return model, configuration, metadata, history, checkpoint_path
 
              
     

@@ -7,8 +7,7 @@ import warnings
 warnings.simplefilter(action='ignore', category=Warning)
 
 # [IMPORT CUSTOM MODULES]
-from FAIRS.commons.utils.dataloader.generators import RouletteGenerator
-from FAIRS.commons.utils.dataloader.serializer import DataSerializer, ModelSerializer
+from FAIRS.commons.utils.data.serializer import DataSerializer, ModelSerializer
 from FAIRS.commons.utils.learning.models import FAIRSnet
 from FAIRS.commons.utils.learning.training import DQNTraining
 from FAIRS.commons.utils.validation.reports import log_training_report
@@ -25,7 +24,7 @@ if __name__ == '__main__':
     # selected and load the pretrained model, then print the summary     
     logger.info('Loading specific checkpoint from pretrained models')   
     modelserializer = ModelSerializer()     
-    model, configuration, history, checkpoint_path = modelserializer.select_and_load_checkpoint()    
+    model, configuration, metadata, _, checkpoint_path = modelserializer.select_and_load_checkpoint()    
     model.summary(expand_nested=True)  
     
     
@@ -35,9 +34,7 @@ if __name__ == '__main__':
     #--------------------------------------------------------------------------     
     # load data from csv, add paths to images 
     logger.info(f'Loading FAIRS dataset from {DATA_PATH}')     
-    generator = RouletteGenerator(CONFIG)    
-    roulette_dataset, color_encoder = generator.prepare_roulette_dataset()
-    
+   
    
     # 2. [BUILD MODEL AND AGENTSL]  
     #-------------------------------------------------------------------------- 
