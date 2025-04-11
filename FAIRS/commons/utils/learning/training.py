@@ -118,7 +118,7 @@ class DQNTraining:
                     tensorboard.on_epoch_end(epoch=episode, logs=scores) 
 
                 # Update plot with game statistics
-                game_statistics.log_step(total_reward, environment.capital, done)              
+                game_statistics.log_step(environment.capital, done)              
 
                 # Update target network periodically
                 if time_step % self.update_frequency == 0:

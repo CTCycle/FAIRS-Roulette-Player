@@ -1,12 +1,12 @@
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
 import os
 import keras
 import webbrowser
 import subprocess
 import time
-
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
 
 from FAIRS.commons.constants import CONFIG
 from FAIRS.commons.logger import logger
@@ -75,8 +75,7 @@ class GameStatsCallback(keras.callbacks.Callback):
         self.plot_freq_steps = max(1, plot_freq_steps) 
         os.makedirs(plot_path, exist_ok=True)                
        
-        self.iterations = []
-        self.rewards = []
+        self.iterations = []        
         self.capitals = []
         self.episode_end_indices = []
        
@@ -84,9 +83,8 @@ class GameStatsCallback(keras.callbacks.Callback):
         self.episode_count = 0
        
     #--------------------------------------------------------------------------
-    def log_step(self, total_reward, current_capital, done):        
-        self.iterations.append(self.global_step)
-        self.rewards.append(total_reward)
+    def log_step(self, current_capital, done):        
+        self.iterations.append(self.global_step)        
         self.capitals.append(current_capital)
   
         if done:
@@ -101,50 +99,38 @@ class GameStatsCallback(keras.callbacks.Callback):
              self.plot_and_save(self.global_step)    
 
     #--------------------------------------------------------------------------
-    def plot_and_save(self, current_episode_num):       
-        fig, ax1 = plt.subplots(figsize=(14, 7))
-    
-        # Plot Total Reward (orange series) on ax1.
-        color1 = 'orange'
-        ax1.set_xlabel('Iterations (Time Steps)')
-        ax1.set_ylabel('Total Reward (Episode)', color=color1)
-        line1, = ax1.plot(self.iterations, self.rewards, color=color1, label='Total Reward', alpha=0.8)
-        ax1.tick_params(axis='y', labelcolor=color1)
-
-        # Create a secondary y-axis for Current Capital.
-        # Make its background transparent to prevent it from obscuring the first series.
-        ax2 = ax1.twinx()
-        ax2.patch.set_visible(False)  # Ensure ax2's background is transparent.
-        color2 = 'blue'
-        ax2.set_ylabel('Current Capital', color=color2)
-        line2, = ax2.plot(self.iterations, self.capitals, color=color2, label='Current Capital', alpha=0.8)
-        ax2.tick_params(axis='y', labelcolor=color2)
-
-        # Add vertical lines to mark episode ends.
+    def plot_and_save(self, current_step):       
+        fig, ax = plt.subplots(figsize=(14, 7))
+        
+        # Configure the single y-axis.
+        ax.set_xlabel('Iterations (Time Steps)')
+        ax.set_ylabel('Value')   
+        
+        series = ax.plot(self.iterations, self.capitals, color='blue', label='Current Capital', alpha=0.8)
+        
+        # Add vertical lines for episode ends.
         vline_handles = []
         if self.episode_end_indices:
-            vline_label_added = False
-            for i, index in enumerate(self.episode_end_indices):
-                label = 'Episode End' if not vline_label_added else ""
-                vline = ax1.axvline(x=index, color='grey', linestyle='--', alpha=0.6, label=label)
-                if not vline_label_added:
+            first_marker = True
+            for index in self.episode_end_indices:
+                label = 'Episode End' if first_marker else ""
+                vline = ax.axvline(x=index, color='grey', linestyle='--', alpha=0.6, label=label)
+                if first_marker:
                     vline_handles.append(vline)
-                    vline_label_added = True
-
-        # Combine the lines and create a legend.
-        lines = [line1, line2] + vline_handles
+                    first_marker = False
+        
+        # Create combined legend.
+        lines = series + vline_handles
         labels = [l.get_label() for l in lines]
-        ax1.legend(lines, labels, loc='upper center', bbox_to_anchor=(0.5, -0.1), ncol=3)
-
+        ax.legend(lines, labels, loc='upper center', bbox_to_anchor=(0.5, -0.1), ncol=3)
+        
         # Add a title and adjust layout.
-        fig.suptitle(f'Training Progress: Reward & Capital (After Episode {current_episode_num})')
+        fig.suptitle(f'Training Progress: Reward & Capital (At step {current_step})')
         fig.tight_layout(rect=[0, 0.1, 1, 0.95])
-        plt.tight_layout()
-
-        # Save the figure using the pre-determined full file path.
+        
+        # Save and close the figure.
         plt.savefig(self.plot_path, bbox_inches='tight', format='jpeg', dpi=300)
-        plt.close()
-
+        plt.close(fig)
 
 
 
