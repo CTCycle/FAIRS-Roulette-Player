@@ -2,8 +2,7 @@
     "SEED" : 54,   
     "dataset": {"FROM_GENERATOR" : null,
                 "SAMPLE_SIZE" : 1.0,
-                "VALIDATION_SIZE" : 0.1,
-                "SAVE_CSV" : false}, 
+                "VALIDATION_SIZE" : 0.1}, 
 
     "device" : {"DEVICE" : "GPU",
                 "DEVICE_ID" : 0,
@@ -26,7 +25,7 @@
     "environment" : {"INITIAL_CAPITAL": 3000,
                      "BET_AMOUNT": 10,
                      "MAX_STEPS": 1000,                     
-                     "RENDERING" : true},
+                     "RENDERING" : false},
 
     "training" : {"EPISODES" : 50,
                   "ADDITIONAL_EPISODES" : 10,                   

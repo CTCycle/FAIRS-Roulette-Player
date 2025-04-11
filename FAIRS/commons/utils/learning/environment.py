@@ -257,7 +257,7 @@ class RouletteEnvironment(gym.Env):
         else:
             self.done = False
 
-        return self.state, self.reward, self.done, self.capital, next_extraction    
+        return self.state, self.reward, self.done, next_extraction    
 
     #--------------------------------------------------------------------------
     def _build_rendering_canvas(self):

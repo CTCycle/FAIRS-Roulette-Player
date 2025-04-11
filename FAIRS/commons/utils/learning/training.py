@@ -1,6 +1,7 @@
 import numpy as np
 import keras
 import torch
+from tqdm import tqdm
 
 from FAIRS.commons.utils.data.serializer import ModelSerializer
 from FAIRS.commons.utils.learning.callbacks import CallbacksWrapper
@@ -27,6 +28,7 @@ class DQNTraining:
 
         # initialize variables
         self.session = []
+        self.game_stats_frequency = 50
         self.callback_wrapper = CallbacksWrapper(configuration) 
         self.serializer = ModelSerializer()           
         self.agent = DQNAgent(self.configuration)                 
@@ -69,22 +71,25 @@ class DQNTraining:
         # if tensorboard is selected, an instance of the tb callback is built
         # the dashboard is set on the Q model and tensorboard is launched automatically
         tensorboard = None
+        game_statistics = self.callback_wrapper.game_stats_callback(
+            checkpoint_path, plot_freq_steps=self.game_stats_frequency)
         if self.configuration["training"]["USE_TENSORBOARD"]:
             tensorboard = self.callback_wrapper.tensorboard_callback(
                 checkpoint_path, model)            
                
         # Training loop for each episode 
-        scores = None    
-        capital = environment.capital   
-        for episode in range(start_episode, episodes):                    
+        scores = None             
+        for episode in range(start_episode, episodes):                                 
             state = environment.reset()
             state = np.reshape(state, newshape=(1, state_size))
             total_reward = 0
-            for time_step in range(environment.max_steps):                 
+            for time_step in range(environment.max_steps):          
+                gain = environment.capital/environment.initial_capital
+                gain = np.reshape(gain, newshape=(1, 1)) 
                 # action is always performed using the Q model
-                action = self.agent.act(model, state, capital)
-                next_state, reward, done, capital, extraction = environment.step(action)
-                total_reward += reward
+                action = self.agent.act(model, state, gain)
+                next_state, reward, done, extraction = environment.step(action)
+                total_reward += reward                
                 next_state = np.reshape(next_state, [1, state_size])
 
                 # render environment 
@@ -92,7 +97,7 @@ class DQNTraining:
                     environment.render(episode, time_step, action, extraction)
 
                 # Remember experience
-                self.agent.remember(state, action, reward, next_state, done)
+                self.agent.remember(state, action, reward, gain, next_state, done)
                 state = next_state
 
                 # Perform replay if the memory size is sufficient
@@ -110,7 +115,10 @@ class DQNTraining:
 
                 # call on_epoch_end method of selected callbacks             
                 if tensorboard is not None and scores is not None:                    
-                    tensorboard.on_epoch_end(epoch=episode, logs=scores)                
+                    tensorboard.on_epoch_end(epoch=episode, logs=scores) 
+
+                # Update plot with game statistics
+                game_statistics.log_step(total_reward, environment.capital, done)              
 
                 # Update target network periodically
                 if time_step % self.update_frequency == 0:
@@ -139,7 +147,8 @@ class DQNTraining:
             start_episode = from_episode                    
 
         # determine state size as the observation space size       
-        state_size = environment.observation_space.shape[0]         
+        state_size = environment.observation_space.shape[0] 
+        logger.info(f'Size of the observation space (previous extractions): {state_size}')        
         agent = self.train_with_reinforcement_learning(
             model, target_model, environment, start_episode, episodes, 
             state_size, checkpoint_path)

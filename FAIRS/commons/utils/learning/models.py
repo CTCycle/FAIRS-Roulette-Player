@@ -4,7 +4,7 @@ import torch
 
 from FAIRS.commons.utils.learning.embeddings import RouletteEmbedding
 from FAIRS.commons.utils.learning.logits import BatchNormDense, InverseFrequency, QScoreNet, AddNorm
-from FAIRS.commons.constants import CONFIG, STATES
+from FAIRS.commons.constants import CONFIG, STATES, NUMBERS
 from FAIRS.commons.logger import logger
 
 
@@ -20,44 +20,36 @@ class FAIRSnet:
         self.jit_backend = configuration["model"]["JIT_BACKEND"]
         self.learning_rate = configuration["training"]["LEARNING_RATE"]       
         self.seed = configuration["SEED"]
+        self.q_neurons = self.neurons * 2
        
         self.action_size = STATES
+        self.add_norm = AddNorm() 
+        self.gain = layers.Input(shape=(), name='gain', dtype='int32')
         self.timeseries = layers.Input(
-            shape=(self.perceptive_size,), name='timeseries')        
+            shape=(self.perceptive_size,), name='timeseries', dtype='int32')              
         self.embedding = RouletteEmbedding(
-            self.embedding_dims, self.action_size, mask_negative=True)
-        self.inverse_freq = InverseFrequency() 
-        self.add_norm = AddNorm()
-        
-        self.q_neurons = self.neurons * 2
-        self.QNet = QScoreNet(self.q_neurons, self.action_size, self.seed) 
-
-        self.inputs = layers.Input(
-            shape=(self.perceptive_size,), name='timeseries', dtype=torch.int32)  
-  
-        
+            self.embedding_dims, NUMBERS, mask_padding=True)        
+               
+        self.QNet = QScoreNet(self.q_neurons, self.action_size, self.seed)         
         
     # build model given the architecture
     #--------------------------------------------------------------------------
-    def get_model(self, model_summary=True): 
-        inverse_freq = self.inverse_freq(self.inputs)
-        inverse_freq = keras.ops.expand_dims(inverse_freq, axis=-1)  
-        inverse_freq = BatchNormDense(self.neurons)(inverse_freq)
-                
-        embeddings = self.embedding(self.inputs)
+    def get_model(self, model_summary=True):                
+        embeddings = self.embedding(self.timeseries)
         layer = BatchNormDense(self.neurons)(embeddings)
-        layer = BatchNormDense(self.neurons)(layer)  
-        layer = BatchNormDense(self.neurons)(layer) 
+        layer = BatchNormDense(self.neurons//2)(layer)  
 
-        layer = self.add_norm([layer, inverse_freq])      
+        gain = keras.ops.expand_dims(self.gain, axis=-1)
+        gain = BatchNormDense(self.neurons//2)(gain)        
+        add = self.add_norm([gain, layer])               
         
-        layer = layers.Flatten()(layer)
+        layer = layers.Flatten()(add)
         layer = BatchNormDense(self.q_neurons)(layer)
         layer = layers.Dropout(rate=0.3, seed=self.seed)(layer) 
         output = self.QNet(layer)         
         
         # define the model from inputs and outputs
-        model = Model(inputs=timeseries, outputs=output)                
+        model = Model(inputs=[self.timeseries, self.gain], outputs=output)                
 
         # define model compilation parameters such as learning rate, loss, metrics and optimizer
         loss = losses.MeanSquaredError() 

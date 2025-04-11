@@ -22,7 +22,7 @@ class RouletteCategoricalCrossentropy(keras.losses.Loss):
 
     #--------------------------------------------------------------------------    
     def call(self, y_true, y_pred):
-        y_true = keras.ops.cast(y_true, dtype=torch.float32)
+        y_true = keras.ops.cast(y_true, dtype=keras.config.floatx())
         loss = self.loss(y_true, y_pred)        
         # Apply penalty based on the difference between prediction and true value        
         total_loss = loss * self.penalty_scores        
@@ -54,12 +54,12 @@ class RouletteAccuracy(keras.metrics.Metric):
     #--------------------------------------------------------------------------
     def update_state(self, y_true, y_pred, sample_weight=None):
         
-        y_true = keras.ops.cast(y_true, dtype=torch.float32)       
+        y_true = keras.ops.cast(y_true, dtype=keras.config.floatx())       
         probabilities = keras.ops.argmax(y_pred, axis=1)
         accuracy = keras.ops.equal(y_true, probabilities)               
         
         if sample_weight is not None:
-            sample_weight = keras.ops.cast(sample_weight, dtype=torch.float32)
+            sample_weight = keras.ops.cast(sample_weight, dtype=keras.config.floatx())
             accuracy = keras.ops.multiply(accuracy, sample_weight)
             
         

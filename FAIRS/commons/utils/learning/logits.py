@@ -54,8 +54,10 @@ class QScoreNet(keras.layers.Layer):
         self.output_size = output_size
         self.seed = seed
         # define Q score layers as Dense layers with linear activation
-        self.Q1 = layers.Dense(self.dense_units, kernel_initializer='he_uniform')
-        self.Q2 = layers.Dense(self.output_size, kernel_initializer='he_uniform', dtype=torch.float32)
+        self.Q1 = layers.Dense(
+            self.dense_units, kernel_initializer='he_uniform')
+        self.Q2 = layers.Dense(
+            self.output_size, kernel_initializer='he_uniform', dtype=keras.config.floatx())
         self.batch_norm = layers.BatchNormalization()         
 
     # build method for the custom layer 
@@ -101,9 +103,8 @@ class BatchNormDense(layers.Layer):
 
     #--------------------------------------------------------------------------
     def call(self, inputs, training=None):
-        layer = self.dense(inputs)
-        layer = layers.BatchNormalization()(layer)  
-        layer = self.batch_norm(layer, training)
+        layer = self.dense(inputs)        
+        layer = self.batch_norm(layer, training=training)
         layer = activations.relu(layer) 
 
         return layer
@@ -127,30 +128,31 @@ class BatchNormDense(layers.Layer):
 @keras.saving.register_keras_serializable(package='CustomLayers', name='InverseFrequency')   
 class InverseFrequency(layers.Layer):
 
-    def __init__(self, **kwargs):
-        super(InverseFrequency, self).__init__(**kwargs)
-
+    def __init__(self, expand_dims=True, **kwargs):
+        super(InverseFrequency, self).__init__(**kwargs)  
+        self.expand_dims = expand_dims 
+        
     #--------------------------------------------------------------------------
-    def compute_inverse_freq(self, sample):
-        # sample: 1-D tensor of integers for a single batch element
-        count = keras.ops.bincount(sample)
-        # Compute inverse frequency for each unique element
-        inverse_counts = 1.0 / keras.ops.cast(count, torch.float32)      
+    def call(self, inputs, training=None):         
+        # Flatten the input tensor to count frequencies across all elements
+        inputs = keras.ops.cast(inputs, 'int32')
+        inputs = keras.ops.reshape(inputs, [-1])
+        # Calculate the frequency of each integer value in the flattened tensor       
+        counts = keras.ops.bincount(inputs)
+        counts = keras.ops.cast(counts, keras.config.floatx())
+        inverse_counts = 1.0 / keras.ops.maximum(counts, keras.backend.epsilon())
+        # Use the original integer inputs as indices to gather the inverse frequencies
+        inverse_counts = keras.ops.take(inputs, inverse_counts)
+        if self.expand_dims:
+            inverse_counts = keras.ops.expand_dims(inverse_counts, axis=-1)
 
         return inverse_counts
-
-    #--------------------------------------------------------------------------
-    def call(self, inputs, training=None):        
-        inputs = keras.ops.cast(inputs, torch.int32)
-        inverse_frequencies = self.compute_inverse_freq(inputs)
-        #inverse_frequencies = keras.ops.map(inverse_frequencies, inputs)
-
-        return inverse_frequencies
 
     # serialize layer for saving  
     #--------------------------------------------------------------------------
     def get_config(self):
-        config = super(InverseFrequency, self).get_config()        
+        config = super(InverseFrequency, self).get_config()
+        config.update({'expand_dims': self.expand_dims})        
         return config
 
     # deserialization method 
