@@ -1,10 +1,11 @@
+import matplotlib
+matplotlib.use('TkAgg') 
+import matplotlib.pyplot as plt
+
 import pandas as pd
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
-import matplotlib
-matplotlib.use('TkAgg') 
-import matplotlib.pyplot as plt
 
 from FAIRS.commons.utils.data.process.mapping import RouletteMapper
 from FAIRS.commons.constants import CONFIG, STATES, NUMBERS, PAD_VALUE

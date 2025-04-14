@@ -14,10 +14,9 @@ from FAIRS.commons.logger import logger
     
 # [CALLBACK FOR REAL TIME TRAINING MONITORING]
 ###############################################################################
-class RealTimeHistory(keras.callbacks.Callback):    
+class RealTimeHistory:    
         
-    def __init__(self, plot_path, past_logs=None, **kwargs):
-        super(RealTimeHistory, self).__init__(**kwargs)
+    def __init__(self, plot_path, past_logs=None):        
         self.plot_path = plot_path 
         self.past_logs = past_logs 
         self.fig_path = os.path.join(self.plot_path, 'training_history.jpeg')      
@@ -67,10 +66,9 @@ class RealTimeHistory(keras.callbacks.Callback):
 
 
 ###############################################################################
-class GameStatsCallback(keras.callbacks.Callback):
+class GameStatsCallback:
     
-    def __init__(self, plot_path, plot_freq_steps=1, **kwargs):        
-        super(GameStatsCallback, self).__init__(**kwargs)
+    def __init__(self, plot_path, plot_freq_steps=1):        
         self.plot_path = os.path.join(plot_path, 'game_statistics.jpeg')  
         self.plot_freq_steps = max(1, plot_freq_steps) 
         os.makedirs(plot_path, exist_ok=True)                
