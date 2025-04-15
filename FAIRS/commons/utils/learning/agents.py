@@ -1,8 +1,9 @@
+import os
+import pickle
 import random
 import numpy as np
 import keras
 from collections import deque
-
 
 from FAIRS.commons.utils.learning.environment import RouletteEnvironment
 from FAIRS.commons.constants import CONFIG, STATES, PAD_VALUE
@@ -22,7 +23,19 @@ class DQNAgent:
         self.epsilon_min = configuration['agent']['MINIMUM_ER'] 
         self.memory_size = configuration['agent']['MAX_MEMORY'] 
         self.replay_size = configuration['agent']['REPLAY_BUFFER']   
-        self.memory = deque(maxlen=self.memory_size) if memory is None else memory         
+        self.memory = deque(maxlen=self.memory_size) if memory is None else memory  
+
+    #--------------------------------------------------------------------------
+    def dump_memory(self, path):    
+        memory_path = os.path.join(path, 'configuration', 'replay_memory.pkl')
+        with open(memory_path, 'wb') as f:
+            pickle.dump(self.memory, f)
+
+    #--------------------------------------------------------------------------
+    def load_memory(self, path):    
+        memory_path = os.path.join(path, 'configuration', 'replay_memory.pkl')        
+        with open(memory_path, 'rb') as f:
+            self.memory = pickle.load(f)
     
     #--------------------------------------------------------------------------
     def act(self, model : keras.Model, state, gain):        

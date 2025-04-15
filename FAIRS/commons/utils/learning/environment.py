@@ -211,8 +211,8 @@ class RouletteEnvironment(gym.Env):
         
     # Reset the state of the environment to an initial state
     #--------------------------------------------------------------------------
-    def reset(self):        
-        self.extraction_index = 0
+    def reset(self, start_over=False):        
+        self.extraction_index = 0 if start_over else self.select_random_index() 
         self.state = np.full(
             shape=self.perceptive_size, fill_value=PAD_VALUE, dtype=np.int32)                  
         self.capital = self.initial_capital
@@ -232,6 +232,14 @@ class RouletteEnvironment(gym.Env):
         scaled_rewards = np.where(rewards < 0, negative_scaled, positive_scaled)
 
         return scaled_rewards
+    
+    # Perform the action (0: Bet on Red, 1: Bet on Black, 2: Bet on Specific Number)
+    #--------------------------------------------------------------------------
+    def select_random_index(self):
+        end_cutoff = self.timeseries.shape[0] - self.perceptive_size
+        random_index = np.random.randint(0, end_cutoff)
+
+        return random_index
 
     # Perform the action (0: Bet on Red, 1: Bet on Black, 2: Bet on Specific Number)
     #--------------------------------------------------------------------------
@@ -240,7 +248,9 @@ class RouletteEnvironment(gym.Env):
                 action, next_extraction, self.capital)        
    
     #--------------------------------------------------------------------------
-    def step(self, action):
+    def step(self, action):  
+        # reset the perceived field each time the end of the series is reached
+        # then start again from a random index simulating a brand new roulette series      
         if self.extraction_index >= self.timeseries.shape[0]:
             self.state = self.reset()
         

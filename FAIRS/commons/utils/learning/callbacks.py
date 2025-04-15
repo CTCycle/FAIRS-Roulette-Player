@@ -68,13 +68,14 @@ class RealTimeHistory:
 ###############################################################################
 class GameStatsCallback:
     
-    def __init__(self, plot_path, plot_freq_steps=1):        
+    def __init__(self, plot_path, plot_freq_steps=1, iterations=None, capitals=None):        
         self.plot_path = os.path.join(plot_path, 'game_statistics.jpeg')  
         self.plot_freq_steps = max(1, plot_freq_steps) 
         os.makedirs(plot_path, exist_ok=True)                
        
-        self.iterations = []        
-        self.capitals = []
+        self.iterations = [] if iterations is None else iterations
+        self.capitals = [] if capitals is None else capitals  
+        self.capitals = capitals
         self.episode_end_indices = []
        
         self.global_step = 0
@@ -100,13 +101,13 @@ class GameStatsCallback:
     def plot_and_save(self, current_step):       
         fig, ax = plt.subplots(figsize=(14, 7))
         
-        # Configure the single y-axis.
+        # Configure the single y-axis
         ax.set_xlabel('Iterations (Time Steps)')
         ax.set_ylabel('Value')   
         
         series = ax.plot(self.iterations, self.capitals, color='blue', label='Current Capital', alpha=0.8)
         
-        # Add vertical lines for episode ends.
+        # Add vertical lines for episode ends
         vline_handles = []
         if self.episode_end_indices:
             first_marker = True
@@ -117,16 +118,16 @@ class GameStatsCallback:
                     vline_handles.append(vline)
                     first_marker = False
         
-        # Create combined legend.
+        # Create combined legend
         lines = series + vline_handles
         labels = [l.get_label() for l in lines]
         ax.legend(lines, labels, loc='upper center', bbox_to_anchor=(0.5, -0.1), ncol=3)
         
-        # Add a title and adjust layout.
-        fig.suptitle(f'Training Progress: Reward & Capital (At step {current_step})')
+        # Add a title and adjust layout
+        fig.suptitle(f'Training Progress: Capital (At step {current_step})')
         fig.tight_layout(rect=[0, 0.1, 1, 0.95])
         
-        # Save and close the figure.
+        # Save and close the figure
         plt.savefig(self.plot_path, bbox_inches='tight', format='jpeg', dpi=300)
         plt.close(fig)
 

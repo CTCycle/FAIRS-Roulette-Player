@@ -26,31 +26,16 @@ if __name__ == '__main__':
     modelserializer = ModelSerializer()     
     model, configuration, metadata, _, checkpoint_path = modelserializer.select_and_load_checkpoint()    
     model.summary(expand_nested=True)  
-    
-    
 
-
-    # 1. [LOAD DATA]
-    #--------------------------------------------------------------------------     
-    # load data from csv, add paths to images 
-    logger.info(f'Loading FAIRS dataset from {DATA_PATH}')     
-   
-   
-    # 2. [BUILD MODEL AND AGENTSL]  
-    #-------------------------------------------------------------------------- 
     # initialize training device 
-    # allows changing device prior to initializing the generators    
     trainer = DQNTraining(configuration) 
-    trainer.set_device()  
- 
+    trainer.set_device() 
 
-    # build the FAIRSnet model and the DQNA agent     
-    learner = FAIRSnet(CONFIG)
-    Q_model = learner.get_model(model_summary=True)
-    target_model = learner.get_model(model_summary=False)    
-    
-    # generate graphviz plot fo the model layout         
-    modelserializer.save_model_plot(Q_model, checkpoint_path)              
+    # 2. [LOAD DATA]
+    #-------------------------------------------------------------------------- 
+    dataserializer = DataSerializer(CONFIG)
+    dataset, metadata = dataserializer.load_processed_data() 
+    logger.info(f'Preprocessed roulette series has been loaded ({dataset.shape[0]} samples)')      
    
     # 3. [BUILD MODEL AND AGENT]  
     #--------------------------------------------------------------------------  
@@ -58,11 +43,11 @@ if __name__ == '__main__':
     # use command prompt on the model folder and (upon activating environment), 
     # use the bash command: python -m tensorboard.main --logdir tensorboard/ 
     #--------------------------------------------------------------------------
-    log_training_report(roulette_dataset, CONFIG) 
+    log_training_report(dataset, CONFIG) 
 
     # perform training and save model at the end    
-    logger.info('Start training with reinforcement learning routine')
-    trainer.train_model(Q_model, target_model, roulette_dataset, checkpoint_path)
+    logger.info('Resuming reinforcement learning from checkpoint') 
+    trainer.train_model(model, model, dataset, checkpoint_path, from_checkpoint=True)
 
 
 

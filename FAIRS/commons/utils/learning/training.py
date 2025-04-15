@@ -26,12 +26,17 @@ class DQNTraining:
         self.configuration = configuration 
         self.metadata = metadata 
 
-        # initialize variables
-        self.session = []
+        # initialize variables        
         self.game_stats_frequency = 50
         self.callback_wrapper = CallbacksWrapper(configuration) 
         self.serializer = ModelSerializer()           
-        self.agent = DQNAgent(self.configuration)                 
+        self.agent = DQNAgent(self.configuration) 
+        self.session_stats = {'episode': [],
+                              'time_step': [],
+                              'loss': [],
+                              'metrics': [],
+                              'reward': [],
+                              'total_reward': []}                
 
     # set device
     #--------------------------------------------------------------------------
@@ -56,31 +61,33 @@ class DQNTraining:
     def update_session_stats(self, scores, episode, time_step, reward, total_reward):
         loss = scores.get('loss', None)
         metric = scores.get('root_mean_squared_error', None)                   
-        self.session.append({'episode': episode,
-                            'time_step': time_step,
-                            'loss': loss.item() if not None else 0,
-                            'metrics': metric.item() if not None else 0,
-                            'reward': reward,
-                            'total_reward': total_reward})        
+        self.session_stats['episode'].append(episode)
+        self.session_stats['time_step'].append(time_step)
+        self.session_stats['loss'].append(loss.item() if loss is not None else 0.0)
+        self.session_stats['metrics'].append(metric.item() if metric is not None else 0.0)
+        self.session_stats['reward'].append(reward)
+        self.session_stats['total_reward'].append(total_reward)   
 
     #--------------------------------------------------------------------------
     def train_with_reinforcement_learning(self, model : keras.Model, target_model : keras.Model,
                                           environment : RouletteEnvironment, start_episode, 
                                           episodes, state_size, checkpoint_path):
-
         # if tensorboard is selected, an instance of the tb callback is built
         # the dashboard is set on the Q model and tensorboard is launched automatically
         tensorboard = None
         game_statistics = self.callback_wrapper.game_stats_callback(
             checkpoint_path, plot_freq_steps=self.game_stats_frequency)
+        real_time_history = self.callback_wrapper.real_time_history(
+            self.configuration, checkpoint_path, history=self.session_stats)
         if self.configuration["training"]["USE_TENSORBOARD"]:
             tensorboard = self.callback_wrapper.tensorboard_callback(
                 checkpoint_path, model)            
                
         # Training loop for each episode 
         scores = None             
-        for episode in range(start_episode, episodes):                                 
-            state = environment.reset()
+        for i, episode in enumerate(range(start_episode, episodes)): 
+            start_over = True if i == 0 else False                                
+            state = environment.reset(start_over=start_over)
             state = np.reshape(state, newshape=(1, state_size))
             total_reward = 0
             for time_step in range(environment.max_steps):          
@@ -127,7 +134,7 @@ class DQNTraining:
                 if done:
                     break
                      
-        return self.agent
+        return self.agent 
  
     #--------------------------------------------------------------------------
     def train_model(self, model, target_model, data, checkpoint_path, from_checkpoint=False):
@@ -142,9 +149,9 @@ class DQNTraining:
             history = None
         else:
             _, self.metadata, history = self.serializer.load_session_configuration(checkpoint_path)                     
-            episodes = history['total_epochs'] + CONFIG['training']['ADDITIONAL_EPISODES'] 
-            from_episode = history['total_epochs']
-            start_episode = from_episode                    
+            episodes = history['total_episodes'] + CONFIG['training']['ADDITIONAL_EPISODES'] 
+            from_episode = history['total_episodes']
+            start_episode = from_episode                          
 
         # determine state size as the observation space size       
         state_size = environment.observation_space.shape[0] 
@@ -152,9 +159,17 @@ class DQNTraining:
         agent = self.train_with_reinforcement_learning(
             model, target_model, environment, start_episode, episodes, 
             state_size, checkpoint_path)
+        
+        # use the real time history callback data to retrieve current loss and metric values
+        # this allows to correctly resume the training metrics plot if training from checkpoint
+        history = {'history' : self.session_stats, 
+                   'val_history' : None,
+                   'total_episodes' : episodes}
 
         # Save the final model at the end of training
-        self.serializer.save_pretrained_model(model, checkpoint_path)        
+        self.serializer.save_pretrained_model(model, checkpoint_path)
+        # serialize training memory using pickle
+        self.agent.dump_memory(checkpoint_path)    
         self.serializer.save_session_configuration(
             checkpoint_path, history, self.configuration, self.metadata)
 

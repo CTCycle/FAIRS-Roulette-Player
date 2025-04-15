@@ -19,15 +19,15 @@
                "EXPLORATION_RATE" : 0.5,
                "ER_DECAY" : 0.995,
                "MINIMUM_ER" : 0.10,
-               "REPLAY_BUFFER" : 5000,
+               "REPLAY_BUFFER" : 4000,
                "MAX_MEMORY": 100000},
 
     "environment" : {"INITIAL_CAPITAL": 3000,
                      "BET_AMOUNT": 10,
-                     "MAX_STEPS": 1000,                     
+                     "MAX_STEPS": 500,                     
                      "RENDERING" : false},
 
-    "training" : {"EPISODES" : 50,
+    "training" : {"EPISODES" : 20,
                   "ADDITIONAL_EPISODES" : 10,                   
                   "LEARNING_RATE" : 0.00001,                 
                   "BATCH_SIZE" : 64,
