@@ -188,7 +188,7 @@ class ModelSerializer:
         model = self.load_checkpoint(checkpoint_path)       
         configuration, metadata, history = self.load_session_configuration(checkpoint_path)           
             
-        return model, configuration, metadata, history, checkpoint_path
+        return model, configuration, metadata, checkpoint_path
 
              
     

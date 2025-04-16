@@ -7,8 +7,8 @@ import warnings
 warnings.simplefilter(action='ignore', category=Warning)
 
 # [IMPORT CUSTOM MODULES]
-from FAIRS.commons.utils.inference.player import RoulettePlayer, save_predictions_to_csv
-from FAIRS.commons.utils.data.serializer import ModelSerializer
+from FAIRS.commons.utils.inference.player import RoulettePlayer
+from FAIRS.commons.utils.data.serializer import DataSerializer, ModelSerializer
 from FAIRS.commons.constants import CONFIG
 from FAIRS.commons.logger import logger
 
@@ -21,29 +21,26 @@ if __name__ == '__main__':
     #--------------------------------------------------------------------------  
     # selected and load the pretrained model, then print the summary 
     modelserializer = ModelSerializer()         
-    model, configuration, history, checkpoint_path = modelserializer.select_and_load_checkpoint()    
+    model, configuration, checkpoint_path = modelserializer.select_and_load_checkpoint()    
     model.summary(expand_nested=True)   
-    print()       
-   
-    # 1. [LOAD DATA]
+
+    # 2. [LOAD DATA]
     #-------------------------------------------------------------------------- 
-    # load the timeseries for predictions and use the roulette generator to process 
-    # raw extractions and retrieve sequence of positions and color-encoded values  
-    generator = RouletteGenerator(configuration)    
-    dataset_path = os.path.join(PRED_PATH, 'FAIRS_predictions.csv')
-    prediction_dataset = generator.prepare_roulette_dataset(dataset_path) 
+    dataserializer = DataSerializer(CONFIG)
+    dataset, metadata = dataserializer.load_processed_data() 
+    logger.info(f'Preprocessed roulette series has been loaded ({dataset.shape[0]} samples)') 
+   
  
-    # 2. [START PREDICTIONS]
+    # 3. [START PREDICTIONS]
     #--------------------------------------------------------------------------
     logger.info('Start predicting most rewarding actions with the selected model')    
     generator = RoulettePlayer(model, configuration)       
-    roulette_predictions = generator.play_past_roulette_games(prediction_dataset)
+    roulette_predictions = generator.play_past_roulette_games(dataset)
 
     if CONFIG['inference']['ONLINE']:
         real_time_game = generator.play_real_time_roulette()
 
-    # save predictions as .csv file in the predictions folder
-    save_predictions_to_csv(roulette_predictions, os.path.basename(checkpoint_path))
+    
 
     
 

@@ -40,11 +40,11 @@ On Windows, run *start_on_windows.bat* to launch the main navigation menu and br
 
 **2) Model training and evaluation:** open the machine learning menu to explore various options for model training and validation. Once the menu is open, you will see different options:
 
-- **train from scratch:** start training the FAIRS model using reinforcement learning in a roulette-based environment. This option starts a training from scratch using either true roulette extraction series or a random number generator. 
+**train from scratch:** start training the FAIRS model using reinforcement learning in a roulette-based environment. This option starts a training from scratch using either true roulette extraction series or a random number generator. 
 
-- **train from checkpoint:** start training a pretrained FAIRS checkpoint for an additional amount of episodes, using the pretrained model settings and data (CURRENTLY NOT IMPLEMENTED!) 
+**train from checkpoint:** start training a pretrained FAIRS checkpoint for an additional amount of episodes, using the pretrained model settings and data (CURRENTLY NOT IMPLEMENTED!) 
 
-- **model evaluation:** evaluate the performance of pretrained model checkpoints using different metrics. 
+**model evaluation:** evaluate the performance of pretrained model checkpoints using different metrics. 
 
 **3) Predict roulette extractions:** predict the future roulette extractions based on the historical timeseries and start the real time playing mode (if selected).  
 
