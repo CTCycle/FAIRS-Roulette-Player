@@ -27,7 +27,7 @@ if __name__ == '__main__':
     
     # 3. [SET DEVICE]
     #-------------------------------------------------------------------------- 
-    # activate DQN agent initialize training device based on given configurations    
+    # activate DQN agent initialize training device based on given configuration    
     logger.info('Setting device for training operations')   
     trainer = DQNTraining(CONFIG, metadata) 
     trainer.set_device()   

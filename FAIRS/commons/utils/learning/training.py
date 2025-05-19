@@ -148,7 +148,7 @@ class DQNTraining:
             start_episode = 0
             history = None
         else:
-            _, self.metadata, history = self.serializer.load_session_configuration(checkpoint_path)                     
+            _, self.metadata, history = self.serializer.load_training_configurationn(checkpoint_path)                     
             episodes = history['total_episodes'] + CONFIG['training']['ADDITIONAL_EPISODES'] 
             from_episode = history['total_episodes']
             start_episode = from_episode                          
@@ -170,7 +170,7 @@ class DQNTraining:
         self.serializer.save_pretrained_model(model, checkpoint_path)
         # serialize training memory using pickle
         self.agent.dump_memory(checkpoint_path)    
-        self.serializer.save_session_configuration(
+        self.serializer.save_training_configurationn(
             checkpoint_path, history, self.configuration, self.metadata)
 
 
