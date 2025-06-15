@@ -54,7 +54,7 @@ class DataSerializer:
         return dataset
 
     #--------------------------------------------------------------------------
-    def save_preprocessed_data(self, processed_data : pd.DataFrame):               
+    def save_preprocessed_data(self, processed_data):               
         self.database.save_preprocessed_data_table(processed_data)      
         metadata = {'seed' : self.configuration['SEED'], 
                     'dataset' : self.configuration['dataset'],
@@ -151,7 +151,7 @@ class ModelSerializer:
     def save_model_plot(self, model, path):        
         logger.debug('Generating model architecture graph')
         plot_path = os.path.join(path, 'model_layout.png')       
-        keras.utils.plot_model(model, to_file=plot_path, show_shapes=True, 
+        plot_model(model, to_file=plot_path, show_shapes=True, 
                     show_layer_names=True, show_layer_activations=True, 
                     expand_nested=True, rankdir='TB', dpi=400)
             
@@ -159,7 +159,7 @@ class ModelSerializer:
     def load_checkpoint(self, checkpoint_name):
         checkpoint_path = os.path.join(CHECKPOINT_PATH, checkpoint_name)
         model_path = os.path.join(checkpoint_path, 'saved_model.keras') 
-        model = keras.models.load_model(model_path) 
+        model = load_model(model_path) 
         
         return model
             

@@ -10,7 +10,7 @@ DATA_PATH = join(RSC_PATH, 'database')
 SOURCE_PATH = join(DATA_PATH, 'dataset')
 METADATA_PATH = join(DATA_PATH, 'metadata')
 INFERENCE_PATH = join(DATA_PATH, 'inference')
-VALIDATION_PATH = join(DATA_PATH, 'validation')
+EVALUATION_PATH = join(DATA_PATH, 'validation')
 CHECKPOINT_PATH = join(RSC_PATH, 'checkpoints')
 LOGS_PATH = join(RSC_PATH, 'logs')
 
@@ -21,6 +21,6 @@ STATES = 47
 PAD_VALUE = -1
 
 CONFIG_PATH = join(PROJECT_DIR, 'settings', 'configuration.json')
-with open(CONFIG_PATH, 'r') as file:
+with open(self.configuration_PATH, 'r') as file:
     CONFIG = json.load(file)
 

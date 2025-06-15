@@ -167,7 +167,7 @@ class BetsAndRewards:
 ###############################################################################
 class RouletteEnvironment(gym.Env):
 
-    def __init__(self, data : pd.DataFrame, configuration):
+    def __init__(self, data, configuration):
         super(RouletteEnvironment, self).__init__() 
         self.timeseries = data['timeseries'].values
         self.positions = data['position'].values

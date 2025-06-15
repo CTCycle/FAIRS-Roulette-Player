@@ -26,7 +26,7 @@ if __name__ == '__main__':
 
     # 2. [LOAD DATA]
     #-------------------------------------------------------------------------- 
-    dataserializer = DataSerializer(CONFIG)
+    dataserializer = DataSerializer(self.configuration)
     dataset, metadata = dataserializer.load_processed_data() 
     logger.info(f'Preprocessed roulette series has been loaded ({dataset.shape[0]} samples)') 
    
