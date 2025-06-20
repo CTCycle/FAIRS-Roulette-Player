@@ -141,7 +141,7 @@ class CallbacksWrapper:
         self.configuration = configuration
 
     #--------------------------------------------------------------------------
-    def real_time_history(self, configuration, checkpoint_path, history):
+    def real_time_history_callback(self, configuration, checkpoint_path, history):
         RTH_callback = RealTimeHistory(checkpoint_path, configuration, past_logs=history)              
         
         return RTH_callback

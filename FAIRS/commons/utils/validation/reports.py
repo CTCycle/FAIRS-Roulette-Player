@@ -5,7 +5,7 @@ from FAIRS.commons.logger import logger
 
 
 ###############################################################################
-def evaluation_report(model : keras.Model, train_dataset, validation_dataset):    
+def get_evaluation_report(model : keras.Model, train_dataset, validation_dataset):    
     training = model.evaluate(train_dataset, verbose=1)
     validation = model.evaluate(validation_dataset, verbose=1)
     logger.info(

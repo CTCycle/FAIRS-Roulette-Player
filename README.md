@@ -142,7 +142,7 @@ For customization, you can modify the main configuration parameters using *setti
 | DPI                | Resolution of figures from validation                    |
 
 
-**Environmental variables** are stored in *setup/variables/.env*. For security reasons, this file is typically not uploaded to GitHub. Instead, you must create this file manually by copying the template from *resources/templates/.env* and placing it in the *setup/variables* directory.
+**Environmental variables** are stored in the *app* folder (within the project folder). For security reasons, this file is typically not uploaded to GitHub. Instead, you must create this file manually by copying the template from *resources/templates/.env* and placing it in the *app* directory.
 
 | Variable              | Description                                              |
 |-----------------------|----------------------------------------------------------|

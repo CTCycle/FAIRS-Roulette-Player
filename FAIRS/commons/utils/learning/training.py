@@ -77,7 +77,7 @@ class DQNTraining:
         tensorboard = None
         game_statistics = self.callback_wrapper.game_stats_callback(
             checkpoint_path, plot_freq_steps=self.game_stats_frequency)
-        real_time_history = self.callback_wrapper.real_time_history(
+        real_time_history_callback = self.callback_wrapper.real_time_history_callback(
             self.configuration, checkpoint_path, history=self.session_stats)
         if self.configuration["training"]["USE_TENSORBOARD"]:
             tensorboard = self.callback_wrapper.tensorboard_callback(
