@@ -20,6 +20,10 @@ NUMBERS = 37
 STATES = 47
 PAD_VALUE = -1
 
+# [UI LAYOUT PATH]
+###############################################################################
+UI_PATH = join(PROJECT_DIR, 'app', 'src', 'window_layout.ui')
+
 CONFIG_PATH = join(PROJECT_DIR, 'settings', 'configuration.json')
 with open(self.configuration_PATH, 'r') as file:
     CONFIG = json.load(file)
