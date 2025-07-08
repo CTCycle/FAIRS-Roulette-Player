@@ -2,8 +2,8 @@ import keras
 from keras import losses, metrics, layers, Model, activations
 import torch
 
-from FAIRS.commons.utils.learning.embeddings import RouletteEmbedding
-from FAIRS.commons.utils.learning.logits import BatchNormDense, InverseFrequency, QScoreNet, AddNorm
+from FAIRS.commons.utils.learning.models.embeddings import RouletteEmbedding
+from FAIRS.commons.utils.learning.models.logits import BatchNormDense, InverseFrequency, QScoreNet, AddNorm
 from FAIRS.commons.constants import CONFIG, STATES, NUMBERS
 from FAIRS.commons.logger import logger
 

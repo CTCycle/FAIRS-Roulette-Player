@@ -158,7 +158,7 @@ class ValidationEvents:
     #--------------------------------------------------------------------------
     def handle_error(self, window, err_tb):
         exc, tb = err_tb
-        logger.error(exc, '\n', tb)
+        logger.error(f"{exc}\n{tb}")
         QMessageBox.critical(window, 'Something went wrong!', f"{exc}\n\n{tb}")  
 
    
@@ -289,6 +289,6 @@ class ModelEvents:
     #--------------------------------------------------------------------------
     def handle_error(self, window, err_tb):
         exc, tb = err_tb
-        logger.error(exc, '\n', tb)
+        logger.error(f"{exc}\n{tb}")
         QMessageBox.critical(window, 'Something went wrong!', f"{exc}\n\n{tb}")  
 

@@ -21,7 +21,7 @@ class WorkerSignals(QObject):
 
     
 ###############################################################################
-class Worker(QRunnable):
+class ThreadWorker(QRunnable):
     def __init__(self, fn, *args, **kwargs):
         super().__init__()
         self.fn = fn
@@ -80,9 +80,8 @@ class Worker(QRunnable):
 
 
 #------------------------------------------------------------------------------
-def check_thread_status(worker : Worker):
-    if worker is not None and worker.is_interrupted():
-        logger.warning('Running thread interrupted by user')
+def check_thread_status(worker : ThreadWorker):
+    if worker is not None and worker.is_interrupted():        
         raise WorkerInterrupted()    
 
 #------------------------------------------------------------------------------

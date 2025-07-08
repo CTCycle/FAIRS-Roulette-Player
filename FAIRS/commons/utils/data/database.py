@@ -183,7 +183,7 @@ class FAIRSDatabase:
         source_data = pd.read_csv(self.source_path, sep=';', encoding='utf-8')      
         inference_data = pd.read_csv(self.inference_path, sep=';', encoding='utf-8')    
         self.save_source_data_table(source_data)
-        self.save_inference_data_table(inference_data)
+        self.save_predictions_table(inference_data)
 
     #--------------------------------------------------------------------------
     def load_source_data_table(self):                   
@@ -221,7 +221,7 @@ class FAIRSDatabase:
         conn.close() 
 
     #--------------------------------------------------------------------------
-    def save_inference_data_table(self, data):         
+    def save_predictions_table(self, data):         
         conn = sqlite3.connect(self.db_path)         
         data.to_sql(
             self.inference_data.name, conn, if_exists='replace', index=False,
