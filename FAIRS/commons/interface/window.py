@@ -1,4 +1,4 @@
-from FEXT.commons.variables import EnvironmentVariables
+from FEXT.app.src.variables import EnvironmentVariables
 EV = EnvironmentVariables()
 
 from functools import partial
@@ -9,12 +9,12 @@ from PySide6.QtWidgets import (QPushButton, QRadioButton, QCheckBox, QDoubleSpin
                                QSpinBox, QComboBox, QProgressBar, QGraphicsScene, 
                                QGraphicsPixmapItem, QGraphicsView)
 
-from FEXT.commons.utils.data.database import FEXTDatabase
-from FEXT.commons.configuration import Configuration
-from FEXT.commons.interface.events import GraphicsHandler, ValidationEvents, ModelEvents
-from FEXT.commons.interface.workers import ThreadWorker
-from FEXT.commons.constants import IMG_PATH, INFERENCE_INPUT_PATH
-from FEXT.commons.logger import logger
+from FEXT.app.src.utils.data.database import FEXTDatabase
+from FEXT.app.src.configuration import Configuration
+from FEXT.app.src.interface.events import GraphicsHandler, ValidationEvents, ModelEvents
+from FEXT.app.src.interface.workers import ThreadWorker
+from FEXT.app.src.constants import IMG_PATH, INFERENCE_INPUT_PATH
+from FEXT.app.src.logger import logger
 
 
 ###############################################################################
@@ -140,7 +140,7 @@ class MainWindow:
            
             # 4. inference tab page  
             ('encode_images','clicked',self.encode_images_with_checkpoint),            
-            # 5. viewer tab page 
+            # 4. viewer tab page 
             ('data_plots_view', 'toggled', self._update_graphics_view),
             ('model_plots_view', 'toggled', self._update_graphics_view),
             ('inference_images_view', 'toggled', self._update_graphics_view), 

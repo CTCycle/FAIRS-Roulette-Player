@@ -2,8 +2,8 @@ import traceback
 import inspect
 from PySide6.QtCore import QObject, Signal, QRunnable, Slot
 
-from FEXT.commons.constants import ROOT_DIR, DATA_PATH
-from FEXT.commons.logger import logger
+from FEXT.app.src.constants import ROOT_DIR, DATA_PATH
+from FEXT.app.src.logger import logger
 
 
 ###############################################################################
