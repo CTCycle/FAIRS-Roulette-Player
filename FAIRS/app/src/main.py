@@ -6,9 +6,9 @@ import warnings
 warnings.simplefilter(action='ignore', category=Warning)
 
 # [IMPORT CUSTOM MODULES]
-from FAIRS.commons.interface.window import MainWindow
-from FAIRS.commons.constants import UI_PATH
-from FAIRS.commons.logger import logger
+from FAIRS.app.src.interface.window import MainWindow
+from FAIRS.app.src.constants import UI_PATH
+from FAIRS.app.src.logger import logger
 
 
 # [RUN MAIN]

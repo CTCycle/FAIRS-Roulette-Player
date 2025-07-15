@@ -1,5 +1,5 @@
 # [SETTING ENVIRONMENT VARIABLES]
-from FAIRS.commons.variables import EnvironmentVariables
+from FAIRS.app.src.variables import EnvironmentVariables
 EV = EnvironmentVariables()
 
 # [SETTING WARNINGS]
@@ -7,12 +7,12 @@ import warnings
 warnings.simplefilter(action='ignore', category=Warning)
 
 # [IMPORT CUSTOM MODULES]
-from FAIRS.commons.utils.data.serializer import DataSerializer, ModelSerializer
-from FAIRS.commons.utils.learning.models.qnet import FAIRSnet
-from FAIRS.commons.utils.learning.training.fitting import DQNTraining
-from FAIRS.commons.utils.validation.reports import log_training_report
-from FAIRS.commons.constants import CONFIG, DATA_PATH
-from FAIRS.commons.logger import logger
+from FAIRS.app.src.utils.data.serializer import DataSerializer, ModelSerializer
+from FAIRS.app.src.utils.learning.models.qnet import FAIRSnet
+from FAIRS.app.src.utils.learning.training.fitting import DQNTraining
+from FAIRS.app.src.utils.validation.reports import log_training_report
+from FAIRS.app.src.constants import CONFIG, DATA_PATH
+from FAIRS.app.src.logger import logger
 
 
 # [RUN MAIN]

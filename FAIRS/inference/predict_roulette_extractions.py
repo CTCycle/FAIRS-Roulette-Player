@@ -7,10 +7,10 @@ import warnings
 warnings.simplefilter(action='ignore', category=Warning)
 
 # [IMPORT CUSTOM MODULES]
-from FAIRS.commons.utils.inference.player import RoulettePlayer
-from FAIRS.commons.utils.data.serializer import DataSerializer, ModelSerializer
-from FAIRS.commons.constants import CONFIG
-from FAIRS.commons.logger import logger
+from FAIRS.app.src.utils.inference.player import RoulettePlayer
+from FAIRS.app.src.utils.data.serializer import DataSerializer, ModelSerializer
+from FAIRS.app.src.constants import CONFIG
+from FAIRS.app.src.logger import logger
 
 
 # [RUN MAIN]
