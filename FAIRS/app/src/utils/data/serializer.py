@@ -6,9 +6,9 @@ import pandas as pd
 from datetime import datetime
 import keras
 
-from FAIRS.app.src.utils.data.database import FAIRSDatabase
-from FAIRS.app.src.constants import CONFIG, DATA_PATH, METADATA_PATH, CHECKPOINT_PATH
-from FAIRS.app.src.logger import logger
+from FAIRS.app.utils.data.database import FAIRSDatabase
+from FAIRS.app.constants import CONFIG, DATA_PATH, METADATA_PATH, CHECKPOINT_PATH
+from FAIRS.app.logger import logger
 
 
 
@@ -156,7 +156,7 @@ class ModelSerializer:
                     expand_nested=True, rankdir='TB', dpi=400)
             
     #--------------------------------------------------------------------------
-    def load_checkpoint(self, checkpoint_name):
+    def load_checkpoint(self, checkpoint_name : str):
         checkpoint_path = os.path.join(CHECKPOINT_PATH, checkpoint_name)
         model_path = os.path.join(checkpoint_path, 'saved_model.keras') 
         model = load_model(model_path) 

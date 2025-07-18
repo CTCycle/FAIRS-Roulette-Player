@@ -3,18 +3,18 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg
 from PySide6.QtWidgets import QMessageBox
 from PySide6.QtGui import QImage, QPixmap
 
-from FEXT.app.src.utils.data.serializer import DataSerializer, ModelSerializer
-from FEXT.app.src.utils.data.loader import TrainingDataLoader, InferenceDataLoader
-from FEXT.app.src.utils.data.process import TrainValidationSplit
-from FEXT.app.src.utils.learning.training import ModelTraining
-from FEXT.app.src.utils.learning.autoencoder import FeXTAutoEncoder
-from FEXT.app.src.utils.inference.encoding import ImageEncoding
-from FEXT.app.src.utils.validation.dataset import ImageAnalysis, ImageReconstruction
-from FEXT.app.src.utils.validation.checkpoints import ModelEvaluationSummary
-from FEXT.app.src.interface.workers import check_thread_status
+from FEXT.app.utils.data.serializer import DataSerializer, ModelSerializer
+from FEXT.app.utils.data.loader import TrainingDataLoader, InferenceDataLoader
+from FEXT.app.utils.data.process import TrainValidationSplit
+from FEXT.app.utils.learning.training import ModelTraining
+from FEXT.app.utils.learning.autoencoder import FeXTAutoEncoder
+from FEXT.app.utils.inference.encoding import ImageEncoding
+from FEXT.app.utils.validation.dataset import ImageAnalysis, ImageReconstruction
+from FEXT.app.utils.validation.checkpoints import ModelEvaluationSummary
+from FEXT.app.interface.workers import check_thread_status
 
-from FEXT.app.src.constants import IMG_PATH, INFERENCE_INPUT_PATH
-from FEXT.app.src.logger import logger
+from FEXT.app.constants import IMG_PATH, INFERENCE_INPUT_PATH
+from FEXT.app.logger import logger
 
 
 ###############################################################################

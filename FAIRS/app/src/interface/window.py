@@ -1,4 +1,4 @@
-from FEXT.app.src.variables import EnvironmentVariables
+from FEXT.app.variables import EnvironmentVariables
 EV = EnvironmentVariables()
 
 from functools import partial
@@ -9,12 +9,12 @@ from PySide6.QtWidgets import (QPushButton, QRadioButton, QCheckBox, QDoubleSpin
                                QSpinBox, QComboBox, QProgressBar, QGraphicsScene, 
                                QGraphicsPixmapItem, QGraphicsView)
 
-from FEXT.app.src.utils.data.database import FEXTDatabase
-from FEXT.app.src.configuration import Configuration
-from FEXT.app.src.interface.events import GraphicsHandler, ValidationEvents, ModelEvents
-from FEXT.app.src.interface.workers import ThreadWorker
-from FEXT.app.src.constants import IMG_PATH, INFERENCE_INPUT_PATH
-from FEXT.app.src.logger import logger
+from FEXT.app.utils.data.database import FEXTDatabase
+from FEXT.app.configuration import Configuration
+from FEXT.app.interface.events import GraphicsHandler, ValidationEvents, ModelEvents
+from FEXT.app.interface.workers import ThreadWorker
+from FEXT.app.constants import IMG_PATH, INFERENCE_INPUT_PATH
+from FEXT.app.logger import logger
 
 
 ###############################################################################
@@ -445,6 +445,8 @@ class MainWindow:
             return 
         
         if self.worker:            
+            message = "A task is currently running, wait for it to finish and then try again"
+            QMessageBox.warning(self.main_win, "Application is still busy", message)
             return         
         
         self.configuration = self.config_manager.get_configuration() 
@@ -469,6 +471,8 @@ class MainWindow:
     @Slot()
     def train_from_scratch(self):
         if self.worker:            
+            message = "A task is currently running, wait for it to finish and then try again"
+            QMessageBox.warning(self.main_win, "Application is still busy", message)
             return 
                   
         self.configuration = self.config_manager.get_configuration() 
@@ -489,6 +493,8 @@ class MainWindow:
     @Slot()
     def resume_training_from_checkpoint(self): 
         if self.worker:            
+            message = "A task is currently running, wait for it to finish and then try again"
+            QMessageBox.warning(self.main_win, "Application is still busy", message)
             return 
         
         self.configuration = self.config_manager.get_configuration() 
@@ -513,6 +519,8 @@ class MainWindow:
     @Slot()
     def run_model_evaluation_pipeline(self):  
         if self.worker:            
+            message = "A task is currently running, wait for it to finish and then try again"
+            QMessageBox.warning(self.main_win, "Application is still busy", message)
             return 
 
         self.configuration = self.config_manager.get_configuration() 
@@ -536,6 +544,8 @@ class MainWindow:
     @Slot()
     def get_checkpoints_summary(self):       
         if self.worker:            
+            message = "A task is currently running, wait for it to finish and then try again"
+            QMessageBox.warning(self.main_win, "Application is still busy", message)
             return 
         
         self.configuration = self.config_manager.get_configuration() 
@@ -558,6 +568,8 @@ class MainWindow:
     @Slot()    
     def encode_images_with_checkpoint(self):  
         if self.worker:            
+            message = "A task is currently running, wait for it to finish and then try again"
+            QMessageBox.warning(self.main_win, "Application is still busy", message)
             return 
         
         self.configuration = self.config_manager.get_configuration() 

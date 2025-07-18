@@ -2,8 +2,8 @@ import torch
 import keras
 from keras import layers 
 
-from FAIRS.app.src.constants import CONFIG, PAD_VALUE
-from FAIRS.app.src.logger import logger
+from FAIRS.app.constants import CONFIG, PAD_VALUE
+from FAIRS.app.logger import logger
       
 
 # [POSITIONAL EMBEDDING]

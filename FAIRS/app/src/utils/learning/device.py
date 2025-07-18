@@ -1,7 +1,7 @@
 import torch
 from keras.mixed_precision import set_global_policy
 
-from NISTADS.app.src.logger import logger
+from NISTADS.app.logger import logger
 
 
 # [DEVICE SETTINGS]

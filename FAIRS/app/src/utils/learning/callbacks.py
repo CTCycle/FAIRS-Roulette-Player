@@ -8,8 +8,8 @@ import webbrowser
 import subprocess
 import time
 
-from FAIRS.app.src.constants import CONFIG
-from FAIRS.app.src.logger import logger
+from FAIRS.app.constants import CONFIG
+from FAIRS.app.logger import logger
 
     
 # [CALLBACK FOR REAL TIME TRAINING MONITORING]

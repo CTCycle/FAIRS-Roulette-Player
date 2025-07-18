@@ -2,8 +2,8 @@ import os
 import sqlite3
 import pandas as pd
 
-from FAIRS.app.src.constants import DATA_PATH, SOURCE_PATH, INFERENCE_PATH
-from FAIRS.app.src.logger import logger
+from FAIRS.app.constants import DATA_PATH, SOURCE_PATH, INFERENCE_PATH
+from FAIRS.app.logger import logger
 
 
 ###############################################################################

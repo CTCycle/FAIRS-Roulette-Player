@@ -3,12 +3,12 @@ import keras
 import torch
 from tqdm import tqdm
 
-from FAIRS.app.src.utils.data.serializer import ModelSerializer
-from FAIRS.app.src.utils.learning.callbacks import CallbacksWrapper
-from FAIRS.app.src.utils.learning.environment import RouletteEnvironment
-from FAIRS.app.src.utils.learning.agents import DQNAgent
-from FAIRS.app.src.constants import CONFIG
-from FAIRS.app.src.logger import logger
+from FAIRS.app.utils.data.serializer import ModelSerializer
+from FAIRS.app.utils.learning.callbacks import CallbacksWrapper
+from FAIRS.app.utils.learning.environment import RouletteEnvironment
+from FAIRS.app.utils.learning.agents import DQNAgent
+from FAIRS.app.constants import CONFIG
+from FAIRS.app.logger import logger
 
 
 # [TOOLS FOR TRAINING MACHINE LEARNING MODELS]

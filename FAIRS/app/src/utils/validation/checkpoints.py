@@ -2,10 +2,10 @@ import os
 import shutil
 import pandas as pd
 
-from FAIRS.app.src.utils.data.database import FAIRSDatabase
-from FAIRS.app.src.utils.data.serializer import ModelSerializer
-from FAIRS.app.src.constants import CONFIG, CHECKPOINT_PATH, DATA_PATH
-from FAIRS.app.src.logger import logger
+from FAIRS.app.utils.data.database import FAIRSDatabase
+from FAIRS.app.utils.data.serializer import ModelSerializer
+from FAIRS.app.constants import CONFIG, CHECKPOINT_PATH, DATA_PATH
+from FAIRS.app.logger import logger
 
 
 

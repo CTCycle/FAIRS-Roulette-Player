@@ -2,8 +2,8 @@ import traceback
 import inspect
 from PySide6.QtCore import QObject, Signal, QRunnable, Slot
 
-from FEXT.app.src.constants import ROOT_DIR, DATA_PATH
-from FEXT.app.src.logger import logger
+from FEXT.app.constants import ROOT_DIR, DATA_PATH
+from FEXT.app.logger import logger
 
 
 ###############################################################################
@@ -87,5 +87,5 @@ def check_thread_status(worker : ThreadWorker):
 #------------------------------------------------------------------------------
 def update_progress_callback(progress, total, progress_callback=None):   
     if progress_callback is not None:        
-        percent = int((progress + 1) * 100 / total)
+        percent = int(progress * 100 / total)
         progress_callback(percent)  

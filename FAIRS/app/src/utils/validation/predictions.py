@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import confusion_matrix
 
-from FAIRS.app.src.constants import CONFIG
-from FAIRS.app.src.logger import logger    
+from FAIRS.app.constants import CONFIG
+from FAIRS.app.logger import logger    
 
 
 

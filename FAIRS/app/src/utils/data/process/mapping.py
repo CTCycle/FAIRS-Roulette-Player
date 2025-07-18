@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 
-from FAIRS.app.src.constants import CONFIG
-from FAIRS.app.src.logger import logger
+from FAIRS.app.constants import CONFIG
+from FAIRS.app.logger import logger
 
 
 # [PREPROCESSING]

@@ -7,9 +7,9 @@ import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
 
-from FAIRS.app.src.utils.data.process.mapping import RouletteMapper
-from FAIRS.app.src.constants import CONFIG, STATES, NUMBERS, PAD_VALUE
-from FAIRS.app.src.logger import logger
+from FAIRS.app.utils.data.process.mapping import RouletteMapper
+from FAIRS.app.constants import CONFIG, STATES, NUMBERS, PAD_VALUE
+from FAIRS.app.logger import logger
 
 
 
