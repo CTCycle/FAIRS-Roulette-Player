@@ -177,7 +177,7 @@ class CallbacksWrapper:
         chkp_save = keras.callbacks.ModelCheckpoint(filepath=checkpoint_filepath,
                                                     save_weights_only=False,  
                                                     monitor='loss',       
-                                                    save_best_only=True,      
+                                                    save_best_only=False,      
                                                     mode='auto',              
                                                     verbose=1)
 

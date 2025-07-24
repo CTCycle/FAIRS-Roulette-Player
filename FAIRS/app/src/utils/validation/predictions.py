@@ -15,7 +15,7 @@ from FAIRS.app.logger import logger
 class BetsAccuracy:
 
     def __init__(self, model : keras.Model):
-        self.DPI = 400
+        self.DPI = configuration.get('image_resolution', 400)
         self.file_type = 'jpeg'        
         self.model = model  
 

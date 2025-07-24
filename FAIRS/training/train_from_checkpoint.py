@@ -22,7 +22,7 @@ if __name__ == '__main__':
     # 1. [LOAD PRETRAINED MODEL]
     #--------------------------------------------------------------------------  
     # selected and load the pretrained model, then print the summary     
-    logger.info('Loading specific checkpoint from pretrained models')   
+    logger.info('Loading specific checkpoint')   
     modelserializer = ModelSerializer()     
     model, configuration, metadata, checkpoint_path = modelserializer.select_and_load_checkpoint()    
     model.summary(expand_nested=True)  

@@ -36,10 +36,10 @@ class Configuration:
 
             # Learning rate scheduler
             'use_scheduler' : False,
-            'initial_lr': 0.001,
+            'initial_LR': 0.001,
             'constant_steps': 40000,
             'decay_steps': 1000,
-            'final_lr': 0.0001,
+            'target_LR': 0.0001,
 
             # Validation
             'val_batch_size': 20,

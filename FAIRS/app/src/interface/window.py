@@ -202,7 +202,7 @@ class MainWindow:
             ('save_checkpoints', 'toggled', 'save_checkpoints'),            
             ('checkpoints_frequency', 'valueChanged', 'checkpoints_frequency'),
 
-            ('LR_scheduler', 'toggled', 'use_lr_scheduler'),
+            ('LR_scheduler', 'toggled', 'use_LR_scheduler'),
             ('initial_LR', 'valueChanged', 'initial_LR'),
             ('target_LR', 'valueChanged', 'target_LR'),
             ('constant_steps', 'valueChanged', 'constant_steps'),          

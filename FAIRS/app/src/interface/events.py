@@ -102,7 +102,7 @@ class ValidationEvents:
     #--------------------------------------------------------------------------
     def run_model_evaluation_pipeline(self, metrics, selected_checkpoint, device='CPU', 
                                       progress_callback=None, worker=None):
-        logger.info(f'Loading {selected_checkpoint} checkpoint from pretrained models')   
+        logger.info(f'Loading {selected_checkpoint} checkpoint')   
         modser = ModelSerializer()       
         model, train_config, session, checkpoint_path = modser.load_checkpoint(
             selected_checkpoint)    
@@ -217,7 +217,7 @@ class ModelEvents:
     #--------------------------------------------------------------------------
     def resume_training_pipeline(self, selected_checkpoint, progress_callback=None, 
                                  worker=None):
-        logger.info(f'Loading {selected_checkpoint} checkpoint from pretrained models') 
+        logger.info(f'Loading {selected_checkpoint} checkpoint') 
         modser = ModelSerializer()         
         model, train_config, session, checkpoint_path = modser.load_checkpoint(
             selected_checkpoint)    
@@ -253,7 +253,7 @@ class ModelEvents:
     #--------------------------------------------------------------------------
     def run_inference_pipeline(self, selected_checkpoint, device='CPU', 
                                progress_callback=None, worker=None):
-        logger.info(f'Loading {selected_checkpoint} checkpoint from pretrained models')
+        logger.info(f'Loading {selected_checkpoint} checkpoint')
         modser = ModelSerializer()         
         model, train_config, session, checkpoint_path = modser.load_checkpoint(
             selected_checkpoint)    

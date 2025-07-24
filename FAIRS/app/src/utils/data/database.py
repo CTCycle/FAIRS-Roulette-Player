@@ -109,7 +109,7 @@ class CheckpointSummaryTable:
             'device_id': 'VARCHAR',
             'number_of_processors': 'INTEGER',
             'use_tensorboard': 'VARCHAR',
-            'lr_scheduler_initial_lr': 'FLOAT',
+            'lr_scheduler_initial_LR': 'FLOAT',
             'lr_scheduler_constant_steps': 'FLOAT',
             'lr_scheduler_decay_steps': 'FLOAT'}    
 
@@ -140,7 +140,7 @@ class CheckpointSummaryTable:
             device_id VARCHAR,
             number_of_processors INTEGER,
             use_tensorboard VARCHAR,
-            lr_scheduler_initial_lr FLOAT,
+            lr_scheduler_initial_LR FLOAT,
             lr_scheduler_constant_steps FLOAT,
             lr_scheduler_decay_steps FLOAT
             );
@@ -182,7 +182,7 @@ class FAIRSDatabase:
     def update_database(self):               
         source_data = pd.read_csv(self.source_path, sep=';', encoding='utf-8')      
         inference_data = pd.read_csv(self.inference_path, sep=';', encoding='utf-8')    
-        self.save_source_data_table(source_data)
+        self.save_source_data(source_data)
         self.save_predictions_table(inference_data)
 
     #--------------------------------------------------------------------------
@@ -204,7 +204,7 @@ class FAIRSDatabase:
         return data      
 
     #--------------------------------------------------------------------------
-    def save_source_data_table(self, data):                 
+    def save_source_data(self, data):                 
         conn = sqlite3.connect(self.db_path)         
         data.to_sql(self.source_data.name, conn, if_exists='replace', index=False,
                     dtype=self.source_data.get_dtypes())
@@ -230,7 +230,7 @@ class FAIRSDatabase:
         conn.close()    
 
     #--------------------------------------------------------------------------
-    def save_checkpoints_summary_table(self, data):        
+    def save_checkpoints_summary(self, data):        
         conn = sqlite3.connect(self.db_path)         
         data.to_sql(
             self.checkpoints_summary.name, conn, if_exists='replace', index=False,

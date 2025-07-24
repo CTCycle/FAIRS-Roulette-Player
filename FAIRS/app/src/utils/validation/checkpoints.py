@@ -13,8 +13,8 @@ from FAIRS.app.logger import logger
 ################################################################################
 class ModelEvaluationSummary:
 
-    def __init__(self, configuration, remove_invalid=False):
-        self.remove_invalid = remove_invalid
+    def __init__(self, configuration):
+        
         self.serializer = ModelSerializer()
 
         self.csv_kwargs = {'index': 'False', 'sep': ';', 'encoding': 'utf-8'}
@@ -30,8 +30,7 @@ class ModelEvaluationSummary:
                 pretrained_model_path = os.path.join(entry.path, 'saved_model.keras')                
                 if os.path.isfile(pretrained_model_path):
                     model_paths.append(entry.path)
-                elif not os.path.isfile(pretrained_model_path) and self.remove_invalid:                    
-                    shutil.rmtree(entry.path)
+                
 
         return model_paths  
 
@@ -46,30 +45,30 @@ class ModelEvaluationSummary:
             model_name = os.path.basename(model_path) 
             # Extract model name and training type                       
             device_config = configuration["device"]
-            precision = 16 if device_config.get("MIXED_PRECISION", 'NA') == True else 32
+            precision = 16 if device_config.get("MIXED_PRECISION", np.nan) == True else 32
             chkp_config = {'Checkpoint name': model_name,                                                 
-                           'Sample size': configuration["dataset"].get("SAMPLE_SIZE", 'NA'),
-                           'Validation size': configuration["dataset"].get("VALIDATION_SIZE", 'NA'),
-                           'Seed': configuration.get("SEED", 'NA'),                          
+                           'Sample size': configuration["dataset"].get("SAMPLE_SIZE", np.nan),
+                           'Validation size': configuration["dataset"].get("VALIDATION_SIZE", np.nan),
+                           'Seed': configuration.get("SEED", np.nan),                          
                            'Precision (bits)': precision,                     
-                           'Epochs': configuration["training"].get("EPOCHS", 'NA'),
-                           'Learning rate': configuration["training"].get("LEARNING_RATE", 'NA'),
-                           'Batch size': configuration["training"].get("BATCH_SIZE", 'NA'),                          
-                           'Normalize': configuration["dataset"].get("IMG_NORMALIZE", 'NA'),
-                           'Split seed': configuration["dataset"].get("SPLIT_SEED", 'NA'),
-                           'Image augment': configuration["dataset"].get("IMG_AUGMENTATION", 'NA'),                          
-                           'Residuals': configuration["model"].get("RESIDUAL_CONNECTIONS", 'NA'),
-                           'JIT Compile': configuration["model"].get("JIT_COMPILE", 'NA'),
-                           'JIT Backend': configuration["model"].get("JIT_BACKEND", 'NA'),
-                           'Device': configuration["device"].get("DEVICE", 'NA'),
-                           'Device ID': configuration["device"].get("DEVICE_ID", 'NA'),
-                           'Number of Processors': configuration["device"].get("NUM_PROCESSORS", 'NA'),
-                           'Tensorboard logs': configuration["training"].get("USE_TENSORBOARD", 'NA')}
+                           'Epochs': configuration["training"].get("EPOCHS", np.nan),
+                           'Learning rate': configuration["training"].get("LEARNING_RATE", np.nan),
+                           'Batch size': configuration["training"].get("BATCH_SIZE", np.nan),                          
+                           'Normalize': configuration["dataset"].get("IMG_NORMALIZE", np.nan),
+                           'Split seed': configuration["dataset"].get("SPLIT_SEED", np.nan),
+                           'Image augment': configuration["dataset"].get("IMG_AUGMENTATION", np.nan),                          
+                           'Residuals': configuration["model"].get("RESIDUAL_CONNECTIONS", np.nan),
+                           'JIT Compile': configuration["model"].get("JIT_COMPILE", np.nan),
+                           'JIT Backend': configuration["model"].get("JIT_BACKEND", np.nan),
+                           'Device': configuration["device"].get("DEVICE", np.nan),
+                           'Device ID': configuration["device"].get("DEVICE_ID", np.nan),
+                           'Number of Processors': configuration["device"].get("NUM_PROCESSORS", np.nan),
+                           'Tensorboard logs': configuration["training"].get("USE_TENSORBOARD", np.nan)}
 
             model_parameters.append(chkp_config)
 
         dataframe = pd.DataFrame(model_parameters)
-        self.database.save_checkpoints_summary_table(dataframe)
+        self.database.save_checkpoints_summary(dataframe)
 
         if self.save_as_csv:
             logger.info('Export to CSV requested. Now saving checkpoint summary to CSV file')             

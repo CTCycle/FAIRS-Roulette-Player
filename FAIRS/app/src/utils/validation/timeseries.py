@@ -8,7 +8,7 @@ from FAIRS.app.logger import logger
 class RouletteSeriesValidation:
 
     def __init__(self, train_data, validation_data):
-        self.DPI = 400
+        self.DPI = configuration.get('image_resolution', 400)
         self.file_type = 'jpeg'
         self.train_data = train_data
         self.validation_data = validation_data
