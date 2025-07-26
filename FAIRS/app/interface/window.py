@@ -1,20 +1,20 @@
-from FEXT.app.variables import EnvironmentVariables
+from FAIRS.app.variables import EnvironmentVariables
 EV = EnvironmentVariables()
 
 from functools import partial
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtCore import QFile, QIODevice, Slot, QThreadPool, Qt
-from PySide6.QtGui import QPainter, QPixmap
+from PySide6.QtGui import QPainter, QPixmap, QAction
 from PySide6.QtWidgets import (QPushButton, QRadioButton, QCheckBox, QDoubleSpinBox, 
                                QSpinBox, QComboBox, QProgressBar, QGraphicsScene, 
                                QGraphicsPixmapItem, QGraphicsView)
 
-from FEXT.app.utils.data.database import FEXTDatabase
-from FEXT.app.configuration import Configuration
-from FEXT.app.interface.events import GraphicsHandler, ValidationEvents, ModelEvents
-from FEXT.app.interface.workers import ThreadWorker
-from FEXT.app.constants import IMG_PATH, INFERENCE_INPUT_PATH
-from FEXT.app.logger import logger
+from FAIRS.app.utils.data.database import FAIRSDatabase
+from FAIRS.app.configuration import Configuration
+from FAIRS.app.interface.events import GraphicsHandler, ValidationEvents, ModelEvents
+from FAIRS.app.interface.workers import ThreadWorker
+from FAIRS.app.constants import *
+from FAIRS.app.logger import logger
 
 
 ###############################################################################
@@ -41,7 +41,7 @@ class MainWindow:
         self.worker = None        
 
         # initialize database
-        self.database = FEXTDatabase()
+        self.database = FAIRSDatabase()
         self.database.initialize_database()          
 
         # --- Create persistent handlers ---
@@ -53,16 +53,20 @@ class MainWindow:
         self._set_states()
         self.widgets = {}
         self._setup_configuration([ 
-            # out of tab widgets
+            # actions
+            (QAction, 'actionLoadConfig', 'load_configuration_action'),
+            (QAction, 'actionSaveConfig', 'save_configuration_action'),
+            # out of tab widgets            
+            (QProgressBar,'progressBar','progress_bar'),      
+            (QPushButton,'stopThread','stop_thread'),
+            # 1. dataset tab page 
             (QPushButton,'refreshCheckpoints','refresh_checkpoints'),
             (QComboBox,'checkpointsList','checkpoints_list'),
-            (QProgressBar,'progressBar','progress_bar'),      
-            (QPushButton,'stopThread','stop_thread'),    
             # 1. dataset tab page
             (QCheckBox,'getStatsAnalysis','get_image_stats'),
             (QCheckBox,'getPixDist','pixel_distribution_metric'),
             (QPushButton,'evaluateDataset','evaluate_dataset'),
-            (QSpinBox,'seed','general_seed'),
+            (QSpinBox,'seed','seed'),
             (QDoubleSpinBox,'sampleSize','sample_size'),            
                       
             # 2. training tab page    
@@ -188,7 +192,7 @@ class MainWindow:
     def _auto_connect_settings(self):
         connections = [
             # 1. dataset tab page
-            ('general_seed', 'valueChanged', 'general_seed'),
+            ('seed', 'valueChanged', 'seed'),
             ('sample_size', 'valueChanged', 'sample_size'),
             # 2. training tab page   
             ('img_augmentation', 'toggled', 'img_augmentation'),
@@ -479,7 +483,7 @@ class MainWindow:
         self.model_handler = ModelEvents(self.configuration)         
   
         # send message to status bar
-        self._send_message("Training FEXT Autoencoder using a new model instance...")        
+        self._send_message("Training FAIRS Autoencoder using a new model instance...")        
         # functions that are passed to the worker will be executed in a separate thread
         self.worker = ThreadWorker(self.model_handler.run_training_pipeline)                            
        

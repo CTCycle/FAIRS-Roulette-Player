@@ -4,12 +4,12 @@ FAIRS/resources/database/metadata/*
 FAIRS/resources/database/validation/*
 FAIRS/resources/database/inference/*
 
-!FAIRS/commons/assets/*
-setup/environment/*
-setup/miniconda/*
-setup/variables/.env
+setup/python/*
+setup/git/*
+setup/.env
 
 __pycache__
+*.vscode
 *.egg-info
 *.db
 *.log

@@ -4,7 +4,7 @@ class Configuration:
     def __init__(self):
         self.configuration = { 
             # Dataset
-            'general_seed': 42,
+            'seed': 42,
             'sample_size': 1.0,
             'validation_size': 0.2,
             'img_augmentation': False,
@@ -37,7 +37,7 @@ class Configuration:
             # Learning rate scheduler
             'use_scheduler' : False,
             'initial_LR': 0.001,
-            'constant_steps': 40000,
+            'constant_steps': 0,
             'decay_steps': 1000,
             'target_LR': 0.0001,
 
