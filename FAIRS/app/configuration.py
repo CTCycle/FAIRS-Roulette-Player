@@ -1,3 +1,9 @@
+import os
+import json
+
+from FAIRS.app.constants import CONFIG_PATH
+
+
 ###############################################################################
 class Configuration:
     
@@ -7,40 +13,36 @@ class Configuration:
             'seed': 42,
             'sample_size': 1.0,
             'validation_size': 0.2,
-            'img_augmentation': False,
             'shuffle_dataset': True,
             'shuffle_size': 256,
-
             # Model 
-            'initial_neurons': 64,
-            'dropout_rate': 0.2,
+            'num_neurons': 64,
+            'perceptive_field_size': 0.2,
             'jit_compile': False,
             'jit_backend': 'inductor',
-
-            # Device
-            'device': 'CPU',
+            'exploration_rate' : 0.75,
+            'discount_rate' : 0.5,
+             # Device
+            'use_device_GPU': False,
             'device_id': 0,
             'use_mixed_precision': False,
             'num_workers': 0,
-
             # Training
             'split_seed': 76,
             'train_seed': 42, 
             'train_sample_size': 1.0,
-            'epochs': 100,
-            'additional_epochs': 10,
+            'episodes': 100,
+            'max_steps_episode': 1000,
+            'additional_episodes': 10,
             'batch_size': 32,
+            'learning_rate': 0.0001,
+            'max_memory_size': 10000,
+            'replay_buffer_size': 1000,
             'use_tensorboard': False,
             'plot_training_metrics' : True,
             'save_checkpoints': False,
-
-            # Learning rate scheduler
-            'use_scheduler' : False,
-            'initial_LR': 0.001,
-            'constant_steps': 0,
-            'decay_steps': 1000,
-            'target_LR': 0.0001,
-
+            'checkpoints_frequency': 1,
+            
             # Validation
             'val_batch_size': 20,
             'num_evaluation_images': 6            
@@ -53,3 +55,15 @@ class Configuration:
     #--------------------------------------------------------------------------
     def update_value(self, key: str, value: bool):       
         self.configuration[key] = value
+
+    #--------------------------------------------------------------------------
+    def save_configuration_to_json(self, name : str):  
+        full_path = os.path.join(CONFIG_PATH, f'{name}.json')      
+        with open(full_path, 'w') as f:
+            json.dump(self.configuration, f, indent=4)
+
+    #--------------------------------------------------------------------------
+    def load_configuration_from_json(self, name : str):      
+        full_path = os.path.join(CONFIG_PATH, name)
+        with open(full_path, 'r') as f:
+            self.configuration = json.load(f)

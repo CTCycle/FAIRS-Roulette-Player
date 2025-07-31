@@ -3,18 +3,18 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg
 from PySide6.QtWidgets import QMessageBox
 from PySide6.QtGui import QImage, QPixmap
 
-from FEXT.app.utils.data.serializer import DataSerializer, ModelSerializer
-from FEXT.app.utils.data.loader import TrainingDataLoader, InferenceDataLoader
-from FEXT.app.utils.data.process import TrainValidationSplit
-from FEXT.app.utils.learning.training import ModelTraining
-from FEXT.app.utils.learning.autoencoder import FeXTAutoEncoder
-from FEXT.app.utils.inference.encoding import ImageEncoding
-from FEXT.app.utils.validation.dataset import ImageAnalysis, ImageReconstruction
-from FEXT.app.utils.validation.checkpoints import ModelEvaluationSummary
-from FEXT.app.interface.workers import check_thread_status
+from FAIRS.app.utils.data.serializer import DataSerializer, ModelSerializer
+from FAIRS.app.utils.data.loader import TrainingDataLoader, InferenceDataLoader
+from FAIRS.app.utils.data.process import TrainValidationSplit
+from FAIRS.app.utils.learning.training import ModelTraining
+from FAIRS.app.utils.learning.autoencoder import FAIRSAutoEncoder
+from FAIRS.app.utils.inference.encoding import ImageEncoding
+from FAIRS.app.utils.validation.dataset import ImageAnalysis, ImageReconstruction
+from FAIRS.app.utils.validation.checkpoints import ModelEvaluationSummary
+from FAIRS.app.interface.workers import check_thread_status
 
-from FEXT.app.constants import IMG_PATH, INFERENCE_INPUT_PATH
-from FEXT.app.logger import logger
+from FAIRS.app.constants import IMG_PATH, INFERENCE_INPUT_PATH
+from FAIRS.app.logger import logger
 
 
 ###############################################################################
@@ -66,9 +66,9 @@ class ValidationEvents:
         self.configuration = configuration  
 
     #--------------------------------------------------------------------------
-    def load_images_path(self, path, sample_size=1.0):
+    def load_img_path(self, path, sample_size=1.0):
         serializer = DataSerializer(self.configuration)             
-        images_paths = serializer.get_images_path_from_directory(
+        images_paths = serializer.get_img_path_from_directory(
             path, sample_size) 
         
         return images_paths 
@@ -77,7 +77,7 @@ class ValidationEvents:
     def run_dataset_evaluation_pipeline(self, metrics, progress_callback=None, worker=None):         
         serializer = DataSerializer(self.configuration)    
         sample_size = self.configuration.get("sample_size", 1.0)
-        images_paths = serializer.get_images_path_from_directory(IMG_PATH, sample_size)
+        images_paths = serializer.get_img_path_from_directory(IMG_PATH, sample_size)
         logger.info(f'The image dataset is composed of {len(images_paths)} images')            
                
         logger.info('Current metric: image dataset statistics')
@@ -120,7 +120,7 @@ class ValidationEvents:
         logger.info('Preparing dataset of images based on splitting sizes')  
         sample_size = train_config.get("train_sample_size", 1.0)
         serializer = DataSerializer(self.configuration)  
-        images_paths = serializer.get_images_path_from_directory(IMG_PATH, sample_size)
+        images_paths = serializer.get_img_path_from_directory(IMG_PATH, sample_size)
         splitter = TrainValidationSplit(train_config) 
         _, validation_images = splitter.split_train_and_validation(images_paths)     
 
@@ -148,18 +148,6 @@ class ValidationEvents:
 
         return images      
 
-    # define the logic to handle successfull data retrieval outside the main UI loop
-    #--------------------------------------------------------------------------
-    def handle_success(self, window, message):
-        # send message to status bar
-        window.statusBar().showMessage(message)
-    
-    # define the logic to handle error during data retrieval outside the main UI loop
-    #--------------------------------------------------------------------------
-    def handle_error(self, window, err_tb):
-        exc, tb = err_tb
-        logger.error(f"{exc}\n{tb}")
-        QMessageBox.critical(window, 'Something went wrong!', f"{exc}\n\n{tb}")  
 
    
 
@@ -180,7 +168,7 @@ class ModelEvents:
         logger.info('Preparing dataset of images based on splitting sizes')  
         sample_size = self.configuration.get("train_sample_size", 1.0)
         serializer = DataSerializer(self.configuration)  
-        images_paths = serializer.get_images_path_from_directory(IMG_PATH, sample_size)
+        images_paths = serializer.get_img_path_from_directory(IMG_PATH, sample_size)
 
         splitter = TrainValidationSplit(self.configuration) 
         train_data, validation_data = splitter.split_train_and_validation(images_paths)
@@ -197,10 +185,10 @@ class ModelEvents:
         trainer.set_device()
 
         # build the autoencoder model 
-        logger.info('Building FeXT AutoEncoder model') 
+        logger.info('Building FAIRS AutoEncoder model') 
         modser = ModelSerializer() 
         checkpoint_path = modser.create_checkpoint_folder()
-        autoencoder = FeXTAutoEncoder(self.configuration)           
+        autoencoder = FAIRSAutoEncoder(self.configuration)           
         model = autoencoder.get_model(model_summary=True) 
 
         # check worker status to allow interruption
@@ -209,7 +197,7 @@ class ModelEvents:
         # generate training log report and graphviz plot for the model layout               
         modser.save_model_plot(model, checkpoint_path) 
         # perform training and save model at the end
-        logger.info('Starting FeXT AutoEncoder training') 
+        logger.info('Starting FAIRS AutoEncoder training') 
         trainer.train_model(
             model, train_dataset, validation_dataset, checkpoint_path, 
             progress_callback=progress_callback, worker=worker)
@@ -231,7 +219,7 @@ class ModelEvents:
         logger.info('Preparing dataset of images based on splitting sizes')  
         sample_size = train_config.get("train_sample_size", 1.0)
         serializer = DataSerializer(self.configuration)  
-        images_paths = serializer.get_images_path_from_directory(IMG_PATH, sample_size)
+        images_paths = serializer.get_img_path_from_directory(IMG_PATH, sample_size)
         splitter = TrainValidationSplit(train_config) 
         train_data, validation_data = splitter.split_train_and_validation(images_paths)     
 
@@ -265,7 +253,7 @@ class ModelEvents:
 
         # select images from the inference folder and retrieve current paths     
         serializer = DataSerializer(self.configuration)     
-        images_paths = serializer.get_images_path_from_directory(INFERENCE_INPUT_PATH)
+        images_paths = serializer.get_img_path_from_directory(INFERENCE_INPUT_PATH)
         logger.info(f'{len(images_paths)} images have been found as inference input')  
 
         # check worker status to allow interruption
@@ -275,20 +263,7 @@ class ModelEvents:
         # takes the list of images path from inference as input    
         encoder = ImageEncoding(model, train_config, checkpoint_path)  
         logger.info(f'Start encoding images using model {selected_checkpoint}')  
-        encoder.encode_images_features(images_paths, progress_callback, worker=worker) 
+        encoder.encode_img_features(images_paths, progress_callback, worker=worker) 
         logger.info('Encoded images have been saved as .npy')
            
-        
-    # define the logic to handle successfull data retrieval outside the main UI loop
-    #--------------------------------------------------------------------------
-    def handle_success(self, window, message):
-        # send message to status bar
-        window.statusBar().showMessage(message)
-    
-    # define the logic to handle error during data retrieval outside the main UI loop
-    #--------------------------------------------------------------------------
-    def handle_error(self, window, err_tb):
-        exc, tb = err_tb
-        logger.error(f"{exc}\n{tb}")
-        QMessageBox.critical(window, 'Something went wrong!', f"{exc}\n\n{tb}")  
 

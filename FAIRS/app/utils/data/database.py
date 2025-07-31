@@ -27,19 +27,19 @@ class RouletteSeries(Base):
 class PredictedGames(Base):
     __tablename__ = 'PREDICTED_GAMES'
     id = Column(Integer, primary_key=True)
-    checkpoint_name = Column(String, primary_key=True)
+    checkpoint = Column(String, primary_key=True)
     extraction = Column(Integer)
     color = Column(String)
     action = Column(String)     
     __table_args__ = (
-        UniqueConstraint('id', 'checkpoint_name'),
+        UniqueConstraint('id', 'checkpoint'),
     )
    
 
 ###############################################################################
 class CheckpointSummary(Base):
     __tablename__ = 'CHECKPOINTS_SUMMARY'    
-    checkpoint_name = Column(String, primary_key=True)
+    checkpoint = Column(String, primary_key=True)
     sample_size = Column(Float)
     validation_size = Column(Float)
     seed = Column(Integer)
@@ -68,7 +68,7 @@ class CheckpointSummary(Base):
     train_accuracy = Column(Float)
     val_accuracy = Column(Float)
     __table_args__ = (
-        UniqueConstraint('checkpoint_name'),
+        UniqueConstraint('checkpoint'),
     )
 
 
