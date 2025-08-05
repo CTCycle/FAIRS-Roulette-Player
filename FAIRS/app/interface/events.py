@@ -6,7 +6,11 @@ from PySide6.QtGui import QImage, QPixmap
 from FAIRS.app.utils.data.serializer import DataSerializer, ModelSerializer
 from FAIRS.app.utils.validation.timeseries import RouletteSeriesValidation
 from FAIRS.app.utils.validation.checkpoints import ModelEvaluationSummary
-from FAIRS.app.interface.workers import check_thread_status
+from FAIRS.app.utils.data.mapping import RouletteMapper
+from FAIRS.app.utils.learning.device import DeviceConfig
+from FAIRS.app.utils.learning.models.qnet import FAIRSnet
+from FAIRS.app.utils.learning.training.fitting import DQNTraining
+from FAIRS.app.interface.workers import check_thread_status, update_progress_callback
 
 from FAIRS.app.constants import RSC_PATH
 from FAIRS.app.logger import logger
@@ -144,7 +148,20 @@ class ModelEvents:
             
     #--------------------------------------------------------------------------
     def run_training_pipeline(self, progress_callback=None, worker=None):  
-        logger.info('Preparing dataset of images based on splitting sizes')  
+        dataserializer = DataSerializer(self.configuration)
+        dataset = dataserializer.load_roulette_dataset() 
+        logger.info(f'Roulette series has been loaded ({len(dataset)} extractions)')        
+        # use the roulette generator to process raw extractions and retrieve 
+        # sequence of positions and color-encoded values              
+        mapper = RouletteMapper(self.configuration)
+        logger.info('Encoding roulette extractions')     
+        dataset = mapper.encode_roulette_dataset(dataset)          
+        
+        # 3. [SAVE PREPROCESSED DATA]
+        #--------------------------------------------------------------------------      
+        dataserializer.save_preprocessed_data(dataset)
+        logger.info('Preprocessed data saved into FAIRS database') 
+        
         sample_size = self.configuration.get("train_sample_size", 1.0)
         serializer = DataSerializer(self.configuration)  
         images_paths = serializer.get_img_path_from_directory(IMG_PATH, sample_size)

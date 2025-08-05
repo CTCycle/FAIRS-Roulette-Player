@@ -17,6 +17,7 @@ class RouletteSeries(Base):
     id = Column(Integer, primary_key=True)
     extraction = Column(Integer)
     color = Column(String) 
+    position = Column(Integer)
     __table_args__ = (
         UniqueConstraint('id'),
     )

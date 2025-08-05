@@ -51,26 +51,6 @@ class DataSerializer:
             dataset = dataset.sample(frac=sample_size, random_state=self.seed)     
 
         return dataset
-
-    #--------------------------------------------------------------------------
-    def save_preprocessed_data(self, processed_data):               
-        self.database.save_preprocessed_data_table(processed_data)      
-        metadata = {'seed' : self.configuration['SEED'], 
-                    'dataset' : self.configuration['dataset'],
-                    'date' : datetime.now().strftime("%Y-%m-%d")}
-                
-        with open(self.metadata_path, 'w') as file:
-            json.dump(metadata, file, indent=4)     
-
-    #--------------------------------------------------------------------------
-    def load_processed_data(self):         
-        processed_data = self.database.load_processed_data_table()     
-
-        with open(self.metadata_path, 'r') as file:
-            metadata = json.load(file)        
-       
-        return processed_data, metadata 
-        
            
 
     
