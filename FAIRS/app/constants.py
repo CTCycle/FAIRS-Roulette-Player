@@ -15,6 +15,10 @@ CHECKPOINT_PATH = join(RSC_PATH, 'checkpoints')
 CONFIG_PATH = join(RSC_PATH, 'configurations')
 LOGS_PATH = join(RSC_PATH, 'logs')
 
+# files
+###############################################################################
+PROCESS_METADATA_FILE = join(METADATA_PATH, 'preprocessing_metadata.json')
+
 # [CONFIGURATIONS]
 ###############################################################################
 NUMBERS = 37
@@ -24,9 +28,8 @@ PAD_VALUE = -1
 # [UI LAYOUT PATH]
 ###############################################################################
 UI_PATH = join(PROJECT_DIR, 'app', 'assets', 'window_layout.ui')
-QSS_PATH = join(PROJECT_DIR, 'app', 'assets', 'stylesheet.qss')
 
-CONFIG_PATH = join(PROJECT_DIR, 'settings', 'configuration.json')
+CONFIG_PATH = join(PROJECT_DIR, 'settings', 'configurations.json')
 with open(CONFIG_PATH, 'r') as file:
     CONFIG = json.load(file)
 

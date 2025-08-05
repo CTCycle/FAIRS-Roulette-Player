@@ -7,7 +7,7 @@ import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
 
-from FAIRS.app.utils.data.process.mapping import RouletteMapper
+from FAIRS.app.utils.data.mapping import RouletteMapper
 from FAIRS.app.constants import CONFIG, STATES, NUMBERS, PAD_VALUE
 from FAIRS.app.logger import logger
 
@@ -17,7 +17,7 @@ from FAIRS.app.logger import logger
 ###############################################################################
 class BetsAndRewards:
 
-    def __init__(self, configuration):
+    def __init__(self, configuration : dict):
         self.seed = configuration["SEED"]         
         self.bet_amount = configuration["environment"]["BET_AMOUNT"]
 

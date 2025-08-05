@@ -72,9 +72,6 @@ class CheckpointSummary(Base):
     )
 
 
-
-
-
 # [DATABASE]
 ###############################################################################
 class FAIRSDatabase:
@@ -137,8 +134,8 @@ class FAIRSDatabase:
     #--------------------------------------------------------------------------
     def save_source_data(self, data : pd.DataFrame):
         with self.engine.begin() as conn:
-            conn.execute(sqlalchemy.text(f"DELETE FROM RADIOGRAPHY_DATA"))        
-        data.to_sql("RADIOGRAPHY_DATA", self.engine, if_exists='append', index=False) 
+            conn.execute(sqlalchemy.text(f"DELETE FROM ROULETTE_SERIES"))        
+        data.to_sql("ROULETTE_SERIES", self.engine, if_exists='append', index=False) 
         
     #--------------------------------------------------------------------------
     def save_predicted_games(self, data : pd.DataFrame):         

@@ -1,14 +1,14 @@
 import torch
 from keras.mixed_precision import set_global_policy
 
-from NISTADS.app.logger import logger
+from FAIRS.app.logger import logger
 
 
 # [DEVICE SETTINGS]
 ###############################################################################
 class DeviceConfig:
     
-    def __init__(self, configuration):
+    def __init__(self, configuration : dict):
         self.configuration = configuration
             
     #--------------------------------------------------------------------------

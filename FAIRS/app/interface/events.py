@@ -4,16 +4,11 @@ from PySide6.QtWidgets import QMessageBox
 from PySide6.QtGui import QImage, QPixmap
 
 from FAIRS.app.utils.data.serializer import DataSerializer, ModelSerializer
-from FAIRS.app.utils.data.loader import TrainingDataLoader, InferenceDataLoader
-from FAIRS.app.utils.data.process import TrainValidationSplit
-from FAIRS.app.utils.learning.training import ModelTraining
-from FAIRS.app.utils.learning.autoencoder import FAIRSAutoEncoder
-from FAIRS.app.utils.inference.encoding import ImageEncoding
-from FAIRS.app.utils.validation.dataset import ImageAnalysis, ImageReconstruction
+from FAIRS.app.utils.validation.timeseries import RouletteSeriesValidation
 from FAIRS.app.utils.validation.checkpoints import ModelEvaluationSummary
 from FAIRS.app.interface.workers import check_thread_status
 
-from FAIRS.app.constants import IMG_PATH, INFERENCE_INPUT_PATH
+from FAIRS.app.constants import RSC_PATH
 from FAIRS.app.logger import logger
 
 
@@ -61,35 +56,20 @@ class GraphicsHandler:
 ###############################################################################
 class ValidationEvents:
 
-    def __init__(self, configuration):        
-             
+    def __init__(self, configuration : dict):
         self.configuration = configuration  
-
-    #--------------------------------------------------------------------------
-    def load_img_path(self, path, sample_size=1.0):
-        serializer = DataSerializer(self.configuration)             
-        images_paths = serializer.get_img_path_from_directory(
-            path, sample_size) 
-        
-        return images_paths 
         
     #--------------------------------------------------------------------------
     def run_dataset_evaluation_pipeline(self, metrics, progress_callback=None, worker=None):         
         serializer = DataSerializer(self.configuration)    
         sample_size = self.configuration.get("sample_size", 1.0)
-        images_paths = serializer.get_img_path_from_directory(IMG_PATH, sample_size)
-        logger.info(f'The image dataset is composed of {len(images_paths)} images')            
-               
-        logger.info('Current metric: image dataset statistics')
-        analyzer = ImageAnalysis(self.configuration) 
-        image_statistics = analyzer.calculate_image_statistics(
-            images_paths, progress_callback, worker)                      
+        roulette_data = serializer.load_roulette_dataset(sample_size)
+        logger.info(f'The loaded roulette series includes {len(roulette_data)} extractions')   
+        validator = RouletteSeriesValidation(self.configuration) 
 
         images = []  
-        if 'pixels_distribution' in metrics:
-            logger.info('Current metric: pixel intensity distribution')
-            images.append(analyzer.calculate_pixel_intensity_distribution(
-                images_paths, progress_callback, worker))
+        if 'roulette_transitions' in metrics:
+            logger.info('Current metric: roulette transitions')            
 
         return images 
 
@@ -154,8 +134,7 @@ class ValidationEvents:
 ###############################################################################
 class ModelEvents:
 
-    def __init__(self, configuration): 
-                  
+    def __init__(self, configuration : dict): 
         self.configuration = configuration 
 
     #--------------------------------------------------------------------------

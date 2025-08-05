@@ -38,18 +38,17 @@ def checkpoint_selection_menu(models_list):
 ###############################################################################
 class DataSerializer:
 
-    def __init__(self, configuration):         
-        self.metadata_path = os.path.join(METADATA_PATH, 'preprocessing_metadata.json')    
-        self.database = FAIRSDatabase(configuration)  
-        self.seed = configuration['SEED']
-        self.parameters = configuration['dataset']          
+    def __init__(self, configuration : dict): 
+        self.seed = configuration.get('seed', 42)
+        # create database instance
+        self.database = FAIRSDatabase()
         self.configuration = configuration
 
     #--------------------------------------------------------------------------
-    def load_roulette_dataset(self, sample_size=None):        
-        dataset = self.database.load_source_data_table()
-        sample_size = self.parameters["SAMPLE_SIZE"] if sample_size is None else sample_size        
-        dataset = dataset.sample(frac=sample_size, random_state=self.seed)     
+    def load_roulette_dataset(self, sample_size=1.0):        
+        dataset = self.database.load_source_dataset()
+        if sample_size < 1.0:            
+            dataset = dataset.sample(frac=sample_size, random_state=self.seed)     
 
         return dataset
 

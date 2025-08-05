@@ -15,8 +15,9 @@ class Configuration:
             'validation_size': 0.2,
             'shuffle_dataset': True,
             'shuffle_size': 256,
+            'use_data_generator': False,
             # Model 
-            'num_neurons': 64,
+            'QNet_neurons': 64,
             'perceptive_field_size': 0.2,
             'jit_compile': False,
             'jit_backend': 'inductor',
@@ -27,7 +28,8 @@ class Configuration:
             'device_id': 0,
             'use_mixed_precision': False,
             'num_workers': 0,
-            # Training
+
+            # Training            
             'split_seed': 76,
             'train_seed': 42, 
             'train_sample_size': 1.0,
@@ -42,6 +44,9 @@ class Configuration:
             'plot_training_metrics' : True,
             'save_checkpoints': False,
             'checkpoints_frequency': 1,
+
+            # inference
+            'real_time_inference': False,
             
             # Validation
             'val_batch_size': 20,

@@ -7,12 +7,9 @@ from FAIRS.app.logger import logger
 ###############################################################################
 class RouletteSeriesValidation:
 
-    def __init__(self, train_data, validation_data):
+    def __init__(self, configuration : dict):
         self.DPI = configuration.get('image_resolution', 400)
         self.file_type = 'jpeg'
-        self.train_data = train_data
-        self.validation_data = validation_data
-        self.serializer = DataSerializer()
         
 
     

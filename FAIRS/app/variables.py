@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 
-from FAIRS.app.constants import ROOT_DIR
+from FAIRS.app.constants import PROJECT_DIR
 from FAIRS.app.logger import logger
 
 # [IMPORT CUSTOM MODULES]

@@ -9,7 +9,7 @@ from FAIRS.app.logger import logger
 ###############################################################################
 class RouletteMapper:
 
-    def __init__(self, configuration):
+    def __init__(self, configuration : dict):
         self.configuration = configuration
         self.categories = [['green', 'black', 'red']]
         self.color_code = {'green' : 0, 'black' : 1, 'red' : 2}

@@ -65,7 +65,7 @@ class MainWindow:
             (QDoubleSpinBox,'sampleSize','sample_size'),
             (QSpinBox,'seed','seed'),
             # 1. dataset tab page
-            (QCheckBox,'seriesTransitions','series_trans_metric'),
+            (QCheckBox,'rouletteTransitions','roulette_transitions_metric'),
             (QPushButton,'evaluateDataset','evaluate_dataset'),
             # 2. training tab page
             # dataset settings group    
@@ -90,8 +90,8 @@ class MainWindow:
             (QSpinBox,'saveCPFrequency','checkpoints_frequency'), 
             (QSpinBox,'maxMemorySize','max_memory_size'),            
             (QSpinBox,'replayBuffer','replay_buffer_size'), 
-            
-            # model settings group     
+            # model settings group
+            (QSpinBox,'numNeurons','QNet_neurons'),     
             (QSpinBox,'perceptiveField','perceptive_field_size'),           
             (QSpinBox,'embeddingDims','embedding_dimensions'),
             (QDoubleSpinBox,'explorationRate','exploration_rate'),
@@ -107,7 +107,9 @@ class MainWindow:
             # model inference and evaluation
             (QPushButton,'refreshCheckpoints','refresh_checkpoints'),
             (QComboBox,'checkpointsList','checkpoints_list'),
-            (QSpinBox,'inferenceBatchSize','inference_batch_size'),     
+            (QSpinBox,'inferenceBatchSize','inference_batch_size'),
+            (QCheckBox,'realTimeInference','real_time_inference'), 
+            (QPushButton,'playRoulette','play_roulette'),     
             (QSpinBox,'evalSamples','num_evaluation_samples'), 
             (QPushButton,'evaluateModel','model_evaluation'),            
             (QPushButton,'checkpointSummary','checkpoints_summary'),
@@ -122,19 +124,19 @@ class MainWindow:
             ('checkpoints_list','currentTextChanged',self.select_checkpoint), 
             ('refresh_checkpoints','clicked',self.load_checkpoints),
             ('stop_thread','clicked',self.stop_running_worker),          
-            # 1. dataset tab page            
-            ('roulette_transitions','toggled',self._update_metrics),
+            # 1. dataset tab page     
+            ('load_dataset','clicked',self.update_database_from_source),             
+            ('roulette_transitions_metric','toggled',self._update_metrics),
             ('evaluate_dataset','clicked',self.run_dataset_evaluation_pipeline),           
             # 2. training tab page               
             ('start_training','clicked',self.train_from_scratch),
             ('resume_training','clicked',self.resume_training_from_checkpoint),
-            # 3. model evaluation tab page
-            ('roulette_transitions','toggled',self._update_metrics),
+            # 3. model evaluation tab page            
             ('get_evaluation_report','toggled',self._update_metrics), 
             ('model_evaluation','clicked', self.run_model_evaluation_pipeline),
             ('checkpoints_summary','clicked',self.get_checkpoints_summary),
             # 4. inference tab page  
-            ('encode_images','clicked',self.encode_img_with_checkpoint),            
+            ('play_roulette','clicked',self.encode_img_with_checkpoint),            
             # 4. viewer tab page 
             ('previous_image', 'clicked', self.show_previous_figure),
             ('next_image', 'clicked', self.show_next_figure),
@@ -179,7 +181,9 @@ class MainWindow:
             ('seed', 'valueChanged', 'seed'),
             ('sample_size', 'valueChanged', 'sample_size'),            
             # 2. model tab page  
-            # # dataset settings group        
+            # # dataset settings group  
+            ('use_data_generator', 'toggled', 'use_data_generator'),
+                  
             ('use_shuffle', 'toggled', 'shuffle_dataset'),
             ('shuffle_size', 'valueChanged', 'shuffle_size'), 
             ('train_sample_size', 'valueChanged', 'train_sample_size'), 
@@ -205,14 +209,16 @@ class MainWindow:
             ('max_memory_size', 'valueChanged', 'max_memory_size'),
             ('replay_buffer_size', 'valueChanged', 'replay_buffer_size'),
             # model settings group
+            ('QNet_neurons', 'valueChanged', 'QNet_neurons'),
             ('perceptive_field_size', 'valueChanged', 'perceptive_field_size'),
             ('embedding_dimensions', 'valueChanged', 'embedding_dimensions'),
             ('exploration_rate', 'valueChanged', 'exploration_rate'),
             ('exploration_rate_decay', 'valueChanged', 'exploration_rate_decay'),
             ('discount_rate', 'valueChanged', 'discount_rate'),
             # session settings group
-            ('additional_epochs', 'valueChanged', 'additional_epochs'),
-            # model inference and evaluation                   
+            ('additional_episodes', 'valueChanged', 'additional_episodes'),
+            # model inference and evaluation          
+            ('real_time_inference', 'toggled', 'real_time_inference'),         
             ('inference_batch_size', 'valueChanged', 'inference_batch_size'),
             ('num_evaluation_samples', 'valueChanged', 'num_evaluation_samples'),                                 
             ]  
@@ -423,10 +429,30 @@ class MainWindow:
 
     #--------------------------------------------------------------------------
     # [DATASET TAB]
-    #--------------------------------------------------------------------------        
+    #--------------------------------------------------------------------------
+    @Slot()
+    def update_database_from_source(self):
+        if self.worker:            
+            message = "A task is currently running, wait for it to finish and then try again"
+            QMessageBox.warning(self.main_win, "Application is still busy", message)
+            return         
+                
+        # send message to status bar
+        self._send_message("Updating database with source data...") 
+        
+        # functions that are passed to the worker will be executed in a separate thread
+        self.worker = ThreadWorker(self.database.update_database_from_source)   
+
+        # start worker and inject signals
+        self._start_thread_worker(
+            self.worker, on_finished=self.on_database_uploading_finished,
+            on_error=self.on_error,
+            on_interrupted=self.on_task_interrupted)  
+
+    #--------------------------------------------------------------------------         
     @Slot()
     def run_dataset_evaluation_pipeline(self):  
-        if not self.data_metrics:
+        if not self.selected_metrics['dataset']:
             return 
         
         if self.worker:            
@@ -466,10 +492,10 @@ class MainWindow:
         # send message to status bar
         self._send_message("Training FAIRS Autoencoder using a new model instance...")        
         # functions that are passed to the worker will be executed in a separate thread
-        self.worker = ThreadWorker(self.model_handler.run_training_pipeline)                            
+        self.worker = ProcessWorker(self.model_handler.run_training_pipeline)                            
        
         # start worker and inject signals
-        self._start_thread_worker(
+        self._start_process_worker(
             self.worker, on_finished=self.on_train_finished,
             on_error=self.on_error,
             on_interrupted=self.on_task_interrupted)  
@@ -488,12 +514,12 @@ class MainWindow:
         # send message to status bar
         self._send_message(f"Resume training from checkpoint {self.selected_checkpoint}")         
         # functions that are passed to the worker will be executed in a separate thread
-        self.worker = ThreadWorker(
+        self.worker = ProcessWorker(
             self.model_handler.resume_training_pipeline,
             self.selected_checkpoint)   
 
         # start worker and inject signals
-        self._start_thread_worker(
+        self._start_process_worker(
             self.worker, on_finished=self.on_train_finished,
             on_error=self.on_error,
             on_interrupted=self.on_task_interrupted)
@@ -528,17 +554,18 @@ class MainWindow:
 
         self.configuration = self.config_manager.get_configuration() 
         self.validation_handler = ValidationEvents(self.configuration)    
-        device = 'GPU' if self.use_GPU_evaluation.isChecked() else 'CPU'   
+       
         # send message to status bar
         self._send_message(f"Evaluating {self.selected_checkpoint} performances... ")
 
         # functions that are passed to the worker will be executed in a separate thread
-        self.worker = ThreadWorker(
+        self.worker = ProcessWorker(
             self.validation_handler.run_model_evaluation_pipeline,
-            self.selected_metrics['model'], self.selected_checkpoint, device)                
+            self.selected_metrics['model'], 
+            self.selected_checkpoint)                
         
         # start worker and inject signals
-        self._start_thread_worker(
+        self._start_process_worker(
             self.worker, on_finished=self.on_model_evaluation_finished,
             on_error=self.on_error,
             on_interrupted=self.on_task_interrupted)     
@@ -595,7 +622,14 @@ class MainWindow:
 
     ###########################################################################
     # [POSITIVE OUTCOME HANDLERS]
-    ########################################################################### 
+    ###########################################################################
+    def on_database_uploading_finished(self, source_data):   
+        message = f'Database updated with current source data ({len(source_data)}) records'
+        self._send_message(message)
+        QMessageBox.information(self.main_win, "Database successfully updated", message)     
+        self.worker = self.worker.cleanup()
+
+    #--------------------------------------------------------------------------
     def on_dataset_evaluation_finished(self, plots):
         self._send_message('Figures have been generated')
         self.worker = self.worker.cleanup()    

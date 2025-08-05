@@ -137,7 +137,7 @@ class GameStatsCallback:
 ###############################################################################
 class CallbacksWrapper:
 
-    def __init__(self, configuration):
+    def __init__(self, configuration : dict):
         self.configuration = configuration
 
     #--------------------------------------------------------------------------

@@ -12,7 +12,7 @@ from FAIRS.app.logger import logger
 ###############################################################################
 class FAIRSnet: 
 
-    def __init__(self, configuration):         
+    def __init__(self, configuration : dict):         
         self.perceptive_size = configuration["model"]["PERCEPTIVE_FIELD"] 
         self.embedding_dims = configuration["model"]["EMBEDDING_DIMS"] 
         self.neurons = configuration["model"]["UNITS"]                   
