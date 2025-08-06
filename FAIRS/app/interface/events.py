@@ -151,52 +151,42 @@ class ModelEvents:
         dataserializer = DataSerializer(self.configuration)
         dataset = dataserializer.load_roulette_dataset() 
         logger.info(f'Roulette series has been loaded ({len(dataset)} extractions)')        
-        # use the roulette generator to process raw extractions and retrieve 
-        # sequence of positions and color-encoded values              
+        # use the mapper to encode extractions based on position and color              
         mapper = RouletteMapper(self.configuration)
         logger.info('Encoding roulette extractions')     
-        dataset = mapper.encode_roulette_dataset(dataset)          
+        dataset = mapper.encode_roulette_series(dataset)          
         
-        # 3. [SAVE PREPROCESSED DATA]
-        #--------------------------------------------------------------------------      
-        dataserializer.save_preprocessed_data(dataset)
-        logger.info('Preprocessed data saved into FAIRS database') 
-        
-        sample_size = self.configuration.get("train_sample_size", 1.0)
-        serializer = DataSerializer(self.configuration)  
-        images_paths = serializer.get_img_path_from_directory(IMG_PATH, sample_size)
+        # save update data into database    
+        dataserializer.save_roulette_dataset(dataset)
+        logger.info('Database updated with processed roulette series')
 
-        splitter = TrainValidationSplit(self.configuration) 
-        train_data, validation_data = splitter.split_train_and_validation(images_paths)
-        
-        # create the tf.datasets using the previously initialized generators 
-        logger.info('Building model data loaders with prefetching and parallel processing')     
-        builder = TrainingDataLoader(self.configuration)          
-        train_dataset, validation_dataset = builder.build_training_dataloader(
-            train_data, validation_data)
-        
         # set device for training operations        
         logger.info('Setting device for training operations') 
-        trainer = ModelTraining(self.configuration)           
-        trainer.set_device()
+        device = DeviceConfig(self.configuration)   
+        device.set_device() 
+        # create checkpoint folder
+        modser = ModelSerializer()
+        checkpoint_path = modser.create_checkpoint_folder()  
 
-        # build the autoencoder model 
-        logger.info('Building FAIRS AutoEncoder model') 
-        modser = ModelSerializer() 
-        checkpoint_path = modser.create_checkpoint_folder()
-        autoencoder = FAIRSAutoEncoder(self.configuration)           
-        model = autoencoder.get_model(model_summary=True) 
+        # build the target model and Q model based on FAIRSnet specifics
+        # Q model is the main trained model, while target model is used to predict 
+        # next state Q scores and is updated based on the Q model weights   
+        logger.info('Building FAIRS reinforcement learning model')  
+        learner = FAIRSnet(self.configuration)
+        Q_model = learner.get_model(model_summary=True)
+        target_model = learner.get_model(model_summary=False)    
+        
+        # generate graphviz plot fo the model layout         
+        modser.save_model_plot(Q_model, checkpoint_path)          
 
-        # check worker status to allow interruption
-        check_thread_status(worker)   
-
-        # generate training log report and graphviz plot for the model layout               
-        modser.save_model_plot(model, checkpoint_path) 
-        # perform training and save model at the end
-        logger.info('Starting FAIRS AutoEncoder training') 
+        # perform training and save model at the end       
+        trainer = DQNTraining(self.configuration)
+        logger.info('Start training with reinforcement learning model')
         trainer.train_model(
-            model, train_dataset, validation_dataset, checkpoint_path, 
-            progress_callback=progress_callback, worker=worker)
+            Q_model, target_model, dataset, checkpoint_path)
+       
+
+        
         
     #--------------------------------------------------------------------------
     def resume_training_pipeline(self, selected_checkpoint, progress_callback=None, 

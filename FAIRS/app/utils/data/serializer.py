@@ -3,35 +3,14 @@ import sys
 import json
 import numpy as np
 import pandas as pd
+from keras import Model
+from keras.utils import plot_model
+from keras.models import load_model
 from datetime import datetime
-import keras
 
 from FAIRS.app.utils.data.database import FAIRSDatabase
 from FAIRS.app.constants import CONFIG, DATA_PATH, METADATA_PATH, CHECKPOINT_PATH
 from FAIRS.app.logger import logger
-
-
-
-###############################################################################
-def checkpoint_selection_menu(models_list):
-
-    index_list = [idx + 1 for idx, item in enumerate(models_list)]     
-    print('Currently available pretrained models:')             
-    for i, directory in enumerate(models_list):
-        print(f'{i + 1} - {directory}')                         
-    while True:
-        try:
-            selection_index = int(input('\nSelect the pretrained model: '))
-            print()
-        except ValueError:
-            logger.error('Invalid choice for the pretrained model, asking again')
-            continue
-        if selection_index in index_list:
-            break
-        else:
-            logger.warning('Model does not exist, please select a valid index')
-
-    return selection_index
 
 
 # [DATA SERIALIZATION]
@@ -46,10 +25,16 @@ class DataSerializer:
 
     #--------------------------------------------------------------------------
     def load_roulette_dataset(self, sample_size=1.0):        
-        dataset = self.database.load_source_dataset()
+        dataset = self.database.load_roulette_dataset()
         if sample_size < 1.0:            
             dataset = dataset.sample(frac=sample_size, random_state=self.seed)     
 
+        return dataset
+    
+    #--------------------------------------------------------------------------
+    def save_roulette_dataset(self, dataset : pd.DataFrame):        
+        dataset = self.database.save_roulette_data(dataset)
+        
         return dataset
            
 
@@ -73,8 +58,8 @@ class ModelSerializer:
         
         return checkpoint_path    
 
-    #--------------------------------------------------------------------------
-    def save_pretrained_model(self, model : keras.Model, path):
+    #------------------------------------------------------------------------
+    def save_pretrained_model(self, model : Model, path : str):
         model_files_path = os.path.join(path, 'saved_model.keras')
         model.save(model_files_path)
         logger.info(f'Training session is over. Model {os.path.basename(path)} has been saved')

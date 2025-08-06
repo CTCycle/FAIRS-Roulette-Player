@@ -18,6 +18,7 @@ class Configuration:
             'use_data_generator': False,
             # Model 
             'QNet_neurons': 64,
+            'embedding_dimensions' : 200,
             'perceptive_field_size': 0.2,
             'jit_compile': False,
             'jit_backend': 'inductor',
@@ -44,6 +45,7 @@ class Configuration:
             'plot_training_metrics' : True,
             'save_checkpoints': False,
             'checkpoints_frequency': 1,
+            'render_environment': False,
 
             # inference
             'real_time_inference': False,

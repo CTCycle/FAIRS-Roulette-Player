@@ -1,12 +1,12 @@
 import numpy as np
-import keras
-import torch
+from keras import Model
+from keras.utils import set_random_seed
 from tqdm import tqdm
 
 from FAIRS.app.utils.data.serializer import ModelSerializer
 from FAIRS.app.utils.learning.callbacks import CallbacksWrapper
-from FAIRS.app.utils.learning.environment import RouletteEnvironment
-from FAIRS.app.utils.learning.agents import DQNAgent
+from FAIRS.app.utils.learning.training.environment import RouletteEnvironment
+from FAIRS.app.utils.learning.training.agents import DQNAgent
 from FAIRS.app.constants import CONFIG
 from FAIRS.app.logger import logger
 
@@ -15,8 +15,8 @@ from FAIRS.app.logger import logger
 ###############################################################################
 class DQNTraining:
 
-    def __init__(self, configuration, metadata):     
-        keras.utils.set_random_seed(configuration["SEED"])         
+    def __init__(self, configuration : dict, metadata : dict):     
+        set_random_seed(configuration.get('training_seed', 42))         
         self.batch_size = configuration['training']['BATCH_SIZE']        
         self.update_frequency = configuration['training']['UPDATE_FREQUENCY'] 
         self.replay_size = configuration['agent']['REPLAY_BUFFER']           
@@ -36,26 +36,9 @@ class DQNTraining:
                               'loss': [],
                               'metrics': [],
                               'reward': [],
-                              'total_reward': []}                
-
-    # set device
-    #--------------------------------------------------------------------------
-    def set_device(self):
-        if self.selected_device == 'GPU':
-            if not torch.cuda.is_available():
-                logger.info('No GPU found. Falling back to CPU')
-                self.device = torch.device('cpu')
-            else:
-                self.device = torch.device(f'cuda:{self.device_id}')
-                torch.cuda.set_device(self.device)  
-                logger.info('GPU is set as active device')            
-                if self.mixed_precision:
-                    keras.mixed_precision.set_global_policy("mixed_float16")
-                    logger.info('Mixed precision policy is active during training')                   
-        else:
-            self.device = torch.device('cpu')
-            logger.info('CPU is set as active device')  
-
+                              'total_reward': []}   
+    
+    
     # set device
     #--------------------------------------------------------------------------
     def update_session_stats(self, scores, episode, time_step, reward, total_reward):
@@ -69,9 +52,9 @@ class DQNTraining:
         self.session_stats['total_reward'].append(total_reward)   
 
     #--------------------------------------------------------------------------
-    def train_with_reinforcement_learning(self, model : keras.Model, target_model : keras.Model,
+    def train_with_reinforcement_learning(self, model : Model, target_model : Model,
                                           environment : RouletteEnvironment, start_episode, 
-                                          episodes, state_size, checkpoint_path):
+                                          episodes, state_size, checkpoint_path, **kwargs):
         # if tensorboard is selected, an instance of the tb callback is built
         # the dashboard is set on the Q model and tensorboard is launched automatically
         tensorboard = None
@@ -137,7 +120,7 @@ class DQNTraining:
         return self.agent 
  
     #--------------------------------------------------------------------------
-    def train_model(self, model, target_model, data, checkpoint_path, from_checkpoint=False):
+    def train_model(self, model, target_model, data, checkpoint_path, from_checkpoint=False, **kwargs):
         environment = RouletteEnvironment(data, self.configuration)
         # perform different initialization duties based on state of session:
         # training from scratch vs resumed training

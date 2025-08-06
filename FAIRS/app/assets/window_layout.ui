@@ -169,9 +169,9 @@
            <property name="geometry">
             <rect>
              <x>0</x>
-             <y>0</y>
+             <y>-30</y>
              <width>1094</width>
-             <height>695</height>
+             <height>727</height>
             </rect>
            </property>
            <layout class="QGridLayout" name="gridLayout">
@@ -791,6 +791,13 @@
                   </widget>
                  </item>
                 </layout>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="renderEnv">
+                 <property name="text">
+                  <string>Environment rendering in real time</string>
+                 </property>
+                </widget>
                </item>
               </layout>
              </widget>

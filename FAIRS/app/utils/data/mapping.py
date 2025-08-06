@@ -23,21 +23,21 @@ class RouletteMapper:
                           'green' : [0]}  
 
     #--------------------------------------------------------------------------
-    def map_roulette_positions(self, dataframe):        
-        dataframe['position'] = dataframe['timeseries'].map(self.position_map)
+    def map_roulette_positions(self, dataframe : pd.DataFrame):        
+        dataframe['position'] = dataframe['extraction'].map(self.position_map)
         
         return dataframe    
     
     #--------------------------------------------------------------------------
-    def map_roulette_colors(self, dataframe):                          
+    def map_roulette_colors(self, dataframe : pd.DataFrame):                          
         reverse_color_map = {v: k for k, values in self.color_map.items() for v in values}        
-        dataframe['color'] = dataframe['timeseries'].map(reverse_color_map)
+        dataframe['color'] = dataframe['extraction'].map(reverse_color_map)
         dataframe['color_code'] = dataframe['color'].map(self.color_code)
 
         return dataframe       
     
     #--------------------------------------------------------------------------
-    def encode_roulette_dataset(self, dataframe):
+    def encode_roulette_series(self, dataframe : pd.DataFrame):
         # map roulette numbers to their positional indices        
         dataframe = self.map_roulette_positions(dataframe)
         # map roulette numbers to their corresponding colors

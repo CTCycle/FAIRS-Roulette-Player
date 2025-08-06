@@ -5,7 +5,7 @@ import numpy as np
 import keras
 from collections import deque
 
-from FAIRS.app.utils.learning.environment import RouletteEnvironment
+from FAIRS.app.utils.learning.training.environment import RouletteEnvironment
 from FAIRS.app.constants import CONFIG, STATES, PAD_VALUE
 from FAIRS.app.logger import logger
 

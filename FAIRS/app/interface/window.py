@@ -83,13 +83,14 @@ class MainWindow:
             (QDoubleSpinBox,'learningRate','learning_rate'), 
             (QCheckBox,'mixedPrecision','use_mixed_precision'),
             (QCheckBox,'compileJIT','use_JIT_compiler'),   
-            (QComboBox,'backendJIT','jit_backend'),        
-            (QCheckBox,'runTensorboard','use_tensorboard'),
-            (QCheckBox,'realTimeHistory','real_time_history_callback'),
-            (QCheckBox,'saveCheckpoints','save_checkpoints'),
+            (QComboBox,'backendJIT','jit_backend'), 
             (QSpinBox,'saveCPFrequency','checkpoints_frequency'), 
             (QSpinBox,'maxMemorySize','max_memory_size'),            
-            (QSpinBox,'replayBuffer','replay_buffer_size'), 
+            (QSpinBox,'replayBuffer','replay_buffer_size'),
+            (QCheckBox,'runTensorboard','use_tensorboard'),
+            (QCheckBox,'realTimeHistory','real_time_history_callback'),
+            (QCheckBox,'saveCheckpoints','save_checkpoints'), 
+            (QCheckBox,'renderEnv','render_environment'),             
             # model settings group
             (QSpinBox,'numNeurons','QNet_neurons'),     
             (QSpinBox,'perceptiveField','perceptive_field_size'),           
@@ -183,7 +184,6 @@ class MainWindow:
             # 2. model tab page  
             # # dataset settings group  
             ('use_data_generator', 'toggled', 'use_data_generator'),
-                  
             ('use_shuffle', 'toggled', 'shuffle_dataset'),
             ('shuffle_size', 'valueChanged', 'shuffle_size'), 
             ('train_sample_size', 'valueChanged', 'train_sample_size'), 

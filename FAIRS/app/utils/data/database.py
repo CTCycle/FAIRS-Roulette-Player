@@ -17,6 +17,7 @@ class RouletteSeries(Base):
     id = Column(Integer, primary_key=True)
     extraction = Column(Integer)
     color = Column(String) 
+    color_code = Column(Integer)
     position = Column(Integer)
     __table_args__ = (
         UniqueConstraint('id'),
@@ -91,7 +92,7 @@ class FAIRSDatabase:
     #--------------------------------------------------------------------------       
     def update_database_from_source(self): 
         dataset = pd.read_csv(self.source_path, sep=';', encoding='utf-8')                 
-        self.save_source_data(dataset)
+        self.save_roulette_data(dataset)
 
         return dataset
     
@@ -126,14 +127,14 @@ class FAIRSDatabase:
             session.close()    
 
     #--------------------------------------------------------------------------
-    def load_source_dataset(self):
+    def load_roulette_dataset(self):
         with self.engine.connect() as conn:
             data = pd.read_sql_table('ROULETTE_SERIES', conn)
             
         return data   
     
     #--------------------------------------------------------------------------
-    def save_source_data(self, data : pd.DataFrame):
+    def save_roulette_data(self, data : pd.DataFrame):
         with self.engine.begin() as conn:
             conn.execute(sqlalchemy.text(f"DELETE FROM ROULETTE_SERIES"))        
         data.to_sql("ROULETTE_SERIES", self.engine, if_exists='append', index=False) 
