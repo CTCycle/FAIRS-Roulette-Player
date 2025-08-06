@@ -19,7 +19,7 @@ class Configuration:
             # Model 
             'QNet_neurons': 64,
             'embedding_dimensions' : 200,
-            'perceptive_field_size': 0.2,
+            'perceptive_field_size': 64,
             'jit_compile': False,
             'jit_backend': 'inductor',
             'exploration_rate' : 0.75,

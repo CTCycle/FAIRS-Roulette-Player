@@ -121,7 +121,7 @@ class DQNTraining:
     #--------------------------------------------------------------------------
     def train_model(self, model, target_model, data, checkpoint_path, **kwargs):
         environment = RouletteEnvironment(data, self.configuration)                    
-        episodes = self.configuration['training']['EPISODES']
+        episodes = self.configuration.get('episodes', 10)
         from_episode = 0
         start_episode = 0
         history = None

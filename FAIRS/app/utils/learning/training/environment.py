@@ -18,9 +18,8 @@ from FAIRS.app.logger import logger
 class BetsAndRewards:
 
     def __init__(self, configuration : dict):
-        self.seed = configuration["SEED"]         
-        self.bet_amount = configuration["environment"]["BET_AMOUNT"]
-
+        self.seed = configuration.get('train_seed', 42)         
+        self.bet_amount = configuration.get('bet_amount', 10)
         mapper = RouletteMapper(configuration)   
         self.numbers = list(range(NUMBERS)) 
         self.red_numbers = mapper.color_map['red']
@@ -167,18 +166,17 @@ class BetsAndRewards:
 ###############################################################################
 class RouletteEnvironment(gym.Env):
 
-    def __init__(self, data, configuration):
+    def __init__(self, data : pd.DataFrame, configuration : dict):
         super(RouletteEnvironment, self).__init__() 
-        self.timeseries = data['timeseries'].values
+        self.extractions = data['extraction'].values
         self.positions = data['position'].values
         self.colors = data['color_code'].values
                
-        self.perceptive_size = configuration["model"]["PERCEPTIVE_FIELD"]        
-        self.initial_capital = configuration["environment"]["INITIAL_CAPITAL"]
-        self.bet_amount = configuration["environment"]["BET_AMOUNT"]
-        self.max_steps = configuration["environment"]["MAX_STEPS"] 
-        self.render_environment = configuration["environment"]["RENDERING"]
-
+        self.perceptive_size = configuration.get('perceptive_field_size', 64)        
+        self.initial_capital = configuration.get('initial_capital', 1000) 
+        self.bet_amount = configuration.get('bet_amount', 10) 
+        self.max_steps = configuration.get('max_steps_episode', 1000) 
+        self.render_environment = configuration.get('render_environment', False)
         self.player = BetsAndRewards(configuration)  
 
         self.black_numbers = self.player.black_numbers
