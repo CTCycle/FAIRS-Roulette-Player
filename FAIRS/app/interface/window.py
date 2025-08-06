@@ -90,14 +90,20 @@ class MainWindow:
             (QCheckBox,'runTensorboard','use_tensorboard'),
             (QCheckBox,'realTimeHistory','real_time_history_callback'),
             (QCheckBox,'saveCheckpoints','save_checkpoints'), 
-            (QCheckBox,'renderEnv','render_environment'),             
-            # model settings group
+                        
+            # agent settings group
             (QSpinBox,'numNeurons','QNet_neurons'),     
             (QSpinBox,'perceptiveField','perceptive_field_size'),           
             (QSpinBox,'embeddingDims','embedding_dimensions'),
             (QDoubleSpinBox,'explorationRate','exploration_rate'),
+            (QDoubleSpinBox,'minExplorationRate','min_exploration_rate'),
             (QDoubleSpinBox,'explorationRateDecay','exploration_rate_decay'),
             (QDoubleSpinBox,'discountRate','discount_rate'),
+            (QSpinBox,'modelUpdateFreq','model_update_frequency'), 
+            # environment
+            (QSpinBox,'initialCapital','initial_capital'),     
+            (QSpinBox,'betAmount','bet_amount'),   
+            (QCheckBox,'renderEnv','render_environment'),
             # session settings group  
             (QCheckBox,'deviceGPU','use_device_GPU'), 
             (QSpinBox,'deviceID','device_ID'),
@@ -208,13 +214,19 @@ class MainWindow:
             ('checkpoints_frequency', 'valueChanged', 'checkpoints_frequency'),
             ('max_memory_size', 'valueChanged', 'max_memory_size'),
             ('replay_buffer_size', 'valueChanged', 'replay_buffer_size'),
-            # model settings group
+            # agent settings group
             ('QNet_neurons', 'valueChanged', 'QNet_neurons'),
             ('perceptive_field_size', 'valueChanged', 'perceptive_field_size'),
             ('embedding_dimensions', 'valueChanged', 'embedding_dimensions'),
             ('exploration_rate', 'valueChanged', 'exploration_rate'),
+            ('min_exploration_rate', 'valueChanged', 'min_exploration_rate'),
             ('exploration_rate_decay', 'valueChanged', 'exploration_rate_decay'),
             ('discount_rate', 'valueChanged', 'discount_rate'),
+            ('model_update_frequency', 'valueChanged', 'model_update_frequency'),
+            # environment settings group
+            ('render_environment', 'toggled', 'render_environment'),
+            ('initial_capital', 'valueChanged', 'initial_capital'),
+            ('bet_amount', 'valueChanged', 'bet_amount'),
             # session settings group
             ('additional_episodes', 'valueChanged', 'additional_episodes'),
             # model inference and evaluation          
@@ -490,7 +502,7 @@ class MainWindow:
         self.model_handler = ModelEvents(self.configuration)         
   
         # send message to status bar
-        self._send_message("Training FAIRS Autoencoder using a new model instance...")        
+        self._send_message("Training FAIRS QNet  using a new model instance...")        
         # functions that are passed to the worker will be executed in a separate thread
         self.worker = ProcessWorker(self.model_handler.run_training_pipeline)                            
        

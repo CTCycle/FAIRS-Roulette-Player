@@ -15,17 +15,16 @@ from FAIRS.app.logger import logger
 ###############################################################################
 class DQNTraining:
 
-    def __init__(self, configuration : dict, metadata : dict):     
+    def __init__(self, configuration : dict):     
         set_random_seed(configuration.get('training_seed', 42))         
-        self.batch_size = configuration['training']['BATCH_SIZE']        
-        self.update_frequency = configuration['training']['UPDATE_FREQUENCY'] 
-        self.replay_size = configuration['agent']['REPLAY_BUFFER']           
-        self.selected_device = CONFIG["device"]["DEVICE"]
-        self.device_id = CONFIG["device"]["DEVICE_ID"]
-        self.mixed_precision = CONFIG["device"]["MIXED_PRECISION"]  
+        self.batch_size = configuration.get('batch_size', 32)        
+        self.update_frequency = configuration.get('model_update_frequency', 10) 
+        self.replay_size = configuration.get('replay_buffer', 1000)
+        self.selected_device = configuration.get('device', 'cpu')
+        self.device_id = configuration.get('device_id', 0)
+        self.mixed_precision = configuration.get('mixed_precision', False) 
         self.configuration = configuration 
-        self.metadata = metadata 
-
+        
         # initialize variables        
         self.game_stats_frequency = 50
         self.callback_wrapper = CallbacksWrapper(configuration) 
@@ -41,7 +40,7 @@ class DQNTraining:
     
     # set device
     #--------------------------------------------------------------------------
-    def update_session_stats(self, scores, episode, time_step, reward, total_reward):
+    def update_session_stats(self, scores : dict, episode, time_step, reward, total_reward):
         loss = scores.get('loss', None)
         metric = scores.get('root_mean_squared_error', None)                   
         self.session_stats['episode'].append(episode)
@@ -120,7 +119,36 @@ class DQNTraining:
         return self.agent 
  
     #--------------------------------------------------------------------------
-    def train_model(self, model, target_model, data, checkpoint_path, from_checkpoint=False, **kwargs):
+    def train_model(self, model, target_model, data, checkpoint_path, **kwargs):
+        environment = RouletteEnvironment(data, self.configuration)                    
+        episodes = self.configuration['training']['EPISODES']
+        from_episode = 0
+        start_episode = 0
+        history = None
+                  
+
+        # determine state size as the observation space size       
+        state_size = environment.observation_space.shape[0] 
+        logger.info(f'Size of the observation space (previous extractions): {state_size}')        
+        agent = self.train_with_reinforcement_learning(
+            model, target_model, environment, start_episode, episodes, 
+            state_size, checkpoint_path)
+        
+        # use the real time history callback data to retrieve current loss and metric values
+        # this allows to correctly resume the training metrics plot if training from checkpoint
+        history = {'history' : self.session_stats, 
+                   'val_history' : None,
+                   'total_episodes' : episodes}
+
+        # Save the final model at the end of training
+        self.serializer.save_pretrained_model(model, checkpoint_path)
+        # serialize training memory using pickle
+        self.agent.dump_memory(checkpoint_path)    
+        self.serializer.save_training_configuration(
+            checkpoint_path, history, self.configuration, self.metadata)
+        
+    #--------------------------------------------------------------------------
+    def resume_training(self, model, target_model, data, checkpoint_path, **kwargs):
         environment = RouletteEnvironment(data, self.configuration)
         # perform different initialization duties based on state of session:
         # training from scratch vs resumed training

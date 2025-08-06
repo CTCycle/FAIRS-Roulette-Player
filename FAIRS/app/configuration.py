@@ -23,7 +23,9 @@ class Configuration:
             'jit_compile': False,
             'jit_backend': 'inductor',
             'exploration_rate' : 0.75,
+            'exploration_rate_decay' : 0.995,
             'discount_rate' : 0.5,
+            'model_update_frequency': 10,
              # Device
             'use_device_GPU': False,
             'device_id': 0,
@@ -45,11 +47,12 @@ class Configuration:
             'plot_training_metrics' : True,
             'save_checkpoints': False,
             'checkpoints_frequency': 1,
+            # environment
+            'initial_capital': 1000,
+            'bet_amount': 10,
             'render_environment': False,
-
             # inference
-            'real_time_inference': False,
-            
+            'real_time_inference': False,            
             # Validation
             'val_batch_size': 20,
             'num_evaluation_images': 6            

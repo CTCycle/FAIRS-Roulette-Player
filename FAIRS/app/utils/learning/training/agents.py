@@ -14,15 +14,15 @@ from FAIRS.app.logger import logger
 # [TOOLS FOR TRAINING MACHINE LEARNING MODELS]
 ###############################################################################
 class DQNAgent:
-    def __init__(self, configuration, memory=None):
+    def __init__(self, configuration : dict, memory=None):
         self.action_size = STATES        
-        self.state_size = configuration['model']['PERCEPTIVE_FIELD']               
-        self.gamma = configuration['agent']['DISCOUNT_RATE'] 
-        self.epsilon = configuration['agent']['EXPLORATION_RATE']              
-        self.epsilon_decay = configuration['agent']['ER_DECAY'] 
-        self.epsilon_min = configuration['agent']['MINIMUM_ER'] 
-        self.memory_size = configuration['agent']['MAX_MEMORY'] 
-        self.replay_size = configuration['agent']['REPLAY_BUFFER']   
+        self.state_size = configuration.get('perceptive_field_size', 64)               
+        self.gamma = configuration.get('discount_rate', 0.5)
+        self.epsilon = configuration.get('exploration_rate', 0.75)
+        self.epsilon_decay = configuration.get('exploration_rate_decay', 0.995)
+        self.epsilon_min = configuration.get('minimum_exploration_rate', 0.1)
+        self.memory_size = configuration.get('max_memory_size', 10000)
+        self.replay_size = configuration.get('replay_buffer_size', 1000) 
         self.memory = deque(maxlen=self.memory_size) if memory is None else memory  
 
     #--------------------------------------------------------------------------

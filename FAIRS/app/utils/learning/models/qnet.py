@@ -41,16 +41,13 @@ class FAIRSnet:
         metric = [metrics.RootMeanSquaredError()]
         opt = optimizers.AdamW(learning_rate=self.learning_rate)          
         model.compile(loss=loss, optimizer=opt, metrics=metric, jit_compile=False)
-
-        if model_summary:
-            model.summary(expand_nested=True)
-            
+        # print model summary on console and run torch.compile 
+        # with triton compiler and selected backend
         model.summary(expand_nested=True) if model_summary else None
         if self.jit_compile:
             model = torch_compile(model, backend=self.jit_backend, mode='default')
 
-        return model                
-         
+        return model         
         
     # build model given the architecture
     #--------------------------------------------------------------------------
@@ -69,11 +66,8 @@ class FAIRSnet:
         output = self.QNet(layer)         
         
         # define the model from inputs and outputs
-        model = Model(inputs=[self.timeseries, self.gain], outputs=output)                
-
-       
-
-        
+        model = Model(inputs=[self.timeseries, self.gain], outputs=output) 
+        model = self.compile_model(model, model_summary=model_summary)   
 
         return model           
        

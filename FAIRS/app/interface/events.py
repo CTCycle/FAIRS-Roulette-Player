@@ -154,27 +154,29 @@ class ModelEvents:
         # use the mapper to encode extractions based on position and color              
         mapper = RouletteMapper(self.configuration)
         logger.info('Encoding roulette extractions')     
-        dataset = mapper.encode_roulette_series(dataset)          
-        
+        dataset = mapper.encode_roulette_series(dataset) 
         # save update data into database    
         dataserializer.save_roulette_dataset(dataset)
         logger.info('Database updated with processed roulette series')
+
+        # check worker status to allow interruption
+        check_thread_status(worker)
 
         # set device for training operations        
         logger.info('Setting device for training operations') 
         device = DeviceConfig(self.configuration)   
         device.set_device() 
+
         # create checkpoint folder
         modser = ModelSerializer()
-        checkpoint_path = modser.create_checkpoint_folder()  
-
+        checkpoint_path = modser.create_checkpoint_folder()
         # build the target model and Q model based on FAIRSnet specifics
         # Q model is the main trained model, while target model is used to predict 
         # next state Q scores and is updated based on the Q model weights   
         logger.info('Building FAIRS reinforcement learning model')  
         learner = FAIRSnet(self.configuration)
         Q_model = learner.get_model(model_summary=True)
-        target_model = learner.get_model(model_summary=False)    
+        target_model = learner.get_model(model_summary=False)   
         
         # generate graphviz plot fo the model layout         
         modser.save_model_plot(Q_model, checkpoint_path)          
@@ -183,7 +185,8 @@ class ModelEvents:
         trainer = DQNTraining(self.configuration)
         logger.info('Start training with reinforcement learning model')
         trainer.train_model(
-            Q_model, target_model, dataset, checkpoint_path)
+            Q_model, target_model, dataset, checkpoint_path,
+            progress_callback=progress_callback, worker=worker)
        
 
         
