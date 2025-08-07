@@ -52,10 +52,9 @@ class LearningInterruptCallback(callbacks.Callback):
     
 # [CALLBACK FOR REAL TIME TRAINING MONITORING]
 ###############################################################################
-class RealTimeHistory(callbacks.Callback):    
+class RealTimeHistory:    
         
     def __init__(self, plot_path, past_logs=None, **kwargs):
-        super(RealTimeHistory, self).__init__(**kwargs)
         self.plot_path = plot_path
         os.makedirs(self.plot_path, exist_ok=True)
         # Separate dicts for training vs. validation metrics
@@ -111,10 +110,9 @@ class RealTimeHistory(callbacks.Callback):
         plt.close()
 
 ###############################################################################
-class GameStatsCallback(callbacks.Callback):
+class GameStatsCallback:
     
     def __init__(self, plot_path, plot_freq_steps=1, iterations=None, capitals=None, **kwargs): 
-        super(GameStatsCallback, self).__init__(**kwargs)     
         self.plot_path = os.path.join(plot_path, 'game_statistics.jpeg')  
         self.plot_freq_steps = max(1, plot_freq_steps) 
         os.makedirs(plot_path, exist_ok=True)
@@ -201,38 +199,43 @@ class GameStatsCallback(callbacks.Callback):
 
 # [CALLBACKS HANDLER]
 ###############################################################################
-def initialize_callbacks_handler(model : Model, configuration : dict, checkpoint_path, session=None,
-                                 total_epochs=100, **kwargs) -> callbacks.CallbackList:    
-    from_epoch = 0  
-    additional_epochs = configuration.get('additional_epochs', 10)
-    if session:
-        from_epoch = session['epochs']
-        total_epochs = additional_epochs + from_epoch
+class CallbacksHandler:
 
-    callbacks_list = [
-        LearningInterruptCallback(kwargs.get('worker', None))]      
-    
-    if configuration.get('plot_training_metrics', False):
-        callbacks_list.append(RealTimeHistory(checkpoint_path, past_logs=session))        
-        callbacks_list.append(GameStatsCallback(checkpoint_path, 50))
-
-    if configuration.get('use_tensorboard', False):
-        logger.debug('Using tensorboard during training')
-        log_path = os.path.join(checkpoint_path, 'tensorboard')
-        tb_callback = callbacks.TensorBoard(log_dir=log_path, histogram_freq=1) 
-        tb_callback.set_model(model) # need to set the model since model.fit() is not called          
-        start_tensorboard_subprocess(log_path)      
-
-    if configuration.get('save_checkpoints', False):
-        logger.debug('Adding checkpoint saving callback')
-        checkpoint_filepath = os.path.join(checkpoint_path, 'model_checkpoint_E{epoch:02d}.keras')
-        callbacks_list.append(callbacks.ModelCheckpoint(
-            filepath=checkpoint_filepath, save_weights_only=False,  
-            monitor='val_loss', save_best_only=False, mode='auto', verbose=0))
+    def __init__(self, configuration : dict):
+        self.configuration = configuration
         
-    cb_list = callbacks.CallbackList(callbacks_list, add_history=False, model=model)
+
+    def get_callbacks(self,  model : Model, checkpoint_path, session=None,
+                      total_epochs=100, **kwargs):
+        from_epoch = 0  
+        additional_epochs = self.configuration.get('additional_epochs', 10)
+        if session:
+            from_epoch = session['epochs']
+            total_epochs = additional_epochs + from_epoch
+
+        callbacks_list = [
+            LearningInterruptCallback(kwargs.get('worker', None))]      
         
-    return cb_list
+        if self.configuration.get('plot_training_metrics', False):
+            callbacks_list.append(RealTimeHistory(checkpoint_path, past_logs=session))        
+            callbacks_list.append(GameStatsCallback(checkpoint_path, 50))
+
+        if self.configuration.get('use_tensorboard', False):
+            logger.debug('Using tensorboard during training')
+            log_path = os.path.join(checkpoint_path, 'tensorboard')
+            tb_callback = callbacks.TensorBoard(log_dir=log_path, histogram_freq=1) 
+            tb_callback.set_model(model) # need to set the model since model.fit() is not called          
+            start_tensorboard_subprocess(log_path)      
+
+        if self.configuration.get('save_checkpoints', False):
+            logger.debug('Adding checkpoint saving callback')
+            checkpoint_filepath = os.path.join(checkpoint_path, 'model_checkpoint_E{epoch:02d}.keras')
+            callbacks_list.append(callbacks.ModelCheckpoint(
+                filepath=checkpoint_filepath, save_weights_only=False,  
+                monitor='val_loss', save_best_only=False, mode='auto', verbose=0))
+            
+        cb_list = callbacks.CallbackList(callbacks_list, add_history=False, model=model)
+        
 
 
 ###############################################################################

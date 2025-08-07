@@ -4,7 +4,7 @@ from keras.utils import set_random_seed
 from tqdm import tqdm
 
 from FAIRS.app.utils.data.serializer import ModelSerializer
-from FAIRS.app.utils.learning.callbacks import initialize_callbacks_handler
+from FAIRS.app.utils.learning.callbacks import CallbacksHandler
 from FAIRS.app.utils.learning.training.environment import RouletteEnvironment
 from FAIRS.app.utils.learning.training.agents import DQNAgent
 from FAIRS.app.interface.workers import check_thread_status, update_progress_callback
@@ -29,8 +29,9 @@ class DQNTraining:
         
         # initialize variables        
         self.game_stats_frequency = 50
-        self.serializer = ModelSerializer()           
-        self.agent = DQNAgent(self.configuration) 
+        self.serializer = ModelSerializer()
+        self.callbacks = CallbacksHandler(configuration)           
+        self.agent = DQNAgent(configuration) 
         self.session_stats = {'episode': [],
                               'time_step': [],
                               'loss': [],
@@ -54,17 +55,12 @@ class DQNTraining:
     def train_with_reinforcement_learning(self, model : Model, target_model : Model,
                                           environment : RouletteEnvironment, start_episode, 
                                           episodes, state_size, checkpoint_path, **kwargs):
-        total_epochs = self.configuration.get('episodes', 100) 
-        # add all callbacks to the callback list
-        callbacks_list = initialize_callbacks_handler(
-            target_model, self.configuration, checkpoint_path, total_epochs=total_epochs, 
-            progress_callback=kwargs.get('progress_callback', None), 
-            worker=kwargs.get('worker', None))
+        
+        total_epochs = self.configuration.get('episodes', 100)        
                
         # Training loop for each episode 
         scores = None 
         total_steps = 0   
-        callbacks_list.on_train_begin()         
         for i, episode in enumerate(range(start_episode, episodes)): 
             start_over = True if i == 0 else False                                
             state = environment.reset(start_over=start_over)
@@ -100,7 +96,7 @@ class DQNTraining:
                         logger.info(
                             f'Episode {episode+1}/{episodes} - Time steps: {time_step} - Capital: {environment.capital} - Total Reward: {total_reward}')                             
                
-                callbacks_list.on_batch_end(total_steps, scores)             
+                         
 
                 # Update target network periodically
                 if time_step % self.update_frequency == 0:
@@ -110,8 +106,7 @@ class DQNTraining:
 
                 if done:
                     break
-
-            callbacks_list.on_epoch_end(i, scores)
+            
 
             # check for worker thread status and update progress callback
             update_progress_callback(
