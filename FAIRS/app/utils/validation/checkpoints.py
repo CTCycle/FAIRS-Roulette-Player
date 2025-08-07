@@ -1,9 +1,11 @@
 import os
-import shutil
 import pandas as pd
+import numpy as np
+from keras import Model
 
-from FAIRS.app.utils.data.database import FAIRSDatabase
-from FAIRS.app.utils.data.serializer import ModelSerializer
+from FAIRS.app.utils.learning.callbacks import LearningInterruptCallback
+from FAIRS.app.utils.data.serializer import DataSerializer, ModelSerializer
+from FAIRS.app.interface.workers import check_thread_status, update_progress_callback
 from FAIRS.app.constants import CONFIG, CHECKPOINT_PATH, DATA_PATH
 from FAIRS.app.logger import logger
 
@@ -13,14 +15,8 @@ from FAIRS.app.logger import logger
 ################################################################################
 class ModelEvaluationSummary:
 
-    def __init__(self, configuration : dict):
-        
-        self.serializer = ModelSerializer()
-
-        self.csv_kwargs = {'index': 'False', 'sep': ';', 'encoding': 'utf-8'}
-        self.database = FAIRSDatabase(configuration)
-        self.save_as_csv = configuration["dataset"]["SAVE_CSV"]
-        self.configuration = configuration     
+    def __init__(self, configuration : dict):         
+        self.configuration = configuration
 
     #---------------------------------------------------------------------------
     def scan_checkpoint_folder(self):
@@ -29,52 +25,65 @@ class ModelEvaluationSummary:
             if entry.is_dir():                
                 pretrained_model_path = os.path.join(entry.path, 'saved_model.keras')                
                 if os.path.isfile(pretrained_model_path):
-                    model_paths.append(entry.path)
-                
+                    model_paths.append(entry.path)                
 
         return model_paths  
 
     #---------------------------------------------------------------------------
-    def get_checkpoints_summary(self):       
-        # look into checkpoint folder to get pretrained model names      
+    def get_checkpoints_summary(self, **kwargs):
+        modser = ModelSerializer() 
+        serializer = DataSerializer(self.configuration)             
         model_paths = self.scan_checkpoint_folder()
         model_parameters = []            
-        for model_path in model_paths:            
-            model = self.serializer.load_checkpoint(model_path)
-            configuration, metadata, history = self.serializer.load_training_configuration(model_path)
-            model_name = os.path.basename(model_path) 
-            # Extract model name and training type                       
-            device_config = configuration["device"]
-            precision = 16 if device_config.get("MIXED_PRECISION", np.nan) == True else 32
-            chkp_config = {'Checkpoint name': model_name,                                                 
-                           'Sample size': configuration["dataset"].get("SAMPLE_SIZE", np.nan),
-                           'Validation size': configuration["dataset"].get("VALIDATION_SIZE", np.nan),
-                           'Seed': configuration.get("SEED", np.nan),                          
-                           'Precision (bits)': precision,                     
-                           'Epochs': configuration["training"].get("EPOCHS", np.nan),
-                           'Learning rate': configuration["training"].get("LEARNING_RATE", np.nan),
-                           'Batch size': configuration["training"].get("BATCH_SIZE", np.nan),                          
-                           'Normalize': configuration["dataset"].get("IMG_NORMALIZE", np.nan),
-                           'Split seed': configuration["dataset"].get("SPLIT_SEED", np.nan),
-                           'Image augment': configuration["dataset"].get("IMG_AUGMENTATION", np.nan),                          
-                           'Residuals': configuration["model"].get("RESIDUAL_CONNECTIONS", np.nan),
-                           'JIT Compile': configuration["model"].get("JIT_COMPILE", np.nan),
-                           'JIT Backend': configuration["model"].get("JIT_BACKEND", np.nan),
-                           'Device': configuration["device"].get("DEVICE", np.nan),
-                           'Device ID': configuration["device"].get("DEVICE_ID", np.nan),
-                           'Number of Processors': configuration["device"].get("NUM_PROCESSORS", np.nan),
-                           'Tensorboard logs': configuration["training"].get("USE_TENSORBOARD", np.nan)}
-
+        for i, model_path in enumerate(model_paths):            
+            model = modser.load_checkpoint(model_path)
+            configuration, history = modser.load_training_configuration(model_path)
+            model_name = os.path.basename(model_path)                   
+            precision = 16 if configuration.get("use_mixed_precision", np.nan) else 32 
+            has_scheduler = configuration.get('use_scheduler', False)
+            scores = history.get('history', {})
+            chkp_config = {
+                    'checkpoint': model_name,
+                    'sample_size': configuration.get('sample_size', np.nan),
+                    'validation_size': configuration.get('validation_size', np.nan),
+                    'seed': configuration.get('train_seed', np.nan),
+                    'precision': precision,
+                    'epochs': history.get('epochs', np.nan),                    
+                    'batch_size': configuration.get('batch_size', np.nan),
+                    'split_seed': configuration.get('split_seed', np.nan),
+                    'image_augmentation': configuration.get('img_augmentation', np.nan),
+                    'image_height': 128,  
+                    'image_width': 128,
+                    'image_channels': 3,
+                    'jit_compile': configuration.get('jit_compile', np.nan),
+                    'has_tensorboard_logs': configuration.get('use_tensorboard', np.nan),
+                    'initial_LR': configuration.get('initial_LR', np.nan),
+                    'constant_steps_LR': configuration.get('constant_steps', np.nan) if has_scheduler else np.nan,
+                    'decay_steps_LR': configuration.get('decay_steps', np.nan) if has_scheduler else np.nan,
+                    'target_LR': configuration.get('target_LR', np.nan) if has_scheduler else np.nan,                    
+                    'initial_neurons': configuration.get('initial_neurons', np.nan),
+                    'dropout_rate': configuration.get('dropout_rate', np.nan),
+                    'train_loss': scores.get('loss', [np.nan])[-1], 
+                    'val_loss': scores.get('val_loss', [np.nan])[-1],
+                    'train_cosine_similarity': scores.get('cosine_similarity', [np.nan])[-1], 
+                    'val_cosine_similarity': scores.get('val_cosine_similarity', [np.nan])[-1]}
+            
             model_parameters.append(chkp_config)
 
-        dataframe = pd.DataFrame(model_parameters)
-        self.database.save_checkpoints_summary(dataframe)
+            # check for thread status and progress bar update   
+            check_thread_status(kwargs.get('worker', None))         
+            update_progress_callback(
+                i+1, len(model_paths), kwargs.get('progress_callback', None)) 
 
-        if self.save_as_csv:
-            logger.info('Export to CSV requested. Now saving checkpoint summary to CSV file')             
-            csv_path = os.path.join(DATA_PATH, 'checkpoints_summary.csv')     
-            dataframe.to_csv(csv_path, index=False, **self.csv_kwargs)        
+        dataframe = pd.DataFrame(model_parameters)
+        serializer.save_checkpoints_summary(dataframe)    
             
         return dataframe
     
-    
+    #--------------------------------------------------------------------------
+    def get_evaluation_report(self, model : Model, validation_dataset, **kwargs):
+        callbacks_list = [LearningInterruptCallback(kwargs.get('worker', None))]
+        validation = model.evaluate(validation_dataset, verbose=1, callbacks=callbacks_list) 
+        logger.info(f'Evaluation of pretrained model has been completed')   
+        logger.info(f'RMSE loss {validation[0]:.3f}')
+        logger.info(f'Cosine similarity {validation[1]:.3f}') 

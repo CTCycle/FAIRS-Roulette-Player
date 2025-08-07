@@ -220,7 +220,7 @@ def initialize_callbacks_handler(model : Model, configuration : dict, checkpoint
         logger.debug('Using tensorboard during training')
         log_path = os.path.join(checkpoint_path, 'tensorboard')
         tb_callback = callbacks.TensorBoard(log_dir=log_path, histogram_freq=1) 
-        #tb_callback.set_model(model) # need to set the model since model.fit() is not called          
+        tb_callback.set_model(model) # need to set the model since model.fit() is not called          
         start_tensorboard_subprocess(log_path)      
 
     if configuration.get('save_checkpoints', False):

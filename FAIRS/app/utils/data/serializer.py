@@ -36,6 +36,10 @@ class DataSerializer:
         dataset = self.database.save_roulette_data(dataset)
         
         return dataset
+    
+    #--------------------------------------------------------------------------
+    def save_checkpoints_summary(self, data : pd.DataFrame):            
+        self.database.save_checkpoints_summary(data) 
            
 
     
@@ -82,8 +86,7 @@ class ModelSerializer:
     #--------------------------------------------------------------------------
     def load_training_configuration(self, path): 
         config_path = os.path.join(path, 'configuration', 'configuration.json')
-        history_path = os.path.join(path, 'configuration', 'session_history.json') 
-        
+        history_path = os.path.join(path, 'configuration', 'session_history.json')
         with open(config_path, 'r') as f:
             configuration = json.load(f) 
 

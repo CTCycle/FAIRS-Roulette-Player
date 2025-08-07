@@ -86,36 +86,24 @@ class ValidationEvents:
     #--------------------------------------------------------------------------
     def run_model_evaluation_pipeline(self, metrics, selected_checkpoint, device='CPU', 
                                       progress_callback=None, worker=None):
+        if selected_checkpoint is None:
+            logger.warning('No checkpoint selected for resuming training')
+            return
+           
         logger.info(f'Loading {selected_checkpoint} checkpoint')   
         modser = ModelSerializer()       
         model, train_config, session, checkpoint_path = modser.load_checkpoint(
             selected_checkpoint)    
         model.summary(expand_nested=True)  
 
-        # set device for training operations
+         # set device for training operations
         logger.info('Setting device for training operations')                
-        trainer = ModelTraining(train_config)    
-        trainer.set_device(device_override=device)  
-
-        # isolate the encoder from the autoencoder model   
-        encoder = ImageEncoding(model, train_config, checkpoint_path)
-        encoder_model = encoder.encoder_model 
-
-        logger.info('Preparing dataset of images based on splitting sizes')  
-        sample_size = train_config.get("train_sample_size", 1.0)
+        device = DeviceConfig(self.configuration)
+        device.set_device()  
+        
+        
         serializer = DataSerializer(self.configuration)  
-        images_paths = serializer.get_img_path_from_directory(IMG_PATH, sample_size)
-        splitter = TrainValidationSplit(train_config) 
-        _, validation_images = splitter.split_train_and_validation(images_paths)     
-
-        # create the tf.datasets using the previously initialized generators 
-        logger.info('Building model data loaders with prefetching and parallel processing') 
-        # use tf.data.Dataset to build the model dataloader with a larger batch size
-        # the dataset is built on top of the training and validation data
-        loader = InferenceDataLoader(train_config)    
-        validation_dataset = loader.build_inference_dataloader(
-            validation_images, batch_size=1)   
-
+        
         # check worker status to allow interruption
         check_thread_status(worker)             
 

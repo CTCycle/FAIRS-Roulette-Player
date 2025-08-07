@@ -162,6 +162,9 @@
        <layout class="QVBoxLayout" name="verticalLayout_3">
         <item>
          <widget class="QScrollArea" name="scrollArea">
+          <property name="sizeAdjustPolicy">
+           <enum>QAbstractScrollArea::SizeAdjustPolicy::AdjustIgnored</enum>
+          </property>
           <property name="widgetResizable">
            <bool>true</bool>
           </property>
@@ -169,7 +172,7 @@
            <property name="geometry">
             <rect>
              <x>0</x>
-             <y>0</y>
+             <y>-122</y>
              <width>1094</width>
              <height>807</height>
             </rect>
@@ -216,9 +219,9 @@
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="adsIsothermsComparison">
+                <widget class="QCheckBox" name="classAccuracy">
                  <property name="text">
-                  <string>Adsorption isotherms prediction</string>
+                  <string>Classification accuracy</string>
                  </property>
                 </widget>
                </item>

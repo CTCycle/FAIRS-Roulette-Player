@@ -118,9 +118,10 @@ class MainWindow:
             (QCheckBox,'realTimeInference','real_time_inference'), 
             (QPushButton,'playRoulette','play_roulette'),     
             (QSpinBox,'evalSamples','num_evaluation_samples'), 
+            (QCheckBox,'evalReport','get_evaluation_report'),
+            (QCheckBox,'classAccuracy','classification_accuracy'), 
             (QPushButton,'evaluateModel','model_evaluation'),            
-            (QPushButton,'checkpointSummary','checkpoints_summary'),
-            (QCheckBox,'evalReport','get_evaluation_report'), 
+            (QPushButton,'checkpointSummary','checkpoints_summary'),          
             # 3. Viewer tab
             (QPushButton,'previousImg','previous_image'),
             (QPushButton,'nextImg','next_image'),
