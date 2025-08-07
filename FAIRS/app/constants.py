@@ -1,4 +1,3 @@
-import json
 from os.path import join, abspath 
 
 # [PATHS]
@@ -28,8 +27,4 @@ PAD_VALUE = -1
 # [UI LAYOUT PATH]
 ###############################################################################
 UI_PATH = join(PROJECT_DIR, 'app', 'assets', 'window_layout.ui')
-
-CONFIG_PATH = join(PROJECT_DIR, 'settings', 'configurations.json')
-with open(CONFIG_PATH, 'r') as file:
-    CONFIG = json.load(file)
 

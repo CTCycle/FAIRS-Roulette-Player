@@ -1,5 +1,5 @@
 import os
-from keras import callbacks, Model
+import keras
 import webbrowser
 import subprocess
 import time
@@ -9,13 +9,12 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 from FAIRS.app.interface.workers import WorkerInterrupted
-from FAIRS.app.constants import CONFIG
 from FAIRS.app.logger import logger
 
 
 # [CALLBACK FOR UI PROGRESS BAR]
 ###############################################################################
-class ProgressBarCallback(callbacks.Callback):
+class ProgressBarCallback(keras.callbacks.Callback):
     def __init__(self, progress_callback, total_epochs, from_epoch=0):
         super().__init__()
         self.progress_callback = progress_callback
@@ -33,7 +32,7 @@ class ProgressBarCallback(callbacks.Callback):
 
 # [CALLBACK FOR TRAIN INTERRUPTION]
 ###############################################################################
-class LearningInterruptCallback(callbacks.Callback):
+class LearningInterruptCallback(keras.callbacks.Callback):
     def __init__(self, worker=None):
         super().__init__()
         self.worker = worker
@@ -54,13 +53,12 @@ class LearningInterruptCallback(callbacks.Callback):
 ###############################################################################
 class RealTimeHistory:    
         
-    def __init__(self, plot_path, past_logs=None, **kwargs):
+    def __init__(self, plot_path, past_logs=None):
         self.plot_path = plot_path
-        os.makedirs(self.plot_path, exist_ok=True)
         # Separate dicts for training vs. validation metrics
-        self.total_epochs = 0 if past_logs is None else past_logs.get('epochs', 0)
+        self.total_epochs = 0 if past_logs is None else past_logs.get('episodes', 0)
         self.history = {'history' : {},
-                        'epochs' : self.total_epochs}        
+                        'episodes' : self.total_epochs}        
 
         # If past_logs provided, split into history and val_history
         if past_logs and 'history' in past_logs:
@@ -132,11 +130,12 @@ class GameStatsCallback:
         self.episode_count = 0   
        
     #--------------------------------------------------------------------------
-    def log_step(self, batch, logs=None):
-        if not logs:
+    def plot_game_statistics(self, logs=None):
+        if not logs.get('episode', []):
             return
         
-        current_capital = logs.get('current_capital', None)
+        # TO DO: continuare implementazione callback
+        current_capital = logs.get('capital', None)
         done = logs.get('done', False)
         # Only log if current_capital is present (can skip if not provided)
         if current_capital is not None:
@@ -187,50 +186,18 @@ class CallbacksWrapper:
         self.configuration = configuration
 
     #--------------------------------------------------------------------------
-    def real_time_history(self, configuration, checkpoint_path, history):
-        RTH_callback = RealTimeHistory(checkpoint_path, configuration, past_logs=history)
+    def get_metrics_callbacks(self, checkpoint_path, history=None):
+        RTH_callback = RealTimeHistory(checkpoint_path, past_logs=history)
+        GS_callback = GameStatsCallback(checkpoint_path, 50)
                
-        return RTH_callback
-    
-    #--------------------------------------------------------------------------
-    def get_callbacks(self,  model : Model, checkpoint_path, session=None,
-                      total_epochs=100, **kwargs):
-        from_epoch = 0  
-        additional_epochs = self.configuration.get('additional_epochs', 10)
-        if session:
-            from_epoch = session['epochs']
-            total_epochs = additional_epochs + from_epoch
-
-        callbacks_list = [
-            LearningInterruptCallback(kwargs.get('worker', None))]      
-        
-        if self.configuration.get('plot_training_metrics', False):
-            callbacks_list.append(RealTimeHistory(checkpoint_path, past_logs=session))        
-            callbacks_list.append(GameStatsCallback(checkpoint_path, 50))
-
-        if self.configuration.get('use_tensorboard', False):
-            logger.debug('Using tensorboard during training')
-            log_path = os.path.join(checkpoint_path, 'tensorboard')
-            tb_callback = callbacks.TensorBoard(log_dir=log_path, histogram_freq=1) 
-            tb_callback.set_model(model) # need to set the model since model.fit() is not called          
-            start_tensorboard_subprocess(log_path)      
-
-        if self.configuration.get('save_checkpoints', False):
-            logger.debug('Adding checkpoint saving callback')
-            checkpoint_filepath = os.path.join(checkpoint_path, 'model_checkpoint_E{epoch:02d}.keras')
-            callbacks_list.append(callbacks.ModelCheckpoint(
-                filepath=checkpoint_filepath, save_weights_only=False,  
-                monitor='val_loss', save_best_only=False, mode='auto', verbose=0))
-            
-        cb_list = callbacks.CallbackList(callbacks_list, add_history=False, model=model) 
+        return RTH_callback, GS_callback
 
     #--------------------------------------------------------------------------
-    def tensorboard_callback(self, checkpoint_path, model) -> callbacks.TensorBoard:        
+    def get_tensorboard_callback(self, checkpoint_path, model) -> keras.callbacks.TensorBoard:        
         logger.debug('Using tensorboard during training')
         log_path = os.path.join(checkpoint_path, 'tensorboard')
-        tb_callback = callbacks.TensorBoard(log_dir=log_path, update_freq=20, 
-                                         histogram_freq=1) 
-
+        tb_callback = keras.callbacks.TensorBoard(
+            log_dir=log_path, update_freq=20, histogram_freq=1) 
         tb_callback.set_model(model)              
         start_tensorboard_subprocess(log_path)        
 
@@ -239,7 +206,7 @@ class CallbacksWrapper:
     #--------------------------------------------------------------------------
     def checkpoints_saving(self, checkpoint_path):
         checkpoint_filepath = os.path.join(checkpoint_path, 'model_checkpoint.keras')
-        chkp_save = callbacks.ModelCheckpoint(filepath=checkpoint_filepath,
+        chkp_save = keras.callbacks.ModelCheckpoint(filepath=checkpoint_filepath,
                                                     save_weights_only=True,  
                                                     monitor='loss',       
                                                     save_best_only=True,      

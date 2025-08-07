@@ -14,7 +14,6 @@ from FAIRS.app.configuration import Configuration
 from FAIRS.app.interface.dialogs import SaveConfigDialog, LoadConfigDialog
 from FAIRS.app.interface.events import GraphicsHandler, ValidationEvents, ModelEvents
 from FAIRS.app.interface.workers import ThreadWorker, ProcessWorker
-from FAIRS.app.constants import DATA_PATH
 from FAIRS.app.logger import logger
 
 

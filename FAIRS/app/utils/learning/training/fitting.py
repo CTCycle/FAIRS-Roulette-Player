@@ -9,7 +9,6 @@ from FAIRS.app.utils.learning.training.environment import RouletteEnvironment
 from FAIRS.app.utils.learning.training.agents import DQNAgent
 from FAIRS.app.interface.workers import check_thread_status, update_progress_callback
 
-from FAIRS.app.constants import CONFIG
 from FAIRS.app.logger import logger
 
 
@@ -26,8 +25,7 @@ class DQNTraining:
         self.device_id = configuration.get('device_id', 0)
         self.mixed_precision = configuration.get('mixed_precision', False) 
         self.configuration = configuration 
-        
-        # initialize variables     
+        # initialize variables
         self.serializer = ModelSerializer()
         self.callbacks = CallbacksWrapper(configuration)           
         self.agent = DQNAgent(configuration) 
@@ -36,11 +34,12 @@ class DQNTraining:
                               'loss': [],
                               'metrics': [],
                               'reward': [],
-                              'total_reward': []}       
+                              'total_reward': [],
+                              'capital': []}       
     
     # set device
     #--------------------------------------------------------------------------
-    def update_session_stats(self, scores : dict, episode, time_step, reward, total_reward):
+    def update_session_stats(self, scores : dict, episode, time_step, reward, total_reward, capital):
         loss = scores.get('loss', None)
         metric = scores.get('root_mean_squared_error', None)                   
         self.session_stats['episode'].append(episode)
@@ -48,14 +47,24 @@ class DQNTraining:
         self.session_stats['loss'].append(loss.item() if loss is not None else 0.0)
         self.session_stats['metrics'].append(metric.item() if metric is not None else 0.0)
         self.session_stats['reward'].append(reward)
-        self.session_stats['total_reward'].append(total_reward)   
+        self.session_stats['total_reward'].append(total_reward) 
+        self.session_stats['capital'].append(capital)   
 
     #--------------------------------------------------------------------------
     def train_with_reinforcement_learning(self, model : Model, target_model : Model,
                                           environment : RouletteEnvironment, start_episode, 
                                           episodes, state_size, checkpoint_path, **kwargs):
         
-        total_epochs = self.configuration.get('episodes', 100)        
+        total_epochs = self.configuration.get('episodes', 100)
+        # if tensorboard is selected, an instance of the tb callback is built
+        # the dashboard is set on the Q model and tensorboard is launched automatically
+        tensorboard = None
+        if self.configuration.get('use_tensorboard', False):
+            tensorboard = self.callbacks.get_tensorboard_callback(checkpoint_path, model)  
+
+        RTH_callback, GS_callback = None, None
+        if self.configuration.get('plot_training_metrics', True):  
+            RTH_callback, GS_callback = self.callbacks.get_metrics_callbacks(checkpoint_path) 
                
         # Training loop for each episode 
         scores = None 
@@ -68,7 +77,7 @@ class DQNTraining:
             for time_step in range(environment.max_steps):          
                 gain = environment.capital/environment.initial_capital
                 gain = np.reshape(gain, newshape=(1, 1)) 
-                # action is always performed using the Q model
+                # action is always performed using the Q-model
                 action = self.agent.act(model, state, gain)
                 next_state, reward, done, extraction = environment.step(action)
                 total_reward += reward                
@@ -99,13 +108,28 @@ class DQNTraining:
                 if time_step % self.update_frequency == 0:
                     target_model.set_weights(model.get_weights())
 
-                total_steps += 1
+                if GS_callback:
+                    GS_callback.plot_game_statistics(self.session_stats)
 
+                # call on_epoch_end method of selected callbacks             
+                if tensorboard and scores:                    
+                    tensorboard.on_batch_end(batch=total_steps, logs=scores)
+
+                check_thread_status(kwargs.get('worker', None))
+
+                total_steps += 1
                 if done:
-                    break
-            
+                    break 
+
+            # call on_epoch_end method of selected callbacks             
+            if tensorboard and scores:                    
+                tensorboard.on_epoch_end(epoch=episode, logs=scores) 
+
+            if RTH_callback:
+                RTH_callback.plot_loss_and_metrics(episode, self.session_stats)
 
             # check for worker thread status and update progress callback
+            check_thread_status(kwargs.get('worker', None))
             update_progress_callback(
                 i+1, episodes, kwargs.get('progress_callback', None))
                      
@@ -115,7 +139,6 @@ class DQNTraining:
     def train_model(self, model : Model, target_model : Model, data, checkpoint_path, **kwargs):
         environment = RouletteEnvironment(data, self.configuration)                    
         episodes = self.configuration.get('episodes', 10)
-        from_episode = 0
         start_episode = 0
         history = None                  
 

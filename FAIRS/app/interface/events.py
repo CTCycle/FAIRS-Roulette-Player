@@ -1,6 +1,5 @@
 import cv2
 from matplotlib.backends.backend_agg import FigureCanvasAgg
-from PySide6.QtWidgets import QMessageBox
 from PySide6.QtGui import QImage, QPixmap
 
 from FAIRS.app.utils.data.serializer import DataSerializer, ModelSerializer
@@ -10,6 +9,7 @@ from FAIRS.app.utils.data.mapping import RouletteMapper
 from FAIRS.app.utils.learning.device import DeviceConfig
 from FAIRS.app.utils.learning.models.qnet import FAIRSnet
 from FAIRS.app.utils.learning.training.fitting import DQNTraining
+from FAIRS.app.utils.learning.inference.player import RoulettePlayer
 from FAIRS.app.interface.workers import check_thread_status, update_progress_callback
 
 from FAIRS.app.constants import RSC_PATH
@@ -84,8 +84,7 @@ class ValidationEvents:
         logger.info(f'Checkpoints summary has been created for {checkpoints_summary.shape[0]} models')   
     
     #--------------------------------------------------------------------------
-    def run_model_evaluation_pipeline(self, metrics, selected_checkpoint, device='CPU', 
-                                      progress_callback=None, worker=None):
+    def run_model_evaluation_pipeline(self, metrics, selected_checkpoint, progress_callback=None, worker=None):
         if selected_checkpoint is None:
             logger.warning('No checkpoint selected for resuming training')
             return
@@ -113,11 +112,7 @@ class ValidationEvents:
             summarizer = ModelEvaluationSummary(self.configuration)       
             summarizer.get_evaluation_report(model, validation_dataset, worker=worker) 
 
-        if 'image_reconstruction' in metrics:
-            validator = ImageReconstruction(train_config, model, checkpoint_path)      
-            images.append(validator.visualize_reconstructed_images(
-                validation_images, progress_callback, worker=worker))       
-
+        
         return images      
 
 
@@ -216,31 +211,35 @@ class ModelEvents:
             additional_epochs, progress_callback=progress_callback, worker=worker)
         
     #--------------------------------------------------------------------------
-    def run_inference_pipeline(self, selected_checkpoint, device='CPU', 
-                               progress_callback=None, worker=None):
-        logger.info(f'Loading {selected_checkpoint} checkpoint')
+    def run_inference_pipeline(self, selected_checkpoint, progress_callback=None, worker=None):
+        logger.info(f'Loading {selected_checkpoint} checkpoint') 
         modser = ModelSerializer()         
         model, train_config, session, checkpoint_path = modser.load_checkpoint(
             selected_checkpoint)    
-        model.summary(expand_nested=True)  
+        model.summary(expand_nested=True)   
 
-        # setting device for training         
-        trainer = ModelTraining(train_config)    
-        trainer.set_device(device_override=device)
+        # set device for training operations
+        logger.info('Setting device for training operations')                 
+        device = DeviceConfig(self.configuration) 
+        device.set_device()
 
-        # select images from the inference folder and retrieve current paths     
-        serializer = DataSerializer(self.configuration)     
-        images_paths = serializer.get_img_path_from_directory(INFERENCE_INPUT_PATH)
-        logger.info(f'{len(images_paths)} images have been found as inference input')  
+        # process dataset using model configurations
+        dataserializer = DataSerializer(self.configuration)
+        sample_size = train_config.get("train_sample_size", 1.0)
+        dataset = dataserializer.load_roulette_dataset() 
+        logger.info(f'Roulette series has been loaded ({len(dataset)} extractions)')        
+        # use the mapper to encode extractions based on position and color              
+        mapper = RouletteMapper(train_config)
+        logger.info('Encoding roulette extractions')     
+        dataset = mapper.encode_roulette_series(dataset) 
+       
+        logger.info('Start predicting most rewarding actions with the selected model')    
+        generator = RoulettePlayer(model, train_config)       
+        roulette_predictions = generator.play_past_roulette_games(
+            dataset, progress_callback=progress_callback, worker=worker)
+        
 
-        # check worker status to allow interruption
-        check_thread_status(worker)   
-             
-        # extract features from images using the encoder output, the image encoder
-        # takes the list of images path from inference as input    
-        encoder = ImageEncoding(model, train_config, checkpoint_path)  
-        logger.info(f'Start encoding images using model {selected_checkpoint}')  
-        encoder.encode_img_features(images_paths, progress_callback, worker=worker) 
-        logger.info('Encoded images have been saved as .npy')
-           
+        if CONFIG['inference']['ONLINE']:
+            real_time_game = generator.play_real_time_roulette()
+
 

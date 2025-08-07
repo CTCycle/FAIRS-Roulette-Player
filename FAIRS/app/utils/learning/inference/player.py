@@ -1,7 +1,8 @@
 import os
 import pandas as pd
 import numpy as np
-import keras
+from keras.utils import set_random_seed
+from keras import Model
 
 from FAIRS.app.utils.data.mapping import RouletteMapper
 from FAIRS.app.constants import CONFIG, INFERENCE_PATH
@@ -9,21 +10,11 @@ from FAIRS.app.logger import logger
 
 
 ###############################################################################
-def save_predictions_to_csv(predictions : np.array, model_name):
-
-    columns = ['extraction', 'position', 'color', 'expected_action', 'action_description']
-    predictions_path = os.path.join(PRED_PATH, f'{model_name}_predictions.csv')
-    predictions = pd.DataFrame(predictions, columns=columns)   
-    predictions.to_csv(predictions_path, index=False)
-
-
-
-###############################################################################
 class RoulettePlayer:
 
-    def __init__(self, model : keras.Model, configuration):        
+    def __init__(self, model : Model, configuration):        
 
-        keras.utils.set_random_seed(configuration["SEED"])  
+        set_random_seed(configuration["SEED"])  
         self.mapper = RouletteMapper()   
 
         self.model = model 
