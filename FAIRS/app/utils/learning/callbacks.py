@@ -197,14 +197,22 @@ class GameStatsCallback:
         plt.close(fig)
 
 
-# [CALLBACKS HANDLER]
-###############################################################################
-class CallbacksHandler:
+      
 
-    def __init__(self, configuration : dict):
+    
+###############################################################################        
+class CallbacksWrapper:
+
+    def __init__(self, configuration):
         self.configuration = configuration
-        
 
+    #--------------------------------------------------------------------------
+    def real_time_history(self, configuration, checkpoint_path, history):
+        RTH_callback = RealTimeHistory(checkpoint_path, configuration, past_logs=history)
+               
+        return RTH_callback
+    
+    #--------------------------------------------------------------------------
     def get_callbacks(self,  model : Model, checkpoint_path, session=None,
                       total_epochs=100, **kwargs):
         from_epoch = 0  
@@ -234,9 +242,32 @@ class CallbacksHandler:
                 filepath=checkpoint_filepath, save_weights_only=False,  
                 monitor='val_loss', save_best_only=False, mode='auto', verbose=0))
             
-        cb_list = callbacks.CallbackList(callbacks_list, add_history=False, model=model)
-        
+        cb_list = callbacks.CallbackList(callbacks_list, add_history=False, model=model) 
 
+    #--------------------------------------------------------------------------
+    def tensorboard_callback(self, checkpoint_path, model) -> callbacks.TensorBoard:        
+        logger.debug('Using tensorboard during training')
+        log_path = os.path.join(checkpoint_path, 'tensorboard')
+        tb_callback = callbacks.TensorBoard(log_dir=log_path, update_freq=20, 
+                                         histogram_freq=1) 
+
+        tb_callback.set_model(model)              
+        start_tensorboard_subprocess(log_path)        
+
+        return tb_callback 
+    
+    #--------------------------------------------------------------------------
+    def checkpoints_saving(self, checkpoint_path):
+        checkpoint_filepath = os.path.join(checkpoint_path, 'model_checkpoint.keras')
+        chkp_save = callbacks.ModelCheckpoint(filepath=checkpoint_filepath,
+                                                    save_weights_only=True,  
+                                                    monitor='loss',       
+                                                    save_best_only=True,      
+                                                    mode='auto',              
+                                                    verbose=1)
+
+        return chkp_save
+    
 
 ###############################################################################
 def start_tensorboard_subprocess(log_dir):    
