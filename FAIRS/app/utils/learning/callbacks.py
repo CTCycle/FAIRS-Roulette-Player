@@ -69,7 +69,7 @@ class RealTimeHistory:
             self.history['epochs'] = past_logs.get('epochs', len(values))                
                     
     #--------------------------------------------------------------------------
-    def on_epoch_end(self, epoch, logs=None):
+    def plot_loss_and_metrics(self, epoch, logs=None):
         if not logs:
             return
         
@@ -78,10 +78,10 @@ class RealTimeHistory:
                 self.history['history'][key] = []
             self.history['history'][key].append(value)
         self.history['epochs'] = epoch + 1
-        self.plot_training_history()
+        self.generate_plots()
 
     #--------------------------------------------------------------------------
-    def plot_training_history(self):
+    def generate_plots(self):
         fig_path = os.path.join(self.plot_path, 'training_history.jpeg')
         plt.figure(figsize=(16, 14)) 
         metrics = self.history['history']
@@ -108,6 +108,7 @@ class RealTimeHistory:
         plt.tight_layout()
         plt.savefig(fig_path, bbox_inches='tight', format='jpeg', dpi=300)
         plt.close()
+        
 
 ###############################################################################
 class GameStatsCallback:
@@ -116,7 +117,6 @@ class GameStatsCallback:
         self.plot_path = os.path.join(plot_path, 'game_statistics.jpeg')  
         self.plot_freq_steps = max(1, plot_freq_steps) 
         os.makedirs(plot_path, exist_ok=True)
-
         self.iterations = [] if iterations is None else iterations
         self.capitals = [] if capitals is None else capitals
         self.episode_end_indices = []
@@ -129,20 +129,15 @@ class GameStatsCallback:
         self.capitals = []
         self.episode_end_indices = []
         self.global_step = 0
-        self.episode_count = 0
-
-    #--------------------------------------------------------------------------
-    def on_train_begin(self, logs=None):
-        self.reset_state()
+        self.episode_count = 0   
        
     #--------------------------------------------------------------------------
-    def on_batch_end(self, batch, logs=None):
+    def log_step(self, batch, logs=None):
         if not logs:
             return
         
         current_capital = logs.get('current_capital', None)
         done = logs.get('done', False)
-
         # Only log if current_capital is present (can skip if not provided)
         if current_capital is not None:
             self.iterations.append(self.global_step)
@@ -155,25 +150,10 @@ class GameStatsCallback:
         self.global_step += 1
 
         if self.global_step > 0 and self.global_step % self.plot_freq_steps == 0:
-            self.plot_and_save(self.global_step)
-        
+            self.generate_plot(self.global_step)
 
     #--------------------------------------------------------------------------
-    def on_epoch_end(self, epoch, logs=None):
-        if not logs:
-            return
-        
-        self.plot_and_save(self.global_step)        
-
-    #--------------------------------------------------------------------------
-    def on_train_end(self, logs=None):
-        if not logs:
-            return
-        
-        self.plot_and_save(self.global_step)
-
-    #--------------------------------------------------------------------------
-    def plot_and_save(self, current_step):
+    def generate_plot(self, current_step):
         fig, ax = plt.subplots(figsize=(14, 10))
         ax.set_xlabel('Iterations (Time Steps)')
         ax.set_ylabel('Value')

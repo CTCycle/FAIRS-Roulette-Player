@@ -4,7 +4,7 @@ from keras.utils import set_random_seed
 from tqdm import tqdm
 
 from FAIRS.app.utils.data.serializer import ModelSerializer
-from FAIRS.app.utils.learning.callbacks import CallbacksHandler
+from FAIRS.app.utils.learning.callbacks import CallbacksWrapper
 from FAIRS.app.utils.learning.training.environment import RouletteEnvironment
 from FAIRS.app.utils.learning.training.agents import DQNAgent
 from FAIRS.app.interface.workers import check_thread_status, update_progress_callback
@@ -27,10 +27,9 @@ class DQNTraining:
         self.mixed_precision = configuration.get('mixed_precision', False) 
         self.configuration = configuration 
         
-        # initialize variables        
-        self.game_stats_frequency = 50
+        # initialize variables     
         self.serializer = ModelSerializer()
-        self.callbacks = CallbacksHandler(configuration)           
+        self.callbacks = CallbacksWrapper(configuration)           
         self.agent = DQNAgent(configuration) 
         self.session_stats = {'episode': [],
                               'time_step': [],
@@ -96,8 +95,6 @@ class DQNTraining:
                         logger.info(
                             f'Episode {episode+1}/{episodes} - Time steps: {time_step} - Capital: {environment.capital} - Total Reward: {total_reward}')                             
                
-                         
-
                 # Update target network periodically
                 if time_step % self.update_frequency == 0:
                     target_model.set_weights(model.get_weights())
