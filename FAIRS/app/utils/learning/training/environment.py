@@ -175,7 +175,7 @@ class RouletteEnvironment(gym.Env):
         self.perceptive_size = configuration.get('perceptive_field_size', 64)        
         self.initial_capital = configuration.get('initial_capital', 1000) 
         self.bet_amount = configuration.get('bet_amount', 10) 
-        self.max_steps = configuration.get('max_steps_episode', 1000) 
+        self.max_steps = configuration.get('max_steps_episode', 2000) 
         self.render_environment = configuration.get('render_environment', False)
         self.player = BetsAndRewards(configuration)  
 
@@ -234,7 +234,7 @@ class RouletteEnvironment(gym.Env):
     # Perform the action (0: Bet on Red, 1: Bet on Black, 2: Bet on Specific Number)
     #--------------------------------------------------------------------------
     def select_random_index(self):
-        end_cutoff = self.timeseries.shape[0] - self.perceptive_size
+        end_cutoff = len(self.extractions) - self.perceptive_size
         random_index = np.random.randint(0, end_cutoff)
 
         return random_index
@@ -249,14 +249,14 @@ class RouletteEnvironment(gym.Env):
     def step(self, action):  
         # reset the perceived field each time the end of the series is reached
         # then start again from a random index simulating a brand new roulette series      
-        if self.extraction_index >= self.timeseries.shape[0]:
+        if self.extraction_index >= len(self.extractions):
             self.state = self.reset()
         
-        next_extraction = np.int32(self.timeseries[self.extraction_index])        
+        next_extraction = np.int32(self.extractions[self.extraction_index])        
         self.state = np.delete(self.state, 0)
         self.state = np.append(self.state, next_extraction)
         self.extraction_index += 1
-
+        # update rewards based on environment feedback
         self.update_rewards(action, next_extraction)
         self.steps += 1
 

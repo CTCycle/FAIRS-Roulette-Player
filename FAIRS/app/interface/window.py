@@ -78,7 +78,7 @@ class MainWindow:
             # training settings group
             (QSpinBox,'trainSeed','train_seed'),          
             (QSpinBox,'numEpisodes','episodes'),
-            (QSpinBox,'maxStepsEp','max_steps'),
+            (QSpinBox,'maxStepsEp','max_steps_episode'),
             (QSpinBox,'batchSize','batch_size'),
             (QDoubleSpinBox,'learningRate','learning_rate'), 
             (QCheckBox,'mixedPrecision','use_mixed_precision'),
@@ -202,7 +202,7 @@ class MainWindow:
             # training settings group
             ('train_seed', 'valueChanged', 'train_seed'),
             ('episodes', 'valueChanged', 'episodes'),
-            ('max_steps', 'valueChanged', 'max_steps'),
+            ('max_steps_episode', 'valueChanged', 'max_steps_episode'),
             ('batch_size', 'valueChanged', 'batch_size'),
             ('learning_rate', 'valueChanged', 'learning_rate'),
             ('use_mixed_precision', 'toggled', 'use_mixed_precision'),

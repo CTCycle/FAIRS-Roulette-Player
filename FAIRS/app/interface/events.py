@@ -149,7 +149,8 @@ class ModelEvents:
     #--------------------------------------------------------------------------
     def run_training_pipeline(self, progress_callback=None, worker=None):  
         dataserializer = DataSerializer(self.configuration)
-        dataset = dataserializer.load_roulette_dataset() 
+        sample_size = self.configuration.get("train_sample_size", 1.0)
+        dataset = dataserializer.load_roulette_dataset(sample_size) 
         logger.info(f'Roulette series has been loaded ({len(dataset)} extractions)')        
         # use the mapper to encode extractions based on position and color              
         mapper = RouletteMapper(self.configuration)
@@ -176,8 +177,7 @@ class ModelEvents:
         logger.info('Building FAIRS reinforcement learning model')  
         learner = FAIRSnet(self.configuration)
         Q_model = learner.get_model(model_summary=True)
-        target_model = learner.get_model(model_summary=False)   
-        
+        target_model = learner.get_model(model_summary=False) 
         # generate graphviz plot fo the model layout         
         modser.save_model_plot(Q_model, checkpoint_path)          
 
@@ -187,13 +187,14 @@ class ModelEvents:
         trainer.train_model(
             Q_model, target_model, dataset, checkpoint_path,
             progress_callback=progress_callback, worker=worker)
-       
-
-        
         
     #--------------------------------------------------------------------------
     def resume_training_pipeline(self, selected_checkpoint, progress_callback=None, 
                                  worker=None):
+        if selected_checkpoint is None:
+            logger.warning('No checkpoint selected for resuming training')
+            return
+        
         logger.info(f'Loading {selected_checkpoint} checkpoint') 
         modser = ModelSerializer()         
         model, train_config, session, checkpoint_path = modser.load_checkpoint(
@@ -201,31 +202,30 @@ class ModelEvents:
         model.summary(expand_nested=True)  
         
         # set device for training operations
-        logger.info('Setting device for training operations')         
-        trainer = ModelTraining(self.configuration)           
-        trainer.set_device()
+        logger.info('Setting device for training operations')                 
+        device = DeviceConfig(self.configuration) 
+        device.set_device()
 
-        logger.info('Preparing dataset of images based on splitting sizes')  
+        # process dataset using model configurations
+        dataserializer = DataSerializer(self.configuration)
         sample_size = train_config.get("train_sample_size", 1.0)
-        serializer = DataSerializer(self.configuration)  
-        images_paths = serializer.get_img_path_from_directory(IMG_PATH, sample_size)
-        splitter = TrainValidationSplit(train_config) 
-        train_data, validation_data = splitter.split_train_and_validation(images_paths)     
-
-        # create the tf.datasets using the previously initialized generators 
-        logger.info('Building model data loaders with prefetching and parallel processing') 
-        builder = TrainingDataLoader(train_config)           
-        train_dataset, validation_dataset = builder.build_training_dataloader(
-            train_data, validation_data)  
+        dataset = dataserializer.load_roulette_dataset() 
+        logger.info(f'Roulette series has been loaded ({len(dataset)} extractions)')        
+        # use the mapper to encode extractions based on position and color              
+        mapper = RouletteMapper(train_config)
+        logger.info('Encoding roulette extractions')     
+        dataset = mapper.encode_roulette_series(dataset) 
 
         # check worker status to allow interruption
         check_thread_status(worker)         
                             
-        # resume training from pretrained model    
-        logger.info(f'Resuming training from checkpoint {selected_checkpoint}') 
+        # perform training and save model at the end       
+        trainer = DQNTraining(train_config)
+        logger.info('Start training with reinforcement learning model')
+        additional_epochs = self.configuration.get('additional_episodes', 10)
         trainer.resume_training(
-            model, train_dataset, validation_dataset, checkpoint_path, session,
-            progress_callback=progress_callback, worker=worker)
+            model, model, dataset, checkpoint_path, session,
+            additional_epochs, progress_callback=progress_callback, worker=worker)
         
     #--------------------------------------------------------------------------
     def run_inference_pipeline(self, selected_checkpoint, device='CPU', 

@@ -37,7 +37,7 @@ class Configuration:
             'train_seed': 42, 
             'train_sample_size': 1.0,
             'episodes': 100,
-            'max_steps_episode': 1000,
+            'max_steps_episode': 2000,
             'additional_episodes': 10,
             'batch_size': 32,
             'learning_rate': 0.0001,

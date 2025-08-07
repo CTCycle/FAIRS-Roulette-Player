@@ -53,10 +53,10 @@ class ModelSerializer:
         checkpoint_path = os.path.join(
             CHECKPOINT_PATH, f'{self.model_name}_{today_datetime}')         
         os.makedirs(checkpoint_path, exist_ok=True)        
-        os.makedirs(os.path.join(checkpoint_path, 'data'), exist_ok=True)
+        os.makedirs(os.path.join(checkpoint_path, 'configuration'), exist_ok=True)
         logger.debug(f'Created checkpoint folder at {checkpoint_path}')
         
-        return checkpoint_path    
+        return checkpoint_path  
 
     #------------------------------------------------------------------------
     def save_pretrained_model(self, model : Model, path : str):
@@ -65,20 +65,14 @@ class ModelSerializer:
         logger.info(f'Training session is over. Model {os.path.basename(path)} has been saved')
 
     #--------------------------------------------------------------------------
-    def save_training_configuration(self, path, history : dict, configuration : dict, metadata : dict):         
-        os.makedirs(os.path.join(path, 'configuration'), exist_ok=True)         
+    def save_training_configuration(self, path, history : dict, configuration : dict): 
         config_path = os.path.join(path, 'configuration', 'configuration.json')
-        metadata_path = os.path.join(path, 'configuration', 'metadata.json')     
         history_path = os.path.join(path, 'configuration', 'session_history.json')        
 
         # Save training and model configuration
         with open(config_path, 'w') as f:
             json.dump(configuration, f) 
-
-        # Save metadata
-        with open(metadata_path, 'w') as f:
-            json.dump(metadata, f)      
-
+       
         # Save session history
         with open(history_path, 'w') as f:
             json.dump(history, f)
@@ -88,27 +82,28 @@ class ModelSerializer:
     #--------------------------------------------------------------------------
     def load_training_configuration(self, path): 
         config_path = os.path.join(path, 'configuration', 'configuration.json')
-        metadata_path = os.path.join(path, 'configuration', 'metadata.json') 
         history_path = os.path.join(path, 'configuration', 'session_history.json') 
         
         with open(config_path, 'r') as f:
             configuration = json.load(f) 
-   
-        with open(metadata_path, 'r') as f:
-            metadata = json.load(f)        
 
         with open(history_path, 'r') as f:
             history = json.load(f)
 
-        return configuration, metadata, history  
+        return configuration, history  
 
     #-------------------------------------------------------------------------- 
     def scan_checkpoints_folder(self):
         model_folders = []
         for entry in os.scandir(CHECKPOINT_PATH):
             if entry.is_dir():
-                model_folders.append(entry.name)
-        
+                # Check if the folder contains at least one .keras file
+                has_keras = any(
+                    f.name.endswith('.keras') and f.is_file()
+                    for f in os.scandir(entry.path))
+                if has_keras:
+                    model_folders.append(entry.name)
+                    
         return model_folders 
 
     #--------------------------------------------------------------------------
@@ -121,38 +116,15 @@ class ModelSerializer:
             
     #--------------------------------------------------------------------------
     def load_checkpoint(self, checkpoint : str):
-        checkpoint_path = os.path.join(CHECKPOINT_PATH, checkpoint)
-        model_path = os.path.join(checkpoint_path, 'saved_model.keras') 
-        model = load_model(model_path) 
-        
-        return model
-            
-    #-------------------------------------------------------------------------- 
-    def select_and_load_checkpoint(self):
-        # look into checkpoint folder to get pretrained model names      
-        model_folders = self.scan_checkpoints_folder()
-        # quit the script if no pretrained models are found 
-        if len(model_folders) == 0:
-            logger.error('No pretrained model checkpoints in resources')
-            sys.exit()
-
-        # select model if multiple checkpoints are available
-        if len(model_folders) > 1:
-            selection_index = checkpoint_selection_menu(model_folders)                    
-            checkpoint_path = os.path.join(
-                CHECKPOINT_PATH, model_folders[selection_index-1])
-
-        # load directly the pretrained model if only one is available 
-        elif len(model_folders) == 1:
-            checkpoint_path = os.path.join(CHECKPOINT_PATH, model_folders[0])
-            logger.info(f'Since only checkpoint {os.path.basename(checkpoint_path)} is available, it will be loaded directly')
-                          
         # effectively load the model using keras builtin method
         # load configuration data from .json file in checkpoint folder
-        model = self.load_checkpoint(checkpoint_path)       
-        configuration, metadata, history = self.load_training_configuration(checkpoint_path)           
+        checkpoint_path = os.path.join(CHECKPOINT_PATH, checkpoint) 
+        model_path = os.path.join(checkpoint_path, 'saved_model.keras') 
+        model = load_model(model_path)       
+        configuration, session = self.load_training_configuration(checkpoint_path)        
             
-        return model, configuration, metadata, checkpoint_path
-
+        return model, configuration, session, checkpoint_path
+            
+    
              
     
