@@ -54,6 +54,7 @@ class MainWindow:
         self.widgets = {}
         self._setup_configuration([ 
             # actions
+            (QAction, 'actionReloadApp', 'reload_app_action'),
             (QAction, 'actionLoadConfig', 'load_configuration_action'),
             (QAction, 'actionSaveConfig', 'save_configuration_action'),
             # out of tab widgets            
@@ -88,8 +89,7 @@ class MainWindow:
             (QSpinBox,'replayBuffer','replay_buffer_size'),
             (QCheckBox,'runTensorboard','use_tensorboard'),
             (QCheckBox,'realTimeHistory','real_time_history_callback'),
-            (QCheckBox,'saveCheckpoints','save_checkpoints'), 
-                        
+            (QCheckBox,'saveCheckpoints','save_checkpoints'),                        
             # agent settings group
             (QSpinBox,'numNeurons','QNet_neurons'),     
             (QSpinBox,'perceptiveField','perceptive_field_size'),           
@@ -115,7 +115,7 @@ class MainWindow:
             (QComboBox,'checkpointsList','checkpoints_list'),
             (QSpinBox,'inferenceBatchSize','inference_batch_size'),
             (QCheckBox,'realTimeInference','real_time_inference'), 
-            (QPushButton,'playRoulette','play_roulette'),     
+            (QPushButton,'playRoulette','start_roulette_game'),     
             (QSpinBox,'evalSamples','num_evaluation_samples'), 
             (QCheckBox,'evalReport','get_evaluation_report'),
             (QCheckBox,'classAccuracy','classification_accuracy'), 
@@ -127,10 +127,12 @@ class MainWindow:
             (QPushButton,'clearImg','clear_images'),            
             ])
         
-        self._connect_signals([  
-            ('checkpoints_list','currentTextChanged',self.select_checkpoint), 
-            ('refresh_checkpoints','clicked',self.load_checkpoints),
-            ('stop_thread','clicked',self.stop_running_worker),          
+        self._connect_signals([ 
+            # actions
+            ('save_configuration_action', 'triggered', self.save_configuration),   
+            ('load_configuration_action', 'triggered', self.load_configuration), 
+            # out of tab widgets    
+            ('stop_thread','clicked',self.stop_running_worker),
             # 1. dataset tab page     
             ('load_dataset','clicked',self.update_database_from_source),             
             ('roulette_transitions_metric','toggled',self._update_metrics),
@@ -138,12 +140,13 @@ class MainWindow:
             # 2. training tab page               
             ('start_training','clicked',self.train_from_scratch),
             ('resume_training','clicked',self.resume_training_from_checkpoint),
-            # 3. model evaluation tab page            
+            # 3. model evaluation tab and inference page  
+            ('checkpoints_list','currentTextChanged',self.select_checkpoint), 
+            ('refresh_checkpoints','clicked',self.load_checkpoints),          
             ('get_evaluation_report','toggled',self._update_metrics), 
             ('model_evaluation','clicked', self.run_model_evaluation_pipeline),
             ('checkpoints_summary','clicked',self.get_checkpoints_summary),
-            # 4. inference tab page  
-            ('play_roulette','clicked',self.encode_img_with_checkpoint),            
+            ('start_roulette_game','clicked',self.play_roulette),            
             # 4. viewer tab page 
             ('previous_image', 'clicked', self.show_previous_figure),
             ('next_image', 'clicked', self.show_next_figure),
@@ -608,7 +611,7 @@ class MainWindow:
     # [INFERENCE TAB]
     #--------------------------------------------------------------------------   
     @Slot()    
-    def encode_img_with_checkpoint(self):  
+    def play_roulette(self):  
         if self.worker:            
             message = "A task is currently running, wait for it to finish and then try again"
             QMessageBox.warning(self.main_win, "Application is still busy", message)
@@ -621,12 +624,12 @@ class MainWindow:
         self._send_message(f"Encoding images with {self.selected_checkpoint}") 
         
         # functions that are passed to the worker will be executed in a separate thread
-        self.worker = ThreadWorker(
+        self.worker = ProcessWorker(
             self.model_handler.run_inference_pipeline,
             self.selected_checkpoint)
 
         # start worker and inject signals
-        self._start_thread_worker(
+        self._start_process_worker(
             self.worker, on_finished=self.on_inference_finished,
             on_error=self.on_error,
             on_interrupted=self.on_task_interrupted)

@@ -3,7 +3,7 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg
 from PySide6.QtGui import QImage, QPixmap
 
 from FAIRS.app.utils.data.serializer import DataSerializer, ModelSerializer
-from FAIRS.app.utils.validation.timeseries import RouletteSeriesValidation
+from FAIRS.app.utils.validation.dataset import RouletteSeriesValidation
 from FAIRS.app.utils.validation.checkpoints import ModelEvaluationSummary
 from FAIRS.app.utils.data.process import RouletteSeriesEncoder
 from FAIRS.app.utils.learning.device import DeviceConfig
@@ -78,9 +78,11 @@ class ValidationEvents:
         return images 
 
     #--------------------------------------------------------------------------
-    def get_checkpoints_summary(self, progress_callback=None, worker=None): 
+    def get_checkpoints_summary(self, progress_callback=None, worker=None):
         summarizer = ModelEvaluationSummary(self.configuration)    
-        checkpoints_summary = summarizer.get_checkpoints_summary(progress_callback, worker) 
+        checkpoints_summary = summarizer.get_checkpoints_summary(
+            progress_callback=progress_callback, worker=worker)  
+ 
         logger.info(f'Checkpoints summary has been created for {checkpoints_summary.shape[0]} models')   
     
     #--------------------------------------------------------------------------
@@ -98,9 +100,8 @@ class ValidationEvents:
          # set device for training operations
         logger.info('Setting device for training operations')                
         device = DeviceConfig(self.configuration)
-        device.set_device()  
-        
-        
+        device.set_device() 
+
         serializer = DataSerializer(self.configuration)  
         
         # check worker status to allow interruption
