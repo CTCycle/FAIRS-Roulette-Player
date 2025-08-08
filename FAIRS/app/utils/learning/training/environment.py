@@ -1,11 +1,8 @@
-import matplotlib
-matplotlib.use('TkAgg') 
-import matplotlib.pyplot as plt
-
 import pandas as pd
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
+import matplotlib.pyplot as plt
 
 from FAIRS.app.utils.data.process import RouletteSeriesEncoder
 from FAIRS.app.constants import STATES, NUMBERS, PAD_VALUE

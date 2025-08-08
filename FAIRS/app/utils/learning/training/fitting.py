@@ -60,7 +60,8 @@ class DQNTraining:
         # the dashboard is set on the Q model and tensorboard is launched automatically
         tensorboard = None
         if self.configuration.get('use_tensorboard', False):
-            tensorboard = self.callbacks.get_tensorboard_callback(checkpoint_path, model)  
+            tensorboard = self.callbacks.get_tensorboard_callback(checkpoint_path, model)
+            tensorboard.on_train_begin()  
 
         RTH_callback, GS_callback = None, None
         if self.configuration.get('plot_training_metrics', True):  
@@ -132,6 +133,9 @@ class DQNTraining:
             check_thread_status(kwargs.get('worker', None))
             update_progress_callback(
                 i+1, episodes, kwargs.get('progress_callback', None))
+            
+        if tensorboard:
+            tensorboard.on_train_end()
                      
         return self.agent 
  

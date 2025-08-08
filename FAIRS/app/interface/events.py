@@ -150,7 +150,7 @@ class ModelEvents:
         logger.info('Setting device for training operations') 
         device = DeviceConfig(self.configuration)   
         device.set_device() 
-
+        
         # create checkpoint folder
         modser = ModelSerializer()
         checkpoint_path = modser.create_checkpoint_folder()
