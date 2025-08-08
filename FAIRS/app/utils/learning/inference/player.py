@@ -4,8 +4,8 @@ import numpy as np
 from keras.utils import set_random_seed
 from keras import Model
 
-from FAIRS.app.utils.data.mapping import RouletteMapper
-from FAIRS.app.constants import CONFIG, INFERENCE_PATH
+from FAIRS.app.utils.data.process import RouletteSeriesEncoder
+from FAIRS.app.constants import INFERENCE_PATH
 from FAIRS.app.logger import logger
 
 
@@ -15,7 +15,7 @@ class RoulettePlayer:
     def __init__(self, model : Model, configuration):        
 
         set_random_seed(configuration["SEED"])  
-        self.mapper = RouletteMapper()   
+        self.mapper = RouletteSeriesEncoder()   
 
         self.model = model 
         self.configuration = configuration        

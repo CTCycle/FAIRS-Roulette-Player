@@ -2,7 +2,7 @@ import torch
 import keras
 from keras import layers 
 
-from FAIRS.app.constants import CONFIG, PAD_VALUE
+from FAIRS.app.constants import PAD_VALUE
 from FAIRS.app.logger import logger
       
 

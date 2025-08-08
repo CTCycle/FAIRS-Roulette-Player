@@ -1,5 +1,3 @@
-from FAIRS.app.utils.data.serializer import DataSerializer
-from FAIRS.app.constants import CONFIG
 from FAIRS.app.logger import logger
 
 

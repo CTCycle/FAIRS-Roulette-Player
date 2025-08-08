@@ -1,13 +1,12 @@
 import numpy as np
 import pandas as pd
 
-from FAIRS.app.constants import CONFIG
 from FAIRS.app.logger import logger
 
 
 # [PREPROCESSING]
 ###############################################################################
-class RouletteMapper:
+class RouletteSeriesEncoder:
 
     def __init__(self, configuration : dict):
         self.configuration = configuration

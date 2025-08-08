@@ -2,7 +2,6 @@ import torch
 import keras
 import tensorflow as tf
 
-from FAIRS.app.constants import CONFIG
 from FAIRS.app.logger import logger
 
 # [LOSS FUNCTION]

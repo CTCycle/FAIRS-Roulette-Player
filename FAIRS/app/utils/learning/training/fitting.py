@@ -97,7 +97,7 @@ class DQNTraining:
                     scores = self.agent.replay(
                         model, target_model, environment, self.batch_size)                   
                     self.update_session_stats(
-                        scores, episode, time_step, reward, total_reward)
+                        scores, episode, time_step, reward, total_reward, environment.capital)
                     if time_step % 10 == 0:
                         logger.info(
                             f'Loss: {scores["loss"]} | RMSE: {scores["root_mean_squared_error"]}') 

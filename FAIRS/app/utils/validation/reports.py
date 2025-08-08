@@ -1,6 +1,5 @@
 import keras
 
-from FAIRS.app.constants import CONFIG
 from FAIRS.app.logger import logger
 
 

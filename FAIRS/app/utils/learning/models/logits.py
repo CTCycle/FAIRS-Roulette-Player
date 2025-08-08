@@ -2,7 +2,6 @@ import keras
 from keras import layers, activations
 import torch
 
-from FAIRS.app.constants import CONFIG
 from FAIRS.app.logger import logger
 
     

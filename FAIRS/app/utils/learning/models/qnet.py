@@ -6,7 +6,7 @@ from keras.saving import register_keras_serializable
 
 from FAIRS.app.utils.learning.models.embeddings import RouletteEmbedding
 from FAIRS.app.utils.learning.models.logits import BatchNormDense, InverseFrequency, QScoreNet, AddNorm
-from FAIRS.app.constants import CONFIG, STATES, NUMBERS
+from FAIRS.app.constants import STATES, NUMBERS
 from FAIRS.app.logger import logger
 
 

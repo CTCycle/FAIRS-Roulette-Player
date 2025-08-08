@@ -134,9 +134,7 @@ class GameStatsCallback:
         if not logs.get('episode', []):
             return
         
-        # TO DO: continuare implementazione callback
         current_capital = logs.get('capital', None)
-        done = logs.get('done', False)
         # Only log if current_capital is present (can skip if not provided)
         if current_capital is not None:
             self.iterations.append(self.global_step)

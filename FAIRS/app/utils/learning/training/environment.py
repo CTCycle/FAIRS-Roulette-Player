@@ -7,8 +7,8 @@ import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
 
-from FAIRS.app.utils.data.mapping import RouletteMapper
-from FAIRS.app.constants import CONFIG, STATES, NUMBERS, PAD_VALUE
+from FAIRS.app.utils.data.process import RouletteSeriesEncoder
+from FAIRS.app.constants import STATES, NUMBERS, PAD_VALUE
 from FAIRS.app.logger import logger
 
 
@@ -20,7 +20,7 @@ class BetsAndRewards:
     def __init__(self, configuration : dict):
         self.seed = configuration.get('train_seed', 42)         
         self.bet_amount = configuration.get('bet_amount', 10)
-        mapper = RouletteMapper(configuration)   
+        mapper = RouletteSeriesEncoder(configuration)   
         self.numbers = list(range(NUMBERS)) 
         self.red_numbers = mapper.color_map['red']
         self.black_numbers = mapper.color_map['black'] 

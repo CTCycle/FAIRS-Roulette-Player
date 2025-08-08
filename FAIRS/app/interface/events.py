@@ -5,7 +5,7 @@ from PySide6.QtGui import QImage, QPixmap
 from FAIRS.app.utils.data.serializer import DataSerializer, ModelSerializer
 from FAIRS.app.utils.validation.timeseries import RouletteSeriesValidation
 from FAIRS.app.utils.validation.checkpoints import ModelEvaluationSummary
-from FAIRS.app.utils.data.mapping import RouletteMapper
+from FAIRS.app.utils.data.process import RouletteSeriesEncoder
 from FAIRS.app.utils.learning.device import DeviceConfig
 from FAIRS.app.utils.learning.models.qnet import FAIRSnet
 from FAIRS.app.utils.learning.training.fitting import DQNTraining
@@ -136,7 +136,7 @@ class ModelEvents:
         dataset = dataserializer.load_roulette_dataset(sample_size) 
         logger.info(f'Roulette series has been loaded ({len(dataset)} extractions)')        
         # use the mapper to encode extractions based on position and color              
-        mapper = RouletteMapper(self.configuration)
+        mapper = RouletteSeriesEncoder(self.configuration)
         logger.info('Encoding roulette extractions')     
         dataset = mapper.encode_roulette_series(dataset) 
         # save update data into database    
@@ -195,7 +195,7 @@ class ModelEvents:
         dataset = dataserializer.load_roulette_dataset() 
         logger.info(f'Roulette series has been loaded ({len(dataset)} extractions)')        
         # use the mapper to encode extractions based on position and color              
-        mapper = RouletteMapper(train_config)
+        mapper = RouletteSeriesEncoder(train_config)
         logger.info('Encoding roulette extractions')     
         dataset = mapper.encode_roulette_series(dataset) 
 
@@ -229,7 +229,7 @@ class ModelEvents:
         dataset = dataserializer.load_roulette_dataset() 
         logger.info(f'Roulette series has been loaded ({len(dataset)} extractions)')        
         # use the mapper to encode extractions based on position and color              
-        mapper = RouletteMapper(train_config)
+        mapper = RouletteSeriesEncoder(train_config)
         logger.info('Encoding roulette extractions')     
         dataset = mapper.encode_roulette_series(dataset) 
        

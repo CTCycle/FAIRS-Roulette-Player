@@ -1,7 +1,6 @@
 import os
-import sys
 import json
-import numpy as np
+
 import pandas as pd
 from keras import Model
 from keras.utils import plot_model
@@ -9,7 +8,7 @@ from keras.models import load_model
 from datetime import datetime
 
 from FAIRS.app.utils.data.database import FAIRSDatabase
-from FAIRS.app.constants import CONFIG, DATA_PATH, METADATA_PATH, CHECKPOINT_PATH
+from FAIRS.app.constants import CHECKPOINT_PATH
 from FAIRS.app.logger import logger
 
 
