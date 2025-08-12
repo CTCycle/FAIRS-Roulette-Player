@@ -1,3 +1,5 @@
+import traceback
+
 import cv2
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from PySide6.QtGui import QImage, QPixmap
@@ -97,13 +99,20 @@ class ValidationEvents:
             selected_checkpoint)    
         model.summary(expand_nested=True)  
 
-         # set device for training operations
-        logger.info('Setting device for training operations')                
-        device = DeviceConfig(self.configuration)
-        device.set_device() 
+        # setting device for training         
+        device = DeviceConfig(self.configuration) 
+        device.set_device()
 
-        serializer = DataSerializer(self.configuration)  
-        
+        # select images from the inference folder and retrieve current paths     
+        serializer = DataSerializer(train_config)
+        sample_size = self.configuration.get("sample_size", 1.0)
+        dataset = serializer.load_roulette_dataset(sample_size) 
+        logger.info(f'Roulette series has been loaded ({len(dataset)} extractions)')        
+        # use the mapper to encode extractions based on position and color              
+        mapper = RouletteSeriesEncoder(self.configuration)
+        logger.info('Encoding roulette extractions')     
+        dataset = mapper.encode_roulette_series(dataset) 
+               
         # check worker status to allow interruption
         check_thread_status(worker)             
 
@@ -111,7 +120,7 @@ class ValidationEvents:
         if 'evaluation_report' in metrics:
             # evaluate model performance over the training and validation dataset 
             summarizer = ModelEvaluationSummary(self.configuration)       
-            summarizer.get_evaluation_report(model, validation_dataset, worker=worker) 
+            summarizer.get_evaluation_report(model, dataset, worker=worker) 
 
         
         return images      
@@ -210,37 +219,67 @@ class ModelEvents:
         trainer.resume_training(
             model, model, dataset, checkpoint_path, session,
             additional_epochs, progress_callback=progress_callback, worker=worker)
-        
+
     #--------------------------------------------------------------------------
-    def run_inference_pipeline(self, selected_checkpoint, progress_callback=None, worker=None):
-        logger.info(f'Loading {selected_checkpoint} checkpoint') 
-        modser = ModelSerializer()         
-        model, train_config, session, checkpoint_path = modser.load_checkpoint(
-            selected_checkpoint)    
-        model.summary(expand_nested=True)   
+    # this is implemented as static method as it is run by a model window. 
+    # the inference pipeline is run by a process worker that sends signals to the dialog box
+    #--------------------------------------------------------------------------
+    @staticmethod
+    def run_inference_pipeline(configuration: dict, checkpoint_name: str, cmd_q, out_q):
+        """
+        Child-process loop for real-time inference through external dialog window:
+            - build the model and RoulettePlayer locally
+            - react to dict commands from cmd_q
+            - emit dict events on out_q
+        Events:
+            {"kind":"prediction", "action": int, "description": str}
+            {"kind":"updated", "value": int}
+            {"kind":"error", "detail": str}
+            {"kind":"closed"}
+        """
+        try:
+            logger.info(f'Loading {checkpoint_name} checkpoint') 
+            modser = ModelSerializer()         
+            model, train_config, session, checkpoint_path = modser.load_checkpoint(
+                checkpoint_name)    
+            model.summary(expand_nested=True)   
 
-        # set device for training operations
-        logger.info('Setting device for training operations')                 
-        device = DeviceConfig(self.configuration) 
-        device.set_device()
+            # set device for training operations
+            logger.info('Setting device for training operations')                 
+            device = DeviceConfig(configuration) 
+            device.set_device()
+            player = RoulettePlayer(model, train_config)
 
-        # process dataset using model configurations
-        dataserializer = DataSerializer(self.configuration)
-        sample_size = train_config.get("train_sample_size", 1.0)
-        dataset = dataserializer.load_roulette_dataset() 
-        logger.info(f'Roulette series has been loaded ({len(dataset)} extractions)')        
-        # use the mapper to encode extractions based on position and color              
-        mapper = RouletteSeriesEncoder(train_config)
-        logger.info('Encoding roulette extractions')     
-        dataset = mapper.encode_roulette_series(dataset) 
-       
-        logger.info('Start predicting most rewarding actions with the selected model')    
-        generator = RoulettePlayer(model, train_config)       
-        roulette_predictions = generator.play_past_roulette_games(
-            dataset, progress_callback=progress_callback, worker=worker)
-        
+            running = True
+            logger.info('Starting real-time inference session')
+            while running:
+                cmd = cmd_q.get()  # blocking on purpose; process is dedicated
+                if not isinstance(cmd, dict) or "kind" not in cmd:
+                    out_q.put({"kind": "error", "detail": f"Bad command: {cmd!r}"})
+                    continue
 
-        if CONFIG['inference']['ONLINE']:
-            real_time_game = generator.play_real_time_roulette()
-
-
+                kind = cmd["kind"]
+                if kind == "next":
+                    try:
+                        res = player.predict_next()
+                        out_q.put({"kind": "prediction", **res})
+                    except Exception as e:
+                        out_q.put({"kind": "error", "detail": f"predict failed: {e!r}"})
+                elif kind == "update":
+                    try:
+                        value = cmd.get("value", None)
+                        player.apply_true(int(value))
+                        out_q.put({"kind": "updated", "value": int(value)})
+                    except Exception as e:
+                        out_q.put({"kind": "error", "detail": f"update failed: {e!r}"})
+                elif kind == "shutdown":
+                    running = False
+                else:
+                    out_q.put({"kind": "error", "detail": f"unknown command: {kind}"})
+        except Exception as e:
+            out_q.put({"kind": "error", "detail": f"fatal: {e!r}\n{traceback.format_exc()}"})
+        finally:
+            try:
+                out_q.put({"kind": "closed"})
+            except Exception:
+                pass

@@ -19,7 +19,7 @@ if __name__ == "__main__":
 
     # setup stylesheet
     extra = {'density_scale': '-1'}
-    apply_stylesheet(app, theme='dark_teal.xml', extra=extra)
+    apply_stylesheet(app, theme='dark_yellow.xml', extra=extra)
 
     main_window = MainWindow(UI_PATH)   
     main_window.show()

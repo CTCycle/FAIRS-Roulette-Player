@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (QPushButton, QRadioButton, QCheckBox, QDoubleSpin
 
 from FAIRS.app.utils.data.database import FAIRSDatabase
 from FAIRS.app.configuration import Configuration
-from FAIRS.app.interface.dialogs import SaveConfigDialog, LoadConfigDialog
+from FAIRS.app.interface.dialogs import SaveConfigDialog, LoadConfigDialog, RouletteDialog
 from FAIRS.app.interface.events import GraphicsHandler, ValidationEvents, ModelEvents
 from FAIRS.app.interface.workers import ThreadWorker, ProcessWorker
 from FAIRS.app.logger import logger
@@ -113,8 +113,7 @@ class MainWindow:
             # model inference and evaluation
             (QPushButton,'refreshCheckpoints','refresh_checkpoints'),
             (QComboBox,'checkpointsList','checkpoints_list'),
-            (QSpinBox,'inferenceBatchSize','inference_batch_size'),
-            (QCheckBox,'realTimeInference','real_time_inference'), 
+            (QSpinBox,'inferenceBatchSize','inference_batch_size'),            
             (QPushButton,'playRoulette','start_roulette_game'),     
             (QSpinBox,'evalSamples','num_evaluation_samples'), 
             (QCheckBox,'evalReport','get_evaluation_report'),
@@ -232,8 +231,7 @@ class MainWindow:
             ('bet_amount', 'valueChanged', 'bet_amount'),
             # session settings group
             ('additional_episodes', 'valueChanged', 'additional_episodes'),
-            # model inference and evaluation          
-            ('real_time_inference', 'toggled', 'real_time_inference'),         
+            # model inference and evaluation        
             ('inference_batch_size', 'valueChanged', 'inference_batch_size'),
             ('num_evaluation_samples', 'valueChanged', 'num_evaluation_samples'),                                 
             ]  
@@ -609,31 +607,20 @@ class MainWindow:
 
     #--------------------------------------------------------------------------
     # [INFERENCE TAB]
-    #--------------------------------------------------------------------------   
-    @Slot()    
-    def play_roulette(self):  
-        if self.worker:            
-            message = "A task is currently running, wait for it to finish and then try again"
-            QMessageBox.warning(self.main_win, "Application is still busy", message)
-            return 
-        
-        self.configuration = self.config_manager.get_configuration() 
-        self.model_handler = ModelEvents(self.configuration)  
-        
-        # send message to status bar
-        self._send_message(f"Encoding images with {self.selected_checkpoint}") 
-        
-        # functions that are passed to the worker will be executed in a separate thread
-        self.worker = ProcessWorker(
-            self.model_handler.run_inference_pipeline,
-            self.selected_checkpoint)
+    #--------------------------------------------------------------------------  
+    @Slot()
+    def play_roulette(self):
+        if self.worker:
+            QMessageBox.warning(self.main_win, "Application is still busy",
+                                "A task is currently running, wait for it to finish and then try again")
+            return
 
-        # start worker and inject signals
-        self._start_process_worker(
-            self.worker, on_finished=self.on_inference_finished,
-            on_error=self.on_error,
-            on_interrupted=self.on_task_interrupted)
+        cfg = self.config_manager.get_configuration()        
+        dlg = RouletteDialog(self.main_win, cfg, self.selected_checkpoint)
+        dlg.exec()            
+        return
 
+        
 
     ###########################################################################
     # [POSITIVE OUTCOME HANDLERS]

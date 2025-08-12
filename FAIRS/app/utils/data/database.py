@@ -72,6 +72,7 @@ class FAIRSDatabase:
     def __init__(self):             
         self.db_path = os.path.join(DATA_PATH, 'FAIRS_database.db')
         self.source_path = os.path.join(SOURCE_PATH, 'FAIRS_dataset.csv')
+        self.inference_path = os.path.join(INFERENCE_PATH, 'predicted_games.csv')
         self.engine = create_engine(f'sqlite:///{self.db_path}', echo=False, future=True)
         self.Session = sessionmaker(bind=self.engine, future=True)
         self.insert_batch_size = 2000
@@ -82,10 +83,12 @@ class FAIRSDatabase:
 
     #--------------------------------------------------------------------------       
     def update_database_from_source(self): 
-        dataset = pd.read_csv(self.source_path, sep=';', encoding='utf-8')                 
-        self.save_roulette_data(dataset)
+        roulette_dataset = pd.read_csv(self.source_path, sep=';', encoding='utf-8')
+        roulette_predictions = pd.read_csv(self.inference_path, sep=';', encoding='utf-8')                 
+        self.save_roulette_data(roulette_dataset)
+        self.save_predicted_games(roulette_predictions)
 
-        return dataset
+        return roulette_dataset, roulette_predictions
     
     #--------------------------------------------------------------------------
     def upsert_dataframe(self, df: pd.DataFrame, table_cls):
@@ -122,7 +125,14 @@ class FAIRSDatabase:
         with self.engine.connect() as conn:
             data = pd.read_sql_table('ROULETTE_SERIES', conn)
             
-        return data   
+        return data  
+
+    #--------------------------------------------------------------------------
+    def load_predicted_games(self):
+        with self.engine.connect() as conn:
+            data = pd.read_sql_table('PREDICTED_GAMES', conn)
+            
+        return data 
     
     #--------------------------------------------------------------------------
     def save_roulette_data(self, data : pd.DataFrame):
