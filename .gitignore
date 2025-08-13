@@ -1,9 +1,16 @@
-__pycache__
 FAIRS/resources/checkpoints/*
+FAIRS/resources/database/dataset/*
+FAIRS/resources/database/metadata/*
+FAIRS/resources/database/validation/*
+FAIRS/resources/database/inference/*
 
-setup/environment/*
-setup/miniconda/*
+setup/python/*
+setup/git/*
+setup/.env
 
+__pycache__
+*.vscode
 *.egg-info
+*.db
 *.log
 !.gitkeep
