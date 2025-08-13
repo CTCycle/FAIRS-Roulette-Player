@@ -1,6 +1,6 @@
 import requests, zipfile, io, os, shutil
 
-GITHUB_ZIP_URL = "https://github.com/USER/REPO/archive/refs/heads/main.zip"
+GITHUB_ZIP_URL = "https://github.com/CTCycle/FAIRS-roulette-agent/archive/refs/heads/main.zip"
 ROOT_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 print("[INFO] Downloading latest version...")
