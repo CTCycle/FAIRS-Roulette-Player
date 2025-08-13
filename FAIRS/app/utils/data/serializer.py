@@ -32,14 +32,17 @@ class DataSerializer:
     
     #--------------------------------------------------------------------------
     def load_inference_dataset(self):        
-        dataset = self.database.load_roulette_dataset()
-        
+        dataset = self.database.load_roulette_dataset()        
         return dataset
     
     #--------------------------------------------------------------------------
     def save_roulette_dataset(self, dataset : pd.DataFrame):        
-        dataset = self.database.save_roulette_data(dataset)
-        
+        dataset = self.database.save_roulette_dataset(dataset)        
+        return dataset
+    
+    #--------------------------------------------------------------------------
+    def save_predicted_games(self, dataset : pd.DataFrame):        
+        dataset = self.database.save_predicted_games(dataset)        
         return dataset
     
     #--------------------------------------------------------------------------

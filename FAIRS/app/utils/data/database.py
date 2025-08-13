@@ -29,12 +29,11 @@ class RouletteSeries(Base):
 class PredictedGames(Base):
     __tablename__ = 'PREDICTED_GAMES'
     id = Column(Integer, primary_key=True)
-    checkpoint = Column(String, primary_key=True)
+    checkpoint = Column(String)
     extraction = Column(Integer)
-    color = Column(String)
-    action = Column(String)     
+    predicted_action = Column(String)     
     __table_args__ = (
-        UniqueConstraint('id', 'checkpoint'),
+        UniqueConstraint('id'),
     )
    
 
@@ -85,7 +84,7 @@ class FAIRSDatabase:
     def update_database_from_source(self): 
         roulette_dataset = pd.read_csv(self.source_path, sep=';', encoding='utf-8')
         roulette_predictions = pd.read_csv(self.inference_path, sep=';', encoding='utf-8')                 
-        self.save_roulette_data(roulette_dataset)
+        self.save_roulette_dataset(roulette_dataset)
         self.save_predicted_games(roulette_predictions)
 
         return roulette_dataset, roulette_predictions
@@ -135,7 +134,7 @@ class FAIRSDatabase:
         return data 
     
     #--------------------------------------------------------------------------
-    def save_roulette_data(self, data : pd.DataFrame):
+    def save_roulette_dataset(self, data : pd.DataFrame):
         with self.engine.begin() as conn:
             conn.execute(sqlalchemy.text(f"DELETE FROM ROULETTE_SERIES"))        
         data.to_sql("ROULETTE_SERIES", self.engine, if_exists='append', index=False) 

@@ -38,8 +38,7 @@ class ModelEvaluationSummary:
         for i, model_path in enumerate(model_paths):
             configuration, history = modser.load_training_configuration(model_path)
             model_name = os.path.basename(model_path)                   
-            precision = 16 if configuration.get("use_mixed_precision", np.nan) else 32 
-            
+            precision = 16 if configuration.get("use_mixed_precision", np.nan) else 32             
             scores = history.get('history', {})
             chkp_config = {
                     'checkpoint': model_name,
@@ -59,11 +58,10 @@ class ModelEvaluationSummary:
                     'exploration_rate_decay': configuration.get('exploration_rate_decay', np.nan),    
                     'discount_rate': configuration.get('discount_rate', np.nan),              
                     'perceptive_field_size': configuration.get('perceptive_field_size', np.nan), 
-                    'model_update_frequency': configuration.get('model_uptade_frequency', np.nan),   
+                    'model_update_frequency': configuration.get('model_update_frequency', np.nan),   
                     'loss': scores.get('loss', [np.nan])[-1],                     
                     'accuracy': scores.get('cosine_similarity', [np.nan])[-1], 
-                    }
-                    
+                    }                    
             
             model_parameters.append(chkp_config)
 

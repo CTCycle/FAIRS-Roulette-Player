@@ -738,7 +738,55 @@
               <property name="title">
                <string>Model inference</string>
               </property>
-              <layout class="QVBoxLayout" name="verticalLayout_15">
+              <layout class="QVBoxLayout" name="verticalLayout_9">
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_36">
+                 <item>
+                  <widget class="QLabel" name="ICILabel">
+                   <property name="text">
+                    <string>Initial capital</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QSpinBox" name="initInferenceCap">
+                   <property name="minimum">
+                    <number>1</number>
+                   </property>
+                   <property name="maximum">
+                    <number>1000000000</number>
+                   </property>
+                   <property name="value">
+                    <number>100</number>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_37">
+                 <item>
+                  <widget class="QLabel" name="PBLabel">
+                   <property name="text">
+                    <string>Playing bet</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QSpinBox" name="playBet">
+                   <property name="minimum">
+                    <number>1</number>
+                   </property>
+                   <property name="maximum">
+                    <number>1000000</number>
+                   </property>
+                   <property name="value">
+                    <number>1</number>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
                <item>
                 <spacer name="verticalSpacer_3">
                  <property name="orientation">
@@ -755,7 +803,7 @@
                <item>
                 <widget class="QPushButton" name="playRoulette">
                  <property name="text">
-                  <string>Play roulette</string>
+                  <string>Open roulette player</string>
                  </property>
                 </widget>
                </item>
@@ -1213,8 +1261,16 @@
     </property>
     <addaction name="actionReloadApp"/>
    </widget>
+   <widget class="QMenu" name="menuDatabase">
+    <property name="title">
+     <string>Database</string>
+    </property>
+    <addaction name="actionRecreate_database"/>
+    <addaction name="actionExport_all_tables"/>
+   </widget>
    <addaction name="menuMain"/>
    <addaction name="menuConfiguration"/>
+   <addaction name="menuDatabase"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionSaveConfig">
@@ -1230,6 +1286,16 @@
   <action name="actionReloadApp">
    <property name="text">
     <string>Reload application</string>
+   </property>
+  </action>
+  <action name="actionExport_all_tables">
+   <property name="text">
+    <string>Export data</string>
+   </property>
+  </action>
+  <action name="actionRecreate_database">
+   <property name="text">
+    <string>Delete data</string>
    </property>
   </action>
  </widget>

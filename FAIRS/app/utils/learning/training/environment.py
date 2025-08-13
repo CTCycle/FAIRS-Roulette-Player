@@ -16,25 +16,39 @@ class BetsAndRewards:
 
     def __init__(self, configuration : dict):
         self.seed = configuration.get('train_seed', 42)         
-        self.bet_amount = configuration.get('bet_amount', 10)
-        mapper = RouletteSeriesEncoder(configuration)   
+        self.bet_amount = configuration.get('bet_amount', 10)         
         self.numbers = list(range(NUMBERS)) 
+        mapper = RouletteSeriesEncoder(configuration)  
         self.red_numbers = mapper.color_map['red']
         self.black_numbers = mapper.color_map['black'] 
 
-    #--------------------------------------------------------------------------
-    # Define the action space with additional bets:
-    # 0-36: Bet on a specific number,
-    # 37: Bet on Red,
-    # 38: Bet on Black,
-    # 39: Pass,
-    # 40: Bet on Odd,
-    # 41: Bet on Even,
-    # 42: Bet on Low (1-18),
-    # 43: Bet on High (19-36),
-    # 44: Bet on First Dozen (1-12),
-    # 45: Bet on Second Dozen (13-24),
-    # 46: Bet on Third Dozen (25-36)
+        # Define the action space with additional bets:
+        # 0-36: Bet on a specific number,
+        # 37: Bet on Red,
+        # 38: Bet on Black,
+        # 39: Pass,
+        # 40: Bet on Odd,
+        # 41: Bet on Even,
+        # 42: Bet on Low (1-18),
+        # 43: Bet on High (19-36),
+        # 44: Bet on First Dozen (1-12),
+        # 45: Bet on Second Dozen (13-24),
+        # 46: Bet on Third Dozen (25-36)
+        self.num_actions = 47
+        self.action_descriptions = {i: f"Bet on number {i}" for i in range(37)}
+        self.action_descriptions.update({
+            37: "Bet on Red",
+            38: "Bet on Black",
+            39: "Pass",
+            40: "Bet on Odd",
+            41: "Bet on Even",
+            42: "Bet on Low (1-18)",
+            43: "Bet on High (19-36)",
+            44: "Bet on First Dozen (1-12)",
+            45: "Bet on Second Dozen (13-24)",
+            46: "Bet on Third Dozen (25-36)"})
+
+     
     #--------------------------------------------------------------------------
     def bet_on_number(self, action: int, next_extraction: int):       
         if action == next_extraction:

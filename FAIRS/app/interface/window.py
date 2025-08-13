@@ -113,7 +113,9 @@ class MainWindow:
             # model inference and evaluation
             (QPushButton,'refreshCheckpoints','refresh_checkpoints'),
             (QComboBox,'checkpointsList','checkpoints_list'),
-            (QSpinBox,'inferenceBatchSize','inference_batch_size'),            
+            (QSpinBox,'inferenceBatchSize','inference_batch_size'), 
+            (QSpinBox,'initInferenceCap','game_capital'),       
+            (QSpinBox,'playBet','game_bet'),         
             (QPushButton,'playRoulette','start_roulette_game'),     
             (QSpinBox,'evalSamples','num_evaluation_samples'), 
             (QCheckBox,'evalReport','get_evaluation_report'),
@@ -233,6 +235,8 @@ class MainWindow:
             ('additional_episodes', 'valueChanged', 'additional_episodes'),
             # model inference and evaluation        
             ('inference_batch_size', 'valueChanged', 'inference_batch_size'),
+            ('game_capital', 'valueChanged', 'game_capital'),
+            ('game_bet', 'valueChanged', 'game_bet'),
             ('num_evaluation_samples', 'valueChanged', 'num_evaluation_samples'),                                 
             ]  
 
@@ -464,14 +468,14 @@ class MainWindow:
 
     #--------------------------------------------------------------------------         
     @Slot()
-    def run_dataset_evaluation_pipeline(self):  
-        if not self.selected_metrics['dataset']:
-            return 
-        
+    def run_dataset_evaluation_pipeline(self):         
         if self.worker:            
             message = "A task is currently running, wait for it to finish and then try again"
             QMessageBox.warning(self.main_win, "Application is still busy", message)
-            return         
+            return     
+
+        if not self.selected_metrics['dataset']:
+            return     
         
         self.configuration = self.config_manager.get_configuration() 
         self.validation_handler = ValidationEvents(self.configuration)       
@@ -521,6 +525,9 @@ class MainWindow:
             QMessageBox.warning(self.main_win, "Application is still busy", message)
             return 
         
+        if not self.selected_checkpoint:
+            return
+        
         self.configuration = self.config_manager.get_configuration() 
         self.model_handler = ModelEvents(self.configuration)   
 
@@ -563,6 +570,9 @@ class MainWindow:
         if self.worker:            
             message = "A task is currently running, wait for it to finish and then try again"
             QMessageBox.warning(self.main_win, "Application is still busy", message)
+            return 
+        
+        if not self.selected_metrics['model'] or not self.selected_checkpoint:
             return 
 
         self.configuration = self.config_manager.get_configuration() 
@@ -614,19 +624,20 @@ class MainWindow:
             QMessageBox.warning(self.main_win, "Application is still busy",
                                 "A task is currently running, wait for it to finish and then try again")
             return
+        
+        if not self.selected_checkpoint:
+            return
 
         cfg = self.config_manager.get_configuration()        
         dlg = RouletteDialog(self.main_win, cfg, self.selected_checkpoint)
         dlg.exec()            
-        return
-
-        
+        return        
 
     ###########################################################################
     # [POSITIVE OUTCOME HANDLERS]
     ###########################################################################
     def on_database_uploading_finished(self, source_data):   
-        message = f'Database updated with current source data ({len(source_data)}) records'
+        message = f'Database updated with source data ({len(source_data[0])}) records'
         self._send_message(message)
         QMessageBox.information(self.main_win, "Database successfully updated", message)     
         self.worker = self.worker.cleanup()

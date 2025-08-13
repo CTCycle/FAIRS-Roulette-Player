@@ -48,20 +48,18 @@ Also allows building the ML dataset that will be used for training the XREPORT m
 - **Mapping of images path with their corresponding labels**
 - **Train and validation dataset splitting**
 
-![data_tab](XREPORT/app/assets/figures/data_tab.png)
+![data_tab](FAIRS/app/assets/figures/data_tab.png)
 
-**Model:** through this tab one can train the XREPORT transformer from scratch or resume training for previously trained checkpoints. Moreover, this section provides both model inference and evaluation functionalities. Use the pretrained transformer decoder from a model checkpoint to generate radiological reports from input images. Reports can be generated using various auto-regressive strategies, including greedy search and beam search. Moreover, the XREPORT transformer model can be evaluated using different metrics, such as:
+**Model:** this tab gives access to FAIRS model training from scratch or training resumption from previous checkpoints.Moreover, this section provides both model inference and evaluation features. Use the pretrained DQN agent to predict roulette extractions in real time using the dedicated console. Eventually, the DQN agent can be evaluated using different metrics, such as:
 
 - **Average mean sparse categorical loss and accuracy** 
-- **Calculation of BLEU scores** 
+- **...** 
 
-![model_tab](XREPORT/app/assets/figures/model_tab.gif)
+![model_tab](FAIRS/app/assets/figures/model_tab.gif)
 
-**Viewer:** this tab is dedicated to image and plots visualisation, the user may select one fo the following options
-- **Training images**: visualize training images located in *resources/database/dataset*  
-- **Inference images**: visualize inference images located in *resources/database/inference*  
+**Viewer:** real time data visualization, coming soon! 
 
-![viewer_tab](XREPORT/app/assets/figures/viewer_tab.png)
+![viewer_tab](FAIRS/app/assets/figures/viewer_tab.png)
 
 
 **Setup and Maintenance:** you can run *setup_and_maintenance.bat* to start the external tools for maintenance with the following options:
@@ -76,7 +74,7 @@ This folder organizes data and results across various stages of the project, suc
 
 - **checkpoints:**  pretrained model checkpoints are stored here, and can be used either for resuming training or performing inference with an already trained model.
 
-- **database:** collected adsorption data, processed data and validation results will be stored centrally within the main database *FAIRS_database.db*. All associated metadata will be promptly stored in *database/metadata*. Validation outputs will be saved separately within *database/validation*. Data used for inference with a pretrained checkpoint is located in *database/inference* (a template of the expected dataset columns is available at *resources/templates/FAIRS_predictions.csv*). 
+- **database:** collected adsorption data, processed data and validation results will be stored centrally within the main database *FAIRS_database.db*. Validation outputs will be saved separately within *database/validation*. Data used for inference with a pretrained checkpoint is located in *database/inference* (a template of the expected dataset columns is available at *resources/templates/FAIRS_predictions.csv*). 
 
 - **logs:** log files are saved here
 
@@ -85,10 +83,11 @@ This folder organizes data and results across various stages of the project, suc
 
 **Environmental variables** are stored in the *app* folder (within the project folder). For security reasons, this file is typically not uploaded to GitHub. Instead, you must create this file manually by copying the template from *resources/templates/.env* and placing it in the *app* directory.
 
-| Variable              | Description                                              |
-|-----------------------|----------------------------------------------------------|
-| KERAS_BACKEND         | Sets the backend for Keras, default is PyTorch           |
-| TF_CPP_MIN_LOG_LEVEL  | TensorFlow logging verbosity                             |
+| Variable              | Description                                      |
+|-----------------------|--------------------------------------------------|
+| KERAS_BACKEND         | Sets the backend for Keras, default is PyTorch   |
+| TF_CPP_MIN_LOG_LEVEL  | TensorFlow logging verbosity                     |
+| MPLBACKEND            | Matplotlib backend, keep default as Agg          |
 
 ## 5. License
 This project is licensed under the terms of the MIT license. See the LICENSE file for details.

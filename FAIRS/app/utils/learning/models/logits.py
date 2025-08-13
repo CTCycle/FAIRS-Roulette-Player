@@ -67,7 +67,8 @@ class QScoreNet(keras.layers.Layer):
     # implement transformer encoder through call method  
     #--------------------------------------------------------------------------    
     def call(self, inputs, training=None):
-        x = self.Q1(inputs)
+        x = layers.Flatten()(inputs)
+        x = self.Q1(x)
         x = self.batch_norm(x, training=training) 
         x = activations.relu(x)      
         output = self.Q2(x)                         

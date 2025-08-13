@@ -79,7 +79,7 @@ class DQNTraining:
                 gain = environment.capital/environment.initial_capital
                 gain = np.reshape(gain, newshape=(1, 1)) 
                 # action is always performed using the Q-model
-                action = self.agent.act(model, state, gain)
+                action = self.agent.act(model, state)
                 next_state, reward, done, extraction = environment.step(action)
                 total_reward += reward                
                 next_state = np.reshape(next_state, [1, state_size])
@@ -99,7 +99,7 @@ class DQNTraining:
                         model, target_model, environment, self.batch_size)                   
                     self.update_session_stats(
                         scores, episode, time_step, reward, total_reward, environment.capital)
-                    if time_step % 10 == 0:
+                    if time_step % 20 == 0:
                         logger.info(
                             f'Loss: {scores["loss"]} | RMSE: {scores["root_mean_squared_error"]}') 
                         logger.info(
@@ -169,29 +169,24 @@ class DQNTraining:
             checkpoint_path, history, self.configuration)
         
     #--------------------------------------------------------------------------
-    def resume_training(self, model : Model, target_model : Model, data, checkpoint_path, **kwargs):
+    def resume_training(self, model : Model, target_model : Model, data, 
+                        checkpoint_path, session=None, additional_epochs=10, **kwargs):
         environment = RouletteEnvironment(data, self.configuration)
-        # perform different initialization duties based on state of session:
-        # training from scratch vs resumed training
-        # calculate number of epochs taking into account possible training resumption
-        
-        _, self.metadata, history = self.serializer.load_training_configuration(checkpoint_path)                     
-        episodes = history['total_episodes'] + CONFIG['training']['ADDITIONAL_EPISODES'] 
-        from_episode = history['total_episodes']
-        start_episode = from_episode                          
+        from_episode = 0 if not session else session['epochs']     
+        total_episodes = from_episode + additional_epochs  
 
         # determine state size as the observation space size       
         state_size = environment.observation_space.shape[0] 
         logger.info(f'Size of the observation space (previous extractions): {state_size}')        
         agent = self.train_with_reinforcement_learning(
-            model, target_model, environment, start_episode, episodes, 
+            model, target_model, environment, from_episode, total_episodes, 
             state_size, checkpoint_path)
         
         # use the real time history callback data to retrieve current loss and metric values
         # this allows to correctly resume the training metrics plot if training from checkpoint
         history = {'history' : self.session_stats, 
                    'val_history' : None,
-                   'total_episodes' : episodes}
+                   'total_episodes' : total_episodes}
 
         # Save the final model at the end of training
         self.serializer.save_pretrained_model(model, checkpoint_path)

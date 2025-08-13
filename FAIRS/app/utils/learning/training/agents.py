@@ -38,7 +38,7 @@ class DQNAgent:
             self.memory = pickle.load(f)
     
     #--------------------------------------------------------------------------
-    def act(self, model : keras.Model, state, gain):        
+    def act(self, model : keras.Model, state):        
         # generate a random number between 0 and 1 for exploration purposes.
         # if this number is equal or smaller to exploration rate, the agent will
         # pick a random roulette choice. It will do the same if the perceived field is empty
@@ -49,7 +49,7 @@ class DQNAgent:
             return random_action
         # if the random value is above the exploration rate, the action will
         # be predicted by the current model snapshot
-        q_values = model.predict([state, gain], verbose=0)
+        q_values = model.predict(state, verbose=0)
         best_q = np.int32(np.argmax(q_values))
 
         return best_q 
@@ -82,15 +82,15 @@ class DQNAgent:
         dones = np.array([d for s, a, r, c, ns, d in minibatch], dtype=np.int32)
 
         # Predict current Q-values
-        targets = model.predict([states, gains], verbose=0)
+        targets = model.predict(states, verbose=0)
 
         # Double DQN next action selection via the online model
         # 1. Get Q-values for next states from the online model
-        next_action_selection = model.predict([next_states, gains], verbose=0) # (batch_size, action_size)
+        next_action_selection = model.predict(next_states, verbose=0) # (batch_size, action_size)
         best_next_actions = np.argmax(next_action_selection, axis=1)
 
         # 2. Evaluate those actions using the target model
-        Q_futures_target = target_model.predict([next_states, gains], verbose=0) # (batch_size, action_size)
+        Q_futures_target = target_model.predict(next_states, verbose=0) # (batch_size, action_size)
         Q_future_selected = Q_futures_target[np.arange(batch_size), best_next_actions]
 
         # Scale rewards if your environment uses scaled rewards
@@ -104,7 +104,7 @@ class DQNAgent:
         targets[batch_indices, actions] = updated_targets
 
         # Fit the model on the entire batch using train on batch method
-        logs = model.train_on_batch([states, gains], targets, return_dict=True)         
+        logs = model.train_on_batch(states, targets, return_dict=True)         
 
         # Update epsilon
         if self.epsilon > self.epsilon_min:

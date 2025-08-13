@@ -1,6 +1,7 @@
 import traceback
 
 import cv2
+import numpy as np
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from PySide6.QtGui import QImage, QPixmap
 
@@ -89,10 +90,6 @@ class ValidationEvents:
     
     #--------------------------------------------------------------------------
     def run_model_evaluation_pipeline(self, metrics, selected_checkpoint, progress_callback=None, worker=None):
-        if selected_checkpoint is None:
-            logger.warning('No checkpoint selected for resuming training')
-            return
-           
         logger.info(f'Loading {selected_checkpoint} checkpoint')   
         modser = ModelSerializer()       
         model, train_config, session, checkpoint_path = modser.load_checkpoint(
@@ -184,10 +181,6 @@ class ModelEvents:
     #--------------------------------------------------------------------------
     def resume_training_pipeline(self, selected_checkpoint, progress_callback=None, 
                                  worker=None):
-        if selected_checkpoint is None:
-            logger.warning('No checkpoint selected for resuming training')
-            return
-        
         logger.info(f'Loading {selected_checkpoint} checkpoint') 
         modser = ModelSerializer()         
         model, train_config, session, checkpoint_path = modser.load_checkpoint(
@@ -225,61 +218,81 @@ class ModelEvents:
     # the inference pipeline is run by a process worker that sends signals to the dialog box
     #--------------------------------------------------------------------------
     @staticmethod
-    def run_inference_pipeline(configuration: dict, checkpoint_name: str, cmd_q, out_q):
+    def run_inference_pipeline(configuration: dict, checkpoint_name: str, cmd_q, out_q) -> None:
+
         """
         Child-process loop for real-time inference through external dialog window:
-            - build the model and RoulettePlayer locally
-            - react to dict commands from cmd_q
-            - emit dict events on out_q
+          - build the model and RoulettePlayer locally
+          - react to dict commands from cmd_q
+          - emit dict events on out_q
+
         Events:
-            {"kind":"prediction", "action": int, "description": str}
-            {"kind":"updated", "value": int}
-            {"kind":"error", "detail": str}
-            {"kind":"closed"}
-        """
-        try:
-            logger.info(f'Loading {checkpoint_name} checkpoint') 
-            modser = ModelSerializer()         
-            model, train_config, session, checkpoint_path = modser.load_checkpoint(
-                checkpoint_name)    
-            model.summary(expand_nested=True)   
+          {"kind":"prediction", "action": int, "description": str}
+          {"kind":"updated", "value": int}
+          {"kind":"error", "detail": str}
+          {"kind":"closed"}
 
-            # set device for training operations
-            logger.info('Setting device for training operations')                 
-            device = DeviceConfig(configuration) 
-            device.set_device()
-            player = RoulettePlayer(model, train_config)
+        """        
+        logger.info(f'Loading {checkpoint_name} checkpoint')
+        modser = ModelSerializer()
+        model, train_config, session, checkpoint_path = modser.load_checkpoint(checkpoint_name)
+        model.summary(expand_nested=True)
 
-            running = True
-            logger.info('Starting real-time inference session')
-            while running:
-                cmd = cmd_q.get()  # blocking on purpose; process is dedicated
-                if not isinstance(cmd, dict) or "kind" not in cmd:
-                    out_q.put({"kind": "error", "detail": f"Bad command: {cmd!r}"})
-                    continue
+        # Ensure device is set in the child process (so GPU context is owned here)
+        logger.info('Setting device for inference operations')
+        device = DeviceConfig(configuration)
+        device.set_device()
 
-                kind = cmd["kind"]
-                if kind == "next":
-                    try:
-                        res = player.predict_next()
-                        out_q.put({"kind": "prediction", **res})
-                    except Exception as e:
-                        out_q.put({"kind": "error", "detail": f"predict failed: {e!r}"})
-                elif kind == "update":
-                    try:
-                        value = cmd.get("value", None)
-                        player.apply_true(int(value))
-                        out_q.put({"kind": "updated", "value": int(value)})
-                    except Exception as e:
-                        out_q.put({"kind": "error", "detail": f"update failed: {e!r}"})
-                elif kind == "shutdown":
-                    running = False
-                else:
-                    out_q.put({"kind": "error", "detail": f"unknown command: {kind}"})
-        except Exception as e:
-            out_q.put({"kind": "error", "detail": f"fatal: {e!r}\n{traceback.format_exc()}"})
-        finally:
-            try:
+        # Load the data you will use to seed the perceptive field.
+        # The player expects raw extractions in [0, 36] as ints.
+        dataserializer = DataSerializer(configuration)
+        dataset = dataserializer.load_inference_dataset()
+        # dataset is expected as an array-like with at least one column where [:,0] are extractions
+        if dataset.empty:
+            return
+         
+        # Build player with training-time agent settings        
+        player = RoulettePlayer(model, train_config)    
+        logger.info('Perceptive field is being created from the most recent inference data window')    
+        player.initialize_states()
+      
+        # Signal to parent process: model & data are loaded, ready for commands
+        out_q.put({"kind": "ready"})
+        running = True
+        logger.info('Starting real-time inference session')            
+        while running:
+            cmd = cmd_q.get()  # blocking; dedicated process
+            kind = cmd["kind"]
+            if kind == "next":
+                try:
+                    res = player.predict_next()
+                    out_q.put({"kind": "prediction", **res})
+                except Exception as e:
+                    out_q.put({"kind": "error", "detail": f"predict failed: {e!r}"})
+
+            elif kind == "update":
+                try:
+                    value = cmd.get("value", None)
+                    if value is None:
+                        return
+                    ivalue = int(value)
+                    if not (0 <= ivalue <= 36):
+                        raise ValueError("Inserted value should be between 0 and 36")
+                    player.update_with_true_extraction(ivalue)
+                    player.save_prediction(checkpoint_name)                    
+                    out_q.put({"kind": "updated", "value": ivalue})
+                except Exception as e:
+                    out_q.put({"kind": "error", "detail": f"update failed: {e!r}"})
+
+            elif kind == "shutdown":
+                running = False
                 out_q.put({"kind": "closed"})
-            except Exception:
-                pass
+                break
+
+            else:
+                out_q.put({"kind": "error", "detail": f"unknown command: {kind}"})
+
+    
+    
+                
+        

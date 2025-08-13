@@ -52,7 +52,8 @@ class Configuration:
             'bet_amount': 10,
             'render_environment': False,
             # inference
-                  
+            'game_capital' : 100,
+            'game_bet' : 1,   
             # Validation
             'val_batch_size': 20,
             'num_evaluation_images': 6            
