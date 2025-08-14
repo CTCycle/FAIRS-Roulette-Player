@@ -4,9 +4,9 @@ FAIRS/resources/database/metadata/*
 FAIRS/resources/database/validation/*
 FAIRS/resources/database/inference/*
 
-setup/python/*
-setup/git/*
-setup/.env
+FAIRS/setup/python/*
+FAIRS/setup/git/*
+FAIRS/setup/.env
 
 __pycache__
 *.vscode
