@@ -1,7 +1,5 @@
-import traceback
 
 import cv2
-import numpy as np
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from PySide6.QtGui import QImage, QPixmap
 
