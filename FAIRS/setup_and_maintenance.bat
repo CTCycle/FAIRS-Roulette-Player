@@ -49,7 +49,7 @@ pause
 goto :setup_menu
 
 :logs
-pushd "%app_path%\resources\logs"
+pushd %log_path%
 if not exist *.log (
     echo No log files found.
     popd
