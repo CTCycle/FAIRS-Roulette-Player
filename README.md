@@ -36,21 +36,13 @@ On Windows, run *start_on_windows.bat* to launch the application. Please note th
 
 The main interface streamlines navigation across the application's core services, including dataset evaluation, model training and evaluation, and inference. Users can easily visualize generated plots and browse both training and inference images. Models training supports customizable configurations and also allows resuming previous sessions using pretrained models.
 
-**Dataset validation and processing:** analyze and validate the image and text dataset using different metrics. 
+**Dataset validation and processing:** Load data into the database from the provided csv sources. The dataset can be analyzed and validated using different metrics. 
 
-- **Calculation of images statistics**: pixels mean values, standard deviation, values range, noise ratio
-- **Calculation of average pixel distribution**
-- **Average pixel distribution of train versus validation** 
-
-Also allows building the ML dataset that will be used for training the XREPORT model. Prepare the reports dataset for machine learning by processing the source data through the following steps:
-- **Text cleaning for X-ray reports**
-- **Tokenization of reports**
-- **Mapping of images path with their corresponding labels**
-- **Train and validation dataset splitting**
+- **Calculation of roulette transitions**: visualize transitions between events from the roulette series
 
 ![data_tab](FAIRS/app/assets/figures/data_tab.png)
 
-**Model:** this tab gives access to FAIRS model training from scratch or training resumption from previous checkpoints.Moreover, this section provides both model inference and evaluation features. Use the pretrained DQN agent to predict roulette extractions in real time using the dedicated console. Eventually, the DQN agent can be evaluated using different metrics, such as:
+**Model:** this tab gives access to FAIRS model training from scratch or training resumption from previous checkpoints. Data processing is done in runtime prior to training, by encoding extraction based on color and position on the roulette wheel. Moreover, this section provides both model inference and evaluation features. Use the pretrained DQN agent to predict roulette extractions in real time using the dedicated console. Eventually, the DQN agent can be evaluated using different metrics, such as:
 
 - **Average mean sparse categorical loss and accuracy** 
 - **...** 
