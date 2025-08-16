@@ -57,6 +57,8 @@ class MainWindow:
             (QAction, 'actionReloadApp', 'reload_app_action'),
             (QAction, 'actionLoadConfig', 'load_configuration_action'),
             (QAction, 'actionSaveConfig', 'save_configuration_action'),
+            (QAction, 'actionDeleteData', 'delete_data_action'),
+            (QAction, 'actionExportData', 'export_data_action'),
             # out of tab widgets            
             (QProgressBar,'progressBar','progress_bar'),      
             (QPushButton,'stopThread','stop_thread'),
@@ -130,8 +132,11 @@ class MainWindow:
         
         self._connect_signals([ 
             # actions
+            #('reload_app', 'triggered', self.save_configuration),   
             ('save_configuration_action', 'triggered', self.save_configuration),   
-            ('load_configuration_action', 'triggered', self.load_configuration), 
+            ('load_configuration_action', 'triggered', self.load_configuration),
+            ('delete_data_action', 'triggered', self.load_configuration),   
+            ('export_data_action', 'triggered', self.load_configuration),
             # out of tab widgets    
             ('stop_thread','clicked',self.stop_running_worker),
             # 1. dataset tab page     

@@ -5,7 +5,6 @@ FAIRS/resources/database/validation/*
 FAIRS/resources/database/inference/*
 
 FAIRS/setup/python/*
-FAIRS/setup/git/*
 FAIRS/setup/.env
 
 __pycache__
