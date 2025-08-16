@@ -11,9 +11,9 @@ from PySide6.QtWidgets import (QPushButton, QRadioButton, QCheckBox, QDoubleSpin
 
 from FAIRS.app.utils.data.database import FAIRSDatabase
 from FAIRS.app.configuration import Configuration
-from FAIRS.app.interface.dialogs import SaveConfigDialog, LoadConfigDialog, RouletteDialog
-from FAIRS.app.interface.events import GraphicsHandler, ValidationEvents, ModelEvents
-from FAIRS.app.interface.workers import ThreadWorker, ProcessWorker
+from FAIRS.app.client.dialogs import SaveConfigDialog, LoadConfigDialog, RouletteDialog
+from FAIRS.app.client.events import GraphicsHandler, ValidationEvents, ModelEvents
+from FAIRS.app.client.workers import ThreadWorker, ProcessWorker
 from FAIRS.app.logger import logger
 
 

@@ -7,7 +7,7 @@ from FAIRS.app.utils.data.serializer import ModelSerializer
 from FAIRS.app.utils.learning.callbacks import CallbacksWrapper
 from FAIRS.app.utils.learning.training.environment import RouletteEnvironment
 from FAIRS.app.utils.learning.training.agents import DQNAgent
-from FAIRS.app.interface.workers import check_thread_status, update_progress_callback
+from FAIRS.app.client.workers import check_thread_status, update_progress_callback
 
 from FAIRS.app.logger import logger
 

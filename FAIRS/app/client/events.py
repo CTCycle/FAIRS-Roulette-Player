@@ -11,7 +11,7 @@ from FAIRS.app.utils.learning.device import DeviceConfig
 from FAIRS.app.utils.learning.models.qnet import FAIRSnet
 from FAIRS.app.utils.learning.training.fitting import DQNTraining
 from FAIRS.app.utils.learning.inference.player import RoulettePlayer
-from FAIRS.app.interface.workers import check_thread_status, update_progress_callback
+from FAIRS.app.client.workers import check_thread_status, update_progress_callback
 
 from FAIRS.app.constants import RSC_PATH
 from FAIRS.app.logger import logger

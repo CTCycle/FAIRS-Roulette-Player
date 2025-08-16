@@ -5,7 +5,7 @@ import subprocess
 import time
 import matplotlib.pyplot as plt
 
-from FAIRS.app.interface.workers import WorkerInterrupted
+from FAIRS.app.client.workers import WorkerInterrupted
 from FAIRS.app.logger import logger
 
 
