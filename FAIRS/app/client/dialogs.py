@@ -6,8 +6,8 @@ from PySide6.QtCore import QTimer, Slot
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QLineEdit, QLabel, QPushButton, 
                                QDialogButtonBox, QListWidget, QHBoxLayout, QMessageBox)
 
-from FAIRS.app.interface.events import ModelEvents
-from FAIRS.app.interface.workers import ProcessWorker
+from FAIRS.app.client.events import ModelEvents
+from FAIRS.app.client.workers import ProcessWorker
 from FAIRS.app.constants import CONFIG_PATH
 from FAIRS.app.logger import logger
          

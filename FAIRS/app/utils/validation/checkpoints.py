@@ -5,7 +5,7 @@ from keras import Model
 
 from FAIRS.app.utils.learning.callbacks import LearningInterruptCallback
 from FAIRS.app.utils.data.serializer import DataSerializer, ModelSerializer
-from FAIRS.app.interface.workers import check_thread_status, update_progress_callback
+from FAIRS.app.client.workers import check_thread_status, update_progress_callback
 from FAIRS.app.constants import CHECKPOINT_PATH
 from FAIRS.app.logger import logger
 

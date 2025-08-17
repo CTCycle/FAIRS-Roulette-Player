@@ -1265,8 +1265,8 @@
     <property name="title">
      <string>Database</string>
     </property>
-    <addaction name="actionRecreate_database"/>
-    <addaction name="actionExport_all_tables"/>
+    <addaction name="actionDeleteData"/>
+    <addaction name="actionExportData"/>
    </widget>
    <addaction name="menuMain"/>
    <addaction name="menuConfiguration"/>
@@ -1288,12 +1288,12 @@
     <string>Reload application</string>
    </property>
   </action>
-  <action name="actionExport_all_tables">
+  <action name="actionExportData">
    <property name="text">
     <string>Export data</string>
    </property>
   </action>
-  <action name="actionRecreate_database">
+  <action name="actionDeleteData">
    <property name="text">
     <string>Delete data</string>
    </property>
