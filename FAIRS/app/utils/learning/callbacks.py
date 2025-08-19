@@ -19,7 +19,7 @@ class ProgressBarCallback(keras.callbacks.Callback):
         self.from_epoch = from_epoch
 
     #--------------------------------------------------------------------------
-    def on_epoch_end(self, epoch, logs=None):
+    def on_epoch_end(self, epoch, logs : dict | None = None):
         processed_epochs = epoch - self.from_epoch + 1        
         additional_epochs = max(1, self.total_epochs - self.from_epoch) 
         percent = int(100 * processed_epochs / additional_epochs)
@@ -35,13 +35,13 @@ class LearningInterruptCallback(keras.callbacks.Callback):
         self.worker = worker
 
     #--------------------------------------------------------------------------
-    def on_batch_end(self, batch, logs=None):
+    def on_batch_end(self, batch, logs : dict | None = None):
         if self.worker is not None and self.worker.is_interrupted():            
             self.model.stop_training = True
             raise WorkerInterrupted()
         
     #--------------------------------------------------------------------------
-    def on_validation_batch_end(self, batch, logs=None):
+    def on_validation_batch_end(self, batch, logs : dict | None = None):
         if self.worker is not None and self.worker.is_interrupted():
             raise WorkerInterrupted()
 
@@ -50,14 +50,13 @@ class LearningInterruptCallback(keras.callbacks.Callback):
 ###############################################################################
 class RealTimeHistory:    
         
-    def __init__(self, plot_path, past_logs=None):        
+    def __init__(self, plot_path, past_logs : dict | None = None):        
         self.fig_path = os.path.join(plot_path, 'training_history.jpeg')
         self.total_epochs = 0 if past_logs is None else past_logs.get('episodes', 0)
-        self.history = {'history' : {},
-                        'episodes' : self.total_epochs}   
+        self.history = {'history' : {}, 'episodes' : self.total_epochs}   
                     
     #--------------------------------------------------------------------------
-    def plot_loss_and_metrics(self, episode, logs=None):
+    def plot_loss_and_metrics(self, episode, logs : dict | None = None):
         if not logs.get('episode', []):
             return
         
@@ -94,9 +93,8 @@ class RealTimeHistory:
 ###############################################################################
 class GameStatsCallback:
     
-    def __init__(self, plot_path, plot_freq_steps=1, iterations=None, capitals=None, **kwargs): 
-        self.plot_path = os.path.join(plot_path, 'game_statistics.jpeg')  
-        self.plot_freq_steps = max(1, plot_freq_steps) 
+    def __init__(self, plot_path, iterations=None, capitals=None, **kwargs): 
+        self.plot_path = os.path.join(plot_path, 'game_statistics.jpeg')           
         os.makedirs(plot_path, exist_ok=True)
         self.iterations = [] if iterations is None else iterations
         self.capitals = [] if capitals is None else capitals
@@ -106,7 +104,7 @@ class GameStatsCallback:
         self.episode_count = 0
        
     #--------------------------------------------------------------------------
-    def plot_game_statistics(self, logs=None):
+    def plot_game_statistics(self, logs : dict | None = None):
         if not logs.get('episode', []):
             return
         
@@ -116,7 +114,7 @@ class GameStatsCallback:
             self.episode_count += 1
 
         self.global_step += 1
-        if self.global_step > 0 and self.global_step % self.plot_freq_steps == 0:
+        if self.global_step > 0:
             self.capitals.append(logs.get('capital', [None])[-1])
             self.iterations.append(self.global_step)
             self.generate_plot(self.global_step)
@@ -145,10 +143,7 @@ class GameStatsCallback:
         fig.suptitle(f'Training Progress: Capital (At step {current_step})')
         fig.tight_layout(rect=[0, 0.1, 1, 0.95])
         plt.savefig(self.plot_path, bbox_inches='tight', format='jpeg', dpi=300)
-        plt.close(fig)
-
-
-      
+        plt.close(fig)      
 
     
 ###############################################################################        
@@ -160,7 +155,7 @@ class CallbacksWrapper:
     #--------------------------------------------------------------------------
     def get_metrics_callbacks(self, checkpoint_path, history=None):
         RTH_callback = RealTimeHistory(checkpoint_path, past_logs=history)
-        GS_callback = GameStatsCallback(checkpoint_path, 50)
+        GS_callback = GameStatsCallback(checkpoint_path)
                
         return RTH_callback, GS_callback
 
