@@ -99,7 +99,7 @@ class DQNTraining:
                         model, target_model, environment, self.batch_size)                   
                     self.update_session_stats(
                         scores, episode, time_step, reward, total_reward, environment.capital)
-                    if time_step % 20 == 0:
+                    if time_step % 50 == 0:
                         logger.info(
                             f'Loss: {scores["loss"]} | RMSE: {scores["root_mean_squared_error"]}') 
                         logger.info(
@@ -109,7 +109,7 @@ class DQNTraining:
                 if time_step % self.update_frequency == 0:
                     target_model.set_weights(model.get_weights())
 
-                if GS_callback:
+                if GS_callback and time_step % 100 == 0:
                     GS_callback.plot_game_statistics(self.session_stats)
 
                 # call on_epoch_end method of selected callbacks             
