@@ -118,12 +118,16 @@ class ModelSerializer:
         return model_folders 
 
     #--------------------------------------------------------------------------
-    def save_model_plot(self, model, path):        
-        logger.debug('Generating model architecture graph')
-        plot_path = os.path.join(path, 'model_layout.png')       
-        plot_model(model, to_file=plot_path, show_shapes=True, 
-                    show_layer_names=True, show_layer_activations=True, 
-                    expand_nested=True, rankdir='TB', dpi=400)
+    def save_model_plot(self, model, path):  
+        try: 
+            plot_path = os.path.join(path, "model_layout.png")       
+            plot_model(model, to_file=plot_path, show_shapes=True,
+                show_layer_names=True, show_layer_activations=True,
+                expand_nested=True, rankdir="TB", dpi=400)
+            logger.debug(f"Model architecture plot generated as {plot_path}") 
+        except (OSError, FileNotFoundError, ImportError) as e:
+            logger.warning(
+                "Could not generate model architecture plot (graphviz/pydot not correctly installed)")
             
     #--------------------------------------------------------------------------
     def load_checkpoint(self, checkpoint : str):
