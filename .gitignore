@@ -1,8 +1,6 @@
 FAIRS/resources/checkpoints/*
-FAIRS/resources/database/dataset/*
 FAIRS/resources/database/metadata/*
 FAIRS/resources/database/validation/*
-FAIRS/resources/database/inference/*
 
 FAIRS/setup/python/*
 FAIRS/setup/.env
