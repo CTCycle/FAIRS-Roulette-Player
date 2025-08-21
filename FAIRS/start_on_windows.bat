@@ -74,7 +74,17 @@ echo [INFO] Installing project in editable mode
 "%pip_exe%" install -e . --use-pep517 || (popd & goto :error)
 popd
 
-"%pip_exe%" cache purge || goto :error
+REM --- Purge pip cache only if cache is enabled
+set "_pip_cache_check=%python_dir%\__pip_cache_check.txt"
+"%pip_exe%" cache dir >"%_pip_cache_check%" 2>&1
+findstr /I "disabled" "%_pip_cache_check%" >nul
+if errorlevel 1 (
+    echo [INFO] Purging pip cache
+    "%pip_exe%" cache purge || echo [WARN] Could not purge pip cache
+) else (
+    echo [INFO] pip cache is disabled - skipping purge
+)
+del /q "%_pip_cache_check%" 2>nul
 
 REM Mark environment as installed for future fast start
 > "%env_marker%" echo setup_completed
