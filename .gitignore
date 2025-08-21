@@ -10,6 +10,7 @@ FAIRS/setup/.env
 __pycache__
 *.vscode
 *.egg-info
+*.json
 *.db
 *.log
 !.gitkeep
