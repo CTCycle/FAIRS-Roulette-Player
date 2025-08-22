@@ -7,7 +7,7 @@ from keras.utils import plot_model
 from keras.models import load_model
 from datetime import datetime
 
-from FAIRS.app.utils.data.database import FAIRSDatabase
+from FAIRS.app.utils.data.database import database
 from FAIRS.app.constants import CHECKPOINT_PATH
 from FAIRS.app.logger import logger
 
@@ -18,13 +18,11 @@ class DataSerializer:
 
     def __init__(self, configuration : dict): 
         self.seed = configuration.get('seed', 42)
-        # create database instance
-        self.database = FAIRSDatabase()
         self.configuration = configuration
 
     #--------------------------------------------------------------------------
     def load_roulette_dataset(self, sample_size=1.0):        
-        dataset = self.database.load_roulette_dataset()
+        dataset = database.load_roulette_dataset()
         if sample_size < 1.0:            
             dataset = dataset.sample(frac=sample_size, random_state=self.seed)     
 
@@ -32,22 +30,22 @@ class DataSerializer:
     
     #--------------------------------------------------------------------------
     def load_inference_dataset(self):        
-        dataset = self.database.load_roulette_dataset()        
+        dataset = database.load_roulette_dataset()        
         return dataset
     
     #--------------------------------------------------------------------------
     def save_roulette_dataset(self, dataset : pd.DataFrame):        
-        dataset = self.database.save_roulette_dataset(dataset)        
+        dataset = database.save_roulette_dataset(dataset)        
         return dataset
     
     #--------------------------------------------------------------------------
     def save_predicted_games(self, dataset : pd.DataFrame):        
-        dataset = self.database.save_predicted_games(dataset)        
+        dataset = database.save_predicted_games(dataset)        
         return dataset
     
     #--------------------------------------------------------------------------
     def save_checkpoints_summary(self, data : pd.DataFrame):            
-        self.database.save_checkpoints_summary(data) 
+        database.save_checkpoints_summary(data) 
            
 
     
@@ -118,12 +116,16 @@ class ModelSerializer:
         return model_folders 
 
     #--------------------------------------------------------------------------
-    def save_model_plot(self, model, path):        
-        logger.debug('Generating model architecture graph')
-        plot_path = os.path.join(path, 'model_layout.png')       
-        plot_model(model, to_file=plot_path, show_shapes=True, 
-                    show_layer_names=True, show_layer_activations=True, 
-                    expand_nested=True, rankdir='TB', dpi=400)
+    def save_model_plot(self, model, path):  
+        try: 
+            plot_path = os.path.join(path, "model_layout.png")       
+            plot_model(model, to_file=plot_path, show_shapes=True,
+                show_layer_names=True, show_layer_activations=True,
+                expand_nested=True, rankdir="TB", dpi=400)
+            logger.debug(f"Model architecture plot generated as {plot_path}") 
+        except (OSError, FileNotFoundError, ImportError) as e:
+            logger.warning(
+                "Could not generate model architecture plot (graphviz/pydot not correctly installed)")
             
     #--------------------------------------------------------------------------
     def load_checkpoint(self, checkpoint : str):

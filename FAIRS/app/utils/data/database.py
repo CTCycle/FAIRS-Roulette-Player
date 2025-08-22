@@ -5,11 +5,11 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy import Column, Float, Integer, String, UniqueConstraint, create_engine
 from sqlalchemy.dialects.sqlite import insert
 
+from FAIRS.app.utils.singleton import singleton
 from FAIRS.app.constants import DATA_PATH, SOURCE_PATH, INFERENCE_PATH
 from FAIRS.app.logger import logger
 
 Base = declarative_base()
-
 
 ###############################################################################
 class RouletteSeries(Base):
@@ -23,7 +23,6 @@ class RouletteSeries(Base):
         UniqueConstraint('id'),
     )
    
-
 
 ###############################################################################
 class PredictedGames(Base):
@@ -66,6 +65,7 @@ class CheckpointSummary(Base):
 
 # [DATABASE]
 ###############################################################################
+@singleton
 class FAIRSDatabase:
 
     def __init__(self):             
@@ -192,6 +192,8 @@ class FAIRSDatabase:
             for table in reversed(Base.metadata.sorted_tables): 
                 conn.execute(table.delete())
 
-        
+
+#------------------------------------------------------------------------------
+database = FAIRSDatabase()        
 
     
