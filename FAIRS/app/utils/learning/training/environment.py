@@ -139,38 +139,37 @@ class BetsAndRewards:
     
     #--------------------------------------------------------------------------
     def pass_turn(self):
-        reward = 0       
-        return reward, True
+        reward = 0
+        return reward, False  
 
     #--------------------------------------------------------------------------
-    def interact_and_get_rewards(self, action: int, next_extraction: int, capital : int):       
+    def interact_and_get_rewards(self, action: int, next_extraction: int, capital: int):
         done = False
         if 0 <= action <= 36:
             reward, done = self.bet_on_number(action, next_extraction)
         elif action == 37:
             reward, done = self.bet_on_red(next_extraction)
         elif action == 38:
-            reward, done = self.bet_on_black(next_extraction)        
+            reward, done = self.bet_on_black(next_extraction)
         elif action == 39:
-            reward, done = self.bet_on_odd(next_extraction)
+            reward, done = self.pass_turn()            
         elif action == 40:
-            reward, done = self.bet_on_even(next_extraction)
+            reward, done = self.bet_on_odd(next_extraction)
         elif action == 41:
-            reward, done = self.bet_on_low(next_extraction)
+            reward, done = self.bet_on_even(next_extraction)
         elif action == 42:
-            reward, done = self.bet_on_high(next_extraction)
+            reward, done = self.bet_on_low(next_extraction)
         elif action == 43:
-            reward, done = self.bet_on_first_dozen(next_extraction)
+            reward, done = self.bet_on_high(next_extraction)
         elif action == 44:
-            reward, done = self.bet_on_second_dozen(next_extraction)
+            reward, done = self.bet_on_first_dozen(next_extraction)
         elif action == 45:
-            reward, done = self.bet_on_third_dozen(next_extraction)
+            reward, done = self.bet_on_second_dozen(next_extraction)
         elif action == 46:
-            reward, done = self.pass_turn()
-        
-        capital += reward
+            reward, done = self.bet_on_third_dozen(next_extraction)
 
-        return reward, capital, done       
+        capital += reward
+        return reward, capital, done
 
     
 # [ROULETTE RL ENVIRONMENT]
@@ -260,9 +259,9 @@ class RouletteEnvironment(gym.Env):
     def step(self, action):  
         # reset the perceived field each time the end of the series is reached
         # then start again from a random index simulating a brand new roulette series      
-        if self.extraction_index >= len(self.extractions):
-            self.state = self.reset()
-        
+        if self.extraction_index >= len(self.extractions):            
+            self.extraction_index = self.select_random_index()            
+            
         next_extraction = np.int32(self.extractions[self.extraction_index])        
         self.state = np.delete(self.state, 0)
         self.state = np.append(self.state, next_extraction)
