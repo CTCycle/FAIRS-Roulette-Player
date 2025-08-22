@@ -45,7 +45,7 @@ class DQNAgent:
         random_threshold = np.random.rand()
         if np.all(state == PAD_VALUE) or random_threshold <= self.epsilon:
             # random action selection would not pick "quit the game" 
-            random_action = np.int32(random.randrange(self.action_size-1))
+            random_action = np.int32(random.randrange(self.action_size))
             return random_action
         # if the random value is above the exploration rate, the action will
         # be predicted by the current model snapshot
