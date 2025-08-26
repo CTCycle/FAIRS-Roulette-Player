@@ -1,4 +1,5 @@
 import os
+
 import pandas as pd
 import sqlalchemy
 from sqlalchemy.orm import declarative_base, sessionmaker
@@ -78,19 +79,26 @@ class FAIRSDatabase:
 
     #--------------------------------------------------------------------------       
     def initialize_database(self):
-        Base.metadata.create_all(self.engine)  
+        Base.metadata.create_all(self.engine) 
+
+    #-------------------------------------------------------------------------- 
+    def get_table_class(self, table_name: str):    
+        for cls in Base.__subclasses__():
+            if hasattr(cls, '__tablename__') and cls.__tablename__ == table_name:
+                return cls
+        raise ValueError(f"No table class found for name {table_name}") 
 
     #--------------------------------------------------------------------------       
     def update_database_from_source(self): 
         roulette_dataset = pd.read_csv(self.source_path, sep=';', encoding='utf-8')
         roulette_predictions = pd.read_csv(self.inference_path, sep=';', encoding='utf-8')                 
-        self.save_roulette_dataset(roulette_dataset)
-        self.save_predicted_games(roulette_predictions)
+        self.save_into_database(roulette_dataset, 'ROULETTE_SERIES')
+        self.save_into_database(roulette_predictions, 'PREDICTED_GAMES')
 
         return roulette_dataset, roulette_predictions
     
     #--------------------------------------------------------------------------
-    def upsert_dataframe(self, df: pd.DataFrame, table_cls):
+    def _upsert_dataframe(self, df: pd.DataFrame, table_cls):
         table = table_cls.__table__
         session = self.Session()
         try:
@@ -111,41 +119,30 @@ class FAIRSDatabase:
                 update_cols = {c: getattr(stmt.excluded, c) for c in batch[0] if c not in unique_cols}
                 stmt = stmt.on_conflict_do_update(
                     index_elements=unique_cols,
-                    set_=update_cols
-                )
+                    set_=update_cols)
                 session.execute(stmt)
                 session.commit()
             session.commit()
         finally:
-            session.close()    
+            session.close()  
 
     #--------------------------------------------------------------------------
-    def load_roulette_dataset(self):
+    def load_from_database(self, table_name: str) -> pd.DataFrame:        
         with self.engine.connect() as conn:
-            data = pd.read_sql_table('ROULETTE_SERIES', conn)
-            
-        return data  
+            data = pd.read_sql_table(table_name, conn)
+
+        return data
 
     #--------------------------------------------------------------------------
-    def load_predicted_games(self):
-        with self.engine.connect() as conn:
-            data = pd.read_sql_table('PREDICTED_GAMES', conn)
-            
-        return data 
-    
-    #--------------------------------------------------------------------------
-    def save_roulette_dataset(self, data : pd.DataFrame):
-        with self.engine.begin() as conn:
-            conn.execute(sqlalchemy.text(f"DELETE FROM ROULETTE_SERIES"))        
-        data.to_sql("ROULETTE_SERIES", self.engine, if_exists='append', index=False) 
-        
-    #--------------------------------------------------------------------------
-    def save_predicted_games(self, data : pd.DataFrame):         
-        self.upsert_dataframe(data, PredictedGames)
+    def save_into_database(self, df: pd.DataFrame, table_name: str):        
+        with self.engine.begin() as conn:            
+            conn.execute(sqlalchemy.text(f'DELETE FROM "{table_name}"'))
+            df.to_sql(table_name, self.engine, if_exists='append', index=False)
 
     #--------------------------------------------------------------------------
-    def save_checkpoints_summary(self, data : pd.DataFrame):         
-        self.upsert_dataframe(data, CheckpointSummary)
+    def upsert_into_database(self, df: pd.DataFrame, table_name: str):
+        table_cls = self.get_table_class(table_name)
+        self._upsert_dataframe(df, table_cls)       
 
     #--------------------------------------------------------------------------
     def export_all_tables_as_csv(self, chunksize: int | None = None):        

@@ -62,13 +62,15 @@ class GraphicsHandler:
 class ValidationEvents:
 
     def __init__(self, configuration : dict):
+        self.serializer = DataSerializer()
+        self.modser = ModelSerializer()    
         self.configuration = configuration  
         
     #--------------------------------------------------------------------------
-    def run_dataset_evaluation_pipeline(self, metrics, progress_callback=None, worker=None):         
-        serializer = DataSerializer(self.configuration)    
+    def run_dataset_evaluation_pipeline(self, metrics : list[str], progress_callback=None, worker=None):
+        seed = self.configuration.get("seed", 42)    
         sample_size = self.configuration.get("sample_size", 1.0)
-        roulette_data = serializer.load_roulette_dataset(sample_size)
+        roulette_data = self.serializer.load_roulette_dataset(sample_size, seed)
         logger.info(f'The loaded roulette series includes {len(roulette_data)} extractions')   
         validator = RouletteSeriesValidation(self.configuration) 
 
@@ -88,20 +90,18 @@ class ValidationEvents:
     
     #--------------------------------------------------------------------------
     def run_model_evaluation_pipeline(self, metrics, selected_checkpoint, progress_callback=None, worker=None):
-        logger.info(f'Loading {selected_checkpoint} checkpoint')   
-        modser = ModelSerializer()       
-        model, train_config, session, checkpoint_path = modser.load_checkpoint(
-            selected_checkpoint)    
+        logger.info(f'Loading {selected_checkpoint} checkpoint')
+        model, train_config, _, _ = self.modser.load_checkpoint(selected_checkpoint)    
         model.summary(expand_nested=True)  
 
         # setting device for training         
         device = DeviceConfig(self.configuration) 
         device.set_device()
 
-        # select images from the inference folder and retrieve current paths     
-        serializer = DataSerializer(train_config)
+        # select images from the inference folder and retrieve current paths 
+        seed = train_config.get("seed", 1.0)
         sample_size = self.configuration.get("sample_size", 1.0)
-        dataset = serializer.load_roulette_dataset(sample_size) 
+        dataset = self.serializer.load_roulette_dataset(sample_size, seed) 
         logger.info(f'Roulette series has been loaded ({len(dataset)} extractions)')        
         # use the mapper to encode extractions based on position and color              
         mapper = RouletteSeriesEncoder(self.configuration)
@@ -115,37 +115,35 @@ class ValidationEvents:
         if 'evaluation_report' in metrics:
             # evaluate model performance over the training and validation dataset 
             summarizer = ModelEvaluationSummary(self.configuration)       
-            summarizer.get_evaluation_report(model, dataset, worker=worker) 
-
-        
-        return images      
-
-
-   
+            summarizer.get_evaluation_report(model, dataset, worker=worker)
+                    
+        return images   
+       
 
 ###############################################################################
 class ModelEvents:
 
-    def __init__(self, configuration : dict): 
+    def __init__(self, configuration : dict):
+        self.serializer = DataSerializer()
+        self.modser = ModelSerializer() 
         self.configuration = configuration 
 
     #--------------------------------------------------------------------------
     def get_available_checkpoints(self):
-        serializer = ModelSerializer()
-        return serializer.scan_checkpoints_folder()
+        return self.modser.scan_checkpoints_folder()
             
     #--------------------------------------------------------------------------
-    def run_training_pipeline(self, progress_callback=None, worker=None):  
-        dataserializer = DataSerializer(self.configuration)
-        sample_size = self.configuration.get("train_sample_size", 1.0)
-        dataset = dataserializer.load_roulette_dataset(sample_size) 
+    def run_training_pipeline(self, progress_callback=None, worker=None): 
+        seed = self.configuration.get("seed", 1.0)
+        sample_size = self.configuration.get("sample_size", 1.0)
+        dataset = self.serializer.load_roulette_dataset(sample_size, seed) 
         logger.info(f'Roulette series has been loaded ({len(dataset)} extractions)')        
         # use the mapper to encode extractions based on position and color              
         mapper = RouletteSeriesEncoder(self.configuration)
         logger.info('Encoding roulette extractions')     
         dataset = mapper.encode_roulette_series(dataset) 
         # save update data into database    
-        dataserializer.save_roulette_dataset(dataset)
+        self.serializer.save_roulette_dataset(dataset)
         logger.info('Database updated with processed roulette series')
 
         # check worker status to allow interruption
@@ -157,8 +155,7 @@ class ModelEvents:
         device.set_device() 
         
         # create checkpoint folder
-        modser = ModelSerializer()
-        checkpoint_path = modser.create_checkpoint_folder()
+        checkpoint_path = self.modser.create_checkpoint_folder()
         # build the target model and Q model based on FAIRSnet specifics
         # Q model is the main trained model, while target model is used to predict 
         # next state Q scores and is updated based on the Q model weights   
@@ -167,21 +164,25 @@ class ModelEvents:
         Q_model = learner.get_model(model_summary=True)
         target_model = learner.get_model(model_summary=False) 
         # generate graphviz plot fo the model layout         
-        modser.save_model_plot(Q_model, checkpoint_path)          
+        self.modser.save_model_plot(Q_model, checkpoint_path)          
 
         # perform training and save model at the end       
         trainer = DQNTraining(self.configuration)
         logger.info('Start training with reinforcement learning model')
-        trainer.train_model(
+        model, history = trainer.train_model(
             Q_model, target_model, dataset, checkpoint_path,
             progress_callback=progress_callback, worker=worker)
+        
+        # Save the final model at the end of training
+        self.modser.save_pretrained_model(model, checkpoint_path)       
+        self.modser.save_training_configuration(
+            checkpoint_path, history, self.configuration)
         
     #--------------------------------------------------------------------------
     def resume_training_pipeline(self, selected_checkpoint, progress_callback=None, 
                                  worker=None):
         logger.info(f'Loading {selected_checkpoint} checkpoint') 
-        modser = ModelSerializer()         
-        model, train_config, session, checkpoint_path = modser.load_checkpoint(
+        model, train_config, session, checkpoint_path = self.modser.load_checkpoint(
             selected_checkpoint)    
         model.summary(expand_nested=True)  
         
@@ -191,10 +192,11 @@ class ModelEvents:
         device.set_device()
 
         # process dataset using model configurations
-        dataserializer = DataSerializer(self.configuration)
-        sample_size = train_config.get("train_sample_size", 1.0)
-        dataset = dataserializer.load_roulette_dataset() 
-        logger.info(f'Roulette series has been loaded ({len(dataset)} extractions)')        
+        seed = self.configuration.get("seed", 1.0)
+        sample_size = self.configuration.get("sample_size", 1.0)
+        dataset = self.serializer.load_roulette_dataset(sample_size, seed) 
+        logger.info(f'Roulette series has been loaded ({len(dataset)} extractions)')
+
         # use the mapper to encode extractions based on position and color              
         mapper = RouletteSeriesEncoder(train_config)
         logger.info('Encoding roulette extractions')     
@@ -207,9 +209,14 @@ class ModelEvents:
         trainer = DQNTraining(train_config)
         logger.info('Start training with reinforcement learning model')
         additional_epochs = self.configuration.get('additional_episodes', 10)
-        trainer.resume_training(
+        model, history = trainer.resume_training(
             model, model, dataset, checkpoint_path, session,
             additional_epochs, progress_callback=progress_callback, worker=worker)
+        
+        # Save the final model at the end of training
+        self.modser.save_pretrained_model(model, checkpoint_path)       
+        self.modser.save_training_configuration(
+            checkpoint_path, history, train_config)
 
     #--------------------------------------------------------------------------
     # this is implemented as static method as it is run by a model window. 
@@ -233,7 +240,7 @@ class ModelEvents:
         """        
         logger.info(f'Loading {checkpoint_name} checkpoint')
         modser = ModelSerializer()
-        model, train_config, session, checkpoint_path = modser.load_checkpoint(checkpoint_name)
+        model, train_config, _, _ = modser.load_checkpoint(checkpoint_name)
         model.summary(expand_nested=True)
 
         # Ensure device is set in the child process (so GPU context is owned here)
@@ -243,7 +250,7 @@ class ModelEvents:
 
         # Load the data you will use to seed the perceptive field.
         # The player expects raw extractions in [0, 36] as ints.
-        dataserializer = DataSerializer(configuration)
+        dataserializer = DataSerializer()
         dataset = dataserializer.load_inference_dataset()
         # dataset is expected as an array-like with at least one column where [:,0] are extractions
         if dataset.empty:

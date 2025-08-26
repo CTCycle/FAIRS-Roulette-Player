@@ -1,7 +1,10 @@
 import os
+
 import pandas as pd
 import numpy as np
 from keras import Model
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 from FAIRS.app.utils.learning.callbacks import LearningInterruptCallback
 from FAIRS.app.utils.data.serializer import DataSerializer, ModelSerializer
@@ -15,7 +18,9 @@ from FAIRS.app.logger import logger
 ################################################################################
 class ModelEvaluationSummary:
 
-    def __init__(self, configuration : dict):         
+    def __init__(self, configuration : dict):
+        self.serializer = DataSerializer()  
+        self.modser = ModelSerializer()                   
         self.configuration = configuration
 
     #---------------------------------------------------------------------------
@@ -30,13 +35,11 @@ class ModelEvaluationSummary:
         return model_paths  
 
     #---------------------------------------------------------------------------
-    def get_checkpoints_summary(self, **kwargs):
-        modser = ModelSerializer() 
-        serializer = DataSerializer(self.configuration)           
+    def get_checkpoints_summary(self, **kwargs):                
         model_paths = self.scan_checkpoint_folder()
         model_parameters = []                       
         for i, model_path in enumerate(model_paths):
-            configuration, history = modser.load_training_configuration(model_path)
+            configuration, history = self.modser.load_training_configuration(model_path)
             model_name = os.path.basename(model_path)                   
             precision = 16 if configuration.get("use_mixed_precision", np.nan) else 32             
             scores = history.get('history', {})
@@ -71,7 +74,7 @@ class ModelEvaluationSummary:
                 i+1, len(model_paths), kwargs.get('progress_callback', None)) 
 
         dataframe = pd.DataFrame(model_parameters)
-        serializer.save_checkpoints_summary(dataframe)    
+        self.serializer.save_checkpoints_summary(dataframe)    
             
         return dataframe
     
@@ -119,18 +122,18 @@ class BetsAccuracy:
     #--------------------------------------------------------------------------     
     def plot_confusion_matrix(self, Y_real, predictions, name, path, dpi=400): 
         class_names = ['green', 'black', 'red']        
-        cm = confusion_matrix(Y_real, predictions)    
-        plt.figure(figsize=(14, 14))        
-        sns.heatmap(cm, annot=True, fmt='d', cmap=plt.cm.Blues, cbar=False)        
-        plt.xlabel('Predicted labels', fontsize=14)
-        plt.ylabel('True labels', fontsize=14)
-        plt.title('Confusion Matrix', fontsize=14)
-        plt.xticks(np.arange(len(class_names)) + 0.5, class_names, rotation=45, fontsize=12, ha="right")
-        plt.yticks(np.arange(len(class_names)) + 0.5, class_names, rotation=0, fontsize=12, va="center")          
-        plt.tight_layout()
-        plot_loc = os.path.join(path, f'{name}.jpeg')
-        plt.savefig(plot_loc, bbox_inches='tight', format='jpeg', dpi=self.DPI)
-        plt.close()
+        #cm = confusion_matrix(Y_real, predictions)    
+        # plt.figure(figsize=(14, 14))        
+        # sns.heatmap(cm, annot=True, fmt='d', cmap=plt.cm.Blues, cbar=False)        
+        # plt.xlabel('Predicted labels', fontsize=14)
+        # plt.ylabel('True labels', fontsize=14)
+        # plt.title('Confusion Matrix', fontsize=14)
+        # plt.xticks(np.arange(len(class_names)) + 0.5, class_names, rotation=45, fontsize=12, ha="right")
+        # plt.yticks(np.arange(len(class_names)) + 0.5, class_names, rotation=0, fontsize=12, va="center")          
+        # plt.tight_layout()
+        # plot_loc = os.path.join(path, f'{name}.jpeg')
+        # plt.savefig(plot_loc, bbox_inches='tight', format='jpeg', dpi=self.img_resolution)
+        # plt.close()
 
     
         

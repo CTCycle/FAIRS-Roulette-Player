@@ -1,9 +1,7 @@
 import numpy as np
 from keras import Model
 from keras.utils import set_random_seed
-from tqdm import tqdm
 
-from FAIRS.app.utils.data.serializer import ModelSerializer
 from FAIRS.app.utils.learning.callbacks import CallbacksWrapper
 from FAIRS.app.utils.learning.training.environment import RouletteEnvironment
 from FAIRS.app.utils.learning.training.agents import DQNAgent
@@ -25,8 +23,7 @@ class DQNTraining:
         self.device_id = configuration.get('device_id', 0)
         self.mixed_precision = configuration.get('mixed_precision', False) 
         self.configuration = configuration 
-        # initialize variables
-        self.serializer = ModelSerializer()
+        # initialize variables        
         self.callbacks = CallbacksWrapper(configuration)           
         self.agent = DQNAgent(configuration) 
         self.session_stats = {'episode': [],
@@ -77,7 +74,7 @@ class DQNTraining:
             total_reward = 0
             for time_step in range(environment.max_steps):          
                 gain = environment.capital/environment.initial_capital
-                gain = np.reshape(gain, newshape=(1, 1)) 
+                gain = np.shape(gain, newshape=(1, 1)) 
                 # action is always performed using the Q-model
                 action = self.agent.act(model, state)
                 next_state, reward, done, extraction = environment.step(action)
@@ -137,7 +134,7 @@ class DQNTraining:
         if tensorboard:
             tensorboard.on_train_end()
                      
-        return self.agent 
+        return model
  
     #--------------------------------------------------------------------------
     def train_model(self, model : Model, target_model : Model, data, checkpoint_path, **kwargs):
@@ -149,7 +146,7 @@ class DQNTraining:
         # determine state size as the observation space size       
         state_size = environment.observation_space.shape[0] 
         logger.info(f'Size of the observation space (previous extractions): {state_size}')        
-        agent = self.train_with_reinforcement_learning(
+        model = self.train_with_reinforcement_learning(
             model, target_model, environment, start_episode, episodes, 
             state_size, checkpoint_path, progress_callback=kwargs.get('progress_callback', None), 
             worker=kwargs.get('worker', None))
@@ -159,18 +156,15 @@ class DQNTraining:
         history = {'history' : self.session_stats, 
                    'val_history' : None,
                    'total_episodes' : episodes}
-   
-        serializer = ModelSerializer() 
+        
         # serialize training memory using pickle
-        self.agent.dump_memory(checkpoint_path)   
-        # Save the final model at the end of training
-        serializer.save_pretrained_model(model, checkpoint_path)       
-        serializer.save_training_configuration(
-            checkpoint_path, history, self.configuration)
+        self.agent.dump_memory(checkpoint_path) 
+
+        return model, history          
         
     #--------------------------------------------------------------------------
     def resume_training(self, model : Model, target_model : Model, data, 
-                        checkpoint_path, session=None, additional_epochs=10, **kwargs):
+        checkpoint_path, session=None, additional_epochs=10, **kwargs):
         environment = RouletteEnvironment(data, self.configuration)
         from_episode = 0 if not session else session['epochs']     
         total_episodes = from_episode + additional_epochs  
@@ -178,7 +172,7 @@ class DQNTraining:
         # determine state size as the observation space size       
         state_size = environment.observation_space.shape[0] 
         logger.info(f'Size of the observation space (previous extractions): {state_size}')        
-        agent = self.train_with_reinforcement_learning(
+        model = self.train_with_reinforcement_learning(
             model, target_model, environment, from_episode, total_episodes, 
             state_size, checkpoint_path)
         
@@ -187,12 +181,10 @@ class DQNTraining:
         history = {'history' : self.session_stats, 
                    'val_history' : None,
                    'total_episodes' : total_episodes}
-
-        # Save the final model at the end of training
-        self.serializer.save_pretrained_model(model, checkpoint_path)
+        
         # serialize training memory using pickle
-        self.agent.dump_memory(checkpoint_path)    
-        self.serializer.save_training_configuration(
-            checkpoint_path, history, self.configuration, self.metadata)
+        self.agent.dump_memory(checkpoint_path) 
 
+        return model, history   
+        
 

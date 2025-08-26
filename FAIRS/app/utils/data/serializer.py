@@ -1,5 +1,6 @@
 import os
 import json
+from typing import Dict, Any, Tuple, List
 
 import pandas as pd
 from keras import Model
@@ -16,37 +17,35 @@ from FAIRS.app.logger import logger
 ###############################################################################
 class DataSerializer:
 
-    def __init__(self, configuration : dict): 
-        self.seed = configuration.get('seed', 42)
-        self.configuration = configuration
+    def __init__(self): 
+        self.data_batch = 2000
 
     #--------------------------------------------------------------------------
-    def load_roulette_dataset(self, sample_size=1.0):        
-        dataset = database.load_roulette_dataset()
+    def load_roulette_dataset(self, sample_size: float = 1.0, seed: int = 42) -> pd.DataFrame:
+        dataset = database.load_from_database('ROULETTE_SERIES')
         if sample_size < 1.0:            
-            dataset = dataset.sample(frac=sample_size, random_state=self.seed)     
+            dataset = dataset.sample(frac=sample_size, random_state=seed)     
 
         return dataset
     
     #--------------------------------------------------------------------------
-    def load_inference_dataset(self):        
-        dataset = database.load_roulette_dataset()        
+    def load_inference_dataset(self) -> pd.DataFrame:        
+        dataset = database.load_from_database('PREDICTED_GAMES')
         return dataset
     
     #--------------------------------------------------------------------------
     def save_roulette_dataset(self, dataset : pd.DataFrame):        
-        dataset = database.save_roulette_dataset(dataset)        
+        dataset = database.save_into_database(dataset, 'ROULETTE_SERIES')        
         return dataset
     
     #--------------------------------------------------------------------------
     def save_predicted_games(self, dataset : pd.DataFrame):        
-        dataset = database.save_predicted_games(dataset)        
+        dataset = database.save_into_database(dataset, 'PREDICTED_GAMES')        
         return dataset
     
     #--------------------------------------------------------------------------
     def save_checkpoints_summary(self, data : pd.DataFrame):            
-        database.save_checkpoints_summary(data) 
-           
+        database.upsert_into_database(data, 'CHECKPOINTS_SUMMARY')   
 
     
 # [MODEL SERIALIZATION]
@@ -75,7 +74,7 @@ class ModelSerializer:
         logger.info(f'Training session is over. Model {os.path.basename(path)} has been saved')
 
     #--------------------------------------------------------------------------
-    def save_training_configuration(self, path, history : dict, configuration : dict): 
+    def save_training_configuration(self, path, history : Dict, configuration : Dict): 
         config_path = os.path.join(path, 'configuration', 'configuration.json')
         history_path = os.path.join(path, 'configuration', 'session_history.json')        
 
@@ -90,7 +89,7 @@ class ModelSerializer:
         logger.debug(f'Model configuration, session history and metadata saved for {os.path.basename(path)}')
 
     #--------------------------------------------------------------------------
-    def load_training_configuration(self, path): 
+    def load_training_configuration(self, path : str) -> Tuple[Dict, Dict]: 
         config_path = os.path.join(path, 'configuration', 'configuration.json')
         history_path = os.path.join(path, 'configuration', 'session_history.json')
         with open(config_path, 'r') as f:
@@ -102,7 +101,7 @@ class ModelSerializer:
         return configuration, history  
 
     #-------------------------------------------------------------------------- 
-    def scan_checkpoints_folder(self):
+    def scan_checkpoints_folder(self) -> List[str]:
         model_folders = []
         for entry in os.scandir(CHECKPOINT_PATH):
             if entry.is_dir():
@@ -116,7 +115,7 @@ class ModelSerializer:
         return model_folders 
 
     #--------------------------------------------------------------------------
-    def save_model_plot(self, model, path):  
+    def save_model_plot(self, model : Model, path : str):  
         try: 
             plot_path = os.path.join(path, "model_layout.png")       
             plot_model(model, to_file=plot_path, show_shapes=True,
@@ -128,7 +127,7 @@ class ModelSerializer:
                 "Could not generate model architecture plot (graphviz/pydot not correctly installed)")
             
     #--------------------------------------------------------------------------
-    def load_checkpoint(self, checkpoint : str):
+    def load_checkpoint(self, checkpoint : str) -> Tuple[Model, Dict, Dict, str]:
         # effectively load the model using keras builtin method
         # load configuration data from .json file in checkpoint folder
         checkpoint_path = os.path.join(CHECKPOINT_PATH, checkpoint) 
