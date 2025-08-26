@@ -31,7 +31,7 @@ class RoulettePlayer:
 
         # Load the data you will use to seed the perceptive field.
         # The player expects raw extractions in [0, 36] as ints.
-        self.serializer = DataSerializer(configuration)
+        self.serializer = DataSerializer()
         self.dataset = self.serializer.load_inference_dataset()
         self.updated_dataset = None
         self.true_extraction = None

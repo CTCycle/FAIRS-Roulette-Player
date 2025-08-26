@@ -43,6 +43,8 @@ class ModelEvaluationSummary:
             model_name = os.path.basename(model_path)                   
             precision = 16 if configuration.get("use_mixed_precision", np.nan) else 32             
             scores = history.get('history', {})
+            loss = scores.get('loss', [np.nan])
+            metric = scores.get('cosine_similarity', [np.nan])
             chkp_config = {
                     'checkpoint': model_name,
                     'sample_size': configuration.get('sample_size', np.nan),
@@ -62,8 +64,8 @@ class ModelEvaluationSummary:
                     'discount_rate': configuration.get('discount_rate', np.nan),              
                     'perceptive_field_size': configuration.get('perceptive_field_size', np.nan), 
                     'model_update_frequency': configuration.get('model_update_frequency', np.nan),   
-                    'loss': scores.get('loss', [np.nan])[-1],                     
-                    'accuracy': scores.get('cosine_similarity', [np.nan])[-1], 
+                    'loss': loss[-1] if loss else None,                     
+                    'accuracy': metric[-1] if metric else None, 
                     }                    
             
             model_parameters.append(chkp_config)
@@ -85,8 +87,6 @@ class ModelEvaluationSummary:
         logger.info(f'Evaluation of pretrained model has been completed')   
         logger.info(f'RMSE loss {validation[0]:.3f}')
         logger.info(f'Cosine similarity {validation[1]:.3f}') 
-
-
 
 
 # [VALIDATION OF PRETRAINED MODELS]

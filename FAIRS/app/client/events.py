@@ -1,4 +1,3 @@
-
 import cv2
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from PySide6.QtGui import QImage, QPixmap
@@ -72,11 +71,22 @@ class ValidationEvents:
         sample_size = self.configuration.get("sample_size", 1.0)
         roulette_data = self.serializer.load_roulette_dataset(sample_size, seed)
         logger.info(f'The loaded roulette series includes {len(roulette_data)} extractions')   
-        validator = RouletteSeriesValidation(self.configuration) 
+        validator = RouletteSeriesValidation(self.configuration)
 
-        images = []  
-        if 'roulette_transitions' in metrics:
-            logger.info('Current metric: roulette transitions')            
+        metric_map = {
+            'roulette_transitions': validator.placeholder_method,
+            'roulette_transitions_2': validator.placeholder_method} 
+        
+        images = []
+        for metric in metrics:
+            if metric in metric_map:
+                # check worker status to allow interruption
+                check_thread_status(worker)  
+                metric_name = metric.replace('_', ' ').title()
+                logger.info(f'Current metric: {metric_name}')  
+                result = metric_map[metric](
+                    roulette_data, progress_callback=progress_callback, worker=worker)
+                images.append(result)   
 
         return images 
 
@@ -89,7 +99,8 @@ class ValidationEvents:
         logger.info(f'Checkpoints summary has been created for {checkpoints_summary.shape[0]} models')   
     
     #--------------------------------------------------------------------------
-    def run_model_evaluation_pipeline(self, metrics, selected_checkpoint, progress_callback=None, worker=None):
+    def run_model_evaluation_pipeline(self, metrics : list[str], selected_checkpoint : str, 
+        progress_callback=None, worker=None):
         logger.info(f'Loading {selected_checkpoint} checkpoint')
         model, train_config, _, _ = self.modser.load_checkpoint(selected_checkpoint)    
         model.summary(expand_nested=True)  
@@ -99,26 +110,36 @@ class ValidationEvents:
         device.set_device()
 
         # select images from the inference folder and retrieve current paths 
-        seed = train_config.get("seed", 1.0)
+        seed = train_config.get("seed", 42)
         sample_size = self.configuration.get("sample_size", 1.0)
         dataset = self.serializer.load_roulette_dataset(sample_size, seed) 
         logger.info(f'Roulette series has been loaded ({len(dataset)} extractions)')        
         # use the mapper to encode extractions based on position and color              
         mapper = RouletteSeriesEncoder(self.configuration)
         logger.info('Encoding roulette extractions')     
-        dataset = mapper.encode_roulette_series(dataset) 
-               
-        # check worker status to allow interruption
-        check_thread_status(worker)             
-
-        images = []
-        if 'evaluation_report' in metrics:
-            # evaluate model performance over the training and validation dataset 
-            summarizer = ModelEvaluationSummary(self.configuration)       
-            summarizer.get_evaluation_report(model, dataset, worker=worker)
-                    
-        return images   
+        dataset = mapper.encode_roulette_series(dataset)
+        
+        # evaluate model performance over the training and validation dataset 
+        summarizer = ModelEvaluationSummary(self.configuration)       
        
+        metric_map = {
+            # TO DO: must pass a series of perceptive fields as input
+            # create a method in data/loader.py that mimics dataloader from other projects
+            'evaluation_report': summarizer.get_evaluation_report} 
+        
+        images = []
+        for metric in metrics:
+            if metric in metric_map:
+                # check worker status to allow interruption
+                check_thread_status(worker)  
+                metric_name = metric.replace('_', ' ').title()
+                logger.info(f'Current metric: {metric_name}')  
+                result = metric_map[metric](
+                    model, dataset, progress_callback=progress_callback, worker=worker)
+                images.append(result)   
+
+        return images 
+
 
 ###############################################################################
 class ModelEvents:

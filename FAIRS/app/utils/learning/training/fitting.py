@@ -70,11 +70,11 @@ class DQNTraining:
         for i, episode in enumerate(range(start_episode, episodes)): 
             start_over = True if i == 0 else False                                
             state = environment.reset(start_over=start_over)
-            state = np.reshape(state, newshape=(1, state_size))
+            state = np.reshape(state, shape=(1, state_size))
             total_reward = 0
             for time_step in range(environment.max_steps):          
                 gain = environment.capital/environment.initial_capital
-                gain = np.shape(gain, newshape=(1, 1)) 
+                gain = np.reshape(gain, shape=(1, 1)) 
                 # action is always performed using the Q-model
                 action = self.agent.act(model, state)
                 next_state, reward, done, extraction = environment.step(action)
