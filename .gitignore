@@ -3,6 +3,7 @@ FAIRS/resources/database/metadata/*
 FAIRS/resources/database/validation/*
 
 FAIRS/setup/python/*
+FAIRS/setup/uv/*
 FAIRS/setup/.env
 
 __pycache__
