@@ -5,6 +5,6 @@ class RouletteSeriesValidation:
         self.img_resolution = 400
         self.file_type = "jpeg"
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def placeholder_method(self, data, **kwargs):
         pass

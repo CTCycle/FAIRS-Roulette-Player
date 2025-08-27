@@ -1,4 +1,5 @@
 import os
+from typing import Any, Dict, List
 
 import pandas as pd
 import numpy as np
@@ -15,14 +16,14 @@ from FAIRS.app.logger import logger
 # [LOAD MODEL]
 ################################################################################
 class ModelEvaluationSummary:
-    def __init__(self, model : Model, configuration: dict):
+    def __init__(self, configuration: dict, model: Model | None = None):
         self.serializer = DataSerializer()
         self.modser = ModelSerializer()
         self.model = model
         self.configuration = configuration
 
-    # ---------------------------------------------------------------------------
-    def scan_checkpoint_folder(self):
+    # --------------------------------------------------------------------------
+    def scan_checkpoint_folder(self) -> List[str]:
         model_paths = []
         for entry in os.scandir(CHECKPOINT_PATH):
             if entry.is_dir():
@@ -32,8 +33,8 @@ class ModelEvaluationSummary:
 
         return model_paths
 
-    # ---------------------------------------------------------------------------
-    def get_checkpoints_summary(self, **kwargs):
+    # --------------------------------------------------------------------------
+    def get_checkpoints_summary(self, **kwargs : Any) -> pd.DataFrame:
         model_paths = self.scan_checkpoint_folder()
         model_parameters = []
         for i, model_path in enumerate(model_paths):
@@ -66,9 +67,6 @@ class ModelEvaluationSummary:
                     "exploration_rate_decay", np.nan
                 ),
                 "discount_rate": configuration.get("discount_rate", np.nan),
-                "perceptive_field_size": configuration.get(
-                    "perceptive_field_size", np.nan
-                ),
                 "model_update_frequency": configuration.get(
                     "model_update_frequency", np.nan
                 ),
@@ -89,10 +87,11 @@ class ModelEvaluationSummary:
 
         return dataframe
 
-    # --------------------------------------------------------------------------
-    def get_evaluation_report(self, model: Model, validation_dataset, **kwargs):
+    # -------------------------------------------------------------------------
+    def get_evaluation_report(self, validation_dataset, **kwargs):
         callbacks_list = [LearningInterruptCallback(kwargs.get("worker", None))]
-        validation = model.evaluate(
+        # TO DO: here you must pass the series of windows using the loader
+        validation = self.model.evaluate(
             validation_dataset, verbose=1, callbacks=callbacks_list
         )
         logger.info("Evaluation of pretrained model has been completed")
@@ -108,8 +107,8 @@ class BetsAccuracy:
         self.model = model
 
     # comparison of data distribution using statistical methods
-    # --------------------------------------------------------------------------
-    def plot_timeseries_prediction(self, values, name, path, dpi=400):
+    # -------------------------------------------------------------------------
+    def plot_timeseries_prediction(self, values : Dict[str, Any], name : str, path : str):
         train_data = values["train"]
         test_data = values["test"]
         plt.figure(figsize=(12, 10))
@@ -127,13 +126,13 @@ class BetsAccuracy:
         plt.yticks(fontsize=12)
         plt.tight_layout()
         plot_loc = os.path.join(path, f"{name}.jpeg")
-        plt.savefig(plot_loc, bbox_inches="tight", format="jpeg", dpi=dpi)
+        plt.savefig(plot_loc, bbox_inches="tight", format="jpeg", dpi=400)
         plt.close()
 
     # comparison of data distribution using statistical methods
-    # --------------------------------------------------------------------------
-    def plot_confusion_matrix(self, Y_real, predictions, name, path, dpi=400):
-        class_names = ["green", "black", "red"]
+    # -------------------------------------------------------------------------
+    def plot_confusion_matrix(self, Y_real, predictions, name, path):
+        pass
         # cm = confusion_matrix(Y_real, predictions)
         # plt.figure(figsize=(14, 14))
         # sns.heatmap(cm, annot=True, fmt='d', cmap=plt.cm.Blues, cbar=False)

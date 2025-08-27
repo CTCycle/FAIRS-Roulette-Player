@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import json
 from typing import Dict, Tuple, List
@@ -19,7 +21,7 @@ class DataSerializer:
     def __init__(self):
         self.data_batch = 2000
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def load_roulette_dataset(
         self, sample_size: float = 1.0, seed: int = 42
     ) -> pd.DataFrame:
@@ -29,22 +31,20 @@ class DataSerializer:
 
         return dataset
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def load_inference_dataset(self) -> pd.DataFrame:
         dataset = database.load_from_database("PREDICTED_GAMES")
         return dataset
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def save_roulette_dataset(self, dataset: pd.DataFrame):
         dataset = database.save_into_database(dataset, "ROULETTE_SERIES")
-        return dataset
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def save_predicted_games(self, dataset: pd.DataFrame):
         dataset = database.save_into_database(dataset, "PREDICTED_GAMES")
-        return dataset
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def save_checkpoints_summary(self, data: pd.DataFrame):
         database.upsert_into_database(data, "CHECKPOINTS_SUMMARY")
 
@@ -56,7 +56,7 @@ class ModelSerializer:
         self.model_name = "FAIRS"
 
     # function to create a folder where to save model checkpoints
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def create_checkpoint_folder(self):
         today_datetime = datetime.now().strftime("%Y%m%dT%H%M%S")
         checkpoint_path = os.path.join(
@@ -76,8 +76,10 @@ class ModelSerializer:
             f"Training session is over. Model {os.path.basename(path)} has been saved"
         )
 
-    # --------------------------------------------------------------------------
-    def save_training_configuration(self, path, history: Dict, configuration: Dict):
+    # -------------------------------------------------------------------------
+    def save_training_configuration(
+        self, path: str, history: Dict, configuration: Dict
+    ):
         config_path = os.path.join(path, "configuration", "configuration.json")
         history_path = os.path.join(path, "configuration", "session_history.json")
 
@@ -93,7 +95,7 @@ class ModelSerializer:
             f"Model configuration, session history and metadata saved for {os.path.basename(path)}"
         )
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def load_training_configuration(self, path: str) -> Tuple[Dict, Dict]:
         config_path = os.path.join(path, "configuration", "configuration.json")
         history_path = os.path.join(path, "configuration", "session_history.json")
@@ -105,7 +107,7 @@ class ModelSerializer:
 
         return configuration, history
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def scan_checkpoints_folder(self) -> List[str]:
         model_folders = []
         for entry in os.scandir(CHECKPOINT_PATH):
@@ -120,7 +122,7 @@ class ModelSerializer:
 
         return model_folders
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def save_model_plot(self, model: Model, path: str):
         try:
             plot_path = os.path.join(path, "model_layout.png")
@@ -140,7 +142,7 @@ class ModelSerializer:
                 "Could not generate model architecture plot (graphviz/pydot not correctly installed)"
             )
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def load_checkpoint(self, checkpoint: str) -> Tuple[Model, Dict, Dict, str]:
         # effectively load the model using keras builtin method
         # load configuration data from .json file in checkpoint folder

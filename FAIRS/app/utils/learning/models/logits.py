@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import keras
 from keras import layers, activations
 
@@ -6,19 +8,19 @@ from keras import layers, activations
 ###############################################################################
 @keras.saving.register_keras_serializable(package="CustomLayers", name="AddNorm")
 class AddNorm(keras.layers.Layer):
-    def __init__(self, epsilon=10e-5, **kwargs):
+    def __init__(self, epsilon : float = 10e-5, **kwargs):
         super(AddNorm, self).__init__(**kwargs)
         self.epsilon = epsilon
         self.add = layers.Add()
         self.layernorm = layers.LayerNormalization(epsilon=self.epsilon)
 
     # build method for the custom layer
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def build(self, input_shape):
         super(AddNorm, self).build(input_shape)
 
     # implement transformer encoder through call method
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def call(self, inputs):
         x1, x2 = inputs
         x_add = self.add([x1, x2])
@@ -27,14 +29,14 @@ class AddNorm(keras.layers.Layer):
         return x_norm
 
     # serialize layer for saving
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def get_config(self):
         config = super(AddNorm, self).get_config()
         config.update({"epsilon": self.epsilon})
         return config
 
     # deserialization method
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     @classmethod
     def from_config(cls, config):
         return cls(**config)
@@ -44,7 +46,7 @@ class AddNorm(keras.layers.Layer):
 ###############################################################################
 @keras.saving.register_keras_serializable(package="CustomLayers", name="QScoreNet")
 class QScoreNet(keras.layers.Layer):
-    def __init__(self, dense_units, output_size, seed, **kwargs):
+    def __init__(self, dense_units : int, output_size : int, seed : int, **kwargs):
         super(QScoreNet, self).__init__(**kwargs)
         self.dense_units = dense_units
         self.output_size = output_size
@@ -59,12 +61,12 @@ class QScoreNet(keras.layers.Layer):
         self.batch_norm = layers.BatchNormalization()
 
     # build method for the custom layer
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def build(self, input_shape):
         super(QScoreNet, self).build(input_shape)
 
     # implement transformer encoder through call method
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def call(self, inputs, training=None):
         x = layers.Flatten()(inputs)
         x = self.Q1(x)
@@ -75,7 +77,7 @@ class QScoreNet(keras.layers.Layer):
         return output
 
     # serialize layer for saving
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def get_config(self):
         config = super(QScoreNet, self).get_config()
         config.update(
@@ -88,7 +90,7 @@ class QScoreNet(keras.layers.Layer):
         return config
 
     # deserialization method
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     @classmethod
     def from_config(cls, config):
         return cls(**config)
@@ -97,13 +99,13 @@ class QScoreNet(keras.layers.Layer):
 ###############################################################################
 @keras.saving.register_keras_serializable(package="CustomLayers", name="BatchNormDense")
 class BatchNormDense(layers.Layer):
-    def __init__(self, units, **kwargs):
+    def __init__(self, units : int, **kwargs):
         super(BatchNormDense, self).__init__(**kwargs)
         self.units = units
         self.dense = layers.Dense(units, kernel_initializer="he_uniform")
         self.batch_norm = layers.BatchNormalization()
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def call(self, inputs, training=None):
         layer = self.dense(inputs)
         layer = self.batch_norm(layer, training=training)
@@ -112,7 +114,7 @@ class BatchNormDense(layers.Layer):
         return layer
 
     # serialize layer for saving
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def get_config(self):
         config = super(BatchNormDense, self).get_config()
         config.update({"units": self.units})
@@ -120,7 +122,7 @@ class BatchNormDense(layers.Layer):
         return config
 
     # deserialization method
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     @classmethod
     def from_config(cls, config):
         return cls(**config)
@@ -131,11 +133,11 @@ class BatchNormDense(layers.Layer):
     package="CustomLayers", name="InverseFrequency"
 )
 class InverseFrequency(layers.Layer):
-    def __init__(self, expand_dims=True, **kwargs):
+    def __init__(self, expand_dims : bool = True, **kwargs):
         super(InverseFrequency, self).__init__(**kwargs)
         self.expand_dims = expand_dims
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def call(self, inputs, training=None):
         # Flatten the input tensor to count frequencies across all elements
         inputs = keras.ops.cast(inputs, "int32")
@@ -152,14 +154,14 @@ class InverseFrequency(layers.Layer):
         return inverse_counts
 
     # serialize layer for saving
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def get_config(self):
         config = super(InverseFrequency, self).get_config()
         config.update({"expand_dims": self.expand_dims})
         return config
 
     # deserialization method
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     @classmethod
     def from_config(cls, config):
         return cls(**config)

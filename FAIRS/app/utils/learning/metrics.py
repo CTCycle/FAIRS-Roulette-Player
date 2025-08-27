@@ -28,7 +28,7 @@ class RouletteCategoricalCrossentropy(keras.losses.Loss):
             from_logits=False, reduction="none"
         )
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def call(self, y_true, y_pred):
         y_true = keras.ops.cast(y_true, dtype=keras.config.floatx())
         loss = self.loss(y_true, y_pred)
@@ -38,7 +38,7 @@ class RouletteCategoricalCrossentropy(keras.losses.Loss):
 
         return total_loss
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def get_config(self):
         base_config = super(RouletteCategoricalCrossentropy, self).get_config()
         return {
@@ -61,7 +61,7 @@ class RouletteAccuracy(keras.metrics.Metric):
         self.total = self.add_weight(name="total", initializer="zeros")
         self.count = self.add_weight(name="count", initializer="zeros")
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def update_state(self, y_true, y_pred, sample_weight=None):
         y_true = keras.ops.cast(y_true, dtype=keras.config.floatx())
         probabilities = keras.ops.argmax(y_pred, axis=1)
@@ -74,16 +74,16 @@ class RouletteAccuracy(keras.metrics.Metric):
         # Update the state variables
         self.total.assign_add(keras.ops.sum(accuracy))
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def result(self):
         return self.total / (self.count + keras.backend.epsilon())
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def reset_NUMBERS(self):
         self.total.assign(0)
         self.count.assign(0)
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def get_config(self):
         base_config = super(RouletteAccuracy, self).get_config()
         return {**base_config, "name": self.name}

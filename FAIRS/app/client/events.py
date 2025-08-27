@@ -23,7 +23,7 @@ class GraphicsHandler:
         self.BGRA_encoding = cv2.COLOR_BGRA2RGBA
         self.BGR_encoding = cv2.COLOR_BGR2RGB
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def convert_fig_to_qpixmap(self, fig):
         canvas = FigureCanvasAgg(fig)
         canvas.draw()
@@ -35,7 +35,7 @@ class GraphicsHandler:
 
         return QPixmap.fromImage(qimg)
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def load_image_as_pixmap(self, path):
         img = cv2.imread(path, self.image_encoding)
         # Handle grayscale, RGB, or RGBA
@@ -62,7 +62,7 @@ class ValidationEvents:
         self.modser = ModelSerializer()
         self.configuration = configuration
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def run_dataset_evaluation_pipeline(
         self, metrics: list[str], progress_callback=None, worker=None
     ):
@@ -93,7 +93,7 @@ class ValidationEvents:
 
         return images
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def get_checkpoints_summary(self, progress_callback=None, worker=None):
         summarizer = ModelEvaluationSummary(self.configuration)
         checkpoints_summary = summarizer.get_checkpoints_summary(
@@ -104,7 +104,7 @@ class ValidationEvents:
             f"Checkpoints summary has been created for {checkpoints_summary.shape[0]} models"
         )
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def run_model_evaluation_pipeline(
         self,
         metrics: list[str],
@@ -161,11 +161,11 @@ class ModelEvents:
         self.modser = ModelSerializer()
         self.configuration = configuration
 
-    # --------------------------------------------------------------------------
-    def get_available_checkpoints(self)  -> list[str]:
+    # -------------------------------------------------------------------------
+    def get_available_checkpoints(self) -> list[str]:
         return self.modser.scan_checkpoints_folder()
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def run_training_pipeline(self, progress_callback=None, worker=None):
         seed = self.configuration.get("seed", 1.0)
         sample_size = self.configuration.get("sample_size", 1.0)
@@ -217,7 +217,7 @@ class ModelEvents:
             checkpoint_path, history, self.configuration
         )
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def resume_training_pipeline(
         self, selected_checkpoint, progress_callback=None, worker=None
     ):
@@ -265,10 +265,10 @@ class ModelEvents:
         self.modser.save_pretrained_model(model, checkpoint_path)
         self.modser.save_training_configuration(checkpoint_path, history, train_config)
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     # this is implemented as static method as it is run by a model window.
     # the inference pipeline is run by a process worker that sends signals to the dialog box
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     @staticmethod
     def run_inference_pipeline(
         configuration: dict, checkpoint_name: str, cmd_q, out_q

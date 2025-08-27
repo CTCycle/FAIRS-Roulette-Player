@@ -18,7 +18,7 @@ class ProgressBarCallback(keras.callbacks.Callback):
         self.total_epochs = total_epochs
         self.from_epoch = from_epoch
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def on_epoch_end(self, epoch, logs: dict | None = None):
         processed_epochs = epoch - self.from_epoch + 1
         additional_epochs = max(1, self.total_epochs - self.from_epoch)
@@ -34,13 +34,13 @@ class LearningInterruptCallback(keras.callbacks.Callback):
         super().__init__()
         self.worker = worker
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def on_batch_end(self, batch, logs: dict | None = None):
         if self.worker is not None and self.worker.is_interrupted():
             self.model.stop_training = True
             raise WorkerInterrupted()
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def on_validation_batch_end(self, batch, logs: dict | None = None):
         if self.worker is not None and self.worker.is_interrupted():
             raise WorkerInterrupted()
@@ -54,7 +54,7 @@ class RealTimeHistory:
         self.total_epochs = 0 if past_logs is None else past_logs.get("episodes", 0)
         self.history = {"history": {}, "episodes": self.total_epochs}
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def plot_loss_and_metrics(self, episode, logs: dict | None = None):
         if not logs.get("episode", []):
             return
@@ -67,7 +67,7 @@ class RealTimeHistory:
         self.history["episodes"] = episode + 1
         self.generate_plots()
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def generate_plots(self):
         loss = self.history["history"].get("loss", [])
         metric = self.history["history"].get("metrics", [])
@@ -101,7 +101,7 @@ class GameStatsCallback:
         self.global_step = 0
         self.episode_count = 0
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def plot_game_statistics(self, logs: dict | None = None):
         if not logs.get("episode", []):
             return
@@ -119,7 +119,7 @@ class GameStatsCallback:
 
         self.last_episode = current_episode
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def generate_plot(self, current_step):
         fig, ax = plt.subplots(figsize=(14, 10))
         ax.set_xlabel("Iterations (Time Steps)")
@@ -143,7 +143,7 @@ class GameStatsCallback:
                     vline_handles.append(vline)
                     first_marker = False
         lines = series + vline_handles
-        labels = [l.get_label() for l in lines]
+        labels = [lin.get_label() for lin in lines]
         ax.legend(lines, labels, loc="upper center", bbox_to_anchor=(0.5, -0.1), ncol=3)
         fig.suptitle(f"Training Progress: Capital (At step {current_step})")
         fig.tight_layout(rect=[0, 0.1, 1, 0.95])
@@ -156,14 +156,14 @@ class CallbacksWrapper:
     def __init__(self, configuration):
         self.configuration = configuration
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def get_metrics_callbacks(self, checkpoint_path, history=None):
         RTH_callback = RealTimeHistory(checkpoint_path, past_logs=history)
         GS_callback = GameStatsCallback(checkpoint_path)
 
         return RTH_callback, GS_callback
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def get_tensorboard_callback(
         self, checkpoint_path, model
     ) -> keras.callbacks.TensorBoard:
@@ -177,7 +177,7 @@ class CallbacksWrapper:
 
         return tb_callback
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def checkpoints_saving(self, checkpoint_path):
         checkpoint_filepath = os.path.join(checkpoint_path, "model_checkpoint.keras")
         chkp_save = keras.callbacks.ModelCheckpoint(
