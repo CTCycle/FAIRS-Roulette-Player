@@ -3,32 +3,33 @@ from FAIRS.app.variables import EnvironmentVariables
 EV = EnvironmentVariables()
 
 from functools import partial
-from qt_material import apply_stylesheet
+
+from PySide6.QtCore import QFile, QIODevice, Qt, QThreadPool, QTimer, Slot
+from PySide6.QtGui import QAction, QPainter, QPixmap
 from PySide6.QtUiTools import QUiLoader
-from PySide6.QtCore import QFile, QIODevice, Slot, QThreadPool, QTimer, Qt
-from PySide6.QtGui import QPainter, QPixmap, QAction
 from PySide6.QtWidgets import (
-    QPushButton,
-    QRadioButton,
+    QApplication,
     QCheckBox,
-    QDoubleSpinBox,
-    QSpinBox,
     QComboBox,
-    QProgressBar,
-    QGraphicsScene,
+    QDialog,
+    QDoubleSpinBox,
     QGraphicsPixmapItem,
+    QGraphicsScene,
     QGraphicsView,
     QMessageBox,
-    QDialog,
-    QApplication,
+    QProgressBar,
+    QPushButton,
+    QRadioButton,
+    QSpinBox,
 )
+from qt_material import apply_stylesheet
 
-from FAIRS.app.utils.data.database import database
+from FAIRS.app.client.dialogs import LoadConfigDialog, RouletteDialog, SaveConfigDialog
+from FAIRS.app.client.events import GraphicsHandler, ModelEvents, ValidationEvents
+from FAIRS.app.client.workers import ProcessWorker, ThreadWorker
 from FAIRS.app.configuration import Configuration
-from FAIRS.app.client.dialogs import SaveConfigDialog, LoadConfigDialog, RouletteDialog
-from FAIRS.app.client.events import GraphicsHandler, ValidationEvents, ModelEvents
-from FAIRS.app.client.workers import ThreadWorker, ProcessWorker
 from FAIRS.app.logger import logger
+from FAIRS.app.utils.data.database import database
 
 
 ###############################################################################

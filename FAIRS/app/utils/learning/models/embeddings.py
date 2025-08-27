@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 from typing import Any
+
 import keras
 from keras import layers
 

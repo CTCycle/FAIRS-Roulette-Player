@@ -1,12 +1,13 @@
 import os
 import pickle
 import random
-import numpy as np
-import keras
 from collections import deque
 
+import keras
+import numpy as np
+
+from FAIRS.app.constants import PAD_VALUE, STATES
 from FAIRS.app.utils.learning.training.environment import RouletteEnvironment
-from FAIRS.app.constants import STATES, PAD_VALUE
 
 
 # [TOOLS FOR TRAINING MACHINE LEARNING MODELS]
