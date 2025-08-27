@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import keras
-from keras import layers, activations
+from keras import activations, layers
 
 
 # [ADD NORM LAYER]

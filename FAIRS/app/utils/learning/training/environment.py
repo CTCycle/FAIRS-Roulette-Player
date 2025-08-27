@@ -1,11 +1,11 @@
-import pandas as pd
-import numpy as np
 import gymnasium as gym
-from gymnasium import spaces
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from gymnasium import spaces
 
+from FAIRS.app.constants import NUMBERS, PAD_VALUE, STATES
 from FAIRS.app.utils.data.process import RouletteSeriesEncoder
-from FAIRS.app.constants import STATES, NUMBERS, PAD_VALUE
 
 
 # [ROULETTE RL ENVIRONMENT]

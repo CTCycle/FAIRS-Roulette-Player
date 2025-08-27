@@ -1,8 +1,8 @@
-import traceback
 import inspect
-from multiprocessing import Process, Queue, Event
+import traceback
+from multiprocessing import Event, Process, Queue
 
-from PySide6.QtCore import QObject, Signal, QRunnable, Slot
+from PySide6.QtCore import QObject, QRunnable, Signal, Slot
 
 
 ###############################################################################

@@ -2,13 +2,13 @@ import os
 
 import pandas as pd
 import sqlalchemy
-from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy import Column, Float, Integer, String, UniqueConstraint, create_engine
 from sqlalchemy.dialects.sqlite import insert
+from sqlalchemy.orm import declarative_base, sessionmaker
 
-from FAIRS.app.utils.singleton import singleton
-from FAIRS.app.constants import DATA_PATH, SOURCE_PATH, INFERENCE_PATH
+from FAIRS.app.constants import DATA_PATH, INFERENCE_PATH, SOURCE_PATH
 from FAIRS.app.logger import logger
+from FAIRS.app.utils.singleton import singleton
 
 Base = declarative_base()
 

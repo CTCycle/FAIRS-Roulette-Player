@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-import pandas as pd
 import numpy as np
-from keras.utils import set_random_seed
+import pandas as pd
 from keras import Model
+from keras.utils import set_random_seed
 
+from FAIRS.app.constants import PAD_VALUE
 from FAIRS.app.utils.data.serializer import DataSerializer
 from FAIRS.app.utils.learning.training.environment import BetsAndRewards
-from FAIRS.app.constants import PAD_VALUE
 
 
 ###############################################################################

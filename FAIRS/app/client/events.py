@@ -2,17 +2,16 @@ import cv2
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from PySide6.QtGui import QImage, QPixmap
 
-from FAIRS.app.utils.data.serializer import DataSerializer, ModelSerializer
-from FAIRS.app.utils.validation.dataset import RouletteSeriesValidation
-from FAIRS.app.utils.validation.checkpoints import ModelEvaluationSummary
+from FAIRS.app.client.workers import check_thread_status
+from FAIRS.app.logger import logger
 from FAIRS.app.utils.data.process import RouletteSeriesEncoder
+from FAIRS.app.utils.data.serializer import DataSerializer, ModelSerializer
 from FAIRS.app.utils.learning.device import DeviceConfig
+from FAIRS.app.utils.learning.inference.player import RoulettePlayer
 from FAIRS.app.utils.learning.models.qnet import FAIRSnet
 from FAIRS.app.utils.learning.training.fitting import DQNTraining
-from FAIRS.app.utils.learning.inference.player import RoulettePlayer
-from FAIRS.app.client.workers import check_thread_status
-
-from FAIRS.app.logger import logger
+from FAIRS.app.utils.validation.checkpoints import ModelEvaluationSummary
+from FAIRS.app.utils.validation.dataset import RouletteSeriesValidation
 
 
 ###############################################################################

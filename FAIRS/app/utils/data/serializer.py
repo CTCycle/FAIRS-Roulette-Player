@@ -1,18 +1,17 @@
 from __future__ import annotations
 
-import os
 import json
-from typing import Dict, Tuple, List
+import os
+from datetime import datetime
 
 import pandas as pd
 from keras import Model
-from keras.utils import plot_model
 from keras.models import load_model
-from datetime import datetime
+from keras.utils import plot_model
 
-from FAIRS.app.utils.data.database import database
 from FAIRS.app.constants import CHECKPOINT_PATH
 from FAIRS.app.logger import logger
+from FAIRS.app.utils.data.database import database
 
 
 # [DATA SERIALIZATION]
@@ -78,7 +77,7 @@ class ModelSerializer:
 
     # -------------------------------------------------------------------------
     def save_training_configuration(
-        self, path: str, history: Dict, configuration: Dict
+        self, path: str, history: dict, configuration: dict
     ):
         config_path = os.path.join(path, "configuration", "configuration.json")
         history_path = os.path.join(path, "configuration", "session_history.json")
@@ -96,19 +95,19 @@ class ModelSerializer:
         )
 
     # -------------------------------------------------------------------------
-    def load_training_configuration(self, path: str) -> Tuple[Dict, Dict]:
+    def load_training_configuration(self, path: str) -> tuple[dict, dict]:
         config_path = os.path.join(path, "configuration", "configuration.json")
         history_path = os.path.join(path, "configuration", "session_history.json")
-        with open(config_path, "r") as f:
+        with open(config_path) as f:
             configuration = json.load(f)
 
-        with open(history_path, "r") as f:
+        with open(history_path) as f:
             history = json.load(f)
 
         return configuration, history
 
     # -------------------------------------------------------------------------
-    def scan_checkpoints_folder(self) -> List[str]:
+    def scan_checkpoints_folder(self) -> list[str]:
         model_folders = []
         for entry in os.scandir(CHECKPOINT_PATH):
             if entry.is_dir():
@@ -143,7 +142,7 @@ class ModelSerializer:
             )
 
     # -------------------------------------------------------------------------
-    def load_checkpoint(self, checkpoint: str) -> Tuple[Model, Dict, Dict, str]:
+    def load_checkpoint(self, checkpoint: str) -> tuple[Model, dict, dict, str]:
         # effectively load the model using keras builtin method
         # load configuration data from .json file in checkpoint folder
         checkpoint_path = os.path.join(CHECKPOINT_PATH, checkpoint)

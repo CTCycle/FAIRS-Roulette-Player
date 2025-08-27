@@ -1,16 +1,16 @@
 import os
-from typing import Any, Dict, List
+from typing import Any
 
-import pandas as pd
-import numpy as np
-from keras import Model
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from keras import Model
 
-from FAIRS.app.utils.learning.callbacks import LearningInterruptCallback
-from FAIRS.app.utils.data.serializer import DataSerializer, ModelSerializer
 from FAIRS.app.client.workers import check_thread_status, update_progress_callback
 from FAIRS.app.constants import CHECKPOINT_PATH
 from FAIRS.app.logger import logger
+from FAIRS.app.utils.data.serializer import DataSerializer, ModelSerializer
+from FAIRS.app.utils.learning.callbacks import LearningInterruptCallback
 
 
 # [LOAD MODEL]
@@ -23,7 +23,7 @@ class ModelEvaluationSummary:
         self.configuration = configuration
 
     # --------------------------------------------------------------------------
-    def scan_checkpoint_folder(self) -> List[str]:
+    def scan_checkpoint_folder(self) -> list[str]:
         model_paths = []
         for entry in os.scandir(CHECKPOINT_PATH):
             if entry.is_dir():
@@ -108,7 +108,7 @@ class BetsAccuracy:
 
     # comparison of data distribution using statistical methods
     # -------------------------------------------------------------------------
-    def plot_timeseries_prediction(self, values : Dict[str, Any], name : str, path : str):
+    def plot_timeseries_prediction(self, values : dict[str, Any], name : str, path : str):
         train_data = values["train"]
         test_data = values["test"]
         plt.figure(figsize=(12, 10))

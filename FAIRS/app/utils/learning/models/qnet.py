@@ -1,10 +1,9 @@
+from keras import Model, layers, losses, metrics, optimizers
 from torch import compile as torch_compile
-from keras import layers, Model, losses, metrics, optimizers
 
-
+from FAIRS.app.constants import NUMBERS, STATES
 from FAIRS.app.utils.learning.models.embeddings import RouletteEmbedding
-from FAIRS.app.utils.learning.models.logits import BatchNormDense, QScoreNet, AddNorm
-from FAIRS.app.constants import STATES, NUMBERS
+from FAIRS.app.utils.learning.models.logits import AddNorm, BatchNormDense, QScoreNet
 
 
 # [FAIRS MODEL]

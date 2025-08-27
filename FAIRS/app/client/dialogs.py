@@ -1,18 +1,18 @@
-import os
 import multiprocessing as mp
+import os
 import queue as stdq
 
 from PySide6.QtCore import QTimer, Slot
 from PySide6.QtWidgets import (
     QDialog,
-    QVBoxLayout,
-    QLineEdit,
-    QLabel,
-    QPushButton,
     QDialogButtonBox,
-    QListWidget,
     QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QListWidget,
     QMessageBox,
+    QPushButton,
+    QVBoxLayout,
 )
 
 from FAIRS.app.client.events import ModelEvents

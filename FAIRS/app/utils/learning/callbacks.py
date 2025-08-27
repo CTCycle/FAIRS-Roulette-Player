@@ -1,8 +1,9 @@
 import os
-import keras
-import webbrowser
 import subprocess
 import time
+import webbrowser
+
+import keras
 import matplotlib.pyplot as plt
 
 from FAIRS.app.client.workers import WorkerInterrupted
