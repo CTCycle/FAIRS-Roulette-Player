@@ -16,7 +16,7 @@ class RouletteDataLoader:
         # self.shuffle = shuffle
 
     # effectively build the tf.dataset and apply preprocessing, batching and prefetching
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def build_training_dataloader(self, data: pd.DataFrame, batch_size=None):
         # images, tokens = data['path'].to_list(), data['tokens'].to_list()
         # batch_size = self.batch_size if batch_size is None else batch_size
@@ -30,7 +30,7 @@ class RouletteDataLoader:
         return data
 
     # effectively build the tf.dataset and apply preprocessing, batching and prefetching
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def build_inference_dataloader(
         self, data, batch_size=None, buffer_size=tf.data.AUTOTUNE
     ):

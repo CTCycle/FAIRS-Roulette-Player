@@ -36,7 +36,7 @@ class DQNTraining:
         }
 
     # set device
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def update_session_stats(
         self, scores: dict, episode, time_step, reward, total_reward, capital
     ):
@@ -52,7 +52,7 @@ class DQNTraining:
         self.session_stats["total_reward"].append(total_reward)
         self.session_stats["capital"].append(capital)
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def train_with_reinforcement_learning(
         self,
         model: Model,
@@ -64,7 +64,6 @@ class DQNTraining:
         checkpoint_path,
         **kwargs,
     ):
-        total_epochs = self.configuration.get("episodes", 100)
         # if tensorboard is selected, an instance of the tb callback is built
         # the dashboard is set on the Q model and tensorboard is launched automatically
         tensorboard = None
@@ -162,7 +161,7 @@ class DQNTraining:
 
         return model
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def train_model(
         self, model: Model, target_model: Model, data, checkpoint_path, **kwargs
     ):
@@ -201,7 +200,7 @@ class DQNTraining:
 
         return model, history
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def resume_training(
         self,
         model: Model,

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pandas as pd
 import numpy as np
 from keras.utils import set_random_seed
@@ -36,7 +38,7 @@ class RoulettePlayer:
         self.true_extraction = None
         self.next_action_desc = None
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def initialize_states(self):
         input_data = self.dataset["extraction"].to_numpy(dtype=np.int32).reshape(-1, 1)
         if self.last_state is None:
@@ -51,8 +53,8 @@ class RoulettePlayer:
         else:
             self.last_state[-perceptive_candidates.size :] = perceptive_candidates
 
-    # --------------------------------------------------------------------------
-    def predict_next(self):
+    # -------------------------------------------------------------------------
+    def predict_next(self) -> dict:
         if self.last_state is None:
             self.initialize_states()
 
@@ -65,7 +67,7 @@ class RoulettePlayer:
 
         return {"action": self.next_action, "description": self.next_action_desc}
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def update_with_true_extraction(self, real_number: int):
         if not isinstance(real_number, (int, np.integer)):
             raise ValueError("Real extraction must be an integer")
@@ -76,7 +78,7 @@ class RoulettePlayer:
         self.true_extraction = real_number
         self.last_state = np.append(self.last_state[1:], np.int32(real_number))
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def save_prediction(self, checkpoint_name: str):
         new_id = int(self.dataset["id"].max()) + 1 if len(self.dataset) else 1
         row = {

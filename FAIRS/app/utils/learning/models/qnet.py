@@ -31,8 +31,8 @@ class FAIRSnet:
         # initialize QNet for Q scores predictions
         self.QNet = QScoreNet(self.q_neurons, self.action_size, self.seed)
 
-    # --------------------------------------------------------------------------
-    def compile_model(self, model: Model, model_summary=True):
+    # -------------------------------------------------------------------------
+    def compile_model(self, model: Model, model_summary : bool = True):
         # define model compilation parameters such as learning rate, loss, metrics and optimizer
         loss = losses.MeanSquaredError()
         metric = [metrics.RootMeanSquaredError()]
@@ -47,8 +47,8 @@ class FAIRSnet:
         return model
 
     # build model given the architecture
-    # --------------------------------------------------------------------------
-    def get_model(self, model_summary=True):
+    # -------------------------------------------------------------------------
+    def get_model(self, model_summary : bool = True):
         embeddings = self.embedding(self.timeseries)
         layer = BatchNormDense(self.neurons)(embeddings)
         layer = BatchNormDense(self.neurons)(layer)

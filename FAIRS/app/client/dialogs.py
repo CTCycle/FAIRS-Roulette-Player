@@ -187,7 +187,7 @@ class RouletteDialog(QDialog):
         self.out_timer.timeout.connect(self._drain_out_queue)
         self.out_timer.start()
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def _start_process_worker(self, worker, on_finished, on_error, on_interrupted):
         worker.signals.finished.connect(on_finished)
         worker.signals.error.connect(on_error)

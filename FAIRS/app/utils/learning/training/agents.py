@@ -23,19 +23,19 @@ class DQNAgent:
         self.replay_size = configuration.get("replay_buffer_size", 1000)
         self.memory = deque(maxlen=self.memory_size) if memory is None else memory
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def dump_memory(self, path):
         memory_path = os.path.join(path, "configuration", "replay_memory.pkl")
         with open(memory_path, "wb") as f:
             pickle.dump(self.memory, f)
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def load_memory(self, path):
         memory_path = os.path.join(path, "configuration", "replay_memory.pkl")
         with open(memory_path, "rb") as f:
             self.memory = pickle.load(f)
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def act(self, model: keras.Model, state):
         # generate a random number between 0 and 1 for exploration purposes.
         # if this number is equal or smaller to exploration rate, the agent will
@@ -52,7 +52,7 @@ class DQNAgent:
 
         return best_q
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def remember(self, state, action, reward, gain, next_state, done):
         self.memory.append((state, action, reward, gain, next_state, done))
 
@@ -61,7 +61,7 @@ class DQNAgent:
     # expected future reward if the agent takes that action from the given state.
     # The highest predicted value represents the action that the agent believes
     # will lead to the highest reward in the future.
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def replay(
         self,
         model: keras.Model,
@@ -82,7 +82,7 @@ class DQNAgent:
         )
         actions = np.array([a for s, a, r, c, ns, d in minibatch], dtype=np.int32)
         rewards = np.array([r for s, a, r, c, ns, d in minibatch], dtype=np.float32)
-        gains = np.array(
+        np.array(
             [np.squeeze(c) for s, a, r, c, ns, d in minibatch], dtype=np.float32
         )
         next_states = np.array(

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pandas as pd
 
 
@@ -72,14 +74,14 @@ class RouletteSeriesEncoder:
             "green": [0],
         }
 
-    # --------------------------------------------------------------------------
-    def map_roulette_positions(self, dataframe: pd.DataFrame):
+    # -------------------------------------------------------------------------
+    def map_roulette_positions(self, dataframe: pd.DataFrame) -> pd.DataFrame:
         dataframe["position"] = dataframe["extraction"].map(self.position_map)
 
         return dataframe
 
-    # --------------------------------------------------------------------------
-    def map_roulette_colors(self, dataframe: pd.DataFrame):
+    # -------------------------------------------------------------------------
+    def map_roulette_colors(self, dataframe: pd.DataFrame) -> pd.DataFrame:
         reverse_color_map = {
             v: k for k, values in self.color_map.items() for v in values
         }
@@ -88,8 +90,8 @@ class RouletteSeriesEncoder:
 
         return dataframe
 
-    # --------------------------------------------------------------------------
-    def encode_roulette_series(self, dataframe: pd.DataFrame):
+    # -------------------------------------------------------------------------
+    def encode_roulette_series(self, dataframe: pd.DataFrame) -> pd.DataFrame:
         # map roulette numbers to their positional indices
         dataframe = self.map_roulette_positions(dataframe)
         # map roulette numbers to their corresponding colors
