@@ -15,9 +15,10 @@ from FAIRS.app.logger import logger
 # [LOAD MODEL]
 ################################################################################
 class ModelEvaluationSummary:
-    def __init__(self, configuration: dict):
+    def __init__(self, model : Model, configuration: dict):
         self.serializer = DataSerializer()
         self.modser = ModelSerializer()
+        self.model = model
         self.configuration = configuration
 
     # ---------------------------------------------------------------------------

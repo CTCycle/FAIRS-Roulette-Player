@@ -131,7 +131,7 @@ class ValidationEvents:
         dataset = mapper.encode_roulette_series(dataset)
 
         # evaluate model performance over the training and validation dataset
-        summarizer = ModelEvaluationSummary(self.configuration)
+        summarizer = ModelEvaluationSummary(model, self.configuration)
 
         metric_map = {
             # TO DO: must pass a series of perceptive fields as input
@@ -147,7 +147,7 @@ class ValidationEvents:
                 metric_name = metric.replace("_", " ").title()
                 logger.info(f"Current metric: {metric_name}")
                 result = metric_map[metric](
-                    model, dataset, progress_callback=progress_callback, worker=worker
+                    dataset, progress_callback=progress_callback, worker=worker
                 )
                 images.append(result)
 
@@ -162,7 +162,7 @@ class ModelEvents:
         self.configuration = configuration
 
     # --------------------------------------------------------------------------
-    def get_available_checkpoints(self):
+    def get_available_checkpoints(self)  -> list[str]:
         return self.modser.scan_checkpoints_folder()
 
     # --------------------------------------------------------------------------
