@@ -1,16 +1,25 @@
-import os 
+import os
 import multiprocessing as mp
 import queue as stdq
 
 from PySide6.QtCore import QTimer, Slot
-from PySide6.QtWidgets import (QDialog, QVBoxLayout, QLineEdit, QLabel, QPushButton, 
-                               QDialogButtonBox, QListWidget, QHBoxLayout, QMessageBox)
+from PySide6.QtWidgets import (
+    QDialog,
+    QVBoxLayout,
+    QLineEdit,
+    QLabel,
+    QPushButton,
+    QDialogButtonBox,
+    QListWidget,
+    QHBoxLayout,
+    QMessageBox,
+)
 
 from FAIRS.app.client.events import ModelEvents
 from FAIRS.app.client.workers import ProcessWorker
 from FAIRS.app.constants import CONFIG_PATH
 from FAIRS.app.logger import logger
-         
+
 
 ###############################################################################
 class SaveConfigDialog(QDialog):
@@ -25,16 +34,19 @@ class SaveConfigDialog(QDialog):
         self.name_edit = QLineEdit(self)
         self.layout.addWidget(self.name_edit)
 
-        self.buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self)
+        self.buttons = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self
+        )
         self.layout.addWidget(self.buttons)
 
         self.buttons.accepted.connect(self.accept)
         self.buttons.rejected.connect(self.reject)
 
     def get_name(self):
-        return self.name_edit.text().strip()       
+        return self.name_edit.text().strip()
 
-###############################################################################   
+
+###############################################################################
 class LoadConfigDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -48,10 +60,12 @@ class LoadConfigDialog(QDialog):
         self.layout.addWidget(self.config_list)
 
         # Populate the list with available .json files
-        configs = [f for f in os.listdir(CONFIG_PATH) if f.endswith('.json')]
+        configs = [f for f in os.listdir(CONFIG_PATH) if f.endswith(".json")]
         self.config_list.addItems(configs)
 
-        self.buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self)
+        self.buttons = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self
+        )
         self.layout.addWidget(self.buttons)
 
         self.buttons.accepted.connect(self.accept)
@@ -60,8 +74,9 @@ class LoadConfigDialog(QDialog):
     def get_selected_config(self):
         selected = self.config_list.currentItem()
         return selected.text() if selected else None
-    
-###############################################################################  
+
+
+###############################################################################
 ###############################################################################
 class RouletteDialog(QDialog):
     """
@@ -76,6 +91,7 @@ class RouletteDialog(QDialog):
       {"kind":"closed"}
 
     """
+
     def __init__(self, parent, configuration, checkpoint_name):
         super().__init__(parent)
         self.setWindowTitle("Roulette – Live")
@@ -155,14 +171,14 @@ class RouletteDialog(QDialog):
             self.configuration,
             self.checkpoint,
             self.cmd_q,
-            self.out_q
+            self.out_q,
         )
 
         self._start_process_worker(
             self.worker,
             on_finished=self._on_proc_finished,
             on_error=self._on_proc_error,
-            on_interrupted=self._on_proc_interrupted
+            on_interrupted=self._on_proc_interrupted,
         )
 
         # Start polling child->dialog queue only after process starts
@@ -171,7 +187,7 @@ class RouletteDialog(QDialog):
         self.out_timer.timeout.connect(self._drain_out_queue)
         self.out_timer.start()
 
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
     def _start_process_worker(self, worker, on_finished, on_error, on_interrupted):
         worker.signals.finished.connect(on_finished)
         worker.signals.error.connect(on_error)
@@ -193,7 +209,9 @@ class RouletteDialog(QDialog):
         try:
             self.cmd_q.put({"kind": "next"})
         except Exception as e:
-            QMessageBox.critical(self, "Request error", f"Could not send request: {e!r}")
+            QMessageBox.critical(
+                self, "Request error", f"Could not send request: {e!r}"
+            )
             self._busy_toggle(False)
 
     @Slot()
@@ -206,7 +224,11 @@ class RouletteDialog(QDialog):
             if not (0 <= val <= 36):
                 raise ValueError("Value must be between 0 and 36")
         except Exception as e:
-            QMessageBox.warning(self, "Invalid value", f"Please enter an integer in [0, 36].\n\nDetail: {e}")
+            QMessageBox.warning(
+                self,
+                "Invalid value",
+                f"Please enter an integer in [0, 36].\n\nDetail: {e}",
+            )
             return
 
         try:
@@ -317,7 +339,9 @@ class RouletteDialog(QDialog):
         logger.error(f"Child process error: {exc}\n{tb}")
         self._teardown_timers()
         self._busy_toggle(False)
-        QMessageBox.critical(self, "Process error", "An error occurred. Check logs for details.")
+        QMessageBox.critical(
+            self, "Process error", "An error occurred. Check logs for details."
+        )
 
     def _on_proc_interrupted(self):
         self._teardown_timers()

@@ -1,6 +1,6 @@
 # FAIRS: Fabulous Automated Intelligent Roulette System
 
-## 1. Project Overview
+## 1. Introduction
 FAIRS is a research project dedicated to predicting upcoming outcomes in online roulette through a Deep Q-Network (DQN) agent. Instead of relying solely on immediate, isolated results, FAIRS utilizes sequences of past roulette spins, incorporating a perceptive field of historical outcomes as input. This approach allows the model to detect temporal patterns that might influence future events. Additionally, random number generation can be used to simulate a genuinely unpredictable game environment, mirroring the behavior of a real roulette wheel.
 
 During training, the DQN agent learns to identify patterns within these sequences, and to select the actions associated with the highest Q-scores—signals of potentially more rewarding decisions. In doing so, FAIRS adapts sequence modeling techniques to the inherently random and structured nature of roulette outcomes, aiming to refine predictive accuracy in an environment defined by uncertainty.
@@ -18,15 +18,6 @@ FAIRSnet is a specialized neural network designed for roulette prediction within
 
 ## 3. Installation
 The installation process for Windows is fully automated. Simply run the script *start_on_windows.bat* to begin. During its initial execution, the script installs portable Python, necessary dependencies, minimizing user interaction and ensuring all components are ready for local use. 
-
-**Important:** After installation, if the project folder is moved or its path is changed, the application will no longer function correctly. To fix this, you can either:
-
-- Open the main menu, select *Setup and maintentance* and choose *Install project in editable mode*
-- Manually run the following commands in the terminal, ensuring the project folder is set as the current working directory (CWD):
-
-    `conda activate FAIRS`
-
-    `pip install -e . --use-pep517` 
 
 ### 3.1 Just-In-Time (JIT) Compiler
 This project leverages Just-In-Time model compilation through `torch.compile`, enhancing model performance by tracing the computation graph and applying advanced optimizations like kernel fusion and graph lowering. This approach significantly reduces computation time during both training and inference. The default backend, TorchInductor, is designed to maximize performance on both CPUs and GPUs. Additionally, the installation includes Triton, which generates highly optimized GPU kernels for even faster computation on NVIDIA hardware. 
@@ -56,8 +47,6 @@ The main interface streamlines navigation across the application's core services
 
 **Setup and Maintenance:** you can run *setup_and_maintenance.bat* to start the external tools for maintenance with the following options:
 
-- **Run installation:** run the application installer for Windows
-- **Enable root path imports:** refresh root path imports if the main folder has been moved or renamed
 - **Update project:** check for updates from Github
 - **Remove logs:** remove all logs file from *resources/logs*
 

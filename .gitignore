@@ -3,12 +3,15 @@ FAIRS/resources/database/metadata/*
 FAIRS/resources/database/validation/*
 
 FAIRS/setup/python/*
+FAIRS/setup/uv/*
 FAIRS/setup/.env
 
 __pycache__
 *.vscode
-*.egg-info
 *.json
 *.db
 *.log
+*.lock
+*.venv
+*.egg-info
 !.gitkeep

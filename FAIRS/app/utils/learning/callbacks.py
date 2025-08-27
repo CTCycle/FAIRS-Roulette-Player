@@ -18,10 +18,10 @@ class ProgressBarCallback(keras.callbacks.Callback):
         self.total_epochs = total_epochs
         self.from_epoch = from_epoch
 
-    #--------------------------------------------------------------------------
-    def on_epoch_end(self, epoch, logs : dict | None = None):
-        processed_epochs = epoch - self.from_epoch + 1        
-        additional_epochs = max(1, self.total_epochs - self.from_epoch) 
+    # --------------------------------------------------------------------------
+    def on_epoch_end(self, epoch, logs: dict | None = None):
+        processed_epochs = epoch - self.from_epoch + 1
+        additional_epochs = max(1, self.total_epochs - self.from_epoch)
         percent = int(100 * processed_epochs / additional_epochs)
         if self.progress_callback is not None:
             self.progress_callback(percent)
@@ -34,67 +34,65 @@ class LearningInterruptCallback(keras.callbacks.Callback):
         super().__init__()
         self.worker = worker
 
-    #--------------------------------------------------------------------------
-    def on_batch_end(self, batch, logs : dict | None = None):
-        if self.worker is not None and self.worker.is_interrupted():            
+    # --------------------------------------------------------------------------
+    def on_batch_end(self, batch, logs: dict | None = None):
+        if self.worker is not None and self.worker.is_interrupted():
             self.model.stop_training = True
             raise WorkerInterrupted()
-        
-    #--------------------------------------------------------------------------
-    def on_validation_batch_end(self, batch, logs : dict | None = None):
+
+    # --------------------------------------------------------------------------
+    def on_validation_batch_end(self, batch, logs: dict | None = None):
         if self.worker is not None and self.worker.is_interrupted():
             raise WorkerInterrupted()
 
-    
+
 # [CALLBACK FOR REAL TIME TRAINING MONITORING]
 ###############################################################################
-class RealTimeHistory:    
-        
-    def __init__(self, plot_path, past_logs : dict | None = None):        
-        self.fig_path = os.path.join(plot_path, 'training_history.jpeg')
-        self.total_epochs = 0 if past_logs is None else past_logs.get('episodes', 0)
-        self.history = {'history' : {}, 'episodes' : self.total_epochs}   
-                    
-    #--------------------------------------------------------------------------
-    def plot_loss_and_metrics(self, episode, logs : dict | None = None):
-        if not logs.get('episode', []):
+class RealTimeHistory:
+    def __init__(self, plot_path, past_logs: dict | None = None):
+        self.fig_path = os.path.join(plot_path, "training_history.jpeg")
+        self.total_epochs = 0 if past_logs is None else past_logs.get("episodes", 0)
+        self.history = {"history": {}, "episodes": self.total_epochs}
+
+    # --------------------------------------------------------------------------
+    def plot_loss_and_metrics(self, episode, logs: dict | None = None):
+        if not logs.get("episode", []):
             return
-        
+
         # iterates over all key-value pairs of logs
         for key, value in logs.items():
-            if key not in self.history['history']:
-                self.history['history'][key] = []
-            self.history['history'][key].append(value[-1])
-        self.history['episodes'] = episode + 1
+            if key not in self.history["history"]:
+                self.history["history"][key] = []
+            self.history["history"][key].append(value[-1])
+        self.history["episodes"] = episode + 1
         self.generate_plots()
 
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
     def generate_plots(self):
-        loss = self.history['history'].get('loss', [])
-        metric = self.history['history'].get('metrics', [])
+        loss = self.history["history"].get("loss", [])
+        metric = self.history["history"].get("metrics", [])
         fig, axes = plt.subplots(2, 1, figsize=(16, 10))
         # loss plot
         if loss:
-            axes[0].plot(loss, label='train')
-        axes[0].set_title('Loss')
-        axes[0].set_xlabel('Episode')
-        axes[0].legend(loc='best', fontsize=10)
+            axes[0].plot(loss, label="train")
+        axes[0].set_title("Loss")
+        axes[0].set_xlabel("Episode")
+        axes[0].legend(loc="best", fontsize=10)
         # Metric plot
         if metric:
-            axes[1].plot(metric, label='train')       
-        axes[1].set_title('Metrics')
-        axes[1].set_xlabel('Episode')
-        axes[1].legend(loc='best', fontsize=10)
+            axes[1].plot(metric, label="train")
+        axes[1].set_title("Metrics")
+        axes[1].set_xlabel("Episode")
+        axes[1].legend(loc="best", fontsize=10)
         plt.tight_layout()
-        plt.savefig(self.fig_path, bbox_inches='tight', format='jpeg', dpi=300)
+        plt.savefig(self.fig_path, bbox_inches="tight", format="jpeg", dpi=300)
         plt.close(fig)
 
 
 ###############################################################################
 class GameStatsCallback:
-    
-    def __init__(self, plot_path, iterations=None, capitals=None, **kwargs): 
-        self.plot_path = os.path.join(plot_path, 'game_statistics.jpeg')           
+    def __init__(self, plot_path, iterations=None, capitals=None, **kwargs):
+        self.plot_path = os.path.join(plot_path, "game_statistics.jpeg")
         os.makedirs(plot_path, exist_ok=True)
         self.iterations = [] if iterations is None else iterations
         self.capitals = [] if capitals is None else capitals
@@ -102,95 +100,103 @@ class GameStatsCallback:
         self.episode_end_indices = []
         self.global_step = 0
         self.episode_count = 0
-       
-    #--------------------------------------------------------------------------
-    def plot_game_statistics(self, logs : dict | None = None):
-        if not logs.get('episode', []):
+
+    # --------------------------------------------------------------------------
+    def plot_game_statistics(self, logs: dict | None = None):
+        if not logs.get("episode", []):
             return
-        
-        current_episode = logs.get('episode', [None])[-1]
+
+        current_episode = logs.get("episode", [None])[-1]
         if self.last_episode is not None and self.last_episode != current_episode:
             self.episode_end_indices.append(self.global_step)
             self.episode_count += 1
 
         self.global_step += 1
         if self.global_step > 0:
-            self.capitals.append(logs.get('capital', [None])[-1])
+            self.capitals.append(logs.get("capital", [None])[-1])
             self.iterations.append(self.global_step)
             self.generate_plot(self.global_step)
 
         self.last_episode = current_episode
 
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
     def generate_plot(self, current_step):
         fig, ax = plt.subplots(figsize=(14, 10))
-        ax.set_xlabel('Iterations (Time Steps)')
-        ax.set_ylabel('Value')
+        ax.set_xlabel("Iterations (Time Steps)")
+        ax.set_ylabel("Value")
         series = ax.plot(
-            self.iterations, self.capitals, color='blue', label='Current Capital', alpha=0.8)
+            self.iterations,
+            self.capitals,
+            color="blue",
+            label="Current Capital",
+            alpha=0.8,
+        )
         vline_handles = []
         if self.episode_end_indices:
             first_marker = True
             for index in self.episode_end_indices:
-                label = 'Episode End' if first_marker else ""
-                vline = ax.axvline(x=index, color='grey', linestyle='--', alpha=0.6, label=label)
+                label = "Episode End" if first_marker else ""
+                vline = ax.axvline(
+                    x=index, color="grey", linestyle="--", alpha=0.6, label=label
+                )
                 if first_marker:
                     vline_handles.append(vline)
                     first_marker = False
         lines = series + vline_handles
         labels = [l.get_label() for l in lines]
-        ax.legend(lines, labels, loc='upper center', bbox_to_anchor=(0.5, -0.1), ncol=3)
-        fig.suptitle(f'Training Progress: Capital (At step {current_step})')
+        ax.legend(lines, labels, loc="upper center", bbox_to_anchor=(0.5, -0.1), ncol=3)
+        fig.suptitle(f"Training Progress: Capital (At step {current_step})")
         fig.tight_layout(rect=[0, 0.1, 1, 0.95])
-        plt.savefig(self.plot_path, bbox_inches='tight', format='jpeg', dpi=300)
-        plt.close(fig)      
+        plt.savefig(self.plot_path, bbox_inches="tight", format="jpeg", dpi=300)
+        plt.close(fig)
 
-    
-###############################################################################        
+
+###############################################################################
 class CallbacksWrapper:
-
     def __init__(self, configuration):
         self.configuration = configuration
 
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
     def get_metrics_callbacks(self, checkpoint_path, history=None):
         RTH_callback = RealTimeHistory(checkpoint_path, past_logs=history)
         GS_callback = GameStatsCallback(checkpoint_path)
-               
+
         return RTH_callback, GS_callback
 
-    #--------------------------------------------------------------------------
-    def get_tensorboard_callback(self, checkpoint_path, model) -> keras.callbacks.TensorBoard:        
-        logger.debug('Using tensorboard during training')
-        log_path = os.path.join(checkpoint_path, 'tensorboard')
+    # --------------------------------------------------------------------------
+    def get_tensorboard_callback(
+        self, checkpoint_path, model
+    ) -> keras.callbacks.TensorBoard:
+        logger.debug("Using tensorboard during training")
+        log_path = os.path.join(checkpoint_path, "tensorboard")
         tb_callback = keras.callbacks.TensorBoard(
-            log_dir=log_path, update_freq=20, histogram_freq=1) 
-        tb_callback.set_model(model)              
-        start_tensorboard_subprocess(log_path)        
+            log_dir=log_path, update_freq=20, histogram_freq=1
+        )
+        tb_callback.set_model(model)
+        start_tensorboard_subprocess(log_path)
 
-        return tb_callback 
-    
-    #--------------------------------------------------------------------------
+        return tb_callback
+
+    # --------------------------------------------------------------------------
     def checkpoints_saving(self, checkpoint_path):
-        checkpoint_filepath = os.path.join(checkpoint_path, 'model_checkpoint.keras')
-        chkp_save = keras.callbacks.ModelCheckpoint(filepath=checkpoint_filepath,
-                                                    save_weights_only=True,  
-                                                    monitor='loss',       
-                                                    save_best_only=True,      
-                                                    mode='auto',              
-                                                    verbose=1)
+        checkpoint_filepath = os.path.join(checkpoint_path, "model_checkpoint.keras")
+        chkp_save = keras.callbacks.ModelCheckpoint(
+            filepath=checkpoint_filepath,
+            save_weights_only=True,
+            monitor="loss",
+            save_best_only=True,
+            mode="auto",
+            verbose=1,
+        )
 
         return chkp_save
-    
+
 
 ###############################################################################
-def start_tensorboard_subprocess(log_dir):    
+def start_tensorboard_subprocess(log_dir):
     tensorboard_command = ["tensorboard", "--logdir", log_dir, "--port", "6006"]
     subprocess.Popen(
-        tensorboard_command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)      
-    time.sleep(5)            
-    webbrowser.open("http://localhost:6006")       
-        
-
-
-    
+        tensorboard_command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    )
+    time.sleep(5)
+    webbrowser.open("http://localhost:6006")
