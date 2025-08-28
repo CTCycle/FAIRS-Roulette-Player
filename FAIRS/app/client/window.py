@@ -1,6 +1,5 @@
 from __future__ import annotations
-
-from typing import Any, Callable, cast
+from typing import Any, Callable, List, cast
 
 import pandas as pd
 from FAIRS.app.variables import EnvironmentVariables
