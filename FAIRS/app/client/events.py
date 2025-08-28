@@ -1,10 +1,11 @@
 from __future__ import annotations
+
 from typing import Any, Dict, List
 
 import cv2
 from matplotlib.backends.backend_agg import FigureCanvasAgg
-from PySide6.QtGui import QImage, QPixmap
 from matplotlib.figure import Figure
+from PySide6.QtGui import QImage, QPixmap
 
 from FAIRS.app.client.workers import check_thread_status
 from FAIRS.app.logger import logger
