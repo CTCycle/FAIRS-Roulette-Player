@@ -1,3 +1,4 @@
+from typing import Any, Dict
 import pandas as pd
 import tensorflow as tf
 
@@ -5,7 +6,7 @@ import tensorflow as tf
 # wrapper function to run the data pipeline from raw inputs to tensor dataset
 ###############################################################################
 class RouletteDataLoader:
-    def __init__(self, configuration: dict, shuffle=True):
+    def __init__(self, configuration: Dict[str, Any], shuffle: bool = True) -> None:
         pass
         # self.processor = DataLoaderProcessor(configuration)
         # self.batch_size = configuration.get('batch_size', 32)
@@ -17,7 +18,9 @@ class RouletteDataLoader:
 
     # effectively build the tf.dataset and apply preprocessing, batching and prefetching
     # -------------------------------------------------------------------------
-    def build_training_dataloader(self, data: pd.DataFrame, batch_size=None):
+    def build_training_dataloader(
+        self, data: pd.DataFrame, batch_size: int | None = None
+    ) -> pd.DataFrame:
         # images, tokens = data['path'].to_list(), data['tokens'].to_list()
         # batch_size = self.batch_size if batch_size is None else batch_size
         # dataset = tf.data.Dataset.from_tensor_slices((images, tokens))
@@ -32,8 +35,8 @@ class RouletteDataLoader:
     # effectively build the tf.dataset and apply preprocessing, batching and prefetching
     # -------------------------------------------------------------------------
     def build_inference_dataloader(
-        self, data, batch_size=None, buffer_size=tf.data.AUTOTUNE
-    ):
+        self, data, batch_size: int | None = None, buffer_size=tf.data.AUTOTUNE
+    ) -> Any:
         # images, tokens = data['path'].to_list(), data['tokens'].to_list()
         # batch_size = self.inference_batch_size if batch_size is None else batch_size
         # dataset = tf.data.Dataset.from_tensor_slices((images, tokens))

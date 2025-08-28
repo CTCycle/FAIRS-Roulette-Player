@@ -1,3 +1,4 @@
+from typing import Any, Dict
 import numpy as np
 from keras import Model
 from keras.utils import set_random_seed
@@ -12,7 +13,7 @@ from FAIRS.app.utils.learning.training.environment import RouletteEnvironment
 # [TOOLS FOR TRAINING MACHINE LEARNING MODELS]
 ###############################################################################
 class DQNTraining:
-    def __init__(self, configuration: dict):
+    def __init__(self, configuration: Dict[str, Any]) -> None:
         set_random_seed(configuration.get("training_seed", 42))
         self.batch_size = configuration.get("batch_size", 32)
         self.update_frequency = configuration.get("model_update_frequency", 10)
@@ -37,8 +38,14 @@ class DQNTraining:
     # set device
     # -------------------------------------------------------------------------
     def update_session_stats(
-        self, scores: dict, episode, time_step, reward, total_reward, capital
-    ):
+        self,
+        scores: dict,
+        episode: int,
+        time_step: int,
+        reward: int | float,
+        total_reward: int | float,
+        capital: int | float,
+    ) -> None:
         loss = scores.get("loss", None)
         metric = scores.get("root_mean_squared_error", None)
         self.session_stats["episode"].append(episode)
@@ -62,7 +69,7 @@ class DQNTraining:
         state_size,
         checkpoint_path,
         **kwargs,
-    ):
+    ) -> Model:
         # if tensorboard is selected, an instance of the tb callback is built
         # the dashboard is set on the Q model and tensorboard is launched automatically
         tensorboard = None

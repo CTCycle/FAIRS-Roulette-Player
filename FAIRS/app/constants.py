@@ -20,9 +20,9 @@ PROCESS_METADATA_FILE = join(METADATA_PATH, "preprocessing_metadata.json")
 
 # [CONFIGURATIONS]
 ###############################################################################
-NUMBERS = 37
-STATES = 47
-PAD_VALUE = -1
+NUMBERS: int = 37
+STATES: int = 47
+PAD_VALUE: int = -1
 
 # [UI LAYOUT PATH]
 ###############################################################################

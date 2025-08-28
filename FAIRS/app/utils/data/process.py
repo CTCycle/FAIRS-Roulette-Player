@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Any, Dict
 
 import pandas as pd
 
@@ -6,7 +7,7 @@ import pandas as pd
 # [PREPROCESSING]
 ###############################################################################
 class RouletteSeriesEncoder:
-    def __init__(self, configuration: dict):
+    def __init__(self, configuration: Dict[str, Any]) -> None:
         self.configuration = configuration
         self.categories = [["green", "black", "red"]]
         self.color_code = {"green": 0, "black": 1, "red": 2}

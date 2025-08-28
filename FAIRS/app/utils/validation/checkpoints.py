@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import os
-from typing import Any
+from typing import Any, Dict
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -16,7 +18,9 @@ from FAIRS.app.utils.learning.callbacks import LearningInterruptCallback
 # [LOAD MODEL]
 ################################################################################
 class ModelEvaluationSummary:
-    def __init__(self, configuration: dict, model: Model | None = None):
+    def __init__(
+        self, configuration: Dict[str, Any], model: Model | None = None
+    ) -> None:
         self.serializer = DataSerializer()
         self.modser = ModelSerializer()
         self.model = model
@@ -34,7 +38,7 @@ class ModelEvaluationSummary:
         return model_paths
 
     # --------------------------------------------------------------------------
-    def get_checkpoints_summary(self, **kwargs : Any) -> pd.DataFrame:
+    def get_checkpoints_summary(self, **kwargs: Any) -> pd.DataFrame:
         model_paths = self.scan_checkpoint_folder()
         model_parameters = []
         for i, model_path in enumerate(model_paths):
@@ -108,7 +112,7 @@ class BetsAccuracy:
 
     # comparison of data distribution using statistical methods
     # -------------------------------------------------------------------------
-    def plot_timeseries_prediction(self, values : dict[str, Any], name : str, path : str):
+    def plot_timeseries_prediction(self, values: dict[str, Any], name: str, path: str):
         train_data = values["train"]
         test_data = values["test"]
         plt.figure(figsize=(12, 10))

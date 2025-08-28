@@ -1,3 +1,4 @@
+from typing import Any, Dict, Literal, Tuple
 import gymnasium as gym
 import matplotlib.pyplot as plt
 import numpy as np
@@ -11,7 +12,7 @@ from FAIRS.app.utils.data.process import RouletteSeriesEncoder
 # [ROULETTE RL ENVIRONMENT]
 ###############################################################################
 class BetsAndRewards:
-    def __init__(self, configuration: dict):
+    def __init__(self, configuration: Dict[str, Any]) -> None:
         self.seed = configuration.get("train_seed", 42)
         self.bet_amount = configuration.get("bet_amount", 10)
         self.numbers = list(range(NUMBERS))
@@ -49,7 +50,9 @@ class BetsAndRewards:
         )
 
     # -------------------------------------------------------------------------
-    def bet_on_number(self, action: int, next_extraction: int):
+    def bet_on_number(
+        self, action: int, next_extraction: int
+    ) -> tuple[int, Literal[False]]:
         if action == next_extraction:
             reward = 35 * self.bet_amount
         else:
@@ -58,7 +61,7 @@ class BetsAndRewards:
         return reward, False
 
     # -------------------------------------------------------------------------
-    def bet_on_red(self, next_extraction: int):
+    def bet_on_red(self, next_extraction: int) -> tuple[int, Literal[False]]:
         if next_extraction in self.red_numbers:
             reward = self.bet_amount
         else:
@@ -67,7 +70,7 @@ class BetsAndRewards:
         return reward, False
 
     # -------------------------------------------------------------------------
-    def bet_on_black(self, next_extraction: int):
+    def bet_on_black(self, next_extraction: int) -> tuple[int, Literal[False]]:
         if next_extraction in self.black_numbers:
             reward = self.bet_amount
         else:
@@ -76,7 +79,7 @@ class BetsAndRewards:
         return reward, False
 
     # -------------------------------------------------------------------------
-    def bet_on_odd(self, next_extraction: int):
+    def bet_on_odd(self, next_extraction: int) -> tuple[int, Literal[False]]:
         if next_extraction != 0 and next_extraction % 2 == 1:
             reward = self.bet_amount
         else:
@@ -85,7 +88,7 @@ class BetsAndRewards:
         return reward, False
 
     # -------------------------------------------------------------------------
-    def bet_on_even(self, next_extraction: int):
+    def bet_on_even(self, next_extraction: int) -> tuple[int, Literal[False]]:
         if next_extraction != 0 and next_extraction % 2 == 0:
             reward = self.bet_amount
         else:
@@ -93,7 +96,7 @@ class BetsAndRewards:
         return reward, False
 
     # -------------------------------------------------------------------------
-    def bet_on_low(self, next_extraction: int):
+    def bet_on_low(self, next_extraction: int) -> tuple[int, Literal[False]]:
         if 1 <= next_extraction <= 18:
             reward = self.bet_amount
         else:
@@ -102,7 +105,7 @@ class BetsAndRewards:
         return reward, False
 
     # -------------------------------------------------------------------------
-    def bet_on_high(self, next_extraction: int):
+    def bet_on_high(self, next_extraction: int) -> tuple[int, Literal[False]]:
         if 19 <= next_extraction <= (NUMBERS - 1):
             reward = self.bet_amount
         else:
@@ -111,7 +114,7 @@ class BetsAndRewards:
         return reward, False
 
     # -------------------------------------------------------------------------
-    def bet_on_first_dozen(self, next_extraction: int):
+    def bet_on_first_dozen(self, next_extraction: int) -> tuple[int, Literal[False]]:
         if 1 <= next_extraction <= 12:
             reward = 2 * self.bet_amount
         else:
@@ -120,7 +123,7 @@ class BetsAndRewards:
         return reward, False
 
     # -------------------------------------------------------------------------
-    def bet_on_second_dozen(self, next_extraction: int):
+    def bet_on_second_dozen(self, next_extraction: int) -> tuple[int, Literal[False]]:
         if 13 <= next_extraction <= 24:
             reward = 2 * self.bet_amount
         else:
@@ -129,7 +132,7 @@ class BetsAndRewards:
         return reward, False
 
     # -------------------------------------------------------------------------
-    def bet_on_third_dozen(self, next_extraction: int):
+    def bet_on_third_dozen(self, next_extraction: int) -> tuple[int, Literal[False]]:
         if 25 <= next_extraction <= (NUMBERS - 1):
             reward = 2 * self.bet_amount
         else:
@@ -137,12 +140,14 @@ class BetsAndRewards:
         return reward, False
 
     # -------------------------------------------------------------------------
-    def pass_turn(self):
+    def pass_turn(self) -> tuple[int, Literal[False]]:
         reward = 0
         return reward, False
 
     # -------------------------------------------------------------------------
-    def interact_and_get_rewards(self, action: int, next_extraction: int, capital: int):
+    def interact_and_get_rewards(
+        self, action: int, next_extraction: int, capital: int
+    ) -> tuple[int, int, Literal[False]]:
         done = False
         if 0 <= action <= 36:
             reward, done = self.bet_on_number(action, next_extraction)
@@ -166,6 +171,8 @@ class BetsAndRewards:
             reward, done = self.bet_on_second_dozen(next_extraction)
         elif action == 46:
             reward, done = self.bet_on_third_dozen(next_extraction)
+        else:
+            reward = 0
 
         capital += reward
         return reward, capital, done
@@ -174,7 +181,7 @@ class BetsAndRewards:
 # [ROULETTE RL ENVIRONMENT]
 ###############################################################################
 class RouletteEnvironment(gym.Env):
-    def __init__(self, data: pd.DataFrame, configuration: dict):
+    def __init__(self, data: pd.DataFrame, configuration: Dict[str, Any]):
         super(RouletteEnvironment, self).__init__()
         self.extractions = data["extraction"].values
         self.positions = data["position"].values
@@ -218,7 +225,7 @@ class RouletteEnvironment(gym.Env):
 
     # Reset the state of the environment to an initial state
     # -------------------------------------------------------------------------
-    def reset(self, start_over=False):
+    def reset(self, start_over : bool = False, seed : int | None = None) -> np.ndarray: # type: ignore
         self.extraction_index = 0 if start_over else self.select_random_index()
         self.state = np.full(
             shape=self.perceptive_size, fill_value=PAD_VALUE, dtype=np.int32
@@ -231,7 +238,7 @@ class RouletteEnvironment(gym.Env):
 
     # Reset the state of the environment to an initial state
     # -------------------------------------------------------------------------
-    def scale_rewards(self, rewards):
+    def scale_rewards(self, rewards)-> np.ndarray:
         # Scale negative rewards to [-1, 0] and positive rewards to [0, 1]
         negative_scaled = (
             (rewards - (-self.bet_amount)) / (0 - (-self.bet_amount))
@@ -243,7 +250,7 @@ class RouletteEnvironment(gym.Env):
 
     # Perform the action (0: Bet on Red, 1: Bet on Black, 2: Bet on Specific Number)
     # -------------------------------------------------------------------------
-    def select_random_index(self):
+    def select_random_index(self) -> int:
         end_cutoff = len(self.extractions) - self.perceptive_size
         random_index = np.random.randint(0, end_cutoff)
 
@@ -251,13 +258,13 @@ class RouletteEnvironment(gym.Env):
 
     # Perform the action (0: Bet on Red, 1: Bet on Black, 2: Bet on Specific Number)
     # -------------------------------------------------------------------------
-    def update_rewards(self, action, next_extraction):
+    def update_rewards(self, action, next_extraction) -> None:
         self.reward, self.capital, self.done = self.player.interact_and_get_rewards(
             action, next_extraction, self.capital
         )
 
     # -------------------------------------------------------------------------
-    def step(self, action):
+    def step(self, action) -> Tuple[np.ndarray, int, bool, Any]:  # type: ignore
         # reset the perceived field each time the end of the series is reached
         # then start again from a random index simulating a brand new roulette series
         if self.extraction_index >= len(self.extractions):
@@ -280,22 +287,23 @@ class RouletteEnvironment(gym.Env):
         return self.state, self.reward, self.done, next_extraction
 
     # -------------------------------------------------------------------------
-    def _build_rendering_canvas(self):
+    def _build_rendering_canvas(self) -> None:
         plt.ion()  # Turn on interactive mode
         self.fig, self.ax = plt.subplots(
             figsize=(10, 10), subplot_kw={"projection": "polar"}
         )
-        self.fig.canvas.manager.set_window_title("Roulette Wheel")  # Set window title
-        plt.show(block=False)
-        # Store references to text objects for updating
-        self.title_text = self.ax.set_title("Roulette Wheel - Current Spin")
-        self.episode_text = self.fig.text(0.5, 0.08, "", ha="center", fontsize=12)
-        self.capital_text = self.fig.text(0.5, 0.05, "", ha="center", fontsize=12)
-        self.extraction_text = self.fig.text(0.5, 0.02, "", ha="center", fontsize=10)
+        if self.fig.canvas.manager:
+            self.fig.canvas.manager.set_window_title("Roulette Wheel")  # Set window title
+            plt.show(block=False)
+            # Store references to text objects for updating
+            self.title_text = self.ax.set_title("Roulette Wheel - Current Spin")
+            self.episode_text = self.fig.text(0.5, 0.08, "", ha="center", fontsize=12)
+            self.capital_text = self.fig.text(0.5, 0.05, "", ha="center", fontsize=12)
+            self.extraction_text = self.fig.text(0.5, 0.02, "", ha="center", fontsize=10)
 
     # Render the environment to the screen
     # -------------------------------------------------------------------------
-    def render(self, episode, time_step, action, extracted_number):
+    def render(self, episode, time_step, action, extracted_number) -> None: # type: ignore
         self.ax.clear()
         # Assigning colors to each number to create the roulette layout
         colors = ["green"] + ["red", "black"] * 18

@@ -1,6 +1,10 @@
+from __future__ import annotations
+from typing import Any, Dict, List
+
 import cv2
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from PySide6.QtGui import QImage, QPixmap
+from matplotlib.figure import Figure
 
 from FAIRS.app.client.workers import check_thread_status
 from FAIRS.app.logger import logger
@@ -16,26 +20,26 @@ from FAIRS.app.utils.validation.dataset import RouletteSeriesValidation
 
 ###############################################################################
 class GraphicsHandler:
-    def __init__(self):
+    def __init__(self) -> None:
         self.image_encoding = cv2.IMREAD_UNCHANGED
         self.gray_scale_encoding = cv2.IMREAD_GRAYSCALE
         self.BGRA_encoding = cv2.COLOR_BGRA2RGBA
         self.BGR_encoding = cv2.COLOR_BGR2RGB
 
     # -------------------------------------------------------------------------
-    def convert_fig_to_qpixmap(self, fig):
+    def convert_fig_to_qpixmap(self, fig: Figure) -> QPixmap:
         canvas = FigureCanvasAgg(fig)
         canvas.draw()
         # get the size in pixels and initialize raw RGBA buffer
         width, height = canvas.get_width_height()
         buf = canvas.buffer_rgba()
         # construct a QImage pointing at that memory (no PNG decoding)
-        qimg = QImage(buf, width, height, QImage.Format_RGBA8888)
+        qimg = QImage(buf, width, height, QImage.Format.Format_RGBA8888)
 
         return QPixmap.fromImage(qimg)
 
     # -------------------------------------------------------------------------
-    def load_image_as_pixmap(self, path):
+    def load_image_as_pixmap(self, path: str) -> QPixmap:
         img = cv2.imread(path, self.image_encoding)
         # Handle grayscale, RGB, or RGBA
         if len(img.shape) == 2:  # Grayscale
@@ -47,16 +51,16 @@ class GraphicsHandler:
 
         h, w = img.shape[:2]
         if img.shape[2] == 3:
-            qimg = QImage(img.data, w, h, 3 * w, QImage.Format_RGB888)
+            qimg = QImage(img.data, w, h, 3 * w, QImage.Format.Format_RGB888)
         else:
-            qimg = QImage(img.data, w, h, 4 * w, QImage.Format_RGBA8888)
+            qimg = QImage(img.data, w, h, 4 * w, QImage.Format.Format_RGBA8888)
 
         return QPixmap.fromImage(qimg)
 
 
 ###############################################################################
 class ValidationEvents:
-    def __init__(self, configuration: dict):
+    def __init__(self, configuration: Dict[str, Any]) -> None:
         self.serializer = DataSerializer()
         self.modser = ModelSerializer()
         self.configuration = configuration
@@ -64,7 +68,7 @@ class ValidationEvents:
     # -------------------------------------------------------------------------
     def run_dataset_evaluation_pipeline(
         self, metrics: list[str], progress_callback=None, worker=None
-    ):
+    ) -> List[Any]:
         seed = self.configuration.get("seed", 42)
         sample_size = self.configuration.get("sample_size", 1.0)
         roulette_data = self.serializer.load_roulette_dataset(sample_size, seed)
@@ -110,7 +114,7 @@ class ValidationEvents:
         selected_checkpoint: str,
         progress_callback=None,
         worker=None,
-    ):
+    ) -> List[Any]:
         logger.info(f"Loading {selected_checkpoint} checkpoint")
         model, train_config, _, _ = self.modser.load_checkpoint(selected_checkpoint)
         model.summary(expand_nested=True)
@@ -130,7 +134,7 @@ class ValidationEvents:
         dataset = mapper.encode_roulette_series(dataset)
 
         # evaluate model performance over the training and validation dataset
-        summarizer = ModelEvaluationSummary(model, self.configuration)
+        summarizer = ModelEvaluationSummary(self.configuration, model)
 
         metric_map = {
             # TO DO: must pass a series of perceptive fields as input
@@ -155,7 +159,7 @@ class ValidationEvents:
 
 ###############################################################################
 class ModelEvents:
-    def __init__(self, configuration: dict):
+    def __init__(self, configuration: Dict[str, Any]) -> None:
         self.serializer = DataSerializer()
         self.modser = ModelSerializer()
         self.configuration = configuration
@@ -165,7 +169,7 @@ class ModelEvents:
         return self.modser.scan_checkpoints_folder()
 
     # -------------------------------------------------------------------------
-    def run_training_pipeline(self, progress_callback=None, worker=None):
+    def run_training_pipeline(self, progress_callback=None, worker=None) -> None:
         seed = self.configuration.get("seed", 1.0)
         sample_size = self.configuration.get("sample_size", 1.0)
         dataset = self.serializer.load_roulette_dataset(sample_size, seed)
@@ -218,8 +222,8 @@ class ModelEvents:
 
     # -------------------------------------------------------------------------
     def resume_training_pipeline(
-        self, selected_checkpoint, progress_callback=None, worker=None
-    ):
+        self, selected_checkpoint: str, progress_callback=None, worker=None
+    ) -> None:
         logger.info(f"Loading {selected_checkpoint} checkpoint")
         model, train_config, session, checkpoint_path = self.modser.load_checkpoint(
             selected_checkpoint
@@ -270,7 +274,7 @@ class ModelEvents:
     # -------------------------------------------------------------------------
     @staticmethod
     def run_inference_pipeline(
-        configuration: dict, checkpoint_name: str, cmd_q, out_q
+        configuration: Dict[str, Any], checkpoint_name: str, cmd_q, out_q
     ) -> None:
         """
         Child-process loop for real-time inference through external dialog window:

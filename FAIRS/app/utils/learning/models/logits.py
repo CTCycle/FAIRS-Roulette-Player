@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Any, Dict
 
 import keras
 from keras import activations, layers
@@ -8,7 +9,7 @@ from keras import activations, layers
 ###############################################################################
 @keras.saving.register_keras_serializable(package="CustomLayers", name="AddNorm")
 class AddNorm(keras.layers.Layer):
-    def __init__(self, epsilon : float = 10e-5, **kwargs):
+    def __init__(self, epsilon: float = 10e-5, **kwargs) -> None:
         super(AddNorm, self).__init__(**kwargs)
         self.epsilon = epsilon
         self.add = layers.Add()
@@ -16,12 +17,12 @@ class AddNorm(keras.layers.Layer):
 
     # build method for the custom layer
     # -------------------------------------------------------------------------
-    def build(self, input_shape):
+    def build(self, input_shape) -> None:
         super(AddNorm, self).build(input_shape)
 
     # implement transformer encoder through call method
     # -------------------------------------------------------------------------
-    def call(self, inputs):
+    def call(self, inputs) -> Any:
         x1, x2 = inputs
         x_add = self.add([x1, x2])
         x_norm = self.layernorm(x_add)
@@ -30,7 +31,7 @@ class AddNorm(keras.layers.Layer):
 
     # serialize layer for saving
     # -------------------------------------------------------------------------
-    def get_config(self):
+    def get_config(self) -> Dict[Any, Any]:
         config = super(AddNorm, self).get_config()
         config.update({"epsilon": self.epsilon})
         return config
@@ -46,7 +47,7 @@ class AddNorm(keras.layers.Layer):
 ###############################################################################
 @keras.saving.register_keras_serializable(package="CustomLayers", name="QScoreNet")
 class QScoreNet(keras.layers.Layer):
-    def __init__(self, dense_units : int, output_size : int, seed : int, **kwargs):
+    def __init__(self, dense_units: int, output_size: int, seed: int, **kwargs) -> None:
         super(QScoreNet, self).__init__(**kwargs)
         self.dense_units = dense_units
         self.output_size = output_size
@@ -62,12 +63,12 @@ class QScoreNet(keras.layers.Layer):
 
     # build method for the custom layer
     # -------------------------------------------------------------------------
-    def build(self, input_shape):
+    def build(self, input_shape) -> None:
         super(QScoreNet, self).build(input_shape)
 
     # implement transformer encoder through call method
     # -------------------------------------------------------------------------
-    def call(self, inputs, training=None):
+    def call(self, inputs, training: bool | None = None) -> Any:
         x = layers.Flatten()(inputs)
         x = self.Q1(x)
         x = self.batch_norm(x, training=training)
@@ -78,7 +79,7 @@ class QScoreNet(keras.layers.Layer):
 
     # serialize layer for saving
     # -------------------------------------------------------------------------
-    def get_config(self):
+    def get_config(self) -> Dict[str, Any]:
         config = super(QScoreNet, self).get_config()
         config.update(
             {
@@ -99,14 +100,14 @@ class QScoreNet(keras.layers.Layer):
 ###############################################################################
 @keras.saving.register_keras_serializable(package="CustomLayers", name="BatchNormDense")
 class BatchNormDense(layers.Layer):
-    def __init__(self, units : int, **kwargs):
+    def __init__(self, units: int, **kwargs) -> None:
         super(BatchNormDense, self).__init__(**kwargs)
         self.units = units
         self.dense = layers.Dense(units, kernel_initializer="he_uniform")
         self.batch_norm = layers.BatchNormalization()
 
     # -------------------------------------------------------------------------
-    def call(self, inputs, training=None):
+    def call(self, inputs, training: bool | None = None) -> Any:
         layer = self.dense(inputs)
         layer = self.batch_norm(layer, training=training)
         layer = activations.relu(layer)
@@ -115,7 +116,7 @@ class BatchNormDense(layers.Layer):
 
     # serialize layer for saving
     # -------------------------------------------------------------------------
-    def get_config(self):
+    def get_config(self) -> Dict[str, Any]:
         config = super(BatchNormDense, self).get_config()
         config.update({"units": self.units})
 
@@ -133,19 +134,19 @@ class BatchNormDense(layers.Layer):
     package="CustomLayers", name="InverseFrequency"
 )
 class InverseFrequency(layers.Layer):
-    def __init__(self, expand_dims : bool = True, **kwargs):
+    def __init__(self, expand_dims: bool = True, **kwargs) -> None:
         super(InverseFrequency, self).__init__(**kwargs)
         self.expand_dims = expand_dims
 
     # -------------------------------------------------------------------------
-    def call(self, inputs, training=None):
+    def call(self, inputs, training: bool | None = None) -> Any:
         # Flatten the input tensor to count frequencies across all elements
         inputs = keras.ops.cast(inputs, "int32")
         inputs = keras.ops.reshape(inputs, [-1])
         # Calculate the frequency of each integer value in the flattened tensor
         counts = keras.ops.bincount(inputs)
         counts = keras.ops.cast(counts, keras.config.floatx())
-        inverse_counts = 1.0 / keras.ops.maximum(counts, keras.backend.epsilon())
+        inverse_counts = 1.0 / keras.ops.maximum(counts, keras.backend.epsilon())  # type: ignore
         # Use the original integer inputs as indices to gather the inverse frequencies
         inverse_counts = keras.ops.take(inputs, inverse_counts)
         if self.expand_dims:
@@ -155,7 +156,7 @@ class InverseFrequency(layers.Layer):
 
     # serialize layer for saving
     # -------------------------------------------------------------------------
-    def get_config(self):
+    def get_config(self) -> Dict[str, Any]:
         config = super(InverseFrequency, self).get_config()
         config.update({"expand_dims": self.expand_dims})
         return config

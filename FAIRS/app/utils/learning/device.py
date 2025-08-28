@@ -1,3 +1,4 @@
+from typing import Any, Dict
 import torch
 from keras.mixed_precision import set_global_policy
 
@@ -7,11 +8,11 @@ from FAIRS.app.logger import logger
 # [DEVICE SETTINGS]
 ###############################################################################
 class DeviceConfig:
-    def __init__(self, configuration: dict):
+    def __init__(self, configuration: Dict[str, Any]) -> None:
         self.configuration = configuration
 
     # -------------------------------------------------------------------------
-    def set_device(self):
+    def set_device(self) -> None:
         use_gpu = self.configuration.get("use_device_GPU", False)
         device_name = "cuda" if use_gpu else "cpu"
         mixed_precision = self.configuration.get("use_mixed_precision", False)

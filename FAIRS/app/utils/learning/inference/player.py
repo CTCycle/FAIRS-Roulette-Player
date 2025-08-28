@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
@@ -12,7 +13,7 @@ from FAIRS.app.utils.learning.training.environment import BetsAndRewards
 
 ###############################################################################
 class RoulettePlayer:
-    def __init__(self, model: Model, configuration: dict):
+    def __init__(self, model: Model, configuration: Dict[str, Any]) -> None:
         set_random_seed(configuration.get("seed", 42))
         self.perceptive_size = configuration.get("perceptive_field_size", 64)
         self.initial_capital = configuration.get("game_capital", 100)
@@ -24,8 +25,8 @@ class RoulettePlayer:
 
         # capital gain is not fully implemented as input of the pipeline
         self.current_capital = self.initial_capital
-        self.last_state = None
-        self.gain = None
+        self.last_state: Any | None = None
+        self.gain: Any | None = None
 
         self.model = model
         self.configuration = configuration
@@ -34,12 +35,12 @@ class RoulettePlayer:
         # The player expects raw extractions in [0, 36] as ints.
         self.serializer = DataSerializer()
         self.dataset = self.serializer.load_inference_dataset()
-        self.updated_dataset = None
-        self.true_extraction = None
-        self.next_action_desc = None
+        self.updated_dataset: pd.DataFrame | None = None
+        self.true_extraction: Any | None = None
+        self.next_action_desc: Any | None = None
 
     # -------------------------------------------------------------------------
-    def initialize_states(self):
+    def initialize_states(self) -> None:
         input_data = self.dataset["extraction"].to_numpy(dtype=np.int32).reshape(-1, 1)
         if self.last_state is None:
             self.last_state = np.full(
@@ -54,12 +55,16 @@ class RoulettePlayer:
             self.last_state[-perceptive_candidates.size :] = perceptive_candidates
 
     # -------------------------------------------------------------------------
-    def predict_next(self) -> dict:
-        if self.last_state is None:
+    def predict_next(self) -> Dict[str, Any]:
+        if not self.last_state:
             self.initialize_states()
 
-        current_state = self.last_state.reshape(1, self.perceptive_size)
-        action_logits = self.model.predict(current_state, verbose=0)
+        current_state = (
+            self.last_state.reshape(1, self.perceptive_size)
+            if self.last_state
+            else None
+        )
+        action_logits = self.model.predict(current_state, verbose="0")
         self.next_action = int(np.argmax(action_logits, axis=1)[0])
         self.next_action_desc = self.action_descriptions.get(
             self.next_action, f"action {self.next_action}"
@@ -68,7 +73,7 @@ class RoulettePlayer:
         return {"action": self.next_action, "description": self.next_action_desc}
 
     # -------------------------------------------------------------------------
-    def update_with_true_extraction(self, real_number: int):
+    def update_with_true_extraction(self, real_number: int) -> None:
         if not isinstance(real_number, (int, np.integer)):
             raise ValueError("Real extraction must be an integer")
         if real_number < 0 or real_number > 36:
@@ -76,15 +81,17 @@ class RoulettePlayer:
 
         # roll window and append the new value
         self.true_extraction = real_number
-        self.last_state = np.append(self.last_state[1:], np.int32(real_number))
+        if self.last_state:
+            self.last_state = np.append(self.last_state[1:], np.int32(real_number))
 
     # -------------------------------------------------------------------------
-    def save_prediction(self, checkpoint_name: str):
+    def save_prediction(self, checkpoint_name: str) -> None:
         new_id = int(self.dataset["id"].max()) + 1 if len(self.dataset) else 1
+        true_extraction = int(self.true_extraction) if self.true_extraction else None
         row = {
             "id": new_id,
             "checkpoint": checkpoint_name,
-            "extraction": int(self.true_extraction),
+            "extraction": true_extraction,
             "predicted_action": self.next_action_desc,
         }
 
