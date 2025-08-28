@@ -105,7 +105,7 @@ class GameStatsCallback:
         iterations: List[Any] | None = None,
         capitals: List[Any] | None = None,
         **kwargs,
-    ):
+    ) -> None:
         self.plot_path = os.path.join(plot_path, "game_statistics.jpeg")
         os.makedirs(plot_path, exist_ok=True)
         self.iterations = [] if iterations is None else iterations
@@ -167,7 +167,7 @@ class GameStatsCallback:
 
 ###############################################################################
 class CallbacksWrapper:
-    def __init__(self, configuration: Dict) -> None:
+    def __init__(self, configuration: Dict[str, Any]) -> None:
         self.configuration = configuration
 
     # -------------------------------------------------------------------------

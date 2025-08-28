@@ -74,8 +74,6 @@ class MainWindow:
         self.checkpoints_list: QComboBox
         self.selected_checkpoint = None
         self.selected_metrics = {"dataset": [], "model": []}
-        self.roulette_transitions_metric = None
-        self.get_evaluation_report = None
 
         # initial settings
         self.config_manager = Configuration()
@@ -210,6 +208,13 @@ class MainWindow:
         # Initial population of dynamic UI elements
         self.load_checkpoints()
         self._set_graphics()
+
+    #--------------------------------------------------------------------------
+    def __getattr__(self, name: str) -> Any:  
+        try:
+            return self.widgets[name]
+        except (AttributeError, KeyError) as e:            
+            raise AttributeError(f"{type(self).__name__!s} has no attribute {name!r}") from e
 
     # [SHOW WINDOW]
     ###########################################################################
@@ -374,7 +379,7 @@ class MainWindow:
         self.process_worker_timer = QTimer()
         self.process_worker_timer.setInterval(100)
         self.process_worker_timer.timeout.connect(worker.poll)
-        worker._timer = self.process_worker_timer  # type: ignore
+        worker._timer = self.process_worker_timer 
         self.process_worker_timer.start()
 
         worker.start()
@@ -487,7 +492,7 @@ class MainWindow:
     # -------------------------------------------------------------------------
     # [GRAPHICS]
     # -------------------------------------------------------------------------
-    @Slot(str)
+    @Slot()
     def _update_graphics_view(self) -> None:
         if not self.pixmaps:
             self.graphics["pixmap_item"].setPixmap(QPixmap())
@@ -511,7 +516,7 @@ class MainWindow:
         scene.setSceneRect(scaled.rect())
 
     # -------------------------------------------------------------------------
-    @Slot(str)
+    @Slot()
     def show_previous_figure(self) -> None:
         if not self.pixmaps:
             return
@@ -520,7 +525,7 @@ class MainWindow:
             self._update_graphics_view()
 
     # -------------------------------------------------------------------------
-    @Slot(str)
+    @Slot()
     def show_next_figure(self) -> None:
         if not self.pixmaps:
             return
@@ -529,7 +534,7 @@ class MainWindow:
             self._update_graphics_view()
 
     # -------------------------------------------------------------------------
-    @Slot(str)
+    @Slot()
     def clear_figures(self) -> None:
         if not self.pixmaps:
             return
@@ -675,7 +680,7 @@ class MainWindow:
             logger.warning("No checkpoints available")
 
     # -------------------------------------------------------------------------
-    @Slot(str)
+    @Slot()
     def select_checkpoint(self, name: str) -> None:
         self.selected_checkpoint = name if name else None
 

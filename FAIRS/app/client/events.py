@@ -68,7 +68,7 @@ class ValidationEvents:
 
     # -------------------------------------------------------------------------
     def run_dataset_evaluation_pipeline(
-        self, metrics: list[str], progress_callback=None, worker=None
+        self, metrics: List[str], progress_callback=None, worker=None
     ) -> List[Any]:
         seed = self.configuration.get("seed", 42)
         sample_size = self.configuration.get("sample_size", 1.0)
@@ -111,7 +111,7 @@ class ValidationEvents:
     # -------------------------------------------------------------------------
     def run_model_evaluation_pipeline(
         self,
-        metrics: list[str],
+        metrics: List[str],
         selected_checkpoint: str,
         progress_callback=None,
         worker=None,
@@ -166,7 +166,7 @@ class ModelEvents:
         self.configuration = configuration
 
     # -------------------------------------------------------------------------
-    def get_available_checkpoints(self) -> list[str]:
+    def get_available_checkpoints(self) -> List[str]:
         return self.modser.scan_checkpoints_folder()
 
     # -------------------------------------------------------------------------
