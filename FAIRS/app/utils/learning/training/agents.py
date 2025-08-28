@@ -6,8 +6,8 @@ import random
 from collections import deque
 from typing import Any, Dict
 
-from keras import Model
 import numpy as np
+from keras import Model
 
 from FAIRS.app.constants import PAD_VALUE, STATES
 from FAIRS.app.utils.learning.training.environment import RouletteEnvironment

@@ -3,12 +3,12 @@ from __future__ import annotations
 import os
 import subprocess
 import time
-from typing import Any, Dict, List, Tuple
 import webbrowser
+from typing import Any, Dict, List, Tuple
 
-from keras.callbacks import Callback, TensorBoard, ModelCheckpoint
-from keras import Model
 import matplotlib.pyplot as plt
+from keras import Model
+from keras.callbacks import Callback, ModelCheckpoint, TensorBoard
 
 from FAIRS.app.client.workers import WorkerInterrupted
 from FAIRS.app.logger import logger

@@ -7,13 +7,13 @@ from typing import Any, Callable, Dict, Tuple
 
 from PySide6.QtCore import QTimer, Slot
 from PySide6.QtWidgets import (
-    QMainWindow,
     QDialog,
     QDialogButtonBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QListWidget,
+    QMainWindow,
     QMessageBox,
     QPushButton,
     QVBoxLayout,

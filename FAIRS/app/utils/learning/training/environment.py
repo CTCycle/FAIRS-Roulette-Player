@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any, Dict, Literal, Tuple
+
 import gymnasium as gym
 import matplotlib.pyplot as plt
 import numpy as np

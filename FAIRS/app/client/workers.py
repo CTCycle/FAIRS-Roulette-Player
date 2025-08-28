@@ -2,12 +2,11 @@ from __future__ import annotations
 
 import inspect
 import traceback
-from multiprocessing.synchronize import Event as EC
 from multiprocessing import Event, Process, Queue
+from multiprocessing.synchronize import Event as EC
 from typing import Any, Callable, Generic, TypeVar, Union
 
 from PySide6.QtCore import QObject, QRunnable, Signal, Slot
-
 
 R = TypeVar("R")
 

@@ -1,7 +1,9 @@
 from __future__ import annotations
+
 from typing import Any, Callable, cast
 
 import pandas as pd
+
 from FAIRS.app.variables import EnvironmentVariables
 
 EV = EnvironmentVariables()
@@ -12,7 +14,6 @@ from PySide6.QtCore import QFile, QIODevice, Qt, QThreadPool, QTimer, Slot
 from PySide6.QtGui import QAction, QPainter, QPixmap
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import (
-    QMainWindow,
     QApplication,
     QCheckBox,
     QComboBox,
@@ -21,6 +22,7 @@ from PySide6.QtWidgets import (
     QGraphicsPixmapItem,
     QGraphicsScene,
     QGraphicsView,
+    QMainWindow,
     QMessageBox,
     QProgressBar,
     QPushButton,

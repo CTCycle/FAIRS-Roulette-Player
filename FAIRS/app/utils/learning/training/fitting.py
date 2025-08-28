@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from typing import Any, Dict, Tuple
+
 import numpy as np
+import pandas as pd
 from keras import Model
 from keras.utils import set_random_seed
-import pandas as pd
 
 from FAIRS.app.client.workers import check_thread_status, update_progress_callback
 from FAIRS.app.logger import logger
