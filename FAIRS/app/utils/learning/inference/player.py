@@ -26,7 +26,7 @@ class RoulettePlayer:
 
         # capital gain is not fully implemented as input of the pipeline
         self.current_capital = self.initial_capital
-        self.last_state: Any | None = None
+        self.last_state: np.ndarray | None = None
         self.gain: Any | None = None
 
         self.model = model
@@ -43,7 +43,7 @@ class RoulettePlayer:
     # -------------------------------------------------------------------------
     def initialize_states(self) -> None:
         input_data = self.dataset["extraction"].to_numpy(dtype=np.int32).reshape(-1, 1)
-        if self.last_state is None:
+        if not self.last_state:
             self.last_state = np.full(
                 shape=self.perceptive_size, fill_value=PAD_VALUE, dtype=np.int32
             )
@@ -53,7 +53,8 @@ class RoulettePlayer:
         if perceptive_candidates.size >= self.perceptive_size:
             self.last_state = perceptive_candidates[-self.perceptive_size :]
         else:
-            self.last_state[-perceptive_candidates.size :] = perceptive_candidates
+            if self.last_state:
+                self.last_state[-perceptive_candidates.size :] = perceptive_candidates
 
     # -------------------------------------------------------------------------
     def predict_next(self) -> Dict[str, Any]:
