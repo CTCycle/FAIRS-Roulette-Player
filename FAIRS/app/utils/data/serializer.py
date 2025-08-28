@@ -12,7 +12,7 @@ from keras.utils import plot_model
 
 from FAIRS.app.constants import CHECKPOINT_PATH
 from FAIRS.app.logger import logger
-from FAIRS.app.utils.data.database import database  
+from FAIRS.app.utils.data.database import database
 
 
 # [DATA SERIALIZATION]

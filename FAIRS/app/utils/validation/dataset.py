@@ -1,5 +1,6 @@
 from typing import Any, Dict
 
+
 # [VALIDATION OF DATA]
 ###############################################################################
 class RouletteSeriesValidation:

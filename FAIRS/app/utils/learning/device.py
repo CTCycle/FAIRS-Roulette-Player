@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Any, Dict
 import torch
 from keras.mixed_precision import set_global_policy

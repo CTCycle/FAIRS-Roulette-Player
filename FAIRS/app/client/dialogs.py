@@ -24,6 +24,7 @@ from FAIRS.app.client.workers import ProcessWorker
 from FAIRS.app.constants import CONFIG_PATH
 from FAIRS.app.logger import logger
 
+
 ###############################################################################
 class SaveConfigDialog(QDialog):
     def __init__(self, parent: QMainWindow | None = None) -> None:

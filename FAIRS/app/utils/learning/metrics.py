@@ -1,3 +1,5 @@
+from __future__ import annotations
+from typing import Any, Dict
 import keras
 import tensorflow as tf
 
@@ -29,11 +31,11 @@ class RouletteCategoricalCrossentropy(keras.losses.Loss):
         )
 
     # -------------------------------------------------------------------------
-    def call(self, y_true, y_pred):
+    def call(self, y_true: Any, y_pred: Any):
         y_true = keras.ops.cast(y_true, dtype=keras.config.floatx())
         loss = self.loss(y_true, y_pred)
         # Apply penalty based on the difference between prediction and true value
-        total_loss = loss * self.penalty_scores
+        total_loss = loss * self.penalty_scores  # type: ignore
         total_loss = keras.ops.mean(total_loss)
 
         return total_loss
@@ -62,7 +64,7 @@ class RouletteAccuracy(keras.metrics.Metric):
         self.count = self.add_weight(name="count", initializer="zeros")
 
     # -------------------------------------------------------------------------
-    def update_state(self, y_true, y_pred, sample_weight=None):
+    def update_state(self, y_true, y_pred, sample_weight=None) -> None:
         y_true = keras.ops.cast(y_true, dtype=keras.config.floatx())
         probabilities = keras.ops.argmax(y_pred, axis=1)
         accuracy = keras.ops.equal(y_true, probabilities)
@@ -75,11 +77,11 @@ class RouletteAccuracy(keras.metrics.Metric):
         self.total.assign_add(keras.ops.sum(accuracy))
 
     # -------------------------------------------------------------------------
-    def result(self):
+    def result(self) -> Any:
         return self.total / (self.count + keras.backend.epsilon())
 
     # -------------------------------------------------------------------------
-    def reset_NUMBERS(self):
+    def reset_NUMBERS(self) -> None:
         self.total.assign(0)
         self.count.assign(0)
 
