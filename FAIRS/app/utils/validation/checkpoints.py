@@ -97,7 +97,9 @@ class ModelEvaluationSummary:
         # TO DO: here you must pass the series of windows using the loader
         if self.model:
             validation = self.model.evaluate(
-                validation_dataset, verbose=1, callbacks=callbacks_list # type: ignore
+                validation_dataset,
+                verbose=1,
+                callbacks=callbacks_list,  # type: ignore
             )
             logger.info("Evaluation of pretrained model has been completed")
             logger.info(f"RMSE loss {validation[0]:.3f}")

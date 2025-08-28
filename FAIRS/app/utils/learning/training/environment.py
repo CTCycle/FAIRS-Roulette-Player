@@ -210,7 +210,7 @@ class RouletteEnvironment(gym.Env):
         self.numbers = list(range(NUMBERS))
         self.action_space = spaces.Discrete(STATES)
         # Observation space is the last perceptive_field numbers that appeared on the wheel
-        self.observation_window= spaces.Box(
+        self.observation_window = spaces.Box(
             low=0, high=36, shape=(self.perceptive_size,), dtype=np.int32
         )
 
@@ -227,7 +227,7 @@ class RouletteEnvironment(gym.Env):
 
     # Reset the state of the environment to an initial state
     # -------------------------------------------------------------------------
-    def reset(self, start_over : bool = False, seed : int | None = None) -> np.ndarray: # type: ignore
+    def reset(self, start_over: bool = False, seed: int | None = None) -> np.ndarray:  # type: ignore
         self.extraction_index = 0 if start_over else self.select_random_index()
         self.state = np.full(
             shape=self.perceptive_size, fill_value=PAD_VALUE, dtype=np.int32
@@ -240,7 +240,7 @@ class RouletteEnvironment(gym.Env):
 
     # Reset the state of the environment to an initial state
     # -------------------------------------------------------------------------
-    def scale_rewards(self, rewards)-> np.ndarray:
+    def scale_rewards(self, rewards) -> np.ndarray:
         # Scale negative rewards to [-1, 0] and positive rewards to [0, 1]
         negative_scaled = (
             (rewards - (-self.bet_amount)) / (0 - (-self.bet_amount))
@@ -295,17 +295,21 @@ class RouletteEnvironment(gym.Env):
             figsize=(10, 10), subplot_kw={"projection": "polar"}
         )
         if self.fig.canvas.manager:
-            self.fig.canvas.manager.set_window_title("Roulette Wheel")  # Set window title
+            self.fig.canvas.manager.set_window_title(
+                "Roulette Wheel"
+            )  # Set window title
             plt.show(block=False)
             # Store references to text objects for updating
             self.title_text = self.ax.set_title("Roulette Wheel - Current Spin")
             self.episode_text = self.fig.text(0.5, 0.08, "", ha="center", fontsize=12)
             self.capital_text = self.fig.text(0.5, 0.05, "", ha="center", fontsize=12)
-            self.extraction_text = self.fig.text(0.5, 0.02, "", ha="center", fontsize=10)
+            self.extraction_text = self.fig.text(
+                0.5, 0.02, "", ha="center", fontsize=10
+            )
 
     # Render the environment to the screen
     # -------------------------------------------------------------------------
-    def render(self, episode, time_step, action, extracted_number) -> None: # type: ignore
+    def render(self, episode, time_step, action, extracted_number) -> None:  # type: ignore
         self.ax.clear()
         # Assigning colors to each number to create the roulette layout
         colors = ["green"] + ["red", "black"] * 18

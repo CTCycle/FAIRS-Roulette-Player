@@ -172,14 +172,19 @@ class DQNTraining:
 
     # -------------------------------------------------------------------------
     def train_model(
-        self, model: Model, target_model: Model, data : pd.DataFrame, checkpoint_path : str, **kwargs
+        self,
+        model: Model,
+        target_model: Model,
+        data: pd.DataFrame,
+        checkpoint_path: str,
+        **kwargs,
     ) -> Tuple[Model, Dict[str, Any]]:
         environment = RouletteEnvironment(data, self.configuration)
         episodes = self.configuration.get("episodes", 10)
         start_episode = 0
         history = None
 
-        # determine state size as the observation space size        
+        # determine state size as the observation space size
         state_size = environment.observation_window.shape[0]
         logger.info(
             f"Size of the observation space (previous extractions): {state_size}"
@@ -214,10 +219,10 @@ class DQNTraining:
         self,
         model: Model,
         target_model: Model,
-        data : pd.DataFrame,
-        checkpoint_path : str,
+        data: pd.DataFrame,
+        checkpoint_path: str,
         session: Dict | None = None,
-        additional_epochs : int = 10,
+        additional_epochs: int = 10,
         **kwargs,
     ) -> Tuple[Model, Dict[str, Any]]:
         environment = RouletteEnvironment(data, self.configuration)

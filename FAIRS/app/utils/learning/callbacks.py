@@ -17,7 +17,9 @@ from FAIRS.app.logger import logger
 # [CALLBACK FOR UI PROGRESS BAR]
 ###############################################################################
 class ProgressBarCallback(Callback):
-    def __init__(self, progress_callback : Any, total_epochs : int, from_epoch: int = 0) -> None:
+    def __init__(
+        self, progress_callback: Any, total_epochs: int, from_epoch: int = 0
+    ) -> None:
         super().__init__()
         self.progress_callback = progress_callback
         self.total_epochs = total_epochs
@@ -37,7 +39,7 @@ class ProgressBarCallback(Callback):
 class LearningInterruptCallback(Callback):
     def __init__(self, worker=None) -> None:
         super().__init__()
-        self.model : Model
+        self.model: Model
         self.worker = worker
 
     # -------------------------------------------------------------------------
@@ -65,7 +67,7 @@ class RealTimeHistory:
         if not logs or not logs.get("episode", []):
             return
 
-        # iterates over all key-value pairs of logs        
+        # iterates over all key-value pairs of logs
         for key, value in logs.items():
             if key not in self.history["history"]:
                 self.history["history"][key] = []
@@ -97,7 +99,13 @@ class RealTimeHistory:
 
 ###############################################################################
 class GameStatsCallback:
-    def __init__(self, plot_path : str, iterations : List[Any] | None = None, capitals: List[Any] | None = None, **kwargs):
+    def __init__(
+        self,
+        plot_path: str,
+        iterations: List[Any] | None = None,
+        capitals: List[Any] | None = None,
+        **kwargs,
+    ):
         self.plot_path = os.path.join(plot_path, "game_statistics.jpeg")
         os.makedirs(plot_path, exist_ok=True)
         self.iterations = [] if iterations is None else iterations
@@ -159,11 +167,13 @@ class GameStatsCallback:
 
 ###############################################################################
 class CallbacksWrapper:
-    def __init__(self, configuration : Dict) -> None:
+    def __init__(self, configuration: Dict) -> None:
         self.configuration = configuration
 
     # -------------------------------------------------------------------------
-    def get_metrics_callbacks(self, checkpoint_path, history=None) -> Tuple[RealTimeHistory, GameStatsCallback]:
+    def get_metrics_callbacks(
+        self, checkpoint_path, history=None
+    ) -> Tuple[RealTimeHistory, GameStatsCallback]:
         RTH_callback = RealTimeHistory(checkpoint_path, past_logs=history)
         GS_callback = GameStatsCallback(checkpoint_path)
 
@@ -171,12 +181,14 @@ class CallbacksWrapper:
 
     # -------------------------------------------------------------------------
     def get_tensorboard_callback(
-        self, checkpoint_path : str, model : Model
+        self, checkpoint_path: str, model: Model
     ) -> TensorBoard:
         logger.debug("Using tensorboard during training")
         log_path = os.path.join(checkpoint_path, "tensorboard")
         tb_callback = TensorBoard(
-            log_dir=log_path, update_freq=20, histogram_freq=1 # type: ignore
+            log_dir=log_path,
+            update_freq=20,  # type: ignore
+            histogram_freq=1,  # type: ignore
         )
         tb_callback.set_model(model)
         start_tensorboard_subprocess(log_path)
