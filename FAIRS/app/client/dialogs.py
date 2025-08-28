@@ -3,7 +3,7 @@ from __future__ import annotations
 import multiprocessing as mp
 import os
 import queue as stdq
-from typing import Any, Callable, Dict, Tuple
+from typing import Any, Callable, Dict, List, Tuple
 
 from PySide6.QtCore import QTimer, Slot
 from PySide6.QtWidgets import (
@@ -65,7 +65,7 @@ class LoadConfigDialog(QDialog):
         self.dialog_layout.addWidget(self.config_list)
 
         # Populate the list with available .json files
-        configs: list[str] = [f for f in os.listdir(CONFIG_PATH) if f.endswith(".json")]
+        configs: List[str] = [f for f in os.listdir(CONFIG_PATH) if f.endswith(".json")]
         self.config_list.addItems(configs)
 
         self.buttons = QDialogButtonBox(
