@@ -1,9 +1,13 @@
+from __future__ import annotations
+
 import multiprocessing as mp
 import os
 import queue as stdq
+from typing import Any, Callable, Dict, Tuple
 
 from PySide6.QtCore import QTimer, Slot
 from PySide6.QtWidgets import (
+    QMainWindow,
     QDialog,
     QDialogButtonBox,
     QHBoxLayout,
@@ -20,63 +24,62 @@ from FAIRS.app.client.workers import ProcessWorker
 from FAIRS.app.constants import CONFIG_PATH
 from FAIRS.app.logger import logger
 
-
 ###############################################################################
 class SaveConfigDialog(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, parent: QMainWindow | None = None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Save Configuration As")
-        self.layout = QVBoxLayout(self)
+        self.dialog_layout = QVBoxLayout(self)
 
         self.label = QLabel("Enter a name for your configuration:", self)
-        self.layout.addWidget(self.label)
+        self.dialog_layout.addWidget(self.label)
 
         self.name_edit = QLineEdit(self)
-        self.layout.addWidget(self.name_edit)
+        self.dialog_layout.addWidget(self.name_edit)
 
         self.buttons = QDialogButtonBox(
-            QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel,
+            self,
         )
-        self.layout.addWidget(self.buttons)
+        self.dialog_layout.addWidget(self.buttons)
 
         self.buttons.accepted.connect(self.accept)
         self.buttons.rejected.connect(self.reject)
 
-    def get_name(self):
+    def get_name(self) -> str:
         return self.name_edit.text().strip()
 
 
 ###############################################################################
 class LoadConfigDialog(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, parent: QMainWindow | None = None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Load Configuration")
-        self.layout = QVBoxLayout(self)
+        self.dialog_layout = QVBoxLayout(self)
 
         self.label = QLabel("Select a configuration:", self)
-        self.layout.addWidget(self.label)
+        self.dialog_layout.addWidget(self.label)
 
         self.config_list = QListWidget(self)
-        self.layout.addWidget(self.config_list)
+        self.dialog_layout.addWidget(self.config_list)
 
         # Populate the list with available .json files
-        configs = [f for f in os.listdir(CONFIG_PATH) if f.endswith(".json")]
+        configs: list[str] = [f for f in os.listdir(CONFIG_PATH) if f.endswith(".json")]
         self.config_list.addItems(configs)
 
         self.buttons = QDialogButtonBox(
-            QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel,
+            self,
         )
-        self.layout.addWidget(self.buttons)
-
+        self.dialog_layout.addWidget(self.buttons)
         self.buttons.accepted.connect(self.accept)
         self.buttons.rejected.connect(self.reject)
 
-    def get_selected_config(self):
+    def get_selected_config(self) -> str | None:
         selected = self.config_list.currentItem()
         return selected.text() if selected else None
 
 
-###############################################################################
 ###############################################################################
 class RouletteDialog(QDialog):
     """
@@ -92,9 +95,14 @@ class RouletteDialog(QDialog):
 
     """
 
-    def __init__(self, parent, configuration, checkpoint_name):
+    def __init__(
+        self,
+        parent: QMainWindow | None,
+        configuration: Dict[str, Any],
+        checkpoint_name: str,
+    ) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Roulette – Live")
+        self.setWindowTitle("Roulette Live")
         self.setModal(True)
         self.configuration = configuration
         self.checkpoint = checkpoint_name
@@ -155,7 +163,7 @@ class RouletteDialog(QDialog):
 
     # -------------------- start flow -----------------------------------------
     @Slot()
-    def start_player(self):
+    def start_player(self) -> None:
         if self.started:
             return
         self.started = True
@@ -176,8 +184,8 @@ class RouletteDialog(QDialog):
 
         self._start_process_worker(
             self.worker,
-            on_finished=self._on_proc_finished,
-            on_error=self._on_proc_error,
+            on_finished=self._on_proc_finished,  # type: ignore
+            on_error=self._on_proc_error,  # type: ignore
             on_interrupted=self._on_proc_interrupted,
         )
 
@@ -188,7 +196,13 @@ class RouletteDialog(QDialog):
         self.out_timer.start()
 
     # -------------------------------------------------------------------------
-    def _start_process_worker(self, worker, on_finished, on_error, on_interrupted):
+    def _start_process_worker(
+        self,
+        worker: ProcessWorker,
+        on_finished: Callable[[], None],
+        on_error: Callable[[], None],
+        on_interrupted: Callable[[], None],
+    ) -> None:
         worker.signals.finished.connect(on_finished)
         worker.signals.error.connect(on_error)
         worker.signals.interrupted.connect(on_interrupted)
@@ -196,18 +210,19 @@ class RouletteDialog(QDialog):
         self.process_worker_timer = QTimer(self)
         self.process_worker_timer.setInterval(100)
         self.process_worker_timer.timeout.connect(worker.poll)
-        worker._timer = self.process_worker_timer  # if your ProcessWorker expects it
+        worker._timer = self.process_worker_timer  # type: ignore
         self.process_worker_timer.start()
         worker.start()
 
     # -------------------- UI actions ----------------------------------------
     @Slot()
-    def get_next_prediction(self):
+    def get_next_prediction(self) -> None:
         if not self._ready:
             return
         self._busy_toggle(True)
         try:
-            self.cmd_q.put({"kind": "next"})
+            if self.cmd_q:
+                self.cmd_q.put({"kind": "next"})
         except Exception as e:
             QMessageBox.critical(
                 self, "Request error", f"Could not send request: {e!r}"
@@ -215,7 +230,7 @@ class RouletteDialog(QDialog):
             self._busy_toggle(False)
 
     @Slot()
-    def on_update_clicked(self):
+    def on_update_clicked(self) -> None:
         txt = self.true_edit.text().strip()
         try:
             if txt == "":
@@ -233,16 +248,19 @@ class RouletteDialog(QDialog):
 
         try:
             self._busy_toggle(True)
-            self.cmd_q.put({"kind": "update", "value": val})
+            if self.cmd_q:
+                self.cmd_q.put({"kind": "update", "value": val})
         except Exception as e:
             QMessageBox.critical(self, "Request error", f"Could not send update: {e!r}")
             self._busy_toggle(False)
 
     # -------------------- queue draining ------------------------------------
-    def _drain_out_queue(self):
+    def _drain_out_queue(self) -> None:
         drained_any = False
         while True:
             try:
+                if not self.out_q:
+                    break
                 msg = self.out_q.get_nowait()
             except stdq.Empty:
                 break
@@ -285,7 +303,7 @@ class RouletteDialog(QDialog):
             return
 
     # -------------------- helpers / lifecycle --------------------------------
-    def _apply_enabled(self):
+    def _apply_enabled(self) -> None:
         """Compute enabled flags from self._ready/_loading/_busy."""
         # Start is only available before loading and before ready
         self.btn_start.setEnabled((not self._loading) and (not self._ready))
@@ -296,45 +314,47 @@ class RouletteDialog(QDialog):
         # Close stays enabled always
         self.btn_close.setEnabled(True)
 
-    def _set_controls_enabled(self, *, ready: bool, loading: bool):
+    def _set_controls_enabled(self, *, ready: bool, loading: bool) -> None:
         self._ready = ready
         self._loading = loading
         self._apply_enabled()
 
-    def _busy_toggle(self, is_busy: bool):
+    def _busy_toggle(self, is_busy: bool) -> None:
         self._busy = is_busy
         self._apply_enabled()
 
-    def _teardown_timers(self):
+    def _teardown_timers(self) -> None:
         if self.out_timer and self.out_timer.isActive():
             self.out_timer.stop()
         if self.process_worker_timer and self.process_worker_timer.isActive():
             self.process_worker_timer.stop()
 
-    def _shutdown_child(self):
+    def _shutdown_child(self) -> None:
         if not self.started:
             return
         try:
-            self.cmd_q.put({"kind": "shutdown"})
+            if self.cmd_q:
+                self.cmd_q.put({"kind": "shutdown"})
         except Exception:
             pass
         finally:
             try:
-                self.worker.cleanup()
+                if self.worker:
+                    self.worker.cleanup() if self.worker else None
             except Exception:
                 pass
 
-    def closeEvent(self, event):
+    def closeEvent(self, event) -> None:  # type: ignore
         self._teardown_timers()
         self._shutdown_child()
-        super().closeEvent(event)
+        super().closeEvent(event)  # type: ignore
 
     # -------------------- process callbacks ----------------------------------
-    def _on_proc_finished(self, _):
+    def _on_proc_finished(self, _) -> None:
         self._teardown_timers()
         self._busy_toggle(False)
 
-    def _on_proc_error(self, err_tb):
+    def _on_proc_error(self, err_tb: Tuple[str, str]) -> None:
         exc, tb = err_tb
         logger.error(f"Child process error: {exc}\n{tb}")
         self._teardown_timers()
@@ -343,6 +363,6 @@ class RouletteDialog(QDialog):
             self, "Process error", "An error occurred. Check logs for details."
         )
 
-    def _on_proc_interrupted(self):
+    def _on_proc_interrupted(self) -> None:
         self._teardown_timers()
         self._busy_toggle(False)

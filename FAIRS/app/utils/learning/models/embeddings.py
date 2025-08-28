@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Dict
 
 import keras
 from keras import layers
@@ -15,8 +15,12 @@ from FAIRS.app.constants import PAD_VALUE
 )
 class RouletteEmbedding(keras.layers.Layer):
     def __init__(
-        self, embedding_dims: int, numbers, mask_padding: bool = True, **kwargs: Any
-    ):
+        self,
+        embedding_dims: int,
+        numbers: int,
+        mask_padding: bool = True,
+        **kwargs: Any,
+    ) -> None:
         super(RouletteEmbedding, self).__init__(**kwargs)
         self.embedding_dims = embedding_dims
         self.numbers = numbers
@@ -29,11 +33,11 @@ class RouletteEmbedding(keras.layers.Layer):
             mask_zero=mask_padding,
         )
 
-        self.embedding_scale = keras.ops.sqrt(self.embedding_dims)
+        self.embedding_scale: Any = keras.ops.sqrt(self.embedding_dims)
 
     # implement positional embedding through call method
     # -------------------------------------------------------------------------
-    def call(self, inputs):
+    def call(self, inputs: Any) -> Any:
         # Get embeddings for the numbers
         embedded_numbers = self.numbers_embedding(inputs)
         embedded_numbers *= self.embedding_scale
@@ -50,14 +54,14 @@ class RouletteEmbedding(keras.layers.Layer):
 
     # compute the mask for padded sequences
     # -------------------------------------------------------------------------
-    def compute_mask(self, inputs, mask=None):
+    def compute_mask(self, inputs, previous_mask=None) -> Any:
         mask = keras.ops.not_equal(inputs, PAD_VALUE)
 
         return mask
 
     # serialize layer for saving
     # -------------------------------------------------------------------------
-    def get_config(self):
+    def get_config(self) -> Dict[str, Any]:
         config = super(RouletteEmbedding, self).get_config()
         config.update(
             {

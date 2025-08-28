@@ -13,7 +13,7 @@ from FAIRS.app.utils.learning.training.environment import RouletteEnvironment
 # [TOOLS FOR TRAINING MACHINE LEARNING MODELS]
 ###############################################################################
 class DQNAgent:
-    def __init__(self, configuration: dict, memory=None):
+    def __init__(self, configuration: Dict[str, Any], memory=None):
         self.action_size = STATES
         self.state_size = configuration.get("perceptive_field_size", 64)
         self.gamma = configuration.get("discount_rate", 0.5)
@@ -83,9 +83,7 @@ class DQNAgent:
         )
         actions = np.array([a for s, a, r, c, ns, d in minibatch], dtype=np.int32)
         rewards = np.array([r for s, a, r, c, ns, d in minibatch], dtype=np.float32)
-        np.array(
-            [np.squeeze(c) for s, a, r, c, ns, d in minibatch], dtype=np.float32
-        )
+        np.array([np.squeeze(c) for s, a, r, c, ns, d in minibatch], dtype=np.float32)
         next_states = np.array(
             [np.squeeze(ns) for s, a, r, c, ns, d in minibatch], dtype=np.int32
         )

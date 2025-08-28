@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 from datetime import datetime
+from typing import Any, Dict, List, Tuple, Union
 
 import pandas as pd
 from keras import Model
@@ -11,13 +12,13 @@ from keras.utils import plot_model
 
 from FAIRS.app.constants import CHECKPOINT_PATH
 from FAIRS.app.logger import logger
-from FAIRS.app.utils.data.database import database
+from FAIRS.app.utils.data.database import database  # type: ignore
 
 
 # [DATA SERIALIZATION]
 ###############################################################################
 class DataSerializer:
-    def __init__(self):
+    def __init__(self) -> None:
         self.data_batch = 2000
 
     # -------------------------------------------------------------------------
@@ -36,22 +37,22 @@ class DataSerializer:
         return dataset
 
     # -------------------------------------------------------------------------
-    def save_roulette_dataset(self, dataset: pd.DataFrame):
-        dataset = database.save_into_database(dataset, "ROULETTE_SERIES")
+    def save_roulette_dataset(self, dataset: pd.DataFrame) -> None:
+        database.save_into_database(dataset, "ROULETTE_SERIES")
 
     # -------------------------------------------------------------------------
-    def save_predicted_games(self, dataset: pd.DataFrame):
-        dataset = database.save_into_database(dataset, "PREDICTED_GAMES")
+    def save_predicted_games(self, dataset: pd.DataFrame) -> None:
+        database.save_into_database(dataset, "PREDICTED_GAMES")
 
     # -------------------------------------------------------------------------
-    def save_checkpoints_summary(self, data: pd.DataFrame):
+    def save_checkpoints_summary(self, data: pd.DataFrame) -> None:
         database.upsert_into_database(data, "CHECKPOINTS_SUMMARY")
 
 
 # [MODEL SERIALIZATION]
 ###############################################################################
 class ModelSerializer:
-    def __init__(self):
+    def __init__(self) -> None:
         self.model_name = "FAIRS"
 
     # function to create a folder where to save model checkpoints
@@ -68,7 +69,7 @@ class ModelSerializer:
         return checkpoint_path
 
     # ------------------------------------------------------------------------
-    def save_pretrained_model(self, model: Model, path: str):
+    def save_pretrained_model(self, model: Model, path: str) -> None:
         model_files_path = os.path.join(path, "saved_model.keras")
         model.save(model_files_path)
         logger.info(
@@ -77,7 +78,7 @@ class ModelSerializer:
 
     # -------------------------------------------------------------------------
     def save_training_configuration(
-        self, path: str, history: dict, configuration: dict
+        self, path: str, history: dict, configuration: Dict[str, Any]
     ):
         config_path = os.path.join(path, "configuration", "configuration.json")
         history_path = os.path.join(path, "configuration", "session_history.json")
@@ -95,7 +96,7 @@ class ModelSerializer:
         )
 
     # -------------------------------------------------------------------------
-    def load_training_configuration(self, path: str) -> tuple[dict, dict]:
+    def load_training_configuration(self, path: str) -> Tuple[dict, dict]:
         config_path = os.path.join(path, "configuration", "configuration.json")
         history_path = os.path.join(path, "configuration", "session_history.json")
         with open(config_path) as f:
@@ -107,7 +108,7 @@ class ModelSerializer:
         return configuration, history
 
     # -------------------------------------------------------------------------
-    def scan_checkpoints_folder(self) -> list[str]:
+    def scan_checkpoints_folder(self) -> List[str]:
         model_folders = []
         for entry in os.scandir(CHECKPOINT_PATH):
             if entry.is_dir():
@@ -122,7 +123,7 @@ class ModelSerializer:
         return model_folders
 
     # -------------------------------------------------------------------------
-    def save_model_plot(self, model: Model, path: str):
+    def save_model_plot(self, model: Model, path: str) -> None:
         try:
             plot_path = os.path.join(path, "model_layout.png")
             plot_model(
@@ -142,7 +143,9 @@ class ModelSerializer:
             )
 
     # -------------------------------------------------------------------------
-    def load_checkpoint(self, checkpoint: str) -> tuple[Model, dict, dict, str]:
+    def load_checkpoint(
+        self, checkpoint: str
+    ) -> Tuple[Union[Model, Any], Dict, Dict, str]:
         # effectively load the model using keras builtin method
         # load configuration data from .json file in checkpoint folder
         checkpoint_path = os.path.join(CHECKPOINT_PATH, checkpoint)
