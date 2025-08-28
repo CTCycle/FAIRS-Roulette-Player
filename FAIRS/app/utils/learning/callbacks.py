@@ -1,9 +1,13 @@
+from __future__ import annotations
+
 import os
 import subprocess
 import time
+from typing import Any, Dict, List, Tuple
 import webbrowser
 
-import keras
+from keras.callbacks import Callback, TensorBoard, ModelCheckpoint
+from keras import Model
 import matplotlib.pyplot as plt
 
 from FAIRS.app.client.workers import WorkerInterrupted
@@ -12,15 +16,15 @@ from FAIRS.app.logger import logger
 
 # [CALLBACK FOR UI PROGRESS BAR]
 ###############################################################################
-class ProgressBarCallback(keras.callbacks.Callback):
-    def __init__(self, progress_callback, total_epochs, from_epoch=0):
+class ProgressBarCallback(Callback):
+    def __init__(self, progress_callback : Any, total_epochs : int, from_epoch: int = 0) -> None:
         super().__init__()
         self.progress_callback = progress_callback
         self.total_epochs = total_epochs
         self.from_epoch = from_epoch
 
     # -------------------------------------------------------------------------
-    def on_epoch_end(self, epoch, logs: dict | None = None):
+    def on_epoch_end(self, epoch, logs: Dict | None = None) -> None:
         processed_epochs = epoch - self.from_epoch + 1
         additional_epochs = max(1, self.total_epochs - self.from_epoch)
         percent = int(100 * processed_epochs / additional_epochs)
@@ -30,19 +34,20 @@ class ProgressBarCallback(keras.callbacks.Callback):
 
 # [CALLBACK FOR TRAIN INTERRUPTION]
 ###############################################################################
-class LearningInterruptCallback(keras.callbacks.Callback):
-    def __init__(self, worker=None):
+class LearningInterruptCallback(Callback):
+    def __init__(self, worker=None) -> None:
         super().__init__()
+        self.model : Model
         self.worker = worker
 
     # -------------------------------------------------------------------------
-    def on_batch_end(self, batch, logs: dict | None = None):
+    def on_batch_end(self, batch, logs: Dict | None = None) -> None:
         if self.worker is not None and self.worker.is_interrupted():
             self.model.stop_training = True
             raise WorkerInterrupted()
 
     # -------------------------------------------------------------------------
-    def on_validation_batch_end(self, batch, logs: dict | None = None):
+    def on_validation_batch_end(self, batch, logs: Dict | None = None) -> None:
         if self.worker is not None and self.worker.is_interrupted():
             raise WorkerInterrupted()
 
@@ -50,17 +55,17 @@ class LearningInterruptCallback(keras.callbacks.Callback):
 # [CALLBACK FOR REAL TIME TRAINING MONITORING]
 ###############################################################################
 class RealTimeHistory:
-    def __init__(self, plot_path, past_logs: dict | None = None):
+    def __init__(self, plot_path, past_logs: Dict | None = None) -> None:
         self.fig_path = os.path.join(plot_path, "training_history.jpeg")
         self.total_epochs = 0 if past_logs is None else past_logs.get("episodes", 0)
         self.history = {"history": {}, "episodes": self.total_epochs}
 
     # -------------------------------------------------------------------------
-    def plot_loss_and_metrics(self, episode, logs: dict | None = None):
-        if not logs.get("episode", []):
+    def plot_loss_and_metrics(self, episode, logs: Dict | None = None) -> None:
+        if not logs or not logs.get("episode", []):
             return
 
-        # iterates over all key-value pairs of logs
+        # iterates over all key-value pairs of logs        
         for key, value in logs.items():
             if key not in self.history["history"]:
                 self.history["history"][key] = []
@@ -69,7 +74,7 @@ class RealTimeHistory:
         self.generate_plots()
 
     # -------------------------------------------------------------------------
-    def generate_plots(self):
+    def generate_plots(self) -> None:
         loss = self.history["history"].get("loss", [])
         metric = self.history["history"].get("metrics", [])
         fig, axes = plt.subplots(2, 1, figsize=(16, 10))
@@ -92,7 +97,7 @@ class RealTimeHistory:
 
 ###############################################################################
 class GameStatsCallback:
-    def __init__(self, plot_path, iterations=None, capitals=None, **kwargs):
+    def __init__(self, plot_path : str, iterations : List[Any] | None = None, capitals: List[Any] | None = None, **kwargs):
         self.plot_path = os.path.join(plot_path, "game_statistics.jpeg")
         os.makedirs(plot_path, exist_ok=True)
         self.iterations = [] if iterations is None else iterations
@@ -103,8 +108,8 @@ class GameStatsCallback:
         self.episode_count = 0
 
     # -------------------------------------------------------------------------
-    def plot_game_statistics(self, logs: dict | None = None):
-        if not logs.get("episode", []):
+    def plot_game_statistics(self, logs: Dict | None = None) -> None:
+        if not logs or not logs.get("episode", []):
             return
 
         current_episode = logs.get("episode", [None])[-1]
@@ -121,7 +126,7 @@ class GameStatsCallback:
         self.last_episode = current_episode
 
     # -------------------------------------------------------------------------
-    def generate_plot(self, current_step):
+    def generate_plot(self, current_step) -> None:
         fig, ax = plt.subplots(figsize=(14, 10))
         ax.set_xlabel("Iterations (Time Steps)")
         ax.set_ylabel("Value")
@@ -144,21 +149,21 @@ class GameStatsCallback:
                     vline_handles.append(vline)
                     first_marker = False
         lines = series + vline_handles
-        labels = [lin.get_label() for lin in lines]
+        labels = [str(lin.get_label()) for lin in lines]
         ax.legend(lines, labels, loc="upper center", bbox_to_anchor=(0.5, -0.1), ncol=3)
         fig.suptitle(f"Training Progress: Capital (At step {current_step})")
-        fig.tight_layout(rect=[0, 0.1, 1, 0.95])
+        fig.tight_layout(rect=(0, 0.1, 1, 0.95))
         plt.savefig(self.plot_path, bbox_inches="tight", format="jpeg", dpi=300)
         plt.close(fig)
 
 
 ###############################################################################
 class CallbacksWrapper:
-    def __init__(self, configuration):
+    def __init__(self, configuration : Dict) -> None:
         self.configuration = configuration
 
     # -------------------------------------------------------------------------
-    def get_metrics_callbacks(self, checkpoint_path, history=None):
+    def get_metrics_callbacks(self, checkpoint_path, history=None) -> Tuple[RealTimeHistory, GameStatsCallback]:
         RTH_callback = RealTimeHistory(checkpoint_path, past_logs=history)
         GS_callback = GameStatsCallback(checkpoint_path)
 
@@ -166,12 +171,12 @@ class CallbacksWrapper:
 
     # -------------------------------------------------------------------------
     def get_tensorboard_callback(
-        self, checkpoint_path, model
-    ) -> keras.callbacks.TensorBoard:
+        self, checkpoint_path : str, model : Model
+    ) -> TensorBoard:
         logger.debug("Using tensorboard during training")
         log_path = os.path.join(checkpoint_path, "tensorboard")
-        tb_callback = keras.callbacks.TensorBoard(
-            log_dir=log_path, update_freq=20, histogram_freq=1
+        tb_callback = TensorBoard(
+            log_dir=log_path, update_freq=20, histogram_freq=1 # type: ignore
         )
         tb_callback.set_model(model)
         start_tensorboard_subprocess(log_path)
@@ -179,9 +184,9 @@ class CallbacksWrapper:
         return tb_callback
 
     # -------------------------------------------------------------------------
-    def checkpoints_saving(self, checkpoint_path):
+    def checkpoints_saving(self, checkpoint_path) -> ModelCheckpoint:
         checkpoint_filepath = os.path.join(checkpoint_path, "model_checkpoint.keras")
-        chkp_save = keras.callbacks.ModelCheckpoint(
+        chkp_save = ModelCheckpoint(
             filepath=checkpoint_filepath,
             save_weights_only=True,
             monitor="loss",
@@ -194,10 +199,10 @@ class CallbacksWrapper:
 
 
 ###############################################################################
-def start_tensorboard_subprocess(log_dir):
+def start_tensorboard_subprocess(log_dir) -> None:
     tensorboard_command = ["tensorboard", "--logdir", log_dir, "--port", "6006"]
     subprocess.Popen(
         tensorboard_command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
     )
-    time.sleep(5)
+    time.sleep(4)
     webbrowser.open("http://localhost:6006")

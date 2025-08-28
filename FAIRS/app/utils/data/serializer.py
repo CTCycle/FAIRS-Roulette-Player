@@ -12,7 +12,7 @@ from keras.utils import plot_model
 
 from FAIRS.app.constants import CHECKPOINT_PATH
 from FAIRS.app.logger import logger
-from FAIRS.app.utils.data.database import database  # type: ignore
+from FAIRS.app.utils.data.database import database  
 
 
 # [DATA SERIALIZATION]
@@ -57,7 +57,7 @@ class ModelSerializer:
 
     # function to create a folder where to save model checkpoints
     # -------------------------------------------------------------------------
-    def create_checkpoint_folder(self):
+    def create_checkpoint_folder(self) -> str:
         today_datetime = datetime.now().strftime("%Y%m%dT%H%M%S")
         checkpoint_path = os.path.join(
             CHECKPOINT_PATH, f"{self.model_name}_{today_datetime}"
@@ -78,8 +78,8 @@ class ModelSerializer:
 
     # -------------------------------------------------------------------------
     def save_training_configuration(
-        self, path: str, history: dict, configuration: Dict[str, Any]
-    ):
+        self, path: str, history: Dict, configuration: Dict[str, Any]
+    ) -> None:
         config_path = os.path.join(path, "configuration", "configuration.json")
         history_path = os.path.join(path, "configuration", "session_history.json")
 

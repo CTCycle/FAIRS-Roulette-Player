@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Dict, Literal, Tuple
 import gymnasium as gym
 import matplotlib.pyplot as plt
@@ -181,7 +183,7 @@ class BetsAndRewards:
 # [ROULETTE RL ENVIRONMENT]
 ###############################################################################
 class RouletteEnvironment(gym.Env):
-    def __init__(self, data: pd.DataFrame, configuration: Dict[str, Any]):
+    def __init__(self, data: pd.DataFrame, configuration: Dict[str, Any]) -> None:
         super(RouletteEnvironment, self).__init__()
         self.extractions = data["extraction"].values
         self.positions = data["position"].values
@@ -208,7 +210,7 @@ class RouletteEnvironment(gym.Env):
         self.numbers = list(range(NUMBERS))
         self.action_space = spaces.Discrete(STATES)
         # Observation space is the last perceptive_field numbers that appeared on the wheel
-        self.observation_space = spaces.Box(
+        self.observation_window= spaces.Box(
             low=0, high=36, shape=(self.perceptive_size,), dtype=np.int32
         )
 
