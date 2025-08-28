@@ -1,4 +1,6 @@
+from __future__ import annotations
 from typing import Any, Dict
+
 import pandas as pd
 import tensorflow as tf
 

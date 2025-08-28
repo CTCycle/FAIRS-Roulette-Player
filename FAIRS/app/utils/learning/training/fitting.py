@@ -1,7 +1,10 @@
-from typing import Any, Dict
+from __future__ import annotations
+
+from typing import Any, Dict, Tuple
 import numpy as np
 from keras import Model
 from keras.utils import set_random_seed
+import pandas as pd
 
 from FAIRS.app.client.workers import check_thread_status, update_progress_callback
 from FAIRS.app.logger import logger
@@ -39,7 +42,7 @@ class DQNTraining:
     # -------------------------------------------------------------------------
     def update_session_stats(
         self,
-        scores: dict,
+        scores: Dict,
         episode: int,
         time_step: int,
         reward: int | float,
@@ -169,15 +172,15 @@ class DQNTraining:
 
     # -------------------------------------------------------------------------
     def train_model(
-        self, model: Model, target_model: Model, data, checkpoint_path, **kwargs
-    ):
+        self, model: Model, target_model: Model, data : pd.DataFrame, checkpoint_path : str, **kwargs
+    ) -> Tuple[Model, Dict[str, Any]]:
         environment = RouletteEnvironment(data, self.configuration)
         episodes = self.configuration.get("episodes", 10)
         start_episode = 0
         history = None
 
-        # determine state size as the observation space size
-        state_size = environment.observation_space.shape[0]
+        # determine state size as the observation space size        
+        state_size = environment.observation_window.shape[0]
         logger.info(
             f"Size of the observation space (previous extractions): {state_size}"
         )
@@ -211,18 +214,18 @@ class DQNTraining:
         self,
         model: Model,
         target_model: Model,
-        data,
-        checkpoint_path,
-        session=None,
-        additional_epochs=10,
+        data : pd.DataFrame,
+        checkpoint_path : str,
+        session: Dict | None = None,
+        additional_epochs : int = 10,
         **kwargs,
-    ):
+    ) -> Tuple[Model, Dict[str, Any]]:
         environment = RouletteEnvironment(data, self.configuration)
         from_episode = 0 if not session else session["epochs"]
         total_episodes = from_episode + additional_epochs
 
         # determine state size as the observation space size
-        state_size = environment.observation_space.shape[0]
+        state_size = environment.observation_window.shape[0]
         logger.info(
             f"Size of the observation space (previous extractions): {state_size}"
         )

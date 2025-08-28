@@ -1,8 +1,7 @@
-# [VALIDATION OF DATA]
-###############################################################################
 from typing import Any, Dict
 
-
+# [VALIDATION OF DATA]
+###############################################################################
 class RouletteSeriesValidation:
     def __init__(self, configuration: Dict[str, Any]) -> None:
         self.img_resolution = 400

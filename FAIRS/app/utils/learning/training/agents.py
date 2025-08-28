@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 import os
 import pickle
 import random
 from collections import deque
+from typing import Any, Dict
 
-import keras
+from keras import Model
 import numpy as np
 
 from FAIRS.app.constants import PAD_VALUE, STATES
@@ -13,7 +16,7 @@ from FAIRS.app.utils.learning.training.environment import RouletteEnvironment
 # [TOOLS FOR TRAINING MACHINE LEARNING MODELS]
 ###############################################################################
 class DQNAgent:
-    def __init__(self, configuration: Dict[str, Any], memory=None):
+    def __init__(self, configuration: Dict[str, Any], memory : Any | None = None) -> None:
         self.action_size = STATES
         self.state_size = configuration.get("perceptive_field_size", 64)
         self.gamma = configuration.get("discount_rate", 0.5)
@@ -25,19 +28,19 @@ class DQNAgent:
         self.memory = deque(maxlen=self.memory_size) if memory is None else memory
 
     # -------------------------------------------------------------------------
-    def dump_memory(self, path):
+    def dump_memory(self, path) -> None:
         memory_path = os.path.join(path, "configuration", "replay_memory.pkl")
         with open(memory_path, "wb") as f:
             pickle.dump(self.memory, f)
 
     # -------------------------------------------------------------------------
-    def load_memory(self, path):
+    def load_memory(self, path) -> None:
         memory_path = os.path.join(path, "configuration", "replay_memory.pkl")
         with open(memory_path, "rb") as f:
             self.memory = pickle.load(f)
 
     # -------------------------------------------------------------------------
-    def act(self, model: keras.Model, state):
+    def act(self, model: Model, state) -> np.int32:
         # generate a random number between 0 and 1 for exploration purposes.
         # if this number is equal or smaller to exploration rate, the agent will
         # pick a random roulette choice. It will do the same if the perceived field is empty
@@ -48,13 +51,13 @@ class DQNAgent:
             return random_action
         # if the random value is above the exploration rate, the action will
         # be predicted by the current model snapshot
-        q_values = model.predict(state, verbose=0)
+        q_values = model.predict(state, verbose=0) # type: ignore
         best_q = np.int32(np.argmax(q_values))
 
         return best_q
 
     # -------------------------------------------------------------------------
-    def remember(self, state, action, reward, gain, next_state, done):
+    def remember(self, state : np.ndarray, action : np.int32, reward: int, gain: Any, next_state:np.ndarray, done:bool) -> None:
         self.memory.append((state, action, reward, gain, next_state, done))
 
     # calculate the discounted future reward, using discount factor to determine
@@ -65,11 +68,11 @@ class DQNAgent:
     # -------------------------------------------------------------------------
     def replay(
         self,
-        model: keras.Model,
-        target_model: keras.Model,
+        model: Model,
+        target_model: Model,
         environment: RouletteEnvironment,
         batch_size,
-    ):
+    ) -> Dict[str, Any]:
         # this prevents an error if the batch size is larger than the replay buffer size
         batch_size = min(batch_size, self.replay_size)
         minibatch = random.sample(self.memory, batch_size)
@@ -90,19 +93,15 @@ class DQNAgent:
         dones = np.array([d for s, a, r, c, ns, d in minibatch], dtype=np.int32)
 
         # Predict current Q-values
-        targets = model.predict(states, verbose=0)
+        targets = model.predict(states, verbose=0) # type: ignore
 
         # Double DQN next action selection via the online model
         # 1. Get Q-values for next states from the online model
-        next_action_selection = model.predict(
-            next_states, verbose=0
-        )  # (batch_size, action_size)
+        next_action_selection = model.predict(next_states, verbose=0)   # type: ignore
         best_next_actions = np.argmax(next_action_selection, axis=1)
 
         # 2. Evaluate those actions using the target model
-        Q_futures_target = target_model.predict(
-            next_states, verbose=0
-        )  # (batch_size, action_size)
+        Q_futures_target = target_model.predict(next_states, verbose=0) # type: ignore   
         Q_future_selected = Q_futures_target[np.arange(batch_size), best_next_actions]
 
         # Scale rewards if your environment uses scaled rewards

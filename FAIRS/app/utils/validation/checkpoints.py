@@ -92,15 +92,16 @@ class ModelEvaluationSummary:
         return dataframe
 
     # -------------------------------------------------------------------------
-    def get_evaluation_report(self, validation_dataset, **kwargs):
+    def get_evaluation_report(self, validation_dataset, **kwargs) -> None:
         callbacks_list = [LearningInterruptCallback(kwargs.get("worker", None))]
         # TO DO: here you must pass the series of windows using the loader
-        validation = self.model.evaluate(
-            validation_dataset, verbose=1, callbacks=callbacks_list
-        )
-        logger.info("Evaluation of pretrained model has been completed")
-        logger.info(f"RMSE loss {validation[0]:.3f}")
-        logger.info(f"Cosine similarity {validation[1]:.3f}")
+        if self.model:
+            validation = self.model.evaluate(
+                validation_dataset, verbose=1, callbacks=callbacks_list # type: ignore
+            )
+            logger.info("Evaluation of pretrained model has been completed")
+            logger.info(f"RMSE loss {validation[0]:.3f}")
+            logger.info(f"Cosine similarity {validation[1]:.3f}")
 
 
 # [VALIDATION OF PRETRAINED MODELS]
@@ -112,7 +113,7 @@ class BetsAccuracy:
 
     # comparison of data distribution using statistical methods
     # -------------------------------------------------------------------------
-    def plot_timeseries_prediction(self, values: dict[str, Any], name: str, path: str):
+    def plot_timeseries_prediction(self, values: Dict[str, Any], name: str, path: str):
         train_data = values["train"]
         test_data = values["test"]
         plt.figure(figsize=(12, 10))
