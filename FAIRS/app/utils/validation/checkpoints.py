@@ -98,8 +98,8 @@ class ModelEvaluationSummary:
         if self.model:
             validation = self.model.evaluate(
                 validation_dataset,
-                verbose=1, # type: ignore
-                callbacks=callbacks_list,  
+                verbose=1,  # type: ignore
+                callbacks=callbacks_list,
             )
             logger.info("Evaluation of pretrained model has been completed")
             logger.info(f"RMSE loss {validation[0]:.3f}")
@@ -115,7 +115,9 @@ class BetsAccuracy:
 
     # comparison of data distribution using statistical methods
     # -------------------------------------------------------------------------
-    def plot_timeseries_prediction(self, values: dict[str, Any], name: str, path: str) -> None:
+    def plot_timeseries_prediction(
+        self, values: dict[str, Any], name: str, path: str
+    ) -> None:
         train_data = values["train"]
         test_data = values["test"]
         plt.figure(figsize=(12, 10))
