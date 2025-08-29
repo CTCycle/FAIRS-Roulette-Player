@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -19,7 +19,7 @@ from FAIRS.app.utils.learning.callbacks import LearningInterruptCallback
 ################################################################################
 class ModelEvaluationSummary:
     def __init__(
-        self, configuration: Dict[str, Any], model: Model | None = None
+        self, configuration: dict[str, Any], model: Model | None = None
     ) -> None:
         self.serializer = DataSerializer()
         self.modser = ModelSerializer()
@@ -27,7 +27,7 @@ class ModelEvaluationSummary:
         self.configuration = configuration
 
     # --------------------------------------------------------------------------
-    def scan_checkpoint_folder(self) -> List[str]:
+    def scan_checkpoint_folder(self) -> list[str]:
         model_paths = []
         for entry in os.scandir(CHECKPOINT_PATH):
             if entry.is_dir():
@@ -38,7 +38,7 @@ class ModelEvaluationSummary:
         return model_paths
 
     # --------------------------------------------------------------------------
-    def get_checkpoints_summary(self, **kwargs: Any) -> pd.DataFrame:
+    def get_checkpoints_summary(self, **kwargs) -> pd.DataFrame:
         model_paths = self.scan_checkpoint_folder()
         model_parameters = []
         for i, model_path in enumerate(model_paths):
@@ -98,8 +98,8 @@ class ModelEvaluationSummary:
         if self.model:
             validation = self.model.evaluate(
                 validation_dataset,
-                verbose=1,
-                callbacks=callbacks_list,  # type: ignore
+                verbose=1, # type: ignore
+                callbacks=callbacks_list,  
             )
             logger.info("Evaluation of pretrained model has been completed")
             logger.info(f"RMSE loss {validation[0]:.3f}")
@@ -109,13 +109,13 @@ class ModelEvaluationSummary:
 # [VALIDATION OF PRETRAINED MODELS]
 ###############################################################################
 class BetsAccuracy:
-    def __init__(self, model: Model):
+    def __init__(self, model: Model) -> None:
         self.file_type = "jpeg"
         self.model = model
 
     # comparison of data distribution using statistical methods
     # -------------------------------------------------------------------------
-    def plot_timeseries_prediction(self, values: Dict[str, Any], name: str, path: str):
+    def plot_timeseries_prediction(self, values: dict[str, Any], name: str, path: str) -> None:
         train_data = values["train"]
         test_data = values["test"]
         plt.figure(figsize=(12, 10))
@@ -138,7 +138,7 @@ class BetsAccuracy:
 
     # comparison of data distribution using statistical methods
     # -------------------------------------------------------------------------
-    def plot_confusion_matrix(self, Y_real, predictions, name, path):
+    def plot_confusion_matrix(self, Y_real, predictions, name, path) -> None:
         pass
         # cm = confusion_matrix(Y_real, predictions)
         # plt.figure(figsize=(14, 14))

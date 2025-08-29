@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 from typing import Any, Dict
 
 
 # [VALIDATION OF DATA]
 ###############################################################################
 class RouletteSeriesValidation:
-    def __init__(self, configuration: Dict[str, Any]) -> None:
+    def __init__(self, configuration: dict[str, Any]) -> None:
         self.img_resolution = 400
         self.file_type = "jpeg"
         self.configuration = configuration

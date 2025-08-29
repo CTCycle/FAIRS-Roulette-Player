@@ -17,7 +17,7 @@ from FAIRS.app.utils.learning.training.environment import RouletteEnvironment
 # [TOOLS FOR TRAINING MACHINE LEARNING MODELS]
 ###############################################################################
 class DQNTraining:
-    def __init__(self, configuration: Dict[str, Any]) -> None:
+    def __init__(self, configuration: dict[str, Any]) -> None:
         set_random_seed(configuration.get("training_seed", 42))
         self.batch_size = configuration.get("batch_size", 32)
         self.update_frequency = configuration.get("model_update_frequency", 10)
@@ -179,7 +179,7 @@ class DQNTraining:
         data: pd.DataFrame,
         checkpoint_path: str,
         **kwargs,
-    ) -> Tuple[Model, Dict[str, Any]]:
+    ) -> tuple[Model, dict[str, Any]]:
         environment = RouletteEnvironment(data, self.configuration)
         episodes = self.configuration.get("episodes", 10)
         start_episode = 0
@@ -225,7 +225,7 @@ class DQNTraining:
         session: Dict | None = None,
         additional_epochs: int = 10,
         **kwargs,
-    ) -> Tuple[Model, Dict[str, Any]]:
+    ) -> tuple[Model, dict[str, Any]]:
         environment = RouletteEnvironment(data, self.configuration)
         from_episode = 0 if not session else session["epochs"]
         total_episodes = from_episode + additional_epochs

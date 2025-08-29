@@ -17,7 +17,7 @@ from FAIRS.app.utils.learning.training.environment import RouletteEnvironment
 ###############################################################################
 class DQNAgent:
     def __init__(
-        self, configuration: Dict[str, Any], memory: Any | None = None
+        self, configuration: dict[str, Any], memory: Any | None = None
     ) -> None:
         self.action_size = STATES
         self.state_size = configuration.get("perceptive_field_size", 64)
@@ -82,7 +82,7 @@ class DQNAgent:
         target_model: Model,
         environment: RouletteEnvironment,
         batch_size,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         # this prevents an error if the batch size is larger than the replay buffer size
         batch_size = min(batch_size, self.replay_size)
         minibatch = random.sample(self.memory, batch_size)

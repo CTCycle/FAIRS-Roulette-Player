@@ -61,15 +61,15 @@ class GraphicsHandler:
 
 ###############################################################################
 class ValidationEvents:
-    def __init__(self, configuration: Dict[str, Any]) -> None:
+    def __init__(self, configuration: dict[str, Any]) -> None:
         self.serializer = DataSerializer()
         self.modser = ModelSerializer()
         self.configuration = configuration
 
     # -------------------------------------------------------------------------
     def run_dataset_evaluation_pipeline(
-        self, metrics: List[str], progress_callback=None, worker=None
-    ) -> List[Any]:
+        self, metrics: list[str], progress_callback=None, worker=None
+    ) -> list[Any]:
         seed = self.configuration.get("seed", 42)
         sample_size = self.configuration.get("sample_size", 1.0)
         roulette_data = self.serializer.load_roulette_dataset(sample_size, seed)
@@ -111,11 +111,11 @@ class ValidationEvents:
     # -------------------------------------------------------------------------
     def run_model_evaluation_pipeline(
         self,
-        metrics: List[str],
+        metrics: list[str],
         selected_checkpoint: str,
         progress_callback=None,
         worker=None,
-    ) -> List[Any]:
+    ) -> list[Any]:
         logger.info(f"Loading {selected_checkpoint} checkpoint")
         model, train_config, _, _ = self.modser.load_checkpoint(selected_checkpoint)
         model.summary(expand_nested=True)
@@ -160,13 +160,13 @@ class ValidationEvents:
 
 ###############################################################################
 class ModelEvents:
-    def __init__(self, configuration: Dict[str, Any]) -> None:
+    def __init__(self, configuration: dict[str, Any]) -> None:
         self.serializer = DataSerializer()
         self.modser = ModelSerializer()
         self.configuration = configuration
 
     # -------------------------------------------------------------------------
-    def get_available_checkpoints(self) -> List[str]:
+    def get_available_checkpoints(self) -> list[str]:
         return self.modser.scan_checkpoints_folder()
 
     # -------------------------------------------------------------------------
@@ -275,7 +275,7 @@ class ModelEvents:
     # -------------------------------------------------------------------------
     @staticmethod
     def run_inference_pipeline(
-        configuration: Dict[str, Any], checkpoint_name: str, cmd_q, out_q
+        configuration: dict[str, Any], checkpoint_name: str, cmd_q, out_q
     ) -> None:
         """
         Child-process loop for real-time inference through external dialog window:

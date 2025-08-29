@@ -204,7 +204,6 @@ class MainWindow:
         )
 
         self._auto_connect_settings()
-
         # Initial population of dynamic UI elements
         self.load_checkpoints()
         self._set_graphics()
@@ -238,7 +237,7 @@ class MainWindow:
         signal.connect(partial(self._update_single_setting, config_key, getter))
 
     # -------------------------------------------------------------------------
-    def _update_single_setting(self, config_key: str, getter: Any, *args: Any) -> None:
+    def _update_single_setting(self, config_key: str, getter: Any, *args) -> None:
         value = getter()
         self.config_manager.update_value(config_key, value)
 
@@ -332,7 +331,7 @@ class MainWindow:
         self.current_fig = 0
 
     # -------------------------------------------------------------------------
-    def _connect_button(self, button_name: str, slot) -> None:
+    def _connect_button(self, button_name: str, slot : Any) -> None:
         button = self.main_win.findChild(QPushButton, button_name)
         button.clicked.connect(slot) if button else None
 

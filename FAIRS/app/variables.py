@@ -1,3 +1,4 @@
+from __future__ import annotations
 import os
 from typing import Dict
 
@@ -18,7 +19,7 @@ class EnvironmentVariables:
             logger.error(f".env file not found at: {self.env_path}")
 
     # -------------------------------------------------------------------------
-    def get_environment_variables(self) -> Dict[str, str]:
+    def get_environment_variables(self) -> dict[str, str]:
         return {
             "KERAS_BACKEND": os.getenv("KERAS_BACKEND", "torch"),
             "TF_CPP_MIN_LOG_LEVEL": os.getenv("TF_CPP_MIN_LOG_LEVEL", "1"),

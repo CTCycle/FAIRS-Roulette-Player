@@ -102,8 +102,8 @@ class GameStatsCallback:
     def __init__(
         self,
         plot_path: str,
-        iterations: List[Any] | None = None,
-        capitals: List[Any] | None = None,
+        iterations: list[Any] | None = None,
+        capitals: list[Any] | None = None,
         **kwargs,
     ) -> None:
         self.plot_path = os.path.join(plot_path, "game_statistics.jpeg")
@@ -167,13 +167,13 @@ class GameStatsCallback:
 
 ###############################################################################
 class CallbacksWrapper:
-    def __init__(self, configuration: Dict[str, Any]) -> None:
+    def __init__(self, configuration: dict[str, Any]) -> None:
         self.configuration = configuration
 
     # -------------------------------------------------------------------------
     def get_metrics_callbacks(
         self, checkpoint_path, history=None
-    ) -> Tuple[RealTimeHistory, GameStatsCallback]:
+    ) -> tuple[RealTimeHistory, GameStatsCallback]:
         RTH_callback = RealTimeHistory(checkpoint_path, past_logs=history)
         GS_callback = GameStatsCallback(checkpoint_path)
 

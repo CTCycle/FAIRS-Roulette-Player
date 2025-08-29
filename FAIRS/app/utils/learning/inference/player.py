@@ -14,7 +14,7 @@ from FAIRS.app.utils.learning.training.environment import BetsAndRewards
 
 ###############################################################################
 class RoulettePlayer:
-    def __init__(self, model: Model, configuration: Dict[str, Any]) -> None:
+    def __init__(self, model: Model, configuration: dict[str, Any]) -> None:
         set_random_seed(configuration.get("seed", 42))
         self.perceptive_size = configuration.get("perceptive_field_size", 64)
         self.initial_capital = configuration.get("game_capital", 100)
@@ -57,7 +57,7 @@ class RoulettePlayer:
                 self.last_state[-perceptive_candidates.size :] = perceptive_candidates
 
     # -------------------------------------------------------------------------
-    def predict_next(self) -> Dict[str, Any]:
+    def predict_next(self) -> dict[str, Any]:
         if not self.last_state:
             self.initialize_states()
 
