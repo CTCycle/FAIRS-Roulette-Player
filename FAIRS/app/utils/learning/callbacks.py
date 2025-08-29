@@ -4,7 +4,7 @@ import os
 import subprocess
 import time
 import webbrowser
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict
 
 import matplotlib.pyplot as plt
 from keras import Model

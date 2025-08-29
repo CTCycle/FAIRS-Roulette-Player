@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
 import pandas as pd
 import tensorflow as tf
@@ -38,7 +38,7 @@ class RouletteDataLoader:
     # effectively build the tf.dataset and apply preprocessing, batching and prefetching
     # -------------------------------------------------------------------------
     def build_inference_dataloader(
-        self, data, batch_size: int | None = None, buffer_size=tf.data.AUTOTUNE
+        self, data, batch_size: int | None = None, buffer_size : int = tf.data.AUTOTUNE
     ) -> Any:
         # images, tokens = data['path'].to_list(), data['tokens'].to_list()
         # batch_size = self.inference_batch_size if batch_size is None else batch_size

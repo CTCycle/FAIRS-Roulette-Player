@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
 import cv2
 from matplotlib.backends.backend_agg import FigureCanvasAgg
