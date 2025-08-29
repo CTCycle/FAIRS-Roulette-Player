@@ -11,7 +11,7 @@ from FAIRS.app.logger import logger
 # [DEVICE SETTINGS]
 ###############################################################################
 class DeviceConfig:
-    def __init__(self, configuration: Dict[str, Any]) -> None:
+    def __init__(self, configuration: dict[str, Any]) -> None:
         self.configuration = configuration
 
     # -------------------------------------------------------------------------

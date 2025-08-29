@@ -65,7 +65,7 @@ class LoadConfigDialog(QDialog):
         self.dialog_layout.addWidget(self.config_list)
 
         # Populate the list with available .json files
-        configs: List[str] = [f for f in os.listdir(CONFIG_PATH) if f.endswith(".json")]
+        configs: list[str] = [f for f in os.listdir(CONFIG_PATH) if f.endswith(".json")]
         self.config_list.addItems(configs)
 
         self.buttons = QDialogButtonBox(
@@ -99,7 +99,7 @@ class RouletteDialog(QDialog):
     def __init__(
         self,
         parent: QMainWindow | None,
-        configuration: Dict[str, Any],
+        configuration: dict[str, Any],
         checkpoint_name: str,
     ) -> None:
         super().__init__(parent)
@@ -355,7 +355,7 @@ class RouletteDialog(QDialog):
         self._teardown_timers()
         self._busy_toggle(False)
 
-    def _on_proc_error(self, err_tb: Tuple[str, str]) -> None:
+    def _on_proc_error(self, err_tb: tuple[str, str]) -> None:
         exc, tb = err_tb
         logger.error(f"Child process error: {exc}\n{tb}")
         self._teardown_timers()

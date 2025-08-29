@@ -32,7 +32,7 @@ class AddNorm(keras.layers.Layer):
 
     # serialize layer for saving
     # -------------------------------------------------------------------------
-    def get_config(self) -> Dict[Any, Any]:
+    def get_config(self) -> dict[Any, Any]:
         config = super(AddNorm, self).get_config()
         config.update({"epsilon": self.epsilon})
         return config
@@ -80,7 +80,7 @@ class QScoreNet(keras.layers.Layer):
 
     # serialize layer for saving
     # -------------------------------------------------------------------------
-    def get_config(self) -> Dict[str, Any]:
+    def get_config(self) -> dict[str, Any]:
         config = super(QScoreNet, self).get_config()
         config.update(
             {
@@ -117,7 +117,7 @@ class BatchNormDense(layers.Layer):
 
     # serialize layer for saving
     # -------------------------------------------------------------------------
-    def get_config(self) -> Dict[str, Any]:
+    def get_config(self) -> dict[str, Any]:
         config = super(BatchNormDense, self).get_config()
         config.update({"units": self.units})
 
@@ -157,7 +157,7 @@ class InverseFrequency(layers.Layer):
 
     # serialize layer for saving
     # -------------------------------------------------------------------------
-    def get_config(self) -> Dict[str, Any]:
+    def get_config(self) -> dict[str, Any]:
         config = super(InverseFrequency, self).get_config()
         config.update({"expand_dims": self.expand_dims})
         return config

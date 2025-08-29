@@ -1,3 +1,4 @@
+from __future__ import annotations
 import json
 import os
 from typing import Any, Dict
@@ -59,7 +60,7 @@ class Configuration:
         }
 
     # -------------------------------------------------------------------------
-    def get_configuration(self) -> Dict[str, Any] | Any:
+    def get_configuration(self) -> dict[str, Any] | Any:
         return self.configuration
 
     # -------------------------------------------------------------------------

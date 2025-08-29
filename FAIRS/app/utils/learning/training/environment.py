@@ -15,7 +15,7 @@ from FAIRS.app.utils.data.process import RouletteSeriesEncoder
 # [ROULETTE RL ENVIRONMENT]
 ###############################################################################
 class BetsAndRewards:
-    def __init__(self, configuration: Dict[str, Any]) -> None:
+    def __init__(self, configuration: dict[str, Any]) -> None:
         self.seed = configuration.get("train_seed", 42)
         self.bet_amount = configuration.get("bet_amount", 10)
         self.numbers = list(range(NUMBERS))
@@ -184,7 +184,7 @@ class BetsAndRewards:
 # [ROULETTE RL ENVIRONMENT]
 ###############################################################################
 class RouletteEnvironment(gym.Env):
-    def __init__(self, data: pd.DataFrame, configuration: Dict[str, Any]) -> None:
+    def __init__(self, data: pd.DataFrame, configuration: dict[str, Any]) -> None:
         super(RouletteEnvironment, self).__init__()
         self.extractions = data["extraction"].values
         self.positions = data["position"].values
@@ -267,7 +267,7 @@ class RouletteEnvironment(gym.Env):
         )
 
     # -------------------------------------------------------------------------
-    def step(self, action) -> Tuple[np.ndarray, int, bool, Any]:  # type: ignore
+    def step(self, action) -> tuple[np.ndarray, int, bool, Any]:  # type: ignore
         # reset the perceived field each time the end of the series is reached
         # then start again from a random index simulating a brand new roulette series
         if self.extraction_index >= len(self.extractions):

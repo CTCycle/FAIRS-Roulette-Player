@@ -78,7 +78,7 @@ class ModelSerializer:
 
     # -------------------------------------------------------------------------
     def save_training_configuration(
-        self, path: str, history: Dict, configuration: Dict[str, Any]
+        self, path: str, history: Dict, configuration: dict[str, Any]
     ) -> None:
         config_path = os.path.join(path, "configuration", "configuration.json")
         history_path = os.path.join(path, "configuration", "session_history.json")
@@ -96,7 +96,7 @@ class ModelSerializer:
         )
 
     # -------------------------------------------------------------------------
-    def load_training_configuration(self, path: str) -> Tuple[dict, dict]:
+    def load_training_configuration(self, path: str) -> tuple[dict, dict]:
         config_path = os.path.join(path, "configuration", "configuration.json")
         history_path = os.path.join(path, "configuration", "session_history.json")
         with open(config_path) as f:
@@ -108,7 +108,7 @@ class ModelSerializer:
         return configuration, history
 
     # -------------------------------------------------------------------------
-    def scan_checkpoints_folder(self) -> List[str]:
+    def scan_checkpoints_folder(self) -> list[str]:
         model_folders = []
         for entry in os.scandir(CHECKPOINT_PATH):
             if entry.is_dir():
@@ -145,7 +145,7 @@ class ModelSerializer:
     # -------------------------------------------------------------------------
     def load_checkpoint(
         self, checkpoint: str
-    ) -> Tuple[Union[Model, Any], Dict, Dict, str]:
+    ) -> tuple[Union[Model, Any], Dict, Dict, str]:
         # effectively load the model using keras builtin method
         # load configuration data from .json file in checkpoint folder
         checkpoint_path = os.path.join(CHECKPOINT_PATH, checkpoint)

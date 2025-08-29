@@ -43,7 +43,7 @@ class RouletteCategoricalCrossentropy(keras.losses.Loss):
         return total_loss
 
     # -------------------------------------------------------------------------
-    def get_config(self) -> Dict[str, Any]:
+    def get_config(self) -> dict[str, Any]:
         base_config = super(RouletteCategoricalCrossentropy, self).get_config()
         return {
             **base_config,
@@ -88,7 +88,7 @@ class RouletteAccuracy(keras.metrics.Metric):
         self.count.assign(0)
 
     # -------------------------------------------------------------------------
-    def get_config(self) -> Dict[str, Any]:
+    def get_config(self) -> dict[str, Any]:
         base_config = super(RouletteAccuracy, self).get_config()
         return {**base_config, "name": self.name}
 

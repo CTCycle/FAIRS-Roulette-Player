@@ -14,9 +14,7 @@ R = TypeVar("R")
 ###############################################################################
 class WorkerInterrupted(Exception):
     """Exception to indicate worker was intentionally interrupted."""
-
     pass
-
 
 ###############################################################################
 class WorkerSignals(QObject):
@@ -271,7 +269,6 @@ class ProcessWorker(QObject):
 def check_thread_status(worker: Union[ThreadWorker, ProcessWorker, None]) -> None:
     if worker is not None and worker.is_interrupted():
         raise WorkerInterrupted()
-
 
 # -----------------------------------------------------------------------------
 def update_progress_callback(progress: int, total: int, progress_callback=None) -> None:

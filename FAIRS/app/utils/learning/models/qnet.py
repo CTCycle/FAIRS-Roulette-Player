@@ -13,7 +13,7 @@ from FAIRS.app.utils.learning.models.logits import AddNorm, BatchNormDense, QSco
 # [FAIRS MODEL]
 ###############################################################################
 class FAIRSnet:
-    def __init__(self, configuration: Dict[str, Any]) -> None:
+    def __init__(self, configuration: dict[str, Any]) -> None:
         self.perceptive_size = configuration.get("perceptive_field_size", 64)
         self.embedding_dims = configuration.get("embedding_dimensions", 200)
         self.neurons = configuration.get("QNet_neurons", 64)

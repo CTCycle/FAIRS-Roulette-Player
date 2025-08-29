@@ -77,7 +77,7 @@ class FAIRSDatabase:
         self.insert_batch_size = 2000
 
     # -------------------------------------------------------------------------
-    def initialize_database(self):
+    def initialize_database(self) -> None:
         Base.metadata.create_all(self.engine)
 
     # -------------------------------------------------------------------------
@@ -88,7 +88,7 @@ class FAIRSDatabase:
         raise ValueError(f"No table class found for name {table_name}")
 
     # -------------------------------------------------------------------------
-    def update_database_from_source(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    def update_database_from_source(self) -> tuple[pd.DataFrame, pd.DataFrame]:
         roulette_dataset = pd.read_csv(self.source_path, sep=";", encoding="utf-8")
         roulette_predictions = pd.read_csv(
             self.inference_path, sep=";", encoding="utf-8"

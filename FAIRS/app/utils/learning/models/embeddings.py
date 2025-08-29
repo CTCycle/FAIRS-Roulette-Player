@@ -61,7 +61,7 @@ class RouletteEmbedding(keras.layers.Layer):
 
     # serialize layer for saving
     # -------------------------------------------------------------------------
-    def get_config(self) -> Dict[str, Any]:
+    def get_config(self) -> dict[str, Any]:
         config = super(RouletteEmbedding, self).get_config()
         config.update(
             {

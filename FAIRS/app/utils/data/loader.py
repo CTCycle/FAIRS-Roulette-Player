@@ -9,7 +9,7 @@ import tensorflow as tf
 # wrapper function to run the data pipeline from raw inputs to tensor dataset
 ###############################################################################
 class RouletteDataLoader:
-    def __init__(self, configuration: Dict[str, Any], shuffle: bool = True) -> None:
+    def __init__(self, configuration: dict[str, Any], shuffle: bool = True) -> None:
         pass
         # self.processor = DataLoaderProcessor(configuration)
         # self.batch_size = configuration.get('batch_size', 32)
