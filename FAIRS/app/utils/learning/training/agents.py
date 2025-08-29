@@ -4,7 +4,7 @@ import os
 import pickle
 import random
 from collections import deque
-from typing import Any, Dict
+from typing import Any
 
 import numpy as np
 from keras import Model

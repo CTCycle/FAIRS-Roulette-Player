@@ -3,7 +3,7 @@ from __future__ import annotations
 import multiprocessing as mp
 import os
 import queue as stdq
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Callable
 
 from PySide6.QtCore import QTimer, Slot
 from PySide6.QtWidgets import (

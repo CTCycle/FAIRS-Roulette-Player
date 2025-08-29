@@ -1,9 +1,10 @@
 from __future__ import annotations
+
 import logging
 import logging.config
 import os
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any
 
 from FAIRS.app.constants import LOGS_PATH
 
