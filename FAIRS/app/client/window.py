@@ -208,12 +208,14 @@ class MainWindow:
         self.load_checkpoints()
         self._set_graphics()
 
-    #--------------------------------------------------------------------------
-    def __getattr__(self, name: str) -> Any:  
+    # --------------------------------------------------------------------------
+    def __getattr__(self, name: str) -> Any:
         try:
             return self.widgets[name]
-        except (AttributeError, KeyError) as e:            
-            raise AttributeError(f"{type(self).__name__!s} has no attribute {name!r}") from e
+        except (AttributeError, KeyError) as e:
+            raise AttributeError(
+                f"{type(self).__name__!s} has no attribute {name!r}"
+            ) from e
 
     # [SHOW WINDOW]
     ###########################################################################
@@ -331,7 +333,7 @@ class MainWindow:
         self.current_fig = 0
 
     # -------------------------------------------------------------------------
-    def _connect_button(self, button_name: str, slot : Any) -> None:
+    def _connect_button(self, button_name: str, slot: Any) -> None:
         button = self.main_win.findChild(QPushButton, button_name)
         button.clicked.connect(slot) if button else None
 
@@ -378,7 +380,7 @@ class MainWindow:
         self.process_worker_timer = QTimer()
         self.process_worker_timer.setInterval(100)
         self.process_worker_timer.timeout.connect(worker.poll)
-        worker._timer = self.process_worker_timer 
+        worker._timer = self.process_worker_timer
         self.process_worker_timer.start()
 
         worker.start()
