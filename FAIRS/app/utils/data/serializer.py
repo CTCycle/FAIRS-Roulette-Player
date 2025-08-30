@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import os
 from datetime import datetime
-from typing import Any, Dict, Union
+from typing import Any, Union
 
 import pandas as pd
 from keras import Model
@@ -78,7 +78,7 @@ class ModelSerializer:
 
     # -------------------------------------------------------------------------
     def save_training_configuration(
-        self, path: str, history: Dict, configuration: dict[str, Any]
+        self, path: str, history: dict, configuration: dict[str, Any]
     ) -> None:
         config_path = os.path.join(path, "configuration", "configuration.json")
         history_path = os.path.join(path, "configuration", "session_history.json")
@@ -145,7 +145,7 @@ class ModelSerializer:
     # -------------------------------------------------------------------------
     def load_checkpoint(
         self, checkpoint: str
-    ) -> tuple[Union[Model, Any], Dict, Dict, str]:
+    ) -> tuple[Union[Model, Any], dict, dict, str]:
         # effectively load the model using keras builtin method
         # load configuration data from .json file in checkpoint folder
         checkpoint_path = os.path.join(CHECKPOINT_PATH, checkpoint)

@@ -43,7 +43,7 @@ class DQNTraining:
     # -------------------------------------------------------------------------
     def update_session_stats(
         self,
-        scores: Dict,
+        scores: dict,
         episode: int,
         time_step: int,
         reward: int | float,

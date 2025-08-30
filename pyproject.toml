@@ -40,3 +40,4 @@ explicit = true
 torch = { index = "pytorch-cu128" }
 # torchvision = { index = "pytorch-cu128" }
 # torchaudio  = { index = "pytorch-cu128" }
+
