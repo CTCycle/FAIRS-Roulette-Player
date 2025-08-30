@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 import inspect
 import traceback
 from multiprocessing import Event, Process, Queue
 from multiprocessing.synchronize import Event as EC
-from typing import Any, Callable, Generic, Optional, TypeVar, Union
+from typing import Any, Generic, TypeVar
 
 from PySide6.QtCore import QObject, QRunnable, QTimer, Signal, Slot
 
@@ -157,7 +158,7 @@ def process_target(
 
 ###############################################################################
 class ProcessWorker(QObject):
-    _timer: Optional[QTimer]
+    _timer: QTimer | None
 
     def __init__(self, fn: Callable[..., R], *args: Any, **kwargs: Any) -> None:
         super().__init__()
@@ -269,7 +270,7 @@ class ProcessWorker(QObject):
 
 # [HELPERS FUNCTIONS]
 # -----------------------------------------------------------------------------
-def check_thread_status(worker: Union[ThreadWorker, ProcessWorker, None]) -> None:
+def check_thread_status(worker: ThreadWorker | ProcessWorker | None) -> None:
     if worker is not None and worker.is_interrupted():
         raise WorkerInterrupted()
 
