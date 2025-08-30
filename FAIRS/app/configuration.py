@@ -61,7 +61,7 @@ class Configuration:
         }
 
     # -------------------------------------------------------------------------
-    def get_configuration(self) -> dict[str, Any] | Any:
+    def get_configuration(self) -> dict[str, Any]:
         return self.configuration
 
     # -------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -222,7 +222,7 @@ class DQNTraining:
         target_model: Model,
         data: pd.DataFrame,
         checkpoint_path: str,
-        session: Dict | None = None,
+        session: dict | None = None,
         additional_epochs: int = 10,
         **kwargs,
     ) -> tuple[Model, dict[str, Any]]:

@@ -4,7 +4,7 @@ import os
 import subprocess
 import time
 import webbrowser
-from typing import Any, Dict
+from typing import Any
 
 import matplotlib.pyplot as plt
 from keras import Model
@@ -26,7 +26,7 @@ class ProgressBarCallback(Callback):
         self.from_epoch = from_epoch
 
     # -------------------------------------------------------------------------
-    def on_epoch_end(self, epoch, logs: Dict | None = None) -> None:
+    def on_epoch_end(self, epoch, logs: dict | None = None) -> None:
         processed_epochs = epoch - self.from_epoch + 1
         additional_epochs = max(1, self.total_epochs - self.from_epoch)
         percent = int(100 * processed_epochs / additional_epochs)
@@ -43,13 +43,13 @@ class LearningInterruptCallback(Callback):
         self.worker = worker
 
     # -------------------------------------------------------------------------
-    def on_batch_end(self, batch, logs: Dict | None = None) -> None:
+    def on_batch_end(self, batch, logs: dict | None = None) -> None:
         if self.worker is not None and self.worker.is_interrupted():
             self.model.stop_training = True
             raise WorkerInterrupted()
 
     # -------------------------------------------------------------------------
-    def on_validation_batch_end(self, batch, logs: Dict | None = None) -> None:
+    def on_validation_batch_end(self, batch, logs: dict | None = None) -> None:
         if self.worker is not None and self.worker.is_interrupted():
             raise WorkerInterrupted()
 
@@ -57,13 +57,13 @@ class LearningInterruptCallback(Callback):
 # [CALLBACK FOR REAL TIME TRAINING MONITORING]
 ###############################################################################
 class RealTimeHistory:
-    def __init__(self, plot_path, past_logs: Dict | None = None) -> None:
+    def __init__(self, plot_path, past_logs: dict | None = None) -> None:
         self.fig_path = os.path.join(plot_path, "training_history.jpeg")
         self.total_epochs = 0 if past_logs is None else past_logs.get("episodes", 0)
         self.history = {"history": {}, "episodes": self.total_epochs}
 
     # -------------------------------------------------------------------------
-    def plot_loss_and_metrics(self, episode, logs: Dict | None = None) -> None:
+    def plot_loss_and_metrics(self, episode, logs: dict | None = None) -> None:
         if not logs or not logs.get("episode", []):
             return
 
@@ -116,7 +116,7 @@ class GameStatsCallback:
         self.episode_count = 0
 
     # -------------------------------------------------------------------------
-    def plot_game_statistics(self, logs: Dict | None = None) -> None:
+    def plot_game_statistics(self, logs: dict | None = None) -> None:
         if not logs or not logs.get("episode", []):
             return
 
@@ -211,7 +211,7 @@ class CallbacksWrapper:
 
 
 ###############################################################################
-def start_tensorboard_subprocess(log_dir) -> None:
+def start_tensorboard_subprocess(log_dir: str) -> None:
     tensorboard_command = ["tensorboard", "--logdir", log_dir, "--port", "6006"]
     subprocess.Popen(
         tensorboard_command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
