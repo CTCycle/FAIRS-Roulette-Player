@@ -147,7 +147,7 @@ class InverseFrequency(layers.Layer):
         # Calculate the frequency of each integer value in the flattened tensor
         counts = keras.ops.bincount(inputs)
         counts = keras.ops.cast(counts, keras.config.floatx())
-        inverse_counts = 1.0 / keras.ops.maximum(counts, keras.backend.epsilon())  # type: ignore
+        inverse_counts = 1.0 / keras.ops.maximum(counts, keras.backend.epsilon())
         # Use the original integer inputs as indices to gather the inverse frequencies
         inverse_counts = keras.ops.take(inputs, inverse_counts)
         if self.expand_dims:

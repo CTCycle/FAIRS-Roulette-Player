@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 import inspect
 import traceback
+from collections.abc import Callable
 from multiprocessing import Event, Process, Queue
 from multiprocessing.synchronize import Event as EC
 from typing import Any, Generic, TypeVar
