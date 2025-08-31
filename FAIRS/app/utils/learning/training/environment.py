@@ -228,7 +228,7 @@ class RouletteEnvironment(gym.Env):
 
     # Reset the state of the environment to an initial state
     # -------------------------------------------------------------------------
-    def reset(self, start_over: bool = False, seed: int | None = None) -> np.ndarray:  # type: ignore
+    def reset(self, start_over: bool = False, seed: int | None = None) -> np.ndarray:
         self.extraction_index = 0 if start_over else self.select_random_index()
         self.state = np.full(
             shape=self.perceptive_size, fill_value=PAD_VALUE, dtype=np.int32
@@ -267,7 +267,7 @@ class RouletteEnvironment(gym.Env):
         )
 
     # -------------------------------------------------------------------------
-    def step(self, action) -> tuple[np.ndarray, int, bool, Any]:  # type: ignore
+    def step(self, action) -> tuple[np.ndarray, int, bool, Any]:
         # reset the perceived field each time the end of the series is reached
         # then start again from a random index simulating a brand new roulette series
         if self.extraction_index >= len(self.extractions):
@@ -310,7 +310,7 @@ class RouletteEnvironment(gym.Env):
 
     # Render the environment to the screen
     # -------------------------------------------------------------------------
-    def render(self, episode, time_step, action, extracted_number) -> None:  # type: ignore
+    def render(self, episode, time_step, action, extracted_number) -> None:
         self.ax.clear()
         # Assigning colors to each number to create the roulette layout
         colors = ["green"] + ["red", "black"] * 18

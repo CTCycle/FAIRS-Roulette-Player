@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import os
 from datetime import datetime
-from typing import Any, Union
+from typing import Any
 
 import pandas as pd
 from keras import Model
@@ -143,9 +143,7 @@ class ModelSerializer:
             )
 
     # -------------------------------------------------------------------------
-    def load_checkpoint(
-        self, checkpoint: str
-    ) -> tuple[Union[Model, Any], dict, dict, str]:
+    def load_checkpoint(self, checkpoint: str) -> tuple[Model | Any, dict, dict, str]:
         # effectively load the model using keras builtin method
         # load configuration data from .json file in checkpoint folder
         checkpoint_path = os.path.join(CHECKPOINT_PATH, checkpoint)

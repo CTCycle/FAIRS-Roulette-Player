@@ -98,7 +98,7 @@ class ModelEvaluationSummary:
         if self.model:
             validation = self.model.evaluate(
                 validation_dataset,
-                verbose=1,  # type: ignore
+                verbose=1,
                 callbacks=callbacks_list,
             )
             logger.info("Evaluation of pretrained model has been completed")

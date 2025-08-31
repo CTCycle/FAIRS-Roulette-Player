@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Callable, cast
+from collections.abc import Callable
+from typing import Any, cast
 
 import pandas as pd
 
@@ -81,7 +82,7 @@ class MainWindow:
 
         # set thread pool for the workers
         self.threadpool = QThreadPool.globalInstance()
-        self.worker = None
+        self.worker: ThreadWorker | ProcessWorker | None = None
 
         # initialize database
         database.initialize_database()

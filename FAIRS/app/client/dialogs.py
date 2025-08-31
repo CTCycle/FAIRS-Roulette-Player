@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
 )
 
 from FAIRS.app.client.events import ModelEvents
-from FAIRS.app.client.workers import ProcessWorker
+from FAIRS.app.client.workers import ProcessWorker, ThreadWorker
 from FAIRS.app.constants import CONFIG_PATH
 from FAIRS.app.logger import logger
 
@@ -110,7 +110,7 @@ class RouletteDialog(QDialog):
 
         # Runtime state
         self.started = False
-        self.worker = None
+        self.worker: ThreadWorker | ProcessWorker | None = None
         self.cmd_q = None
         self.out_q = None
         self.process_worker_timer = None
@@ -211,7 +211,7 @@ class RouletteDialog(QDialog):
         self.process_worker_timer = QTimer(self)
         self.process_worker_timer.setInterval(100)
         self.process_worker_timer.timeout.connect(worker.poll)
-        worker._timer = self.process_worker_timer  # type: ignore
+        worker._timer = self.process_worker_timer
         self.process_worker_timer.start()
         worker.start()
 
@@ -345,10 +345,10 @@ class RouletteDialog(QDialog):
             except Exception:
                 pass
 
-    def closeEvent(self, event) -> None:  # type: ignore
+    def closeEvent(self, event) -> None:
         self._teardown_timers()
         self._shutdown_child()
-        super().closeEvent(event)  # type: ignore
+        super().closeEvent(event)
 
     # -------------------- process callbacks ----------------------------------
     def _on_proc_finished(self, _) -> None:
