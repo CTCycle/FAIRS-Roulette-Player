@@ -187,7 +187,7 @@ class CallbacksWrapper:
         log_path = os.path.join(checkpoint_path, "tensorboard")
         tb_callback = TensorBoard(
             log_dir=log_path,
-            update_freq=20,
+            update_freq=20, # type: ignore
             histogram_freq=1,
         )
         tb_callback.set_model(model)

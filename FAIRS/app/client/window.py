@@ -310,8 +310,7 @@ class MainWindow:
     # -------------------------------------------------------------------------
     def _set_states(self) -> None:
         self.progress_bar = self.main_win.findChild(QProgressBar, "progressBar")
-        if self.progress_bar:
-            self.progress_bar.setValue(0) if self.progress_bar else None
+        self.progress_bar.setValue(0) if self.progress_bar else None
 
     # -------------------------------------------------------------------------
     def _set_graphics(self) -> None:
@@ -722,7 +721,7 @@ class MainWindow:
 
     # -------------------------------------------------------------------------
     @Slot()
-    def get_checkpoints_summary(self):
+    def get_checkpoints_summary(self) -> None:
         if self.worker:
             message = (
                 "A task is currently running, wait for it to finish and then try again"
@@ -799,7 +798,7 @@ class MainWindow:
     ###########################################################################
     # [NEGATIVE OUTCOME HANDLERS]
     ###########################################################################
-    def on_error(self, err_tb):
+    def on_error(self, err_tb : tuple[str, str]) -> None:
         exc, tb = err_tb
         logger.error(f"{exc}\n{tb}")
         message = "An error occurred during the operation. Check the logs for details."
