@@ -276,7 +276,7 @@ def check_thread_status(worker: ThreadWorker | ProcessWorker | None) -> None:
 
 
 # -----------------------------------------------------------------------------
-def update_progress_callback(progress: int, total: int, progress_callback=None) -> None:
+def update_progress_callback(progress: int, total: int, progress_callback : Any | None = None) -> None:
     if progress_callback is not None:
         percent = int(progress * 100 / total)
         progress_callback(percent)
