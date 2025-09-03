@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from keras import Model
+import tensorflow as tf
 
 from FAIRS.app.client.workers import check_thread_status, update_progress_callback
 from FAIRS.app.constants import CHECKPOINT_PATH
@@ -92,13 +93,15 @@ class ModelEvaluationSummary:
         return dataframe
 
     # -------------------------------------------------------------------------
-    def get_evaluation_report(self, validation_dataset, **kwargs) -> None:
+    def get_evaluation_report(
+        self, validation_dataset: tf.data.Dataset | np.ndarray | pd.DataFrame, **kwargs
+    ) -> None:
         callbacks_list = [LearningInterruptCallback(kwargs.get("worker", None))]
         # TO DO: here you must pass the series of windows using the loader
         if self.model:
             validation = self.model.evaluate(
                 validation_dataset,
-                verbose=1, # type: ignore
+                verbose=1,  # type: ignore
                 callbacks=callbacks_list,
             )
             logger.info("Evaluation of pretrained model has been completed")

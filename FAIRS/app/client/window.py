@@ -798,7 +798,7 @@ class MainWindow:
     ###########################################################################
     # [NEGATIVE OUTCOME HANDLERS]
     ###########################################################################
-    def on_error(self, err_tb : tuple[str, str]) -> None:
+    def on_error(self, err_tb: tuple[str, str]) -> None:
         exc, tb = err_tb
         logger.error(f"{exc}\n{tb}")
         message = "An error occurred during the operation. Check the logs for details."
