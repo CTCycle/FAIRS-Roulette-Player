@@ -31,19 +31,12 @@ The main interface streamlines navigation across the application's core services
 
 - **Calculation of roulette transitions**: visualize transitions between events from the roulette series
 
-![data_tab](FAIRS/app/assets/figures/data_tab.png)
-
 **Model:** this tab gives access to FAIRS model training from scratch or training resumption from previous checkpoints. Data processing is done in runtime prior to training, by encoding extraction based on color and position on the roulette wheel. Moreover, this section provides both model inference and evaluation features. Use the pretrained DQN agent to predict roulette extractions in real time using the dedicated console. Eventually, the DQN agent can be evaluated using different metrics, such as:
 
 - **Average mean sparse categorical loss and accuracy** 
 - **...** 
 
-![model_tab](FAIRS/app/assets/figures/model_tab.gif)
-
 **Viewer:** real time data visualization, coming soon! 
-
-![viewer_tab](FAIRS/app/assets/figures/viewer_tab.png)
-
 
 **Setup and Maintenance:** you can run *setup_and_maintenance.bat* to start the external tools for maintenance with the following options:
 
