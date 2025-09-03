@@ -53,7 +53,7 @@ class DQNAgent:
             return random_action
         # if the random value is above the exploration rate, the action will
         # be predicted by the current model snapshot
-        q_values = model.predict(state, verbose=0) # type: ignore
+        q_values = model.predict(state, verbose=0)  # type: ignore
         best_q = np.int32(np.argmax(q_values))
 
         return best_q
@@ -103,15 +103,15 @@ class DQNAgent:
         dones = np.array([d for s, a, r, c, ns, d in minibatch], dtype=np.int32)
 
         # Predict current Q-values
-        targets = model.predict(states, verbose=0) # type: ignore
+        targets = model.predict(states, verbose=0)  # type: ignore
 
         # Double DQN next action selection via the online model
         # 1. Get Q-values for next states from the online model
-        next_action_selection = model.predict(next_states, verbose=0) # type: ignore
+        next_action_selection = model.predict(next_states, verbose=0)  # type: ignore
         best_next_actions = np.argmax(next_action_selection, axis=1)
 
         # 2. Evaluate those actions using the target model
-        Q_futures_target = target_model.predict(next_states, verbose=0) # type: ignore
+        Q_futures_target = target_model.predict(next_states, verbose=0)  # type: ignore
         Q_future_selected = Q_futures_target[np.arange(batch_size), best_next_actions]
 
         # Scale rewards if your environment uses scaled rewards

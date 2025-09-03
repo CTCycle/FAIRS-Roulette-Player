@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from keras import Model
 from keras.callbacks import Callback, ModelCheckpoint, TensorBoard
 
-from FAIRS.app.client.workers import WorkerInterrupted
+from FAIRS.app.client.workers import ProcessWorker, ThreadWorker, WorkerInterrupted
 from FAIRS.app.logger import logger
 
 
@@ -37,7 +37,7 @@ class ProgressBarCallback(Callback):
 # [CALLBACK FOR TRAIN INTERRUPTION]
 ###############################################################################
 class LearningInterruptCallback(Callback):
-    def __init__(self, worker=None) -> None:
+    def __init__(self, worker: ThreadWorker | ProcessWorker | None = None) -> None:
         super().__init__()
         self.model: Model
         self.worker = worker
@@ -57,13 +57,13 @@ class LearningInterruptCallback(Callback):
 # [CALLBACK FOR REAL TIME TRAINING MONITORING]
 ###############################################################################
 class RealTimeHistory:
-    def __init__(self, plot_path, past_logs: dict | None = None) -> None:
+    def __init__(self, plot_path: str, past_logs: dict | None = None) -> None:
         self.fig_path = os.path.join(plot_path, "training_history.jpeg")
         self.total_epochs = 0 if past_logs is None else past_logs.get("episodes", 0)
         self.history = {"history": {}, "episodes": self.total_epochs}
 
     # -------------------------------------------------------------------------
-    def plot_loss_and_metrics(self, episode, logs: dict | None = None) -> None:
+    def plot_loss_and_metrics(self, episode: int, logs: dict | None = None) -> None:
         if not logs or not logs.get("episode", []):
             return
 
@@ -134,7 +134,7 @@ class GameStatsCallback:
         self.last_episode = current_episode
 
     # -------------------------------------------------------------------------
-    def generate_plot(self, current_step) -> None:
+    def generate_plot(self, current_step: int) -> None:
         fig, ax = plt.subplots(figsize=(14, 10))
         ax.set_xlabel("Iterations (Time Steps)")
         ax.set_ylabel("Value")
@@ -172,7 +172,7 @@ class CallbacksWrapper:
 
     # -------------------------------------------------------------------------
     def get_metrics_callbacks(
-        self, checkpoint_path, history=None
+        self, checkpoint_path: str, history: dict | None = None
     ) -> tuple[RealTimeHistory, GameStatsCallback]:
         RTH_callback = RealTimeHistory(checkpoint_path, past_logs=history)
         GS_callback = GameStatsCallback(checkpoint_path)
@@ -187,7 +187,7 @@ class CallbacksWrapper:
         log_path = os.path.join(checkpoint_path, "tensorboard")
         tb_callback = TensorBoard(
             log_dir=log_path,
-            update_freq=20, # type: ignore
+            update_freq=20,  # type: ignore
             histogram_freq=1,
         )
         tb_callback.set_model(model)
@@ -196,7 +196,7 @@ class CallbacksWrapper:
         return tb_callback
 
     # -------------------------------------------------------------------------
-    def checkpoints_saving(self, checkpoint_path) -> ModelCheckpoint:
+    def checkpoints_saving(self, checkpoint_path: str) -> ModelCheckpoint:
         checkpoint_filepath = os.path.join(checkpoint_path, "model_checkpoint.keras")
         chkp_save = ModelCheckpoint(
             filepath=checkpoint_filepath,

@@ -15,7 +15,7 @@ class RouletteCategoricalCrossentropy(keras.losses.Loss):
         penalty_increase=0.05,
         perceptive_field=10,
         **kwargs,
-    ):
+    ) -> None:
         super(RouletteCategoricalCrossentropy, self).__init__(name=name, **kwargs)
         self.penalty_increase = penalty_increase
         self.perceptive_size = perceptive_field
@@ -33,7 +33,7 @@ class RouletteCategoricalCrossentropy(keras.losses.Loss):
         )
 
     # -------------------------------------------------------------------------
-    def call(self, y_true: Any, y_pred: Any):
+    def call(self, y_true: Any, y_pred: Any) -> Any:
         y_true = keras.ops.cast(y_true, dtype=keras.config.floatx())
         loss = self.loss(y_true, y_pred)
         # Apply penalty based on the difference between prediction and true value
@@ -53,20 +53,22 @@ class RouletteCategoricalCrossentropy(keras.losses.Loss):
         }
 
     @classmethod
-    def from_config(cls, config):
+    def from_config(cls, config) -> "RouletteCategoricalCrossentropy":
         return cls(**config)
 
 
 # [METRICS]
 ###############################################################################
 class RouletteAccuracy(keras.metrics.Metric):
-    def __init__(self, name="RouletteAccuracy", **kwargs):
+    def __init__(self, name: str = "RouletteAccuracy", **kwargs) -> None:
         super(RouletteAccuracy, self).__init__(name=name, **kwargs)
         self.total = self.add_weight(name="total", initializer="zeros")
         self.count = self.add_weight(name="count", initializer="zeros")
 
     # -------------------------------------------------------------------------
-    def update_state(self, y_true, y_pred, sample_weight=None) -> None:
+    def update_state(
+        self, y_true: Any, y_pred: Any, sample_weight: Any | None = None
+    ) -> None:
         y_true = keras.ops.cast(y_true, dtype=keras.config.floatx())
         probabilities = keras.ops.argmax(y_pred, axis=1)
         accuracy = keras.ops.equal(y_true, probabilities)
@@ -93,5 +95,5 @@ class RouletteAccuracy(keras.metrics.Metric):
         return {**base_config, "name": self.name}
 
     @classmethod
-    def from_config(cls, config):
+    def from_config(cls, config) -> "RouletteAccuracy":
         return cls(**config)

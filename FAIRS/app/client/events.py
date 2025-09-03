@@ -7,7 +7,7 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
 from PySide6.QtGui import QImage, QPixmap
 
-from FAIRS.app.client.workers import check_thread_status
+from FAIRS.app.client.workers import ProcessWorker, ThreadWorker, check_thread_status
 from FAIRS.app.logger import logger
 from FAIRS.app.utils.data.process import RouletteSeriesEncoder
 from FAIRS.app.utils.data.serializer import DataSerializer, ModelSerializer
@@ -68,7 +68,7 @@ class ValidationEvents:
 
     # -------------------------------------------------------------------------
     def run_dataset_evaluation_pipeline(
-        self, metrics: list[str], progress_callback : Any | None = None, worker=None
+        self, metrics: list[str], progress_callback: Any | None = None, worker=None
     ) -> list[Any]:
         seed = self.configuration.get("seed", 42)
         sample_size = self.configuration.get("sample_size", 1.0)
@@ -98,7 +98,11 @@ class ValidationEvents:
         return images
 
     # -------------------------------------------------------------------------
-    def get_checkpoints_summary(self, progress_callback : Any | None = None, worker=None) -> None:
+    def get_checkpoints_summary(
+        self,
+        progress_callback: Any | None = None,
+        worker: ThreadWorker | ProcessWorker | None = None,
+    ) -> None:
         summarizer = ModelEvaluationSummary(self.configuration)
         checkpoints_summary = summarizer.get_checkpoints_summary(
             progress_callback=progress_callback, worker=worker
@@ -113,7 +117,7 @@ class ValidationEvents:
         self,
         metrics: list[str],
         selected_checkpoint: str,
-        progress_callback : Any | None = None,
+        progress_callback: Any | None = None,
         worker=None,
     ) -> list[Any]:
         logger.info(f"Loading {selected_checkpoint} checkpoint")
@@ -170,7 +174,11 @@ class ModelEvents:
         return self.modser.scan_checkpoints_folder()
 
     # -------------------------------------------------------------------------
-    def run_training_pipeline(self, progress_callback : Any | None = None, worker=None) -> None:
+    def run_training_pipeline(
+        self,
+        progress_callback: Any | None = None,
+        worker: ThreadWorker | ProcessWorker | None = None,
+    ) -> None:
         seed = self.configuration.get("seed", 1.0)
         sample_size = self.configuration.get("sample_size", 1.0)
         dataset = self.serializer.load_roulette_dataset(sample_size, seed)
@@ -223,7 +231,10 @@ class ModelEvents:
 
     # -------------------------------------------------------------------------
     def resume_training_pipeline(
-        self, selected_checkpoint: str, progress_callback : Any | None = None, worker=None
+        self,
+        selected_checkpoint: str,
+        progress_callback: Any | None = None,
+        worker=None,
     ) -> None:
         logger.info(f"Loading {selected_checkpoint} checkpoint")
         model, train_config, session, checkpoint_path = self.modser.load_checkpoint(
