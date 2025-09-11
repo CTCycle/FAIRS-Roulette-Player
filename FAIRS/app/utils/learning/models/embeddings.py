@@ -54,7 +54,7 @@ class RouletteEmbedding(keras.layers.Layer):
 
     # compute the mask for padded sequences
     # -------------------------------------------------------------------------
-    def compute_mask(self, inputs, previous_mask=None) -> Any:
+    def compute_mask(self, inputs: Any, previous_mask=None) -> Any:
         mask = keras.ops.not_equal(inputs, PAD_VALUE)
 
         return mask
@@ -75,5 +75,5 @@ class RouletteEmbedding(keras.layers.Layer):
     # deserialization method
     # -------------------------------------------------------------------------
     @classmethod
-    def from_config(cls, config):
+    def from_config(cls: Any, config: Any):
         return cls(**config)

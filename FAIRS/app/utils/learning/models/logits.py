@@ -23,7 +23,7 @@ class AddNorm(keras.layers.Layer):
 
     # implement transformer encoder through call method
     # -------------------------------------------------------------------------
-    def call(self, inputs) -> Any:
+    def call(self, inputs: Any) -> Any:
         x1, x2 = inputs
         x_add = self.add([x1, x2])
         x_norm = self.layernorm(x_add)
@@ -40,7 +40,7 @@ class AddNorm(keras.layers.Layer):
     # deserialization method
     # -------------------------------------------------------------------------
     @classmethod
-    def from_config(cls, config):
+    def from_config(cls: Any, config: Any):
         return cls(**config)
 
 
@@ -69,7 +69,7 @@ class QScoreNet(keras.layers.Layer):
 
     # implement transformer encoder through call method
     # -------------------------------------------------------------------------
-    def call(self, inputs, training: bool | None = None) -> Any:
+    def call(self, inputs: Any, training: bool | None = None) -> Any:
         x = layers.Flatten()(inputs)
         x = self.Q1(x)
         x = self.batch_norm(x, training=training)
@@ -94,7 +94,7 @@ class QScoreNet(keras.layers.Layer):
     # deserialization method
     # -------------------------------------------------------------------------
     @classmethod
-    def from_config(cls, config):
+    def from_config(cls: Any, config: Any):
         return cls(**config)
 
 
@@ -108,7 +108,7 @@ class BatchNormDense(layers.Layer):
         self.batch_norm = layers.BatchNormalization()
 
     # -------------------------------------------------------------------------
-    def call(self, inputs, training: bool | None = None) -> Any:
+    def call(self, inputs: Any, training: bool | None = None) -> Any:
         layer = self.dense(inputs)
         layer = self.batch_norm(layer, training=training)
         layer = activations.relu(layer)
@@ -126,7 +126,7 @@ class BatchNormDense(layers.Layer):
     # deserialization method
     # -------------------------------------------------------------------------
     @classmethod
-    def from_config(cls, config):
+    def from_config(cls: Any, config: Any):
         return cls(**config)
 
 
@@ -140,7 +140,7 @@ class InverseFrequency(layers.Layer):
         self.expand_dims = expand_dims
 
     # -------------------------------------------------------------------------
-    def call(self, inputs, training: bool | None = None) -> Any:
+    def call(self, inputs: Any, training: bool | None = None) -> Any:
         # Flatten the input tensor to count frequencies across all elements
         inputs = keras.ops.cast(inputs, "int32")
         inputs = keras.ops.reshape(inputs, [-1])
@@ -165,5 +165,5 @@ class InverseFrequency(layers.Layer):
     # deserialization method
     # -------------------------------------------------------------------------
     @classmethod
-    def from_config(cls, config):
+    def from_config(cls: Any, config: Any):
         return cls(**config)
