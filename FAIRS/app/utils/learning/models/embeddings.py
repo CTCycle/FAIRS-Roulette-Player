@@ -75,5 +75,8 @@ class RouletteEmbedding(keras.layers.Layer):
     # deserialization method
     # -------------------------------------------------------------------------
     @classmethod
-    def from_config(cls: Any, config: Any):
+    def from_config(
+        cls: type[RouletteEmbedding],
+        config: dict[str, Any],
+    ) -> RouletteEmbedding:
         return cls(**config)

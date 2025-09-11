@@ -40,7 +40,10 @@ class AddNorm(keras.layers.Layer):
     # deserialization method
     # -------------------------------------------------------------------------
     @classmethod
-    def from_config(cls: Any, config: Any):
+    def from_config(
+        cls: type[AddNorm],
+        config: dict[str, Any],
+    ) -> AddNorm:
         return cls(**config)
 
 
@@ -94,7 +97,10 @@ class QScoreNet(keras.layers.Layer):
     # deserialization method
     # -------------------------------------------------------------------------
     @classmethod
-    def from_config(cls: Any, config: Any):
+    def from_config(
+        cls: type[QScoreNet],
+        config: dict[str, Any],
+    ) -> QScoreNet:
         return cls(**config)
 
 
@@ -126,7 +132,10 @@ class BatchNormDense(layers.Layer):
     # deserialization method
     # -------------------------------------------------------------------------
     @classmethod
-    def from_config(cls: Any, config: Any):
+    def from_config(
+        cls: type[BatchNormDense],
+        config: dict[str, Any],
+    ) -> BatchNormDense:
         return cls(**config)
 
 
@@ -165,5 +174,8 @@ class InverseFrequency(layers.Layer):
     # deserialization method
     # -------------------------------------------------------------------------
     @classmethod
-    def from_config(cls: Any, config: Any):
+    def from_config(
+        cls: type[InverseFrequency],
+        config: dict[str, Any],
+    ) -> InverseFrequency:
         return cls(**config)

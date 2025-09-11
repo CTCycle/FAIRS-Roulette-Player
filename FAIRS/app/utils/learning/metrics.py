@@ -52,7 +52,10 @@ class RouletteCategoricalCrossentropy(keras.losses.Loss):
         }
 
     @classmethod
-    def from_config(cls: Any, config: Any) -> "RouletteCategoricalCrossentropy":
+    def from_config(
+        cls: type[RouletteCategoricalCrossentropy],
+        config: dict[str, Any],
+    ) -> RouletteCategoricalCrossentropy:
         return cls(**config)
 
 
@@ -94,5 +97,8 @@ class RouletteAccuracy(keras.metrics.Metric):
         return {**base_config, "name": self.name}
 
     @classmethod
-    def from_config(cls: Any, config: Any) -> "RouletteAccuracy":
+    def from_config(
+        cls: type[RouletteAccuracy],
+        config: dict[str, Any],
+    ) -> RouletteAccuracy:
         return cls(**config)
