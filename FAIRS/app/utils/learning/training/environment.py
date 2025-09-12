@@ -184,17 +184,22 @@ class BetsAndRewards:
 # [ROULETTE RL ENVIRONMENT]
 ###############################################################################
 class RouletteEnvironment(gym.Env):
-    def __init__(self, data: pd.DataFrame, configuration: dict[str, Any]) -> None:
+    def __init__(
+        self, data: pd.DataFrame, configuration: dict[str, Any], checkpoint_path: str
+    ) -> None:
         super(RouletteEnvironment, self).__init__()
         self.extractions = data["extraction"].values
         self.positions = data["position"].values
         self.colors = data["color_code"].values
+        self.checkpoint_path = checkpoint_path
 
         self.perceptive_size = configuration.get("perceptive_field_size", 64)
         self.initial_capital = configuration.get("initial_capital", 1000)
         self.bet_amount = configuration.get("bet_amount", 10)
         self.max_steps = configuration.get("max_steps_episode", 2000)
         self.render_environment = configuration.get("render_environment", False)
+        # real-time render settings
+        self.render_update_every = configuration.get("render_update_every", 10)  
         self.player = BetsAndRewards(configuration)
 
         self.black_numbers = self.player.black_numbers
@@ -291,26 +296,19 @@ class RouletteEnvironment(gym.Env):
 
     # -------------------------------------------------------------------------
     def _build_rendering_canvas(self) -> None:
-        plt.ion()  # Turn on interactive mode
+        # Create an offscreen figure; do not show to keep Agg compatible
         self.fig, self.ax = plt.subplots(
-            figsize=(10, 10), subplot_kw={"projection": "polar"}
+            figsize=(8, 8), subplot_kw={"projection": "polar"}
         )
-        if self.fig.canvas.manager:
-            self.fig.canvas.manager.set_window_title(
-                "Roulette Wheel"
-            )  # Set window title
-            plt.show(block=False)
-            # Store references to text objects for updating
-            self.title_text = self.ax.set_title("Roulette Wheel - Current Spin")
-            self.episode_text = self.fig.text(0.5, 0.08, "", ha="center", fontsize=12)
-            self.capital_text = self.fig.text(0.5, 0.05, "", ha="center", fontsize=12)
-            self.extraction_text = self.fig.text(
-                0.5, 0.02, "", ha="center", fontsize=10
-            )
+        # Pre-create text placeholders for faster updates
+        self.title_text = self.ax.set_title("Roulette Wheel - Current Spin")
+        self.episode_text = self.fig.text(0.5, 0.08, "", ha="center", fontsize=12)
+        self.capital_text = self.fig.text(0.5, 0.05, "", ha="center", fontsize=12)
+        self.extraction_text = self.fig.text(0.5, 0.02, "", ha="center", fontsize=10)
 
     # Render the environment to the screen
     # -------------------------------------------------------------------------
-    def render(self, episode, time_step, action, extracted_number) -> None:
+    def render(self, episode, time_step, action, extracted_number) -> bytes | None:
         self.ax.clear()
         # Assigning colors to each number to create the roulette layout
         colors = ["green"] + ["red", "black"] * 18
@@ -433,6 +431,18 @@ class RouletteEnvironment(gym.Env):
         )
         self.extraction_text.set_text(f"Last extracted number: {extracted_number}")
 
-        # Draw the updated plot
-        self.fig.canvas.draw()
-        self.fig.canvas.flush_events()
+        # Return an in-memory PNG periodically for the UI to consume via IPC
+        if time_step % self.render_update_every == 0:
+            from io import BytesIO
+            buf = BytesIO()
+            self.fig.savefig(
+                buf,
+                format="png",
+                bbox_inches="tight",
+                dpi=120,
+                facecolor=self.fig.get_facecolor(),
+            )
+            return buf.getvalue()
+
+        return None
+            

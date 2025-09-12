@@ -92,6 +92,7 @@ class DQNTraining:
         # Training loop for each episode
         scores = None
         total_steps = 0
+        progress_callback = kwargs.get("progress_callback", None)
         for i, episode in enumerate(range(start_episode, episodes)):
             start_over = True if i == 0 else False
             state = environment.reset(start_over=start_over)
@@ -111,7 +112,12 @@ class DQNTraining:
 
                 # render environment
                 if environment.render_environment:
-                    environment.render(episode, time_step, action, extraction)
+                    png = environment.render(episode, time_step, action, extraction)
+                    if png is not None and progress_callback:
+                        try:
+                            progress_callback({"kind": "render", "data": png})
+                        except Exception:
+                            pass
 
                 # Remember experience
                 self.agent.remember(state, action, reward, gain, next_gain, next_state, done)
@@ -182,8 +188,8 @@ class DQNTraining:
         data: pd.DataFrame,
         checkpoint_path: str,
         **kwargs,
-    ) -> tuple[Model, dict[str, Any]]:
-        environment = RouletteEnvironment(data, self.configuration)
+    ) -> tuple[Model, dict[str, Any]]:        
+        environment = RouletteEnvironment(data, self.configuration, checkpoint_path)
         episodes = self.configuration.get("episodes", 10)
         start_episode = 0
         history = None
@@ -228,8 +234,8 @@ class DQNTraining:
         session: dict | None = None,
         additional_epochs: int = 10,
         **kwargs,
-    ) -> tuple[Model, dict[str, Any]]:
-        environment = RouletteEnvironment(data, self.configuration)
+    ) -> tuple[Model, dict[str, Any]]:        
+        environment = RouletteEnvironment(data, self.configuration, checkpoint_path)
         from_episode = 0 if not session else session["epochs"]
         total_episodes = from_episode + additional_epochs
 
