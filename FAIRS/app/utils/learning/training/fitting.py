@@ -101,17 +101,20 @@ class DQNTraining:
                 gain = environment.capital / environment.initial_capital
                 gain = np.reshape(gain, shape=(1, 1))
                 # action is always performed using the Q-model
-                action = self.agent.act(model, state)
+                action = self.agent.act(model, state, gain)
                 next_state, reward, done, extraction = environment.step(action)
                 total_reward += reward
                 next_state = np.reshape(next_state, [1, state_size])
+                # compute next gain after environment updated capital
+                next_gain = environment.capital / environment.initial_capital
+                next_gain = np.reshape(next_gain, shape=(1, 1))
 
                 # render environment
                 if environment.render_environment:
                     environment.render(episode, time_step, action, extraction)
 
                 # Remember experience
-                self.agent.remember(state, action, reward, gain, next_state, done)
+                self.agent.remember(state, action, reward, gain, next_gain, next_state, done)
                 state = next_state
 
                 # Perform replay if the memory size is sufficient

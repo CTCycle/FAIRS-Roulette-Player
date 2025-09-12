@@ -28,6 +28,8 @@ class RoulettePlayer:
         self.current_capital = self.initial_capital
         self.last_state: np.ndarray | None = None
         self.gain: Any | None = None
+        self.last_action: int | None = None
+        self.player = BetsAndRewards(configuration)
 
         self.model = model
         self.configuration = configuration
@@ -66,8 +68,12 @@ class RoulettePlayer:
             if self.last_state
             else None
         )
-        action_logits = self.model.predict(current_state, verbose="0")
+        # compute gain context and predict with both inputs
+        gain_value = (self.current_capital / self.initial_capital) if self.initial_capital else 1.0
+        gain_input = np.reshape(gain_value, (1, 1)).astype(np.float32)
+        action_logits = self.model.predict({"timeseries": current_state, "gain": gain_input}, verbose="0")
         self.next_action = int(np.argmax(action_logits, axis=1)[0])
+        self.last_action = self.next_action
         self.next_action_desc = self.action_descriptions.get(
             self.next_action, f"action {self.next_action}"
         )
@@ -85,6 +91,13 @@ class RoulettePlayer:
         self.true_extraction = real_number
         if self.last_state:
             self.last_state = np.append(self.last_state[1:], np.int32(real_number))
+
+        # update capital based on the last action and the true extraction
+        if self.last_action is not None:
+            reward, new_capital, _ = self.player.interact_and_get_rewards(
+                self.last_action, real_number, self.current_capital
+            )
+            self.current_capital = new_capital
 
     # -------------------------------------------------------------------------
     def save_prediction(self, checkpoint_name: str) -> None:

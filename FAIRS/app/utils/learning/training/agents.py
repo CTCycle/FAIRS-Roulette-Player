@@ -42,7 +42,7 @@ class DQNAgent:
             self.memory = pickle.load(f)
 
     # -------------------------------------------------------------------------
-    def act(self, model: Model, state) -> np.int32:
+    def act(self, model: Model, state : Any, gain : float | Any) -> np.int32:
         # generate a random number between 0 and 1 for exploration purposes.
         # if this number is equal or smaller to exploration rate, the agent will
         # pick a random roulette choice. It will do the same if the perceived field is empty
@@ -53,7 +53,7 @@ class DQNAgent:
             return random_action
         # if the random value is above the exploration rate, the action will
         # be predicted by the current model snapshot
-        q_values = model.predict(state, verbose=0)  # type: ignore
+        q_values = model.predict({"timeseries": state, "gain": gain}, verbose=0)  # type: ignore
         best_q = np.int32(np.argmax(q_values))
 
         return best_q
@@ -65,10 +65,11 @@ class DQNAgent:
         action: np.int32,
         reward: int,
         gain: Any,
+        next_gain: Any,
         next_state: np.ndarray,
         done: bool,
     ) -> None:
-        self.memory.append((state, action, reward, gain, next_state, done))
+        self.memory.append((state, action, reward, gain, next_gain, next_state, done))
 
     # calculate the discounted future reward, using discount factor to determine
     # how much future rewards are taken into account. Each Q-value represents the
@@ -91,27 +92,24 @@ class DQNAgent:
         # state, action, reward, next state and status
         # arrays of shape (batch size, item shape) are created, state and next state shape = (1, perceptive field)
         # therefor their single dimension must be squeezed out while creating the stacked array
-        states = np.array(
-            [np.squeeze(s) for s, a, r, c, ns, d in minibatch], dtype=np.int32
-        )
-        actions = np.array([a for s, a, r, c, ns, d in minibatch], dtype=np.int32)
-        rewards = np.array([r for s, a, r, c, ns, d in minibatch], dtype=np.float32)
-        np.array([np.squeeze(c) for s, a, r, c, ns, d in minibatch], dtype=np.float32)
-        next_states = np.array(
-            [np.squeeze(ns) for s, a, r, c, ns, d in minibatch], dtype=np.int32
-        )
-        dones = np.array([d for s, a, r, c, ns, d in minibatch], dtype=np.int32)
+        states = np.array([np.squeeze(s) for s, a, r, c, nc, ns, d in minibatch], dtype=np.int32)
+        actions = np.array([a for s, a, r, c, nc, ns, d in minibatch], dtype=np.int32)
+        rewards = np.array([r for s, a, r, c, nc, ns, d in minibatch], dtype=np.float32)
+        gains = np.array([np.squeeze(c) for s, a, r, c, nc, ns, d in minibatch], dtype=np.float32)
+        next_gains = np.array([np.squeeze(nc) for s, a, r, c, nc, ns, d in minibatch], dtype=np.float32)
+        next_states = np.array([np.squeeze(ns) for s, a, r, c, nc, ns, d in minibatch], dtype=np.int32)
+        dones = np.array([d for s, a, r, c, nc, ns, d in minibatch], dtype=np.int32)
 
         # Predict current Q-values
-        targets = model.predict(states, verbose=0)  # type: ignore
+        targets = model.predict({"timeseries": states, "gain": gains}, verbose=0)  # type: ignore
 
         # Double DQN next action selection via the online model
         # 1. Get Q-values for next states from the online model
-        next_action_selection = model.predict(next_states, verbose=0)  # type: ignore
+        next_action_selection = model.predict({"timeseries": next_states, "gain": next_gains}, verbose=0)  # type: ignore
         best_next_actions = np.argmax(next_action_selection, axis=1)
 
         # 2. Evaluate those actions using the target model
-        Q_futures_target = target_model.predict(next_states, verbose=0)  # type: ignore
+        Q_futures_target = target_model.predict({"timeseries": next_states, "gain": next_gains}, verbose=0)  # type: ignore
         Q_future_selected = Q_futures_target[np.arange(batch_size), best_next_actions]
 
         # Scale rewards if your environment uses scaled rewards
@@ -125,7 +123,7 @@ class DQNAgent:
         targets[batch_indices, actions] = updated_targets
 
         # Fit the model on the entire batch using train on batch method
-        logs = model.train_on_batch(states, targets, return_dict=True)
+        logs = model.train_on_batch({"timeseries": states, "gain": gains}, targets, return_dict=True)
 
         # Update epsilon
         if self.epsilon > self.epsilon_min:

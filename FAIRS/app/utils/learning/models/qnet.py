@@ -28,6 +28,8 @@ class FAIRSnet:
         self.timeseries = layers.Input(
             shape=(self.perceptive_size,), name="timeseries", dtype="int32"
         )
+        # second input: gain metric (current capital over initial capital)
+        self.gain_input = layers.Input(shape=(1,), name="gain", dtype="float32")
         self.embedding = RouletteEmbedding(
             self.embedding_dims, self.numbers, mask_padding=True
         )
@@ -56,10 +58,18 @@ class FAIRSnet:
         layer = BatchNormDense(self.neurons)(embeddings)
         layer = BatchNormDense(self.neurons)(layer)
         layer = layers.Dropout(rate=0.3, seed=self.seed)(layer)
-        output = self.QNet(layer)
+
+        # process gain context with a couple of dense layers and match dimensions
+        ctx = BatchNormDense(self.neurons // 2)(self.gain_input)
+        ctx = BatchNormDense(self.neurons)(ctx)
+
+        # add + normalize to inject context into the main stream
+        merged = self.add_norm([layer, ctx])
+
+        output = self.QNet(merged)
 
         # define the model from inputs and outputs
-        model = Model(inputs=self.timeseries, outputs=output)
+        model = Model(inputs=[self.timeseries, self.gain_input], outputs=output)
         model = self.compile_model(model, model_summary=model_summary)
 
         return model
