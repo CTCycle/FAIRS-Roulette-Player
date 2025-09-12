@@ -33,8 +33,12 @@ class RouletteCategoricalCrossentropy(keras.losses.Loss):
         )
 
     # -------------------------------------------------------------------------
+<<<<<<< HEAD
     def call(self, y_true: Any, y_pred: Any) -> Any:
         y_true = keras.ops.cast(y_true, dtype=keras.config.floatx())
+=======
+    def call(self, y_true: Any, y_pred: Any) -> Any:        
+>>>>>>> develop
         loss = self.loss(y_true, y_pred)
         # Apply penalty based on the difference between prediction and true value
         total_loss = loss * self.penalty_scores
@@ -53,7 +57,14 @@ class RouletteCategoricalCrossentropy(keras.losses.Loss):
         }
 
     @classmethod
+<<<<<<< HEAD
     def from_config(cls, config) -> "RouletteCategoricalCrossentropy":
+=======
+    def from_config(
+        cls: type[RouletteCategoricalCrossentropy],
+        config: dict[str, Any],
+    ) -> RouletteCategoricalCrossentropy:
+>>>>>>> develop
         return cls(**config)
 
 
@@ -85,7 +96,11 @@ class RouletteAccuracy(keras.metrics.Metric):
         return self.total / (self.count + keras.backend.epsilon())
 
     # -------------------------------------------------------------------------
+<<<<<<< HEAD
     def reset_NUMBERS(self) -> None:
+=======
+    def reset_numbers(self) -> None:
+>>>>>>> develop
         self.total.assign(0)
         self.count.assign(0)
 
@@ -95,5 +110,12 @@ class RouletteAccuracy(keras.metrics.Metric):
         return {**base_config, "name": self.name}
 
     @classmethod
+<<<<<<< HEAD
     def from_config(cls, config) -> "RouletteAccuracy":
+=======
+    def from_config(
+        cls: type[RouletteAccuracy],
+        config: dict[str, Any],
+    ) -> RouletteAccuracy:
+>>>>>>> develop
         return cls(**config)

@@ -38,7 +38,12 @@ The main interface streamlines navigation across the application's core services
 
 **Viewer:** real time data visualization, coming soon! 
 
+<<<<<<< HEAD
 **Setup and Maintenance:** you can run *setup_and_maintenance.bat* to start the external tools for maintenance with the following options:
+=======
+## 4.1 Setup and Maintenance
+You can run *setup_and_maintenance.bat* to start the external tools for maintenance with the following options:
+>>>>>>> develop
 
 - **Update project:** check for updates from Github
 - **Remove logs:** remove all logs file from *resources/logs*

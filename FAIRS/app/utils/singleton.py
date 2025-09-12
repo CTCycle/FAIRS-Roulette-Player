@@ -20,7 +20,11 @@ def singleton(cls: type[T]) -> type[T]:
     original_init = cls.__init__
 
     @wraps(original_init)
+<<<<<<< HEAD
     def __init__(self, *args: Any, **kwargs: Any) -> None:
+=======
+    def __init__(self, *args: Any, **kwargs) -> None:
+>>>>>>> develop
         if getattr(self, "_singleton_initialized", False):
             return
         original_init(self, *args, **kwargs)
@@ -28,7 +32,11 @@ def singleton(cls: type[T]) -> type[T]:
 
     setattr(cls, "__init__", __init__)
 
+<<<<<<< HEAD
     def _new(cls_, *args: Any, **kwargs: Any) -> Any:
+=======
+    def _new(cls_, *args: Any, **kwargs) -> Any:
+>>>>>>> develop
         if getattr(cls_, "_instance", None) is None:
             with lock:
                 if getattr(cls_, "_instance", None) is None:
