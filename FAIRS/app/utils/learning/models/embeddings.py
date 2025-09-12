@@ -19,7 +19,7 @@ class RouletteEmbedding(keras.layers.Layer):
         embedding_dims: int,
         numbers: int,
         mask_padding: bool = True,
-        **kwargs: Any,
+        **kwargs,
     ) -> None:
         super(RouletteEmbedding, self).__init__(**kwargs)
         self.embedding_dims = embedding_dims
