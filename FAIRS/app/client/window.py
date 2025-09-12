@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from typing import Any, cast
+from numbers import Number
 
 from matplotlib.figure import Figure
 import pandas as pd
@@ -209,6 +210,7 @@ class MainWindow:
         # Initial population of dynamic UI elements
         self.load_checkpoints()
         self._set_graphics()
+        # real-time canvas updates are handled via worker progress signals
 
     # --------------------------------------------------------------------------
     def __getattr__(self, name: str) -> Any:
@@ -334,6 +336,29 @@ class MainWindow:
         self.current_fig = 0
 
     # -------------------------------------------------------------------------
+    @Slot(object)
+    def _on_process_progress(self, payload: Any) -> None:
+        try:
+            # numeric progress updates
+            if isinstance(payload, (int, float)):  
+                if self.progress_bar:
+                    self.progress_bar.setValue(int(payload))
+                return
+
+            # render frames delivered as dicts
+            if isinstance(payload, dict) and payload.get("kind") == "render":
+                data = payload.get("data")
+                if not data:
+                    return
+                qpixmap = QPixmap()
+                if qpixmap.loadFromData(data):  # expects bytes/QByteArray
+                    self.pixmaps = [qpixmap]
+                    self.current_fig = 0
+                    self._update_graphics_view()
+        except Exception:
+            pass
+
+    # -------------------------------------------------------------------------
     def _connect_button(self, button_name: str, slot: Any) -> None:
         button = self.main_win.findChild(QPushButton, button_name)
         button.clicked.connect(slot) if button else None
@@ -354,7 +379,7 @@ class MainWindow:
     ) -> None:
         if update_progress and self.progress_bar:
             self.progress_bar.setValue(0) if self.progress_bar else None
-            worker.signals.progress.connect(self.progress_bar.setValue)
+        worker.signals.progress.connect(self._on_process_progress)
         worker.signals.finished.connect(on_finished)
         worker.signals.error.connect(on_error)
         worker.signals.interrupted.connect(on_interrupted)
@@ -371,7 +396,7 @@ class MainWindow:
     ) -> None:
         if update_progress and self.progress_bar:
             self.progress_bar.setValue(0) if self.progress_bar else None
-            worker.signals.progress.connect(self.progress_bar.setValue)
+        worker.signals.progress.connect(self._on_process_progress)
 
         worker.signals.finished.connect(on_finished)
         worker.signals.error.connect(on_error)
