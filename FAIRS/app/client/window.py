@@ -153,6 +153,7 @@ class MainWindow:
                 (QSpinBox, "initialCapital", "initial_capital"),
                 (QSpinBox, "betAmount", "bet_amount"),
                 (QCheckBox, "renderEnv", "render_environment"),
+                (QSpinBox, "renderUpFreq", "render_update_frequency"),
                 # session settings group
                 (QCheckBox, "deviceGPU", "use_device_GPU"),
                 (QSpinBox, "deviceID", "device_ID"),
@@ -295,6 +296,7 @@ class MainWindow:
             ("model_update_frequency", "valueChanged", "model_update_frequency"),
             # environment settings group
             ("render_environment", "toggled", "render_environment"),
+            ("render_update_frequency", "valueChanged", "render_update_frequency"),
             ("initial_capital", "valueChanged", "initial_capital"),
             ("bet_amount", "valueChanged", "bet_amount"),
             # session settings group
@@ -343,7 +345,7 @@ class MainWindow:
     def _on_process_progress(self, payload: Any) -> None:
         try:
             # numeric progress updates
-            if isinstance(payload, (int, float)):  
+            if isinstance(payload, (int, float)):
                 if self.progress_bar:
                     self.progress_bar.setValue(int(payload))
                 return
@@ -415,19 +417,19 @@ class MainWindow:
         worker.start()
 
     # -------------------------------------------------------------------------
-    def _send_message(self, message : str) -> None:
+    def _send_message(self, message: str) -> None:
         self.main_win.statusBar().showMessage(message)
 
     # [SETUP]
     ###########################################################################
-    def _setup_configuration(self, widget_defs : Any) -> None:
+    def _setup_configuration(self, widget_defs: Any) -> None:
         for cls, name, attr in widget_defs:
             w = self.main_win.findChild(cls, name)
             setattr(self, attr, w)
             self.widgets[attr] = w
 
     # -------------------------------------------------------------------------
-    def _connect_signals(self, connections : Any) -> None:
+    def _connect_signals(self, connections: Any) -> None:
         for attr, signal, slot in connections:
             widget = self.widgets[attr]
             getattr(widget, signal).connect(slot)
@@ -808,7 +810,7 @@ class MainWindow:
 <<<<<<< HEAD
     def on_dataset_evaluation_finished(self, plots) -> None:
 =======
-    def on_dataset_evaluation_finished(self, plots : list[Figure]) -> None:
+    def on_dataset_evaluation_finished(self, plots: list[Figure]) -> None:
 >>>>>>> develop
         self._send_message("Figures have been generated")
         self.worker = self.worker.cleanup() if self.worker else None

@@ -52,7 +52,7 @@ class Configuration:
             "initial_capital": 1000,
             "bet_amount": 10,
             "render_environment": False,
-            'render_update_every': 50,
+            "render_update_frequency": 50,
             # inference
             "game_capital": 100,
             "game_bet": 1,

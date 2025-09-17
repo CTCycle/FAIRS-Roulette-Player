@@ -120,7 +120,9 @@ class DQNTraining:
                             pass
 
                 # Remember experience
-                self.agent.remember(state, action, reward, gain, next_gain, next_state, done)
+                self.agent.remember(
+                    state, action, reward, gain, next_gain, next_state, done
+                )
                 state = next_state
 
                 # Perform replay if the memory size is sufficient
@@ -188,7 +190,7 @@ class DQNTraining:
         data: pd.DataFrame,
         checkpoint_path: str,
         **kwargs,
-    ) -> tuple[Model, dict[str, Any]]:        
+    ) -> tuple[Model, dict[str, Any]]:
         environment = RouletteEnvironment(data, self.configuration, checkpoint_path)
         episodes = self.configuration.get("episodes", 10)
         start_episode = 0
@@ -234,7 +236,7 @@ class DQNTraining:
         session: dict | None = None,
         additional_epochs: int = 10,
         **kwargs,
-    ) -> tuple[Model, dict[str, Any]]:        
+    ) -> tuple[Model, dict[str, Any]]:
         environment = RouletteEnvironment(data, self.configuration, checkpoint_path)
         from_episode = 0 if not session else session["epochs"]
         total_episodes = from_episode + additional_epochs

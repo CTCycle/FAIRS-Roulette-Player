@@ -199,7 +199,7 @@ class RouletteEnvironment(gym.Env):
         self.max_steps = configuration.get("max_steps_episode", 2000)
         self.render_environment = configuration.get("render_environment", False)
         # real-time render settings
-        self.render_update_every = configuration.get("render_update_every", 10)  
+        self.render_update_frequency = configuration.get("render_update_frequency", 10)
         self.player = BetsAndRewards(configuration)
 
         self.black_numbers = self.player.black_numbers
@@ -432,8 +432,9 @@ class RouletteEnvironment(gym.Env):
         self.extraction_text.set_text(f"Last extracted number: {extracted_number}")
 
         # Return an in-memory PNG periodically for the UI to consume via IPC
-        if time_step % self.render_update_every == 0:
+        if time_step % self.render_update_frequency == 0:
             from io import BytesIO
+
             buf = BytesIO()
             self.fig.savefig(
                 buf,
@@ -445,4 +446,3 @@ class RouletteEnvironment(gym.Env):
             return buf.getvalue()
 
         return None
-            

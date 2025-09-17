@@ -172,7 +172,7 @@
            <property name="geometry">
             <rect>
              <x>0</x>
-             <y>0</y>
+             <y>-27</y>
              <width>1094</width>
              <height>807</height>
             </rect>
@@ -636,11 +636,18 @@
                 </layout>
                </item>
                <item>
-                <widget class="QCheckBox" name="renderEnv">
-                 <property name="text">
-                  <string>Environment rendering in real time</string>
-                 </property>
-                </widget>
+                <layout class="QHBoxLayout" name="horizontalLayout_24">
+                 <item>
+                  <widget class="QCheckBox" name="renderEnv">
+                   <property name="text">
+                    <string>Render environment every N steps</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QSpinBox" name="renderUpFreq"/>
+                 </item>
+                </layout>
                </item>
                <item>
                 <spacer name="verticalSpacer_4">
