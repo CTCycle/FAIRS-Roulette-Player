@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from typing import Any, cast
-from numbers import Number
 
 <<<<<<< HEAD
 =======
@@ -174,7 +173,9 @@ class MainWindow:
                 (QCheckBox, "classAccuracy", "classification_accuracy"),
                 (QPushButton, "evaluateModel", "model_evaluation"),
                 (QPushButton, "checkpointSummary", "checkpoints_summary"),
-                # 3. Viewer tab
+                # 3. Viewer tab 
+                (QRadioButton, "viewEnvRender", "env_render_view"),
+                (QRadioButton, "viewTrainMetrics", "train_metrics_view"),
                 (QPushButton, "previousImg", "previous_image"),
                 (QPushButton, "nextImg", "next_image"),
                 (QPushButton, "clearImg", "clear_images"),
@@ -205,6 +206,8 @@ class MainWindow:
                 ("checkpoints_summary", "clicked", self.get_checkpoints_summary),
                 ("start_roulette_game", "clicked", self.play_roulette),
                 # 4. viewer tab page
+                ("env_render_view", "toggled", self._update_graphics_view),
+                ("train_metrics_view", "toggled", self._update_graphics_view),
                 ("previous_image", "clicked", self.show_previous_figure),
                 ("next_image", "clicked", self.show_next_figure),
                 ("clear_images", "clicked", self.clear_figures),
@@ -322,6 +325,16 @@ class MainWindow:
         self.progress_bar.setValue(0) if self.progress_bar else None
 
     # -------------------------------------------------------------------------
+    def get_current_pixmaps_key(self) -> tuple[list[QPixmap], str | None]:
+        for radio, idx_key in self.pixmap_sources.items():
+            if radio and radio.isChecked():
+                pixmaps = self.pixmaps.setdefault(idx_key, [])
+                self.pixmap_stream_index.setdefault(idx_key, {})
+                self.current_fig.setdefault(idx_key, 0)
+                return pixmaps, idx_key
+        return [], None
+
+    # -------------------------------------------------------------------------
     def _set_graphics(self) -> None:
         view = self.main_win.findChild(QGraphicsView, "canvas")
         scene = QGraphicsScene()
@@ -338,31 +351,81 @@ class MainWindow:
                 view.setRenderHint(hint, True)
 
         self.graphics = {"view": view, "scene": scene, "pixmap_item": pixmap_item}
-        self.pixmaps = []
-        self.current_fig = 0
+        view_keys = ("env_render", "train_metrics")
+        self.pixmaps = {key: [] for key in view_keys}
+        self.current_fig = {key: 0 for key in view_keys}
+        self.pixmap_stream_index = {key: {} for key in view_keys}
+
+        self.pixmap_sources = {}
+        env_view = getattr(self, "env_render_view", None)
+        train_view = getattr(self, "train_metrics_view", None)
+        if env_view:
+            self.pixmap_sources[env_view] = "env_render"
+        if train_view:
+            self.pixmap_sources[train_view] = "train_metrics"
 
     # -------------------------------------------------------------------------
     @Slot(object)
     def _on_process_progress(self, payload: Any) -> None:
         try:
-            # numeric progress updates
             if isinstance(payload, (int, float)):
                 if self.progress_bar:
                     self.progress_bar.setValue(int(payload))
                 return
 
-            # render frames delivered as dicts
-            if isinstance(payload, dict) and payload.get("kind") == "render":
-                data = payload.get("data")
-                if not data:
+            if not isinstance(payload, dict) or payload.get("kind") != "render":
+                return
+
+            data = payload.get("data")
+            if not data:
+                return
+
+            source = payload.get("source", "env_render")
+            pixmap: QPixmap | None = None
+
+            if isinstance(data, (bytes, bytearray)):
+                pixmap = QPixmap()
+                if not pixmap.loadFromData(bytes(data)):
                     return
-                qpixmap = QPixmap()
-                if qpixmap.loadFromData(data):  # expects bytes/QByteArray
-                    self.pixmaps = [qpixmap]
-                    self.current_fig = 0
+            elif isinstance(data, QPixmap):
+                pixmap = data
+            elif isinstance(data, str):
+                try:
+                    pixmap = self.graphic_handler.load_image_as_pixmap(data)
+                except Exception:
+                    return
+            else:
+                return
+
+            pixmap_list = self.pixmaps.setdefault(source, [])
+            index_map = self.pixmap_stream_index.setdefault(source, {})
+            self.current_fig.setdefault(source, 0)
+
+            stream = payload.get("stream")
+            if stream:
+                idx = index_map.get(stream)
+                if idx is not None and idx < len(pixmap_list):
+                    pixmap_list[idx] = pixmap
+                else:
+                    idx = len(pixmap_list)
+                    pixmap_list.append(pixmap)
+                    index_map[stream] = idx
+                    if len(pixmap_list) == 1:
+                        self.current_fig[source] = idx
+                if self.current_fig.get(source, 0) == idx:
                     self._update_graphics_view()
+                return
+
+            pixmap_list.append(pixmap)
+            self.current_fig[source] = len(pixmap_list) - 1
+
+            if source == "env_render" and len(pixmap_list) > 20:
+                pixmap_list.pop(0)
+                self.current_fig[source] = max(0, len(pixmap_list) - 1)
+
+            self._update_graphics_view()
         except Exception:
-            pass
+            logger.debug("Unable to handle progress payload", exc_info=True)
 
     # -------------------------------------------------------------------------
     def _connect_button(self, button_name: str, slot: Any) -> None:
@@ -527,13 +590,15 @@ class MainWindow:
     # -------------------------------------------------------------------------
     @Slot()
     def _update_graphics_view(self) -> None:
-        if not self.pixmaps:
+        pixmaps, idx_key = self.get_current_pixmaps_key()
+        if not pixmaps or idx_key is None:
             self.graphics["pixmap_item"].setPixmap(QPixmap())
             self.graphics["scene"].setSceneRect(0, 0, 0, 0)
             return
 
-        idx = min(self.current_fig, len(self.pixmaps) - 1)
-        raw = self.pixmaps[idx]
+        idx = self.current_fig.get(idx_key, 0)
+        idx = min(idx, len(pixmaps) - 1)
+        raw = pixmaps[idx]
 
         qpixmap = QPixmap(raw) if isinstance(raw, str) else raw
         view = self.graphics["view"]
@@ -551,32 +616,38 @@ class MainWindow:
     # -------------------------------------------------------------------------
     @Slot()
     def show_previous_figure(self) -> None:
-        if not self.pixmaps:
+        pixmaps, idx_key = self.get_current_pixmaps_key()
+        if not pixmaps or idx_key is None:
             return
-        if self.current_fig > 0:
-            self.current_fig -= 1
+        idx = self.current_fig.get(idx_key, 0)
+        if idx > 0:
+            self.current_fig[idx_key] = idx - 1
             self._update_graphics_view()
 
     # -------------------------------------------------------------------------
     @Slot()
     def show_next_figure(self) -> None:
-        if not self.pixmaps:
+        pixmaps, idx_key = self.get_current_pixmaps_key()
+        if not pixmaps or idx_key is None:
             return
-        if self.current_fig < len(self.pixmaps) - 1:
-            self.current_fig += 1
+        idx = self.current_fig.get(idx_key, 0)
+        if idx < len(pixmaps) - 1:
+            self.current_fig[idx_key] = idx + 1
             self._update_graphics_view()
 
     # -------------------------------------------------------------------------
     @Slot()
     def clear_figures(self) -> None:
-        if not self.pixmaps:
+        pixmaps, idx_key = self.get_current_pixmaps_key()
+        if idx_key is None:
             return
-        self.pixmaps.clear()
-        self.current_fig = 0
+        pixmaps.clear()
+        self.pixmap_stream_index[idx_key] = {}
+        self.current_fig[idx_key] = 0
         self._update_graphics_view()
-        self.graphics["pixmap_item"].setPixmap(QPixmap())
-        self.graphics["scene"].setSceneRect(0, 0, 0, 0)
-        self.graphics["view"].viewport().update()
+        view = self.graphics.get("view")
+        if view:
+            view.viewport().update()
 
     # -------------------------------------------------------------------------
     # [DATASET TAB]

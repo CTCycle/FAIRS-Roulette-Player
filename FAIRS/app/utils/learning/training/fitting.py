@@ -83,16 +83,17 @@ class DQNTraining:
             )
             tensorboard.on_train_begin()
 
+        progress_callback = kwargs.get("progress_callback", None)
+        worker = kwargs.get("worker", None)
         RTH_callback, GS_callback = None, None
         if self.configuration.get("plot_training_metrics", True):
             RTH_callback, GS_callback = self.callbacks.get_metrics_callbacks(
-                checkpoint_path
+                checkpoint_path, progress_callback=progress_callback
             )
 
         # Training loop for each episode
         scores = None
         total_steps = 0
-        progress_callback = kwargs.get("progress_callback", None)
         for i, episode in enumerate(range(start_episode, episodes)):
             start_over = True if i == 0 else False
             state = environment.reset(start_over=start_over)
@@ -115,7 +116,9 @@ class DQNTraining:
                     png = environment.render(episode, time_step, action, extraction)
                     if png is not None and progress_callback:
                         try:
-                            progress_callback({"kind": "render", "data": png})
+                            progress_callback(
+                                {"kind": "render", "source": "env_render", "data": png}
+                            )
                         except Exception:
                             pass
 
@@ -158,7 +161,7 @@ class DQNTraining:
                 if tensorboard and scores:
                     tensorboard.on_batch_end(batch=total_steps, logs=scores)
 
-                check_thread_status(kwargs.get("worker", None))
+                check_thread_status(worker)
 
                 total_steps += 1
                 if done:
@@ -172,10 +175,8 @@ class DQNTraining:
                 RTH_callback.plot_loss_and_metrics(episode, self.session_stats)
 
             # check for worker thread status and update progress callback
-            check_thread_status(kwargs.get("worker", None))
-            update_progress_callback(
-                i + 1, episodes, kwargs.get("progress_callback", None)
-            )
+            check_thread_status(worker)
+            update_progress_callback(i + 1, episodes, progress_callback)
 
         if tensorboard:
             tensorboard.on_train_end()
