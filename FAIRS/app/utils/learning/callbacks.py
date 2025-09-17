@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 import os
 import subprocess
 import time
 import webbrowser
+from io import BytesIO
 from typing import Any
 
 import matplotlib.pyplot as plt
@@ -57,17 +59,22 @@ class LearningInterruptCallback(Callback):
 # [CALLBACK FOR REAL TIME TRAINING MONITORING]
 ###############################################################################
 class RealTimeHistory:
-    def __init__(self, plot_path: str, past_logs: dict | None = None) -> None:
+    def __init__(
+        self,
+        plot_path: str,
+        past_logs: dict | None = None,
+        progress_callback: Callable[[dict[str, Any]], Any] | None = None,
+    ) -> None:
         self.fig_path = os.path.join(plot_path, "training_history.jpeg")
         self.total_epochs = 0 if past_logs is None else past_logs.get("episodes", 0)
         self.history = {"history": {}, "episodes": self.total_epochs}
+        self.progress_callback = progress_callback
 
     # -------------------------------------------------------------------------
     def plot_loss_and_metrics(self, episode: int, logs: dict | None = None) -> None:
         if not logs or not logs.get("episode", []):
             return
 
-        # iterates over all key-value pairs of logs
         for key, value in logs.items():
             if key not in self.history["history"]:
                 self.history["history"][key] = []
@@ -80,23 +87,31 @@ class RealTimeHistory:
         loss = self.history["history"].get("loss", [])
         metric = self.history["history"].get("metrics", [])
         fig, axes = plt.subplots(2, 1, figsize=(16, 10))
-        # loss plot
         if loss:
             axes[0].plot(loss, label="train")
         axes[0].set_title("Loss")
         axes[0].set_xlabel("Episode")
         axes[0].legend(loc="best", fontsize=10)
-        # Metric plot
         if metric:
             axes[1].plot(metric, label="train")
         axes[1].set_title("Metrics")
         axes[1].set_xlabel("Episode")
         axes[1].legend(loc="best", fontsize=10)
         plt.tight_layout()
-        plt.savefig(self.fig_path, bbox_inches="tight", format="jpeg", dpi=300)
+
+        buffer = BytesIO()
+        fig.savefig(buffer, bbox_inches="tight", format="jpeg", dpi=300)
+        data = buffer.getvalue()
+        with open(self.fig_path, "wb") as target:
+            target.write(data)
+        if self.progress_callback:
+            self.progress_callback(
+                {"kind": "render", "source": "train_metrics", "stream": "history", "data": data}
+            )
         plt.close(fig)
 
 
+###############################################################################
 ###############################################################################
 class GameStatsCallback:
     def __init__(
@@ -104,6 +119,7 @@ class GameStatsCallback:
         plot_path: str,
         iterations: list[Any] | None = None,
         capitals: list[Any] | None = None,
+        progress_callback: Callable[[dict[str, Any]], Any] | None = None,
         **kwargs,
     ) -> None:
         self.plot_path = os.path.join(plot_path, "game_statistics.jpeg")
@@ -114,6 +130,7 @@ class GameStatsCallback:
         self.episode_end_indices = []
         self.global_step = 0
         self.episode_count = 0
+        self.progress_callback = progress_callback
 
     # -------------------------------------------------------------------------
     def plot_game_statistics(self, logs: dict | None = None) -> None:
@@ -161,8 +178,18 @@ class GameStatsCallback:
         ax.legend(lines, labels, loc="upper center", bbox_to_anchor=(0.5, -0.1), ncol=3)
         fig.suptitle(f"Training Progress: Capital (At step {current_step})")
         fig.tight_layout(rect=(0, 0.1, 1, 0.95))
-        plt.savefig(self.plot_path, bbox_inches="tight", format="jpeg", dpi=300)
+
+        buffer = BytesIO()
+        fig.savefig(buffer, bbox_inches="tight", format="jpeg", dpi=300)
+        data = buffer.getvalue()
+        with open(self.plot_path, "wb") as target:
+            target.write(data)
+        if self.progress_callback:
+            self.progress_callback(
+                {"kind": "render", "source": "train_metrics", "stream": "game_stats", "data": data}
+            )
         plt.close(fig)
+
 
 
 ###############################################################################
@@ -172,10 +199,17 @@ class CallbacksWrapper:
 
     # -------------------------------------------------------------------------
     def get_metrics_callbacks(
-        self, checkpoint_path: str, history: dict | None = None
+        self,
+        checkpoint_path: str,
+        history: dict | None = None,
+        progress_callback: Callable[[dict[str, Any]], Any] | None = None,
     ) -> tuple[RealTimeHistory, GameStatsCallback]:
-        RTH_callback = RealTimeHistory(checkpoint_path, past_logs=history)
-        GS_callback = GameStatsCallback(checkpoint_path)
+        RTH_callback = RealTimeHistory(
+            checkpoint_path, past_logs=history, progress_callback=progress_callback
+        )
+        GS_callback = GameStatsCallback(
+            checkpoint_path, progress_callback=progress_callback
+        )
 
         return RTH_callback, GS_callback
 
