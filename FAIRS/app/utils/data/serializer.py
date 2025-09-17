@@ -13,6 +13,7 @@ from keras.utils import plot_model
 from FAIRS.app.constants import CHECKPOINT_PATH
 from FAIRS.app.logger import logger
 from FAIRS.app.utils.data.database import database
+from FAIRS.app.utils.data.generator import RouletteSyntheticGenerator
 
 
 # [DATA SERIALIZATION]
@@ -20,6 +21,28 @@ from FAIRS.app.utils.data.database import database
 class DataSerializer:
     def __init__(self) -> None:
         self.data_batch = 2000
+
+    # -------------------------------------------------------------------------
+    def generate_synthetic_dataset(self, configuration: dict[str, Any]) -> pd.DataFrame:
+        generator = RouletteSyntheticGenerator(configuration)
+        dataset = generator.generate()
+
+        return dataset
+
+    # -------------------------------------------------------------------------
+    def get_training_series(
+        self, configuration: dict[str, Any]
+    ) -> tuple[pd.DataFrame, bool]:
+        use_generator = configuration.get("use_data_generator", False)
+        if use_generator:
+            dataset = self.generate_synthetic_dataset(configuration)
+            return dataset, True
+
+        seed = configuration.get("seed", 42)
+        sample_size = configuration.get("sample_size", 1.0)
+        dataset = self.load_roulette_dataset(sample_size, seed)
+
+        return dataset, False
 
     # -------------------------------------------------------------------------
     def load_roulette_dataset(
