@@ -355,14 +355,8 @@ class MainWindow:
         self.pixmaps = {key: [] for key in view_keys}
         self.current_fig = {key: 0 for key in view_keys}
         self.pixmap_stream_index = {key: {} for key in view_keys}
-
-        self.pixmap_sources = {}
-        env_view = getattr(self, "env_render_view", None)
-        train_view = getattr(self, "train_metrics_view", None)
-        if env_view:
-            self.pixmap_sources[env_view] = "env_render"
-        if train_view:
-            self.pixmap_sources[train_view] = "train_metrics"
+        self.pixmap_sources = {self.env_render_view: "env_render",
+                               self.train_metrics_view: "train_metrics"}        
 
     # -------------------------------------------------------------------------
     @Slot(object)
@@ -478,11 +472,9 @@ class MainWindow:
         if update_progress and self.progress_bar:
             self.progress_bar.setValue(0) if self.progress_bar else None
         worker.signals.progress.connect(self._on_worker_progress)
-
         worker.signals.finished.connect(on_finished)
         worker.signals.error.connect(on_error)
         worker.signals.interrupted.connect(on_interrupted)
-
         # Polling for results from the process queue
         self.process_worker_timer = QTimer()
         self.process_worker_timer.setInterval(100)
