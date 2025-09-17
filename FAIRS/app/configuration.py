@@ -18,6 +18,7 @@ class Configuration:
             "shuffle_dataset": True,
             "shuffle_size": 256,
             "use_data_generator": False,
+            "num_generated_samples": 10000,
             # Model
             "QNet_neurons": 64,
             "embedding_dimensions": 200,

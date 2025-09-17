@@ -117,6 +117,7 @@ class MainWindow:
                 # 2. training tab page
                 # dataset settings group
                 (QCheckBox, "useDataGen", "use_data_generator"),
+                (QSpinBox, "numGeneratedSamples", "num_generated_samples"),
                 (QDoubleSpinBox, "trainSampleSize", "train_sample_size"),
                 (QDoubleSpinBox, "validationSize", "validation_size"),
                 (QSpinBox, "splitSeed", "split_seed"),

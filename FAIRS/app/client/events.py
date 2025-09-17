@@ -179,17 +179,22 @@ class ModelEvents:
         progress_callback: Any | None = None,
         worker: ThreadWorker | ProcessWorker | None = None,
     ) -> None:
-        seed = self.configuration.get("seed", 1.0)
-        sample_size = self.configuration.get("sample_size", 1.0)
-        dataset = self.serializer.load_roulette_dataset(sample_size, seed)
-        logger.info(f"Roulette series has been loaded ({len(dataset)} extractions)")
+        dataset, synthetic = self.serializer.get_training_series(self.configuration)
+        if synthetic:
+            logger.info(
+                f"Synthetic roulette series generated ({len(dataset)} extractions)"
+            )
+        else:
+            logger.info(
+                f"Roulette series has been loaded ({len(dataset)} extractions)"
+            )
         # use the mapper to encode extractions based on position and color
         mapper = RouletteSeriesEncoder(self.configuration)
         logger.info("Encoding roulette extractions")
         dataset = mapper.encode_roulette_series(dataset)
-        # save update data into database
-        self.serializer.save_roulette_dataset(dataset)
-        logger.info("Database updated with processed roulette series")
+        if not synthetic:
+            self.serializer.save_roulette_dataset(dataset)
+            logger.info("Database updated with processed roulette series")
 
         # check worker status to allow interruption
         check_thread_status(worker)
@@ -248,10 +253,20 @@ class ModelEvents:
         device.set_device()
 
         # process dataset using model configurations
-        seed = self.configuration.get("seed", 1.0)
-        sample_size = self.configuration.get("sample_size", 1.0)
-        dataset = self.serializer.load_roulette_dataset(sample_size, seed)
-        logger.info(f"Roulette series has been loaded ({len(dataset)} extractions)")
+        resume_config = dict(self.configuration)
+        resume_config["use_data_generator"] = (
+            resume_config.get("use_data_generator", False)
+            or train_config.get("use_data_generator", False)
+        )
+        dataset, synthetic = self.serializer.get_training_series(resume_config)
+        if synthetic:
+            logger.info(
+                f"Synthetic roulette series generated ({len(dataset)} extractions)"
+            )
+        else:
+            logger.info(
+                f"Roulette series has been loaded ({len(dataset)} extractions)"
+            )
 
         # use the mapper to encode extractions based on position and color
         mapper = RouletteSeriesEncoder(train_config)
