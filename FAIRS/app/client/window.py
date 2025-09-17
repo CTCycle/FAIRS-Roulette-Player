@@ -363,7 +363,7 @@ class MainWindow:
 
     # -------------------------------------------------------------------------
     @Slot(object)
-    def _on_process_progress(self, payload: Any) -> None:
+    def _on_worker_progress(self, payload: Any) -> None:
         try:
             if isinstance(payload, (int, float)):
                 if self.progress_bar:
@@ -425,6 +425,18 @@ class MainWindow:
             logger.debug("Unable to handle progress payload", exc_info=True)
 
     # -------------------------------------------------------------------------
+    def _reset_train_metrics_stream(self) -> None:
+        for key in ("train_metrics", "env_render"): 
+            if key not in self.pixmaps:
+                continue
+            self.pixmaps[key].clear()
+            self.current_fig[key] = 0
+            self.pixmap_stream_index[key] = {}
+            current_radio = getattr(self, f"{key}_view", None)
+            if current_radio and current_radio.isChecked():
+                self._update_graphics_view()
+
+    # -------------------------------------------------------------------------
     def _connect_button(self, button_name: str, slot: Any) -> None:
         button = self.main_win.findChild(QPushButton, button_name)
         button.clicked.connect(slot) if button else None
@@ -445,7 +457,7 @@ class MainWindow:
     ) -> None:
         if update_progress and self.progress_bar:
             self.progress_bar.setValue(0) if self.progress_bar else None
-        worker.signals.progress.connect(self._on_process_progress)
+        worker.signals.progress.connect(self._on_worker_progress)
         worker.signals.finished.connect(on_finished)
         worker.signals.error.connect(on_error)
         worker.signals.interrupted.connect(on_interrupted)
@@ -462,7 +474,7 @@ class MainWindow:
     ) -> None:
         if update_progress and self.progress_bar:
             self.progress_bar.setValue(0) if self.progress_bar else None
-        worker.signals.progress.connect(self._on_process_progress)
+        worker.signals.progress.connect(self._on_worker_progress)
 
         worker.signals.finished.connect(on_finished)
         worker.signals.error.connect(on_error)
@@ -718,6 +730,7 @@ class MainWindow:
 
         self.configuration = self.config_manager.get_configuration()
         self.model_handler = ModelEvents(self.configuration)
+        self._reset_train_metrics_stream()
 
         # send message to status bar
         self._send_message("Training FAIRS QNet  using a new model instance...")
@@ -747,6 +760,7 @@ class MainWindow:
 
         self.configuration = self.config_manager.get_configuration()
         self.model_handler = ModelEvents(self.configuration)
+        self._reset_train_metrics_stream()
 
         # send message to status bar
         self._send_message(
