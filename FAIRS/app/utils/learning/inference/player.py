@@ -69,9 +69,15 @@ class RoulettePlayer:
             else None
         )
         # compute gain context and predict with both inputs
-        gain_value = (self.current_capital / self.initial_capital) if self.initial_capital else 1.0
+        gain_value = (
+            (self.current_capital / self.initial_capital)
+            if self.initial_capital
+            else 1.0
+        )
         gain_input = np.reshape(gain_value, (1, 1)).astype(np.float32)
-        action_logits = self.model.predict({"timeseries": current_state, "gain": gain_input}, verbose="0")
+        action_logits = self.model.predict(
+            {"timeseries": current_state, "gain": gain_input}, verbose="0"
+        )
         self.next_action = int(np.argmax(action_logits, axis=1)[0])
         self.last_action = self.next_action
         self.next_action_desc = self.action_descriptions.get(
