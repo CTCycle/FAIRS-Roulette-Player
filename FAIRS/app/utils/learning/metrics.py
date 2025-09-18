@@ -87,11 +87,7 @@ class RouletteAccuracy(keras.metrics.Metric):
         return self.total / (self.count + keras.backend.epsilon())
 
     # -------------------------------------------------------------------------
-<<<<<<< HEAD
     def reset_NUMBERS(self) -> None:
-=======
-    def reset_numbers(self) -> None:
->>>>>>> develop
         self.total.assign(0)
         self.count.assign(0)
 
