@@ -33,12 +33,7 @@ class RouletteCategoricalCrossentropy(keras.losses.Loss):
         )
 
     # -------------------------------------------------------------------------
-<<<<<<< HEAD
     def call(self, y_true: Any, y_pred: Any) -> Any:
-        y_true = keras.ops.cast(y_true, dtype=keras.config.floatx())
-=======
-    def call(self, y_true: Any, y_pred: Any) -> Any:        
->>>>>>> develop
         loss = self.loss(y_true, y_pred)
         # Apply penalty based on the difference between prediction and true value
         total_loss = loss * self.penalty_scores

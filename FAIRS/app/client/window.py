@@ -895,11 +895,7 @@ class MainWindow:
         self.worker = self.worker.cleanup() if self.worker else None
 
     # -------------------------------------------------------------------------
-<<<<<<< HEAD
-    def on_dataset_evaluation_finished(self, plots) -> None:
-=======
     def on_dataset_evaluation_finished(self, plots: list[Figure]) -> None:
->>>>>>> develop
         self._send_message("Figures have been generated")
         self.worker = self.worker.cleanup() if self.worker else None
 
@@ -913,11 +909,7 @@ class MainWindow:
         self.worker = self.worker.cleanup() if self.worker else None
 
     # -------------------------------------------------------------------------
-<<<<<<< HEAD
-    def on_model_evaluation_finished(self, plots) -> None:
-=======
-    def on_model_evaluation_finished(self, plots : list[Figure]) -> None:
->>>>>>> develop
+    def on_model_evaluation_finished(self, plots: list[Figure]) -> None:
         self._send_message(f"Model {self.selected_checkpoint} has been evaluated")
         self.worker = self.worker.cleanup() if self.worker else None
 
