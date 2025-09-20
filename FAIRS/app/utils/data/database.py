@@ -74,7 +74,7 @@ class FAIRSDatabase:
             f"sqlite:///{self.db_path}", echo=False, future=True
         )
         self.Session = sessionmaker(bind=self.engine, future=True)
-        self.insert_batch_size = 2000
+        self.insert_batch_size = 1000
 
     # -------------------------------------------------------------------------
     def initialize_database(self) -> None:
