@@ -9,7 +9,7 @@ import pandas as pd
 from gymnasium import spaces
 
 from FAIRS.app.constants import NUMBERS, PAD_VALUE, STATES
-from FAIRS.app.utils.data.process import RouletteSeriesEncoder
+from FAIRS.app.utils.services.process import RouletteSeriesEncoder
 
 
 # [ROULETTE RL ENVIRONMENT]

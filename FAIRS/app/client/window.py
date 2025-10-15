@@ -39,7 +39,7 @@ from FAIRS.app.client.events import GraphicsHandler, ModelEvents, ValidationEven
 from FAIRS.app.client.workers import ProcessWorker, ThreadWorker
 from FAIRS.app.configuration import Configuration
 from FAIRS.app.logger import logger
-from FAIRS.app.utils.data.database import database
+from FAIRS.app.utils.repository.database import database
 
 
 ###############################################################################
