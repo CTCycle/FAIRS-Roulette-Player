@@ -118,9 +118,9 @@ class RouletteDialog(QDialog):
         self.out_timer = None
 
         # State flags used to compute UI enabledness
-        self._ready = False
-        self._loading = False
-        self._busy = False
+        self.ready = False
+        self.loading = False
+        self.busy = False
 
         # --- UI ---
         layout = QVBoxLayout(self)
@@ -161,7 +161,7 @@ class RouletteDialog(QDialog):
         self.setMinimumWidth(420)
 
         # Initial state: only Start/Close enabled
-        self._set_controls_enabled(ready=False, loading=False)
+        self.set_controls_enabled(ready=False, loading=False)
 
     # -------------------- start flow -----------------------------------------
     @Slot()
@@ -169,7 +169,7 @@ class RouletteDialog(QDialog):
         if self.started:
             return
         self.started = True
-        self._set_controls_enabled(ready=False, loading=True)
+        self.set_controls_enabled(ready=False, loading=True)
         self.pred_label.setText("Loading model & data…")
 
         ctx = mp.get_context("spawn")
@@ -184,21 +184,21 @@ class RouletteDialog(QDialog):
             self.out_q,
         )
 
-        self._start_process_worker(
+        self.start_process_worker(
             self.worker,
-            on_finished=self._on_proc_finished,  # type: ignore
-            on_error=self._on_proc_error,  # type: ignore
-            on_interrupted=self._on_proc_interrupted,
+            on_finished=self.on_proc_finished,  # type: ignore
+            on_error=self.on_proc_error,  # type: ignore
+            on_interrupted=self.on_proc_interrupted,
         )
 
         # Start polling child->dialog queue only after process starts
         self.out_timer = QTimer(self)
         self.out_timer.setInterval(100)
-        self.out_timer.timeout.connect(self._drain_out_queue)
+        self.out_timer.timeout.connect(self.drain_out_queue)
         self.out_timer.start()
 
     # -------------------------------------------------------------------------
-    def _start_process_worker(
+    def start_process_worker(
         self,
         worker: ProcessWorker,
         on_finished: Callable[[], None],
@@ -212,16 +212,16 @@ class RouletteDialog(QDialog):
         self.process_worker_timer = QTimer(self)
         self.process_worker_timer.setInterval(100)
         self.process_worker_timer.timeout.connect(worker.poll)
-        worker._timer = self.process_worker_timer
+        worker.timer = self.process_worker_timer
         self.process_worker_timer.start()
         worker.start()
 
     # -------------------- UI actions ----------------------------------------
     @Slot()
     def get_next_prediction(self) -> None:
-        if not self._ready:
+        if not self.ready:
             return
-        self._busy_toggle(True)
+        self.busy_toggle(True)
         try:
             if self.cmd_q:
                 self.cmd_q.put({"kind": "next"})
@@ -229,7 +229,7 @@ class RouletteDialog(QDialog):
             QMessageBox.critical(
                 self, "Request error", f"Could not send request: {e!r}"
             )
-            self._busy_toggle(False)
+            self.busy_toggle(False)
 
     @Slot()
     def on_update_clicked(self) -> None:
@@ -249,15 +249,15 @@ class RouletteDialog(QDialog):
             return
 
         try:
-            self._busy_toggle(True)
+            self.busy_toggle(True)
             if self.cmd_q:
                 self.cmd_q.put({"kind": "update", "value": val})
         except Exception as e:
             QMessageBox.critical(self, "Request error", f"Could not send update: {e!r}")
-            self._busy_toggle(False)
+            self.busy_toggle(False)
 
     # -------------------- queue draining ------------------------------------
-    def _drain_out_queue(self) -> None:
+    def drain_out_queue(self) -> None:
         drained_any = False
         while True:
             try:
@@ -276,28 +276,28 @@ class RouletteDialog(QDialog):
             if kind == "ready":
                 # Child finished loading and entered the while-loop
                 self.pred_label.setText("Ready for prediction")
-                self._set_controls_enabled(ready=True, loading=False)
+                self.set_controls_enabled(ready=True, loading=False)
 
             elif kind == "prediction":
                 action = msg.get("action")
                 desc = msg.get("description", str(action))
                 self.pred_label.setText(f"Predicted: {desc} (id={action})")
-                self._busy_toggle(False)
+                self.busy_toggle(False)
 
             elif kind == "updated":
                 v = msg.get("value")
                 self.true_edit.clear()
                 self.pred_label.setText(f"Updated with true extraction: {v}")
-                self._busy_toggle(False)
+                self.busy_toggle(False)
 
             elif kind == "error":
                 detail = msg.get("detail", "Unknown error")
                 logger.error(f"[child error] {detail}")
                 QMessageBox.critical(self, "Worker error", detail)
-                self._busy_toggle(False)
+                self.busy_toggle(False)
 
             elif kind == "closed":
-                self._teardown_timers()
+                self.teardown_timers()
                 if self.isVisible():
                     self.accept()
 
@@ -305,33 +305,33 @@ class RouletteDialog(QDialog):
             return
 
     # -------------------- helpers / lifecycle --------------------------------
-    def _apply_enabled(self) -> None:
-        """Compute enabled flags from self._ready/_loading/_busy."""
+    def apply_enabled(self) -> None:
+        """Compute enabled flags from self.ready/loading/busy."""
         # Start is only available before loading and before ready
-        self.btn_start.setEnabled((not self._loading) and (not self._ready))
+        self.btn_start.setEnabled((not self.loading) and (not self.ready))
         # Action buttons require ready and not busy
-        actions_enabled = self._ready and (not self._busy)
+        actions_enabled = self.ready and (not self.busy)
         self.btn_next.setEnabled(actions_enabled)
         self.btn_update.setEnabled(actions_enabled)
         # Close stays enabled always
         self.btn_close.setEnabled(True)
 
-    def _set_controls_enabled(self, *, ready: bool, loading: bool) -> None:
-        self._ready = ready
-        self._loading = loading
-        self._apply_enabled()
+    def set_controls_enabled(self, *, ready: bool, loading: bool) -> None:
+        self.ready = ready
+        self.loading = loading
+        self.apply_enabled()
 
-    def _busy_toggle(self, is_busy: bool) -> None:
-        self._busy = is_busy
-        self._apply_enabled()
+    def busy_toggle(self, is_busy: bool) -> None:
+        self.busy = is_busy
+        self.apply_enabled()
 
-    def _teardown_timers(self) -> None:
+    def teardown_timers(self) -> None:
         if self.out_timer and self.out_timer.isActive():
             self.out_timer.stop()
         if self.process_worker_timer and self.process_worker_timer.isActive():
             self.process_worker_timer.stop()
 
-    def _shutdown_child(self) -> None:
+    def shutdown_child(self) -> None:
         if not self.started:
             return
         try:
@@ -347,24 +347,24 @@ class RouletteDialog(QDialog):
                 pass
 
     def closeEvent(self, event) -> None:
-        self._teardown_timers()
-        self._shutdown_child()
+        self.teardown_timers()
+        self.shutdown_child()
         super().closeEvent(event)
 
     # -------------------- process callbacks ----------------------------------
-    def _on_proc_finished(self, _) -> None:
-        self._teardown_timers()
-        self._busy_toggle(False)
+    def on_proc_finished(self, _) -> None:
+        self.teardown_timers()
+        self.busy_toggle(False)
 
-    def _on_proc_error(self, err_tb: tuple[str, str]) -> None:
+    def on_proc_error(self, err_tb: tuple[str, str]) -> None:
         exc, tb = err_tb
         logger.error(f"Child process error: {exc}\n{tb}")
-        self._teardown_timers()
-        self._busy_toggle(False)
+        self.teardown_timers()
+        self.busy_toggle(False)
         QMessageBox.critical(
             self, "Process error", "An error occurred. Check logs for details."
         )
 
-    def _on_proc_interrupted(self) -> None:
-        self._teardown_timers()
-        self._busy_toggle(False)
+    def on_proc_interrupted(self) -> None:
+        self.teardown_timers()
+        self.busy_toggle(False)

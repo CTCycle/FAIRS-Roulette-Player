@@ -95,9 +95,9 @@ class MainWindow:
         self.model_handler = ModelEvents(self.configuration)
 
         # setup UI elements
-        self._set_states()
+        self.set_states()
         self.widgets = {}
-        self._setup_configuration(
+        self.setup_configuration(
             [
                 # actions
                 (QAction, "actionLoadConfig", "load_configuration_action"),
@@ -180,7 +180,7 @@ class MainWindow:
             ]
         )
 
-        self._connect_signals(
+        self.connect_signals(
             [
                 # actions
                 ("save_configuration_action", "triggered", self.save_configuration),
@@ -191,7 +191,7 @@ class MainWindow:
                 ("stop_thread", "clicked", self.stop_running_worker),
                 # 1. dataset tab page
                 ("load_dataset", "clicked", self.update_database_from_source),
-                ("roulette_transitions_metric", "toggled", self._update_metrics),
+                ("roulette_transitions_metric", "toggled", self.update_metrics),
                 ("evaluate_dataset", "clicked", self.run_dataset_evaluation_pipeline),
                 # 2. training tab page
                 ("start_training", "clicked", self.train_from_scratch),
@@ -199,23 +199,23 @@ class MainWindow:
                 # 3. model evaluation tab and inference page
                 ("checkpoints_list", "currentTextChanged", self.select_checkpoint),
                 ("refresh_checkpoints", "clicked", self.load_checkpoints),
-                ("get_evaluation_report", "toggled", self._update_metrics),
+                ("get_evaluation_report", "toggled", self.update_metrics),
                 ("model_evaluation", "clicked", self.run_model_evaluation_pipeline),
                 ("checkpoints_summary", "clicked", self.get_checkpoints_summary),
                 ("start_roulette_game", "clicked", self.play_roulette),
                 # 4. viewer tab page
-                ("env_render_view", "toggled", self._update_graphics_view),
-                ("train_metrics_view", "toggled", self._update_graphics_view),
+                ("env_render_view", "toggled", self.update_graphics_view),
+                ("train_metrics_view", "toggled", self.update_graphics_view),
                 ("previous_image", "clicked", self.show_previous_figure),
                 ("next_image", "clicked", self.show_next_figure),
                 ("clear_images", "clicked", self.clear_figures),
             ]
         )
 
-        self._auto_connect_settings()
+        self.auto_connect_settings()
         # Initial population of dynamic UI elements
         self.load_checkpoints()
-        self._set_graphics()
+        self.set_graphics()
         # real-time canvas updates are handled via worker progress signals
 
     # --------------------------------------------------------------------------
@@ -246,15 +246,15 @@ class MainWindow:
                 getter = widget.currentText
 
         signal = getattr(widget, signal_name)
-        signal.connect(partial(self._update_single_setting, config_key, getter))
+        signal.connect(partial(self.update_single_setting, config_key, getter))
 
     # -------------------------------------------------------------------------
-    def _update_single_setting(self, config_key: str, getter: Any, *args) -> None:
+    def update_single_setting(self, config_key: str, getter: Any, *args) -> None:
         value = getter()
         self.config_manager.update_value(config_key, value)
 
     # -------------------------------------------------------------------------
-    def _auto_connect_settings(self) -> None:
+    def auto_connect_settings(self) -> None:
         connections = [
             # 1. dataset tab page
             # dataset evaluation and processing group
@@ -318,7 +318,7 @@ class MainWindow:
             self.connect_update_setting(widget, signal_name, config_key)
 
     # -------------------------------------------------------------------------
-    def _set_states(self) -> None:
+    def set_states(self) -> None:
         self.progress_bar = self.main_win.findChild(QProgressBar, "progressBar")
         self.progress_bar.setValue(0) if self.progress_bar else None
 
@@ -333,7 +333,7 @@ class MainWindow:
         return [], None
 
     # -------------------------------------------------------------------------
-    def _set_graphics(self) -> None:
+    def set_graphics(self) -> None:
         view = self.main_win.findChild(QGraphicsView, "canvas")
         scene = QGraphicsScene()
         pixmap_item = QGraphicsPixmapItem()
@@ -358,7 +358,7 @@ class MainWindow:
 
     # -------------------------------------------------------------------------
     @Slot(object)
-    def _on_worker_progress(self, payload: Any) -> None:
+    def on_worker_progress(self, payload: Any) -> None:
         try:
             if isinstance(payload, (int, float)):
                 if self.progress_bar:
@@ -405,7 +405,7 @@ class MainWindow:
                     if len(pixmap_list) == 1:
                         self.current_fig[source] = idx
                 if self.current_fig.get(source, 0) == idx:
-                    self._update_graphics_view()
+                    self.update_graphics_view()
                 return
 
             pixmap_list.append(pixmap)
@@ -415,34 +415,34 @@ class MainWindow:
                 pixmap_list.pop(0)
                 self.current_fig[source] = max(0, len(pixmap_list) - 1)
 
-            self._update_graphics_view()
+            self.update_graphics_view()
         except Exception:
             logger.debug("Unable to handle progress payload", exc_info=True)
 
     # -------------------------------------------------------------------------
-    def _reset_train_metrics_stream(self) -> None:
+    def reset_train_metrics_stream(self) -> None:
         for key in ("train_metrics", "env_render"): 
             if key not in self.pixmaps:
                 continue
             self.pixmaps[key].clear()
             self.current_fig[key] = 0
             self.pixmap_stream_index[key] = {}
-            current_radio = getattr(self, f"{key}_view", None)
+            current_radio = getattr(self, f"{key}view", None)
             if current_radio and current_radio.isChecked():
-                self._update_graphics_view()
+                self.update_graphics_view()
 
     # -------------------------------------------------------------------------
-    def _connect_button(self, button_name: str, slot: Any) -> None:
+    def connect_button(self, button_name: str, slot: Any) -> None:
         button = self.main_win.findChild(QPushButton, button_name)
         button.clicked.connect(slot) if button else None
 
     # -------------------------------------------------------------------------
-    def _connect_combo_box(self, combo_name: str, slot: Any) -> None:
+    def connect_combo_box(self, combo_name: str, slot: Any) -> None:
         combo = self.main_win.findChild(QComboBox, combo_name)
         combo.currentTextChanged.connect(slot) if combo else None
 
     # -------------------------------------------------------------------------
-    def _start_thread_worker(
+    def start_thread_worker(
         self,
         worker: ThreadWorker,
         on_finished: Callable,
@@ -452,14 +452,14 @@ class MainWindow:
     ) -> None:
         if update_progress and self.progress_bar:
             self.progress_bar.setValue(0) if self.progress_bar else None
-        worker.signals.progress.connect(self._on_worker_progress)
+        worker.signals.progress.connect(self.on_worker_progress)
         worker.signals.finished.connect(on_finished)
         worker.signals.error.connect(on_error)
         worker.signals.interrupted.connect(on_interrupted)
         self.threadpool.start(worker)
 
     # -------------------------------------------------------------------------
-    def _start_process_worker(
+    def start_process_worker(
         self,
         worker: ProcessWorker,
         on_finished: Callable,
@@ -469,7 +469,7 @@ class MainWindow:
     ) -> None:
         if update_progress and self.progress_bar:
             self.progress_bar.setValue(0) if self.progress_bar else None
-        worker.signals.progress.connect(self._on_worker_progress)
+        worker.signals.progress.connect(self.on_worker_progress)
         worker.signals.finished.connect(on_finished)
         worker.signals.error.connect(on_error)
         worker.signals.interrupted.connect(on_interrupted)
@@ -477,31 +477,31 @@ class MainWindow:
         self.process_worker_timer = QTimer()
         self.process_worker_timer.setInterval(100)
         self.process_worker_timer.timeout.connect(worker.poll)
-        worker._timer = self.process_worker_timer
+        worker.timer = self.process_worker_timer
         self.process_worker_timer.start()
 
         worker.start()
 
     # -------------------------------------------------------------------------
-    def _send_message(self, message: str) -> None:
+    def send_message(self, message: str) -> None:
         self.main_win.statusBar().showMessage(message)
 
     # [SETUP]
     ###########################################################################
-    def _setup_configuration(self, widget_defs: Any) -> None:
+    def setup_configuration(self, widget_defs: Any) -> None:
         for cls, name, attr in widget_defs:
             w = self.main_win.findChild(cls, name)
             setattr(self, attr, w)
             self.widgets[attr] = w
 
     # -------------------------------------------------------------------------
-    def _connect_signals(self, connections: Any) -> None:
+    def connect_signals(self, connections: Any) -> None:
         for attr, signal, slot in connections:
             widget = self.widgets[attr]
             getattr(widget, signal).connect(slot)
 
     # -------------------------------------------------------------------------
-    def _set_widgets_from_configuration(self) -> None:
+    def set_widgets_from_configuration(self) -> None:
         cfg = self.config_manager.get_configuration()
         for attr, widget in self.widgets.items():
             if attr not in cfg:
@@ -536,11 +536,11 @@ class MainWindow:
     def stop_running_worker(self) -> None:
         if self.worker:
             self.worker.stop()
-            self._send_message("Interrupt requested. Waiting for threads to stop...")
+            self.send_message("Interrupt requested. Waiting for threads to stop...")
 
     # -------------------------------------------------------------------------
     @Slot()
-    def _update_metrics(self) -> None:
+    def update_metrics(self) -> None:
         self.selected_metrics["dataset"] = [
             name for name, box in self.data_metrics if box and box.isChecked()
         ]
@@ -558,7 +558,7 @@ class MainWindow:
             name = dialog.get_name()
             name = "default_config" if not name else name
             self.config_manager.save_configuration_to_json(name)
-            self._send_message(f"Configuration [{name}] has been saved")
+            self.send_message(f"Configuration [{name}] has been saved")
 
     # -------------------------------------------------------------------------
     @Slot()
@@ -568,8 +568,8 @@ class MainWindow:
             name = dialog.get_selected_config()
             if name:
                 self.config_manager.load_configuration_from_json(name)
-                self._set_widgets_from_configuration()
-                self._send_message(f"Loaded configuration [{name}]")
+                self.set_widgets_from_configuration()
+                self.send_message(f"Loaded configuration [{name}]")
 
     # -------------------------------------------------------------------------
     @Slot()
@@ -580,13 +580,13 @@ class MainWindow:
         if not directory:
             message = "Export cancelled"
             logger.info(message)
-            self._send_message(message)
+            self.send_message(message)
             return
 
         database.export_all_tables_as_csv(directory)
         message = f"All data from database has been exported to {directory}"
         logger.info(message)
-        self._send_message(message)
+        self.send_message(message)
 
     # -------------------------------------------------------------------------
     @Slot()
@@ -594,13 +594,13 @@ class MainWindow:
         database.delete_all_data()
         message = "All data from database has been deleted"
         logger.info(message)
-        self._send_message(message)
+        self.send_message(message)
 
     # -------------------------------------------------------------------------
     # [GRAPHICS]
     # -------------------------------------------------------------------------
     @Slot()
-    def _update_graphics_view(self) -> None:
+    def update_graphics_view(self) -> None:
         pixmaps, idx_key = self.get_current_pixmaps_key()
         if not pixmaps or idx_key is None:
             self.graphics["pixmap_item"].setPixmap(QPixmap())
@@ -633,7 +633,7 @@ class MainWindow:
         idx = self.current_fig.get(idx_key, 0)
         if idx > 0:
             self.current_fig[idx_key] = idx - 1
-            self._update_graphics_view()
+            self.update_graphics_view()
 
     # -------------------------------------------------------------------------
     @Slot()
@@ -644,7 +644,7 @@ class MainWindow:
         idx = self.current_fig.get(idx_key, 0)
         if idx < len(pixmaps) - 1:
             self.current_fig[idx_key] = idx + 1
-            self._update_graphics_view()
+            self.update_graphics_view()
 
     # -------------------------------------------------------------------------
     @Slot()
@@ -655,7 +655,7 @@ class MainWindow:
         pixmaps.clear()
         self.pixmap_stream_index[idx_key] = {}
         self.current_fig[idx_key] = 0
-        self._update_graphics_view()
+        self.update_graphics_view()
         view = self.graphics.get("view")
         if view:
             view.viewport().update()
@@ -673,13 +673,13 @@ class MainWindow:
             return
 
         # send message to status bar
-        self._send_message("Updating database with source data...")
+        self.send_message("Updating database with source data...")
 
         # functions that are passed to the worker will be executed in a separate thread
         self.worker = ThreadWorker(database.update_database_from_source)
 
         # start worker and inject signals
-        self._start_thread_worker(
+        self.start_thread_worker(
             self.worker,
             on_finished=self.on_database_uploading_finished,
             on_error=self.on_error,
@@ -702,7 +702,7 @@ class MainWindow:
         self.configuration = self.config_manager.get_configuration()
         self.validation_handler = ValidationEvents(self.configuration)
         # send message to status bar
-        self._send_message("Calculating image dataset evaluation metrics...")
+        self.send_message("Calculating image dataset evaluation metrics...")
 
         # functions that are passed to the worker will be executed in a separate thread
         self.worker = ThreadWorker(
@@ -711,7 +711,7 @@ class MainWindow:
         )
 
         # start worker and inject signals
-        self._start_thread_worker(
+        self.start_thread_worker(
             self.worker,
             on_finished=self.on_dataset_evaluation_finished,
             on_error=self.on_error,
@@ -732,15 +732,15 @@ class MainWindow:
 
         self.configuration = self.config_manager.get_configuration()
         self.model_handler = ModelEvents(self.configuration)
-        self._reset_train_metrics_stream()
+        self.reset_train_metrics_stream()
 
         # send message to status bar
-        self._send_message("Training FAIRS QNet  using a new model instance...")
+        self.send_message("Training FAIRS QNet  using a new model instance...")
         # functions that are passed to the worker will be executed in a separate thread
         self.worker = ProcessWorker(self.model_handler.run_training_pipeline)
 
         # start worker and inject signals
-        self._start_process_worker(
+        self.start_process_worker(
             self.worker,
             on_finished=self.on_train_finished,
             on_error=self.on_error,
@@ -762,10 +762,10 @@ class MainWindow:
 
         self.configuration = self.config_manager.get_configuration()
         self.model_handler = ModelEvents(self.configuration)
-        self._reset_train_metrics_stream()
+        self.reset_train_metrics_stream()
 
         # send message to status bar
-        self._send_message(
+        self.send_message(
             f"Resume training from checkpoint {self.selected_checkpoint}"
         )
         # functions that are passed to the worker will be executed in a separate thread
@@ -774,7 +774,7 @@ class MainWindow:
         )
 
         # start worker and inject signals
-        self._start_process_worker(
+        self.start_process_worker(
             self.worker,
             on_finished=self.on_train_finished,
             on_error=self.on_error,
@@ -818,7 +818,7 @@ class MainWindow:
         self.validation_handler = ValidationEvents(self.configuration)
 
         # send message to status bar
-        self._send_message(f"Evaluating {self.selected_checkpoint} performances... ")
+        self.send_message(f"Evaluating {self.selected_checkpoint} performances... ")
 
         # functions that are passed to the worker will be executed in a separate thread
         self.worker = ProcessWorker(
@@ -828,7 +828,7 @@ class MainWindow:
         )
 
         # start worker and inject signals
-        self._start_process_worker(
+        self.start_process_worker(
             self.worker,
             on_finished=self.on_model_evaluation_finished,
             on_error=self.on_error,
@@ -848,13 +848,13 @@ class MainWindow:
         self.configuration = self.config_manager.get_configuration()
         self.validation_handler = ValidationEvents(self.configuration)
         # send message to status bar
-        self._send_message("Generating checkpoints summary...")
+        self.send_message("Generating checkpoints summary...")
 
         # functions that are passed to the worker will be executed in a separate thread
         self.worker = ThreadWorker(self.validation_handler.get_checkpoints_summary)
 
         # start worker and inject signals
-        self._start_thread_worker(
+        self.start_thread_worker(
             self.worker,
             on_finished=self.on_model_evaluation_finished,
             on_error=self.on_error,
@@ -887,28 +887,28 @@ class MainWindow:
     ###########################################################################
     def on_database_uploading_finished(self, source_data: pd.DataFrame) -> None:
         message = f"Database updated with source data ({len(source_data[0])}) records"
-        self._send_message(message)
+        self.send_message(message)
         QMessageBox.information(self.main_win, "Database successfully updated", message)
         self.worker = self.worker.cleanup() if self.worker else None
 
     # -------------------------------------------------------------------------
     def on_dataset_evaluation_finished(self, plots: list[Figure]) -> None:
-        self._send_message("Figures have been generated")
+        self.send_message("Figures have been generated")
         self.worker = self.worker.cleanup() if self.worker else None
 
     # -------------------------------------------------------------------------
     def on_train_finished(self, session) -> None:
-        self._send_message("Training session is over. Model has been saved")
+        self.send_message("Training session is over. Model has been saved")
         self.worker = self.worker.cleanup() if self.worker else None
 
     # -------------------------------------------------------------------------
     def on_model_evaluation_finished(self, plots: list[Figure]) -> None:
-        self._send_message(f"Model {self.selected_checkpoint} has been evaluated")
+        self.send_message(f"Model {self.selected_checkpoint} has been evaluated")
         self.worker = self.worker.cleanup() if self.worker else None
 
     # -------------------------------------------------------------------------
     def on_inference_finished(self, session) -> None:
-        self._send_message("Inference call has been terminated")
+        self.send_message("Inference call has been terminated")
         self.worker = self.worker.cleanup() if self.worker else None
 
     ###########################################################################
@@ -927,6 +927,6 @@ class MainWindow:
     ###########################################################################
     def on_task_interrupted(self) -> None:
         self.progress_bar.setValue(0) if self.progress_bar else None
-        self._send_message("Current task has been interrupted by user")
+        self.send_message("Current task has been interrupted by user")
         logger.warning("Current task has been interrupted by user")
         self.worker = self.worker.cleanup() if self.worker else None

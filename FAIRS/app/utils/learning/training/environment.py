@@ -229,7 +229,7 @@ class RouletteEnvironment(gym.Env):
         self.done = False
 
         if self.render_environment:
-            self._build_rendering_canvas()
+            self.build_rendering_canvas()
 
     # Reset the state of the environment to an initial state
     # -------------------------------------------------------------------------
@@ -295,7 +295,7 @@ class RouletteEnvironment(gym.Env):
         return self.state, self.reward, self.done, next_extraction
 
     # -------------------------------------------------------------------------
-    def _build_rendering_canvas(self) -> None:
+    def build_rendering_canvas(self) -> None:
         # Create an offscreen figure; do not show to keep Agg compatible
         self.fig, self.ax = plt.subplots(
             figsize=(8, 8), subplot_kw={"projection": "polar"}
