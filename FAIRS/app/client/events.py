@@ -79,8 +79,7 @@ class ValidationEvents:
         validator = RouletteSeriesValidation(self.configuration)
 
         metric_map = {
-            "roulette_transitions": validator.placeholder_method,
-            "roulette_transitions_2": validator.placeholder_method,
+            "roulette_transitions": validator.roulette_transitions,
         }
 
         images = []
@@ -91,7 +90,10 @@ class ValidationEvents:
                 metric_name = metric.replace("_", " ").title()
                 logger.info(f"Current metric: {metric_name}")
                 result = metric_map[metric](
-                    roulette_data, progress_callback=progress_callback, worker=worker
+                    roulette_data,
+                    metric_name=metric,
+                    progress_callback=progress_callback,
+                    worker=worker,
                 )
                 images.append(result)
 
