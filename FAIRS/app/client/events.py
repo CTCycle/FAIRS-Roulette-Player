@@ -215,9 +215,7 @@ class ModelEvents:
         learner = FAIRSnet(self.configuration)
         Q_model = learner.get_model(model_summary=True)
         target_model = learner.get_model(model_summary=False)
-        # generate graphviz plot fo the model layout
-        self.modser.save_model_plot(Q_model, checkpoint_path)
-
+       
         # perform training and save model at the end
         trainer = DQNTraining(self.configuration)
         logger.info("Start training with reinforcement learning model")
