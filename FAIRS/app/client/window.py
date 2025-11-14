@@ -6,10 +6,7 @@ from typing import Any, cast
 from matplotlib.figure import Figure
 import pandas as pd
 
-from FAIRS.app.variables import EnvironmentVariables
-
-EV = EnvironmentVariables()
-
+from FAIRS.app.utils.variables import env_variables
 from functools import partial
 
 from PySide6.QtCore import QFile, QIODevice, Qt, QThreadPool, QTimer, Slot
@@ -37,8 +34,8 @@ from qt_material import apply_stylesheet
 from FAIRS.app.client.dialogs import LoadConfigDialog, RouletteDialog, SaveConfigDialog
 from FAIRS.app.client.events import GraphicsHandler, ModelEvents, ValidationEvents
 from FAIRS.app.client.workers import ProcessWorker, ThreadWorker
-from FAIRS.app.configuration import Configuration
-from FAIRS.app.logger import logger
+from FAIRS.app.utils.configuration import Configuration
+from FAIRS.app.utils.logger import logger
 from FAIRS.app.utils.repository.database import database
 
 

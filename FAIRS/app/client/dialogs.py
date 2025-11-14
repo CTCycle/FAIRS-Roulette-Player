@@ -22,8 +22,8 @@ from PySide6.QtWidgets import (
 
 from FAIRS.app.client.events import ModelEvents
 from FAIRS.app.client.workers import ProcessWorker, ThreadWorker
-from FAIRS.app.constants import CONFIG_PATH
-from FAIRS.app.logger import logger
+from FAIRS.app.utils.constants import CONFIG_PATH
+from FAIRS.app.utils.logger import logger
 
 
 ###############################################################################

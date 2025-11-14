@@ -5,7 +5,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from FAIRS.app.constants import NUMBERS
+from FAIRS.app.utils.constants import NUMBERS
 
 
 ###############################################################################

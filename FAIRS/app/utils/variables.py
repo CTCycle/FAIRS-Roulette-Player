@@ -4,11 +4,11 @@ import os
 
 from dotenv import load_dotenv
 
-from FAIRS.app.constants import PROJECT_DIR
-from FAIRS.app.logger import logger
+from FAIRS.app.utils.constants import PROJECT_DIR
+from FAIRS.app.utils.logger import logger
 
 
-# [IMPORT CUSTOM MODULES]
+# [LOAD ENVIRONMENT VARIABLES]
 ###############################################################################
 class EnvironmentVariables:
     def __init__(self) -> None:
@@ -21,3 +21,6 @@ class EnvironmentVariables:
     # -------------------------------------------------------------------------
     def get(self, key: str, default: str | None = None) -> str | None:
         return os.getenv(key, default)
+
+
+env_variables = EnvironmentVariables()

@@ -5,7 +5,7 @@ from typing import Any
 from keras import Model, layers, losses, metrics, optimizers
 from torch import compile as torch_compile
 
-from FAIRS.app.constants import NUMBERS, STATES
+from FAIRS.app.utils.constants import NUMBERS, STATES
 from FAIRS.app.utils.learning.models.embeddings import RouletteEmbedding
 from FAIRS.app.utils.learning.models.logits import AddNorm, BatchNormDense, QScoreNet
 

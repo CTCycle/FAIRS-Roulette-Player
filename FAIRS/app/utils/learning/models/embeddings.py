@@ -5,7 +5,7 @@ from typing import Any
 import keras
 from keras import layers
 
-from FAIRS.app.constants import PAD_VALUE
+from FAIRS.app.utils.constants import PAD_VALUE
 
 
 # [POSITIONAL EMBEDDING]

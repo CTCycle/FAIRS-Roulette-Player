@@ -9,8 +9,8 @@ from sqlalchemy import Column, Float, Integer, String, UniqueConstraint, create_
 from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-from FAIRS.app.constants import DATA_PATH, INFERENCE_PATH, SOURCE_PATH
-from FAIRS.app.logger import logger
+from FAIRS.app.utils.constants import DATA_PATH, INFERENCE_PATH, SOURCE_PATH
+from FAIRS.app.utils.logger import logger
 from FAIRS.app.utils.singleton import singleton
 
 Base = declarative_base()

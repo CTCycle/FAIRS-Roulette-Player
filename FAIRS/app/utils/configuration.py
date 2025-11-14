@@ -4,7 +4,7 @@ import json
 import os
 from typing import Any
 
-from FAIRS.app.constants import CONFIG_PATH
+from FAIRS.app.utils.constants import CONFIG_PATH
 
 
 ###############################################################################

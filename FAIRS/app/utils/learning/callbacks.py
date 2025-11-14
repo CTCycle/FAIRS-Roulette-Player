@@ -13,7 +13,7 @@ from keras import Model
 from keras.callbacks import Callback, ModelCheckpoint, TensorBoard
 
 from FAIRS.app.client.workers import ProcessWorker, ThreadWorker, WorkerInterrupted
-from FAIRS.app.logger import logger
+from FAIRS.app.utils.logger import logger
 
 
 # [CALLBACK FOR UI PROGRESS BAR]

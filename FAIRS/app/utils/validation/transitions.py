@@ -7,7 +7,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 
 from FAIRS.app.client.workers import check_thread_status, update_progress_callback
-from FAIRS.app.logger import logger
+from FAIRS.app.utils.logger import logger
 
 
 ###############################################################################

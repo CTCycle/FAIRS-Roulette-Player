@@ -10,8 +10,8 @@ from keras import Model
 from keras.models import load_model
 from keras.utils import plot_model
 
-from FAIRS.app.constants import CHECKPOINT_PATH
-from FAIRS.app.logger import logger
+from FAIRS.app.utils.constants import CHECKPOINT_PATH
+from FAIRS.app.utils.logger import logger
 from FAIRS.app.utils.repository.database import database
 from FAIRS.app.utils.services.generator import RouletteSyntheticGenerator
 

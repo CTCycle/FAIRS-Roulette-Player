@@ -8,7 +8,7 @@ from keras import Model
 from keras.utils import set_random_seed
 
 from FAIRS.app.client.workers import check_thread_status, update_progress_callback
-from FAIRS.app.logger import logger
+from FAIRS.app.utils.logger import logger
 from FAIRS.app.utils.learning.callbacks import CallbacksWrapper
 from FAIRS.app.utils.learning.training.agents import DQNAgent
 from FAIRS.app.utils.learning.training.environment import RouletteEnvironment

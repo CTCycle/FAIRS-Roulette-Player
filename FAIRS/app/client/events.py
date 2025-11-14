@@ -8,7 +8,7 @@ from matplotlib.figure import Figure
 from PySide6.QtGui import QImage, QPixmap
 
 from FAIRS.app.client.workers import ProcessWorker, ThreadWorker, check_thread_status
-from FAIRS.app.logger import logger
+from FAIRS.app.utils.logger import logger
 from FAIRS.app.utils.services.process import RouletteSeriesEncoder
 from FAIRS.app.utils.repository.serializer import DataSerializer, ModelSerializer
 from FAIRS.app.utils.learning.device import DeviceConfig

@@ -5,7 +5,7 @@ from typing import Any
 import torch
 from keras.mixed_precision import set_global_policy
 
-from FAIRS.app.logger import logger
+from FAIRS.app.utils.logger import logger
 
 
 # [DEVICE SETTINGS]
