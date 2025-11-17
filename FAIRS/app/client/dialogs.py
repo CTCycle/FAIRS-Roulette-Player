@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 import multiprocessing as mp
 import os
 import queue as stdq
+from collections.abc import Callable
 from typing import Any
 
 from PySide6.QtCore import QTimer, Slot

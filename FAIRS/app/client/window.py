@@ -1,14 +1,11 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from functools import partial
 from typing import Any, cast
 
-from matplotlib.figure import Figure
 import pandas as pd
-
-from FAIRS.app.utils.variables import env_variables
-from functools import partial
-
+from matplotlib.figure import Figure
 from PySide6.QtCore import QFile, QIODevice, Qt, QThreadPool, QTimer, Slot
 from PySide6.QtGui import QAction, QPainter, QPixmap
 from PySide6.QtUiTools import QUiLoader
@@ -168,7 +165,7 @@ class MainWindow:
                 (QCheckBox, "classAccuracy", "classification_accuracy"),
                 (QPushButton, "evaluateModel", "model_evaluation"),
                 (QPushButton, "checkpointSummary", "checkpoints_summary"),
-                # 3. Viewer tab 
+                # 3. Viewer tab
                 (QRadioButton, "viewEnvRender", "env_render_view"),
                 (QRadioButton, "viewTrainMetrics", "train_metrics_view"),
                 (QPushButton, "previousImg", "previous_image"),
@@ -350,8 +347,10 @@ class MainWindow:
         self.pixmaps = {key: [] for key in view_keys}
         self.current_fig = {key: 0 for key in view_keys}
         self.pixmap_stream_index = {key: {} for key in view_keys}
-        self.pixmap_sources = {self.env_render_view: "env_render",
-                               self.train_metrics_view: "train_metrics"}        
+        self.pixmap_sources = {
+            self.env_render_view: "env_render",
+            self.train_metrics_view: "train_metrics",
+        }
 
     # -------------------------------------------------------------------------
     @Slot(object)
@@ -418,7 +417,7 @@ class MainWindow:
 
     # -------------------------------------------------------------------------
     def reset_train_metrics_stream(self) -> None:
-        for key in ("train_metrics", "env_render"): 
+        for key in ("train_metrics", "env_render"):
             if key not in self.pixmaps:
                 continue
             self.pixmaps[key].clear()
@@ -762,9 +761,7 @@ class MainWindow:
         self.reset_train_metrics_stream()
 
         # send message to status bar
-        self.send_message(
-            f"Resume training from checkpoint {self.selected_checkpoint}"
-        )
+        self.send_message(f"Resume training from checkpoint {self.selected_checkpoint}")
         # functions that are passed to the worker will be executed in a separate thread
         self.worker = ProcessWorker(
             self.model_handler.resume_training_pipeline, self.selected_checkpoint

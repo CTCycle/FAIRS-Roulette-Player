@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 import os
 import subprocess
 import time
 import webbrowser
+from collections.abc import Callable
 from io import BytesIO
 from typing import Any
 
@@ -106,7 +106,12 @@ class RealTimeHistory:
             target.write(data)
         if self.progress_callback:
             self.progress_callback(
-                {"kind": "render", "source": "train_metrics", "stream": "history", "data": data}
+                {
+                    "kind": "render",
+                    "source": "train_metrics",
+                    "stream": "history",
+                    "data": data,
+                }
             )
         plt.close(fig)
 
@@ -186,10 +191,14 @@ class GameStatsCallback:
             target.write(data)
         if self.progress_callback:
             self.progress_callback(
-                {"kind": "render", "source": "train_metrics", "stream": "game_stats", "data": data}
+                {
+                    "kind": "render",
+                    "source": "train_metrics",
+                    "stream": "game_stats",
+                    "data": data,
+                }
             )
         plt.close(fig)
-
 
 
 ###############################################################################

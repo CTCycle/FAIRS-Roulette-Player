@@ -34,12 +34,8 @@ class RouletteTransitionsVisualizer:
         color_matrix, color_states = self._compute_transition_matrix(
             dataframe["color"].astype(str)
         )
-        position_transitions = self._compute_position_transitions(
-            dataframe["position"]
-        )
-        figure = self._create_figure(
-            color_matrix, color_states, position_transitions
-        )
+        position_transitions = self._compute_position_transitions(dataframe["position"])
+        figure = self._create_figure(color_matrix, color_states, position_transitions)
 
         payload = self._figure_to_payload(figure, metric_name)
         if progress_callback:
@@ -93,9 +89,7 @@ class RouletteTransitionsVisualizer:
         return matrix, states
 
     # -------------------------------------------------------------------------
-    def _compute_position_transitions(
-        self, series: pd.Series
-    ) -> pd.DataFrame:
+    def _compute_position_transitions(self, series: pd.Series) -> pd.DataFrame:
         previous = series.shift(1)
         dataframe = pd.DataFrame({"from": previous, "to": series})
         dataframe = dataframe.dropna()

@@ -8,13 +8,13 @@ from matplotlib.figure import Figure
 from PySide6.QtGui import QImage, QPixmap
 
 from FAIRS.app.client.workers import ProcessWorker, ThreadWorker, check_thread_status
-from FAIRS.app.utils.logger import logger
-from FAIRS.app.utils.services.process import RouletteSeriesEncoder
-from FAIRS.app.utils.repository.serializer import DataSerializer, ModelSerializer
 from FAIRS.app.utils.learning.device import DeviceConfig
 from FAIRS.app.utils.learning.inference.player import RoulettePlayer
 from FAIRS.app.utils.learning.models.qnet import FAIRSnet
 from FAIRS.app.utils.learning.training.fitting import DQNTraining
+from FAIRS.app.utils.logger import logger
+from FAIRS.app.utils.repository.serializer import DataSerializer, ModelSerializer
+from FAIRS.app.utils.services.process import RouletteSeriesEncoder
 from FAIRS.app.utils.validation.checkpoints import ModelEvaluationSummary
 from FAIRS.app.utils.validation.dataset import RouletteSeriesValidation
 
@@ -187,9 +187,7 @@ class ModelEvents:
                 f"Synthetic roulette series generated ({len(dataset)} extractions)"
             )
         else:
-            logger.info(
-                f"Roulette series has been loaded ({len(dataset)} extractions)"
-            )
+            logger.info(f"Roulette series has been loaded ({len(dataset)} extractions)")
         # use the mapper to encode extractions based on position and color
         mapper = RouletteSeriesEncoder(self.configuration)
         logger.info("Encoding roulette extractions")
@@ -215,7 +213,7 @@ class ModelEvents:
         learner = FAIRSnet(self.configuration)
         Q_model = learner.get_model(model_summary=True)
         target_model = learner.get_model(model_summary=False)
-       
+
         # perform training and save model at the end
         trainer = DQNTraining(self.configuration)
         logger.info("Start training with reinforcement learning model")
@@ -254,19 +252,16 @@ class ModelEvents:
 
         # process dataset using model configurations
         resume_config = dict(self.configuration)
-        resume_config["use_data_generator"] = (
-            resume_config.get("use_data_generator", False)
-            or train_config.get("use_data_generator", False)
-        )
+        resume_config["use_data_generator"] = resume_config.get(
+            "use_data_generator", False
+        ) or train_config.get("use_data_generator", False)
         dataset, synthetic = self.serializer.get_training_series(resume_config)
         if synthetic:
             logger.info(
                 f"Synthetic roulette series generated ({len(dataset)} extractions)"
             )
         else:
-            logger.info(
-                f"Roulette series has been loaded ({len(dataset)} extractions)"
-            )
+            logger.info(f"Roulette series has been loaded ({len(dataset)} extractions)")
 
         # use the mapper to encode extractions based on position and color
         mapper = RouletteSeriesEncoder(train_config)
