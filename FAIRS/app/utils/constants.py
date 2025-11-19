@@ -15,9 +15,6 @@ EVALUATION_PATH = join(DATA_PATH, "validation")
 CHECKPOINT_PATH = join(RSC_PATH, "checkpoints")
 CONFIG_PATH = join(RSC_PATH, "configurations")
 LOGS_PATH = join(RSC_PATH, "logs")
-
-# files
-###############################################################################
 PROCESS_METADATA_FILE = join(METADATA_PATH, "preprocessing_metadata.json")
 
 # [CONFIGURATIONS]
@@ -28,4 +25,4 @@ PAD_VALUE: int = -1
 
 # [UI LAYOUT PATH]
 ###############################################################################
-UI_PATH = join(PROJECT_DIR, "app", "assets", "window_layout.ui")
+UI_PATH = join(PROJECT_DIR, "app", "layout", "main_window.ui")
