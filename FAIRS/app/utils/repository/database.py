@@ -67,7 +67,7 @@ class CheckpointSummary(Base):
 @singleton
 class FAIRSDatabase:
     def __init__(self) -> None:
-        self.db_path = os.path.join(DATA_PATH, "database.db")
+        self.db_path = os.path.join(DATA_PATH, "sqlite.db")
         self.source_path = os.path.join(SOURCE_PATH, "FAIRS_dataset.csv")
         self.inference_path = os.path.join(INFERENCE_PATH, "predicted_games.csv")
         self.engine = create_engine(
