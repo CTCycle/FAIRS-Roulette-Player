@@ -61,6 +61,8 @@ The main interface streamlines navigation across the application's core services
 - Trigger the validation pipeline to compute descriptive stats, roulette transitions, outlier detection, and quality gates. Metrics are saved under `resources/database/validation` for later review.
 - Export or delete data directly from the menu bar actions without leaving the UI.
 
+![data tab](FAIRS/assets/data_tab.png)
+
 **Model tab (training, inference, evaluation):**
 - Configure data generation, train/validation splits, augmentation, and batching behavior before launching a new training run.
 - Fine-tune the FAIRSnet agent by adjusting perceptive field size, embedding dimensions, exploration schedule, and optimization parameters from the Training and Agent sections.
@@ -69,8 +71,13 @@ The main interface streamlines navigation across the application's core services
 - Execute inference in two modes: batch predictions for stored samples or the interactive Roulette console that simulates bets, capital depletion, and exit conditions in real time.
 - Evaluate checkpoints with accuracy, sparse categorical loss, confusion summaries, and optional detailed reports ready to share with collaborators.
 
-**Viewer tab:** visualization hub.
+![model tab](FAIRS/assets/model_tab.png)
 
+**Viewer tab:** visualization hub.
+- Browse plots generated during dataset or model evaluation, and real-time roulette enviornment rendering
+- Useful for quick sanity checks without leaving the application.
+
+![viewer tab](FAIRS/assets/viewer_tab.png)
 
 ### 5.1 Setup and Maintenance
 `setup_and_maintenance.bat` launches a lightweight maintenance console with these options:
