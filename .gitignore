@@ -8,12 +8,12 @@ FAIRS/setup/.env
 
 __pycache__
 *.vscode
-*.json
+
 *.db
 *.log
 *.lock
 *.venv
-*.egg-info
+
 !.gitkeep
 
 AGENTS.md
