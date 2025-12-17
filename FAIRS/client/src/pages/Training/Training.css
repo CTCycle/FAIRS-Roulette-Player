@@ -1,0 +1,225 @@
+/* Training Page Styles */
+:root {
+  --roulette-red: #E31D2B;
+  --roulette-black: #1A1A1A;
+  --roulette-green: #00933C;
+  --roulette-gold: #D4AF37;
+  --bg-light: #F4F4F9;
+  --card-bg: #FFFFFF;
+  --text-dark: #333333;
+  --text-light: #FFFFFF;
+}
+
+.training-page {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  padding: 2rem;
+  background-color: var(--bg-light);
+  height: 100%;
+  overflow-y: auto;
+  font-family: 'Inter', system-ui, sans-serif;
+  color: var(--text-dark);
+}
+
+.page-header {
+  margin-bottom: 1rem;
+}
+
+.page-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--roulette-black);
+  margin: 0;
+  border-left: 5px solid var(--roulette-red);
+  padding-left: 1rem;
+}
+
+.training-content {
+  display: flex;
+  gap: 2rem;
+  height: 100%;
+}
+
+/* Card Styles */
+.card {
+  background-color: var(--card-bg);
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid rgba(0,0,0,0.05);
+}
+
+.card:hover {
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.card-header {
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid var(--bg-light);
+  padding-bottom: 0.5rem;
+}
+
+.card-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--roulette-black);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.card-title svg {
+  color: var(--roulette-red);
+}
+
+/* Dataset Upload Section */
+.dataset-section {
+  flex: 1;
+}
+
+.upload-area {
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  padding: 3rem 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background-color: #FAFAFA;
+}
+
+.upload-area:hover, .upload-area.active {
+  border-color: var(--roulette-green);
+  background-color: #F0FDF4;
+}
+
+.upload-icon {
+  width: 48px;
+  height: 48px;
+  color: #9CA3AF;
+  margin-bottom: 1rem;
+}
+
+.upload-text {
+  font-size: 1rem;
+  color: #6B7280;
+}
+
+.upload-hint {
+  font-size: 0.875rem;
+  color: #9CA3AF;
+  margin-top: 0.5rem;
+}
+
+.file-list {
+  margin-top: 1.5rem;
+  flex-grow: 1;
+  overflow-y: auto;
+  min-height: 200px;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem;
+  border-bottom: 1px solid #eee;
+  font-size: 0.9rem;
+}
+
+.file-item:last-child {
+  border-bottom: none;
+}
+
+.file-icon {
+  margin-right: 0.75rem;
+  color: var(--roulette-black);
+  width: 18px;
+  height: 18px;
+}
+
+.file-name {
+  flex-grow: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-size {
+  color: #9CA3AF;
+  font-size: 0.8rem;
+  margin-left: 1rem;
+}
+
+/* Training Controls Section */
+.controls-section {
+  flex: 1;
+  min-width: 350px;
+}
+
+.form-group {
+  margin-bottom: 1.25rem;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  color: #4B5563;
+}
+
+.form-select, .form-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #D1D5DB;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: border-color 0.2s;
+  background-color: #fff;
+}
+
+.form-select:focus, .form-input:focus {
+  outline: none;
+  border-color: var(--roulette-red);
+  box-shadow: 0 0 0 3px rgba(227, 29, 43, 0.1);
+}
+
+.param-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.btn-primary {
+  width: 100%;
+  padding: 1rem;
+  background-color: var(--roulette-green);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.btn-primary:hover {
+  background-color: #007A32;
+}
+
+.btn-primary:active {
+  transform: translateY(1px);
+}
+
+.btn-primary svg {
+  width: 20px;
+  height: 20px;
+}
