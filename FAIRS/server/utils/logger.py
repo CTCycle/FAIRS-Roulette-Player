@@ -12,7 +12,7 @@ from FAIRS.server.utils.constants import LOGS_PATH
 ###############################################################################
 os.makedirs(LOGS_PATH, exist_ok=True)
 current_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-log_filename = os.path.join(LOGS_PATH, f"APP_{current_timestamp}.log")
+log_filename = os.path.join(LOGS_PATH, f"FAIRS_{current_timestamp}.log")
 
 # Define logger configuration
 ###############################################################################
