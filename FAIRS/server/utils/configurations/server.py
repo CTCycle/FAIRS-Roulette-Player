@@ -14,6 +14,7 @@ from FAIRS.server.utils.constants import (
 )
 
 from FAIRS.server.utils.types import (
+    coerce_bool,
     coerce_int,
     coerce_str,
     coerce_str_or_none,
@@ -54,10 +55,19 @@ class TrainingSettings:
 
 # -----------------------------------------------------------------------------
 @dataclass(frozen=True)
+class DeviceSettings:
+    jit_compile: bool
+    jit_backend: str
+    num_workers: int
+    use_mixed_precision: bool
+
+# -----------------------------------------------------------------------------
+@dataclass(frozen=True)
 class ServerSettings:
     fastapi: FastAPISettings
     database: DatabaseSettings
-    training: TrainingSettings     
+    training: TrainingSettings
+    device: DeviceSettings     
 
 
 # [BUILDER FUNCTIONS]
@@ -122,16 +132,28 @@ def build_training_settings(payload: dict[str, Any] | Any) -> TrainingSettings:
     )
 
 # -----------------------------------------------------------------------------
+def build_device_settings(payload: dict[str, Any] | Any) -> DeviceSettings:
+    data = ensure_mapping(payload)
+    return DeviceSettings(
+        jit_compile=coerce_bool(data.get("jit_compile"), False),
+        jit_backend=coerce_str(data.get("jit_backend"), "inductor"),
+        num_workers=coerce_int(data.get("num_workers"), 0, minimum=0),
+        use_mixed_precision=coerce_bool(data.get("use_mixed_precision"), False),
+    )
+
+# -----------------------------------------------------------------------------
 def build_server_settings(data: dict[str, Any] | Any) -> ServerSettings:
     payload = ensure_mapping(data)
     fastapi_payload = ensure_mapping(payload.get("fastapi"))
     database_payload = ensure_mapping(payload.get("database"))
     training_payload = ensure_mapping(payload.get("training"))
+    device_payload = ensure_mapping(payload.get("device"))
   
     return ServerSettings(
         fastapi=build_fastapi_settings(fastapi_payload),
         database=build_database_settings(database_payload),
         training=build_training_settings(training_payload),
+        device=build_device_settings(device_payload),
     )
 
 
