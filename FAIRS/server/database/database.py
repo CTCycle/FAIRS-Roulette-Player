@@ -30,6 +30,12 @@ class DatabaseBackend(Protocol):
 
     # -------------------------------------------------------------------------
     def count_rows(self, table_name: str) -> int: ...
+
+    # -------------------------------------------------------------------------
+    def load_paginated(self, table_name: str, offset: int, limit: int) -> pd.DataFrame: ...
+
+    # -------------------------------------------------------------------------
+    def count_columns(self, table_name: str) -> int: ...
    
 
 BackendFactory = Callable[[DatabaseSettings], DatabaseBackend]
@@ -86,6 +92,14 @@ class FAIRSDatabase:
     # -------------------------------------------------------------------------
     def count_rows(self, table_name: str) -> int:
         return self.backend.count_rows(table_name)
+
+    # -------------------------------------------------------------------------
+    def load_paginated(self, table_name: str, offset: int, limit: int) -> pd.DataFrame:
+        return self.backend.load_paginated(table_name, offset, limit)
+
+    # -------------------------------------------------------------------------
+    def count_columns(self, table_name: str) -> int:
+        return self.backend.count_columns(table_name)
 
 
 database = FAIRSDatabase()
