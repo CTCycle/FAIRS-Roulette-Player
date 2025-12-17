@@ -50,7 +50,7 @@
   display: flex;
   flex-direction: column;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-  border: 1px solid rgba(0,0,0,0.05);
+  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .card:hover {
@@ -91,7 +91,8 @@
   background-color: #FAFAFA;
 }
 
-.upload-area:hover, .upload-area.active {
+.upload-area:hover,
+.upload-area.active {
   border-color: var(--roulette-green);
   background-color: #F0FDF4;
 }
@@ -171,7 +172,8 @@
   color: #4B5563;
 }
 
-.form-select, .form-input {
+.form-select,
+.form-input {
   width: 100%;
   padding: 0.75rem;
   border: 1px solid #D1D5DB;
@@ -181,7 +183,8 @@
   background-color: #fff;
 }
 
-.form-select:focus, .form-input:focus {
+.form-select:focus,
+.form-input:focus {
   outline: none;
   border-color: var(--roulette-red);
   box-shadow: 0 0 0 3px rgba(227, 29, 43, 0.1);
@@ -222,4 +225,21 @@
 .btn-primary svg {
   width: 20px;
   height: 20px;
+}
+
+/* Fieldset frames for configuration sections - DARKER BORDER */
+.control-fieldset {
+  border: 1px solid #9CA3AF;
+  /* Darker gray border */
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.control-legend {
+  font-weight: 600;
+  padding: 0 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }

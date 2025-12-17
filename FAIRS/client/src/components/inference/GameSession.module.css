@@ -1,0 +1,140 @@
+.sessionContainer {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: var(--spacing-lg);
+    height: 100%;
+}
+
+.leftPanel,
+.rightPanel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.card {
+    background-color: var(--bg-secondary);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    padding: var(--spacing-md);
+}
+
+.statGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-md);
+}
+
+.statItem {
+    display: flex;
+    flex-direction: column;
+}
+
+.statLabel {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+}
+
+.statValue {
+    color: var(--text-primary);
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.predictionCard {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--primary-accent);
+    border-radius: 8px;
+    padding: var(--spacing-xl);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify_content: center;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.predictionTitle {
+    color: var(--primary-accent);
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: var(--spacing-sm);
+}
+
+.predictionValue {
+    color: var(--text-primary);
+    font-size: 3rem;
+    font-weight: 700;
+    margin-bottom: var(--spacing-xs);
+}
+
+.predictionDesc {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+}
+
+.inputGroup {
+    display: flex;
+    gap: var(--spacing-md);
+    align-items: flex-end;
+}
+
+.numberInput {
+    padding: var(--spacing-md);
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 1.5rem;
+    width: 100%;
+    text-align: center;
+}
+
+.submitBtn {
+    background-color: var(--success);
+    color: white;
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    transition: background-color 0.2s;
+    border: none;
+    cursor: pointer;
+    flex-grow: 1;
+}
+
+.submitBtn:hover {
+    background-color: #16a34a;
+}
+
+.historyTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.historyTable th {
+    text-align: left;
+    padding: var(--spacing-sm);
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border-color);
+    font-weight: 500;
+}
+
+.historyTable td {
+    padding: var(--spacing-sm);
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.outcomeWin {
+    color: var(--success);
+}
+
+.outcomeLoss {
+    color: var(--danger);
+}

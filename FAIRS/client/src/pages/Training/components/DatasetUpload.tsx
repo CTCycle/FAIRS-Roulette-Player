@@ -88,6 +88,14 @@ export const DatasetUpload: React.FC = () => {
                 />
             </div>
 
+            <button
+                type="button"
+                className="btn-primary"
+                onClick={() => fileInputRef.current?.click()}
+            >
+                <Upload /> Upload Data
+            </button>
+
             <div className="file-list">
                 {files.length > 0 ? (
                     files.map((file, index) => (
