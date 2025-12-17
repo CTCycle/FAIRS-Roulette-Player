@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Settings, Play, RefreshCw, Cpu, Layers, Database, Activity } from 'lucide-react';
 
 export const TrainingControls: React.FC = () => {
-    const [config, setConfig] = useState({
+    const [newConfig, setNewConfig] = useState({
         // Agent
         perceptiveField: 64,
         numNeurons: 64,
@@ -28,21 +28,36 @@ export const TrainingControls: React.FC = () => {
         // Session
         deviceGPU: false,
         deviceID: 0,
-        numWorkers: 0,
+        numWorkers: 0
+    });
+
+    const [resumeConfig, setResumeConfig] = useState({
         numAdditionalEpisodes: 10
     });
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleNewChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value, type, checked } = e.target;
-        setConfig(prev => ({
+        setNewConfig(prev => ({
             ...prev,
             [name]: type === 'checkbox' ? checked : value
         }));
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleResumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setResumeConfig(prev => ({
+            ...prev,
+            [name]: value
+        }));
+    };
+
+    const handleNewSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        console.log('Starting training with config:', config);
+        console.log('Starting new training session with config:', newConfig);
+    };
+
+    const handleResume = () => {
+        console.log('Resuming training session with config:', resumeConfig);
     };
 
     return (
@@ -54,147 +69,171 @@ export const TrainingControls: React.FC = () => {
                 </h2>
             </div>
 
-            <form onSubmit={handleSubmit} style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 200px)', paddingRight: '0.5rem' }}>
+            <div className="training-accordions">
+                <details className="training-accordion" open>
+                    <summary className="training-accordion-summary">
+                        <span className="training-accordion-title">
+                            <Play size={18} /> New Training Session
+                        </span>
+                    </summary>
+                    <div className="training-accordion-content">
+                        <form onSubmit={handleNewSubmit}>
+                            {/* AGENT GROUP */}
+                            <fieldset className="control-fieldset">
+                                <legend className="control-legend" style={{ color: '#E31D2B' }}>
+                                    <Activity size={16} /> Agent
+                                </legend>
+                                <div className="param-grid">
+                                    <div className="form-group">
+                                        <label className="form-label">Perceptive Field Size</label>
+                                        <input type="number" name="perceptiveField" value={newConfig.perceptiveField} onChange={handleNewChange} className="form-input" max="1024" />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">QNet Neurons</label>
+                                        <input type="number" name="numNeurons" value={newConfig.numNeurons} onChange={handleNewChange} className="form-input" max="10000" />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Embedding Dims</label>
+                                        <input type="number" name="embeddingDims" value={newConfig.embeddingDims} onChange={handleNewChange} className="form-input" step="8" max="9999" />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Weights Update Freq</label>
+                                        <input type="number" name="modelUpdateFreq" value={newConfig.modelUpdateFreq} onChange={handleNewChange} className="form-input" max="1000" />
+                                    </div>
+                                </div>
 
-                {/* AGENT GROUP */}
-                <fieldset className="control-fieldset">
-                    <legend className="control-legend" style={{ color: '#E31D2B' }}>
-                        <Activity size={16} /> Agent
-                    </legend>
-                    <div className="param-grid">
-                        <div className="form-group">
-                            <label className="form-label">Perceptive Field Size</label>
-                            <input type="number" name="perceptiveField" value={config.perceptiveField} onChange={handleChange} className="form-input" max="1024" />
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label">QNet Neurons</label>
-                            <input type="number" name="numNeurons" value={config.numNeurons} onChange={handleChange} className="form-input" max="10000" />
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label">Embedding Dims</label>
-                            <input type="number" name="embeddingDims" value={config.embeddingDims} onChange={handleChange} className="form-input" step="8" max="9999" />
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label">Weights Update Freq</label>
-                            <input type="number" name="modelUpdateFreq" value={config.modelUpdateFreq} onChange={handleChange} className="form-input" max="1000" />
-                        </div>
-                    </div>
+                                <div className="param-grid">
+                                    <div className="form-group">
+                                        <label className="form-label">Exploration Rate</label>
+                                        <input type="number" name="explorationRate" value={newConfig.explorationRate} onChange={handleNewChange} className="form-input" step="0.01" max="1.0" />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Decay</label>
+                                        <input type="number" name="explorationRateDecay" value={newConfig.explorationRateDecay} onChange={handleNewChange} className="form-input" step="0.001" max="1.0" />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Min Rate</label>
+                                        <input type="number" name="minExplorationRate" value={newConfig.minExplorationRate} onChange={handleNewChange} className="form-input" step="0.01" max="1.0" />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Discount Rate</label>
+                                        <input type="number" name="discountRate" value={newConfig.discountRate} onChange={handleNewChange} className="form-input" step="0.01" max="1.0" />
+                                    </div>
+                                </div>
+                            </fieldset>
 
-                    <div className="param-grid">
-                        <div className="form-group">
-                            <label className="form-label">Exploration Rate</label>
-                            <input type="number" name="explorationRate" value={config.explorationRate} onChange={handleChange} className="form-input" step="0.01" max="1.0" />
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label">Decay</label>
-                            <input type="number" name="explorationRateDecay" value={config.explorationRateDecay} onChange={handleChange} className="form-input" step="0.001" max="1.0" />
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label">Min Rate</label>
-                            <input type="number" name="minExplorationRate" value={config.minExplorationRate} onChange={handleChange} className="form-input" step="0.01" max="1.0" />
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label">Discount Rate</label>
-                            <input type="number" name="discountRate" value={config.discountRate} onChange={handleChange} className="form-input" step="0.01" max="1.0" />
-                        </div>
-                    </div>
-                </fieldset>
+                            {/* ENVIRONMENT GROUP */}
+                            <fieldset className="control-fieldset">
+                                <legend className="control-legend" style={{ color: '#00933C' }}>
+                                    <Layers size={16} /> Environment
+                                </legend>
+                                <div className="param-grid">
+                                    <div className="form-group">
+                                        <label className="form-label">Bet Amount</label>
+                                        <input type="number" name="betAmount" value={newConfig.betAmount} onChange={handleNewChange} className="form-input" min="1" />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Initial Capital</label>
+                                        <input type="number" name="initialCapital" value={newConfig.initialCapital} onChange={handleNewChange} className="form-input" min="1" />
+                                    </div>
+                                </div>
+                                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                    <input type="checkbox" id="renderEnv" name="renderEnv" checked={newConfig.renderEnv} onChange={handleNewChange} />
+                                    <label htmlFor="renderEnv" className="form-label" style={{ marginBottom: 0 }}>Render environment every N steps</label>
+                                    {newConfig.renderEnv && (
+                                        <input type="number" name="renderUpFreq" value={newConfig.renderUpFreq} onChange={handleNewChange} className="form-input" style={{ width: '80px', marginLeft: 'auto' }} />
+                                    )}
+                                </div>
+                            </fieldset>
 
-                {/* ENVIRONMENT GROUP */}
-                <fieldset className="control-fieldset">
-                    <legend className="control-legend" style={{ color: '#00933C' }}>
-                        <Layers size={16} /> Environment
-                    </legend>
-                    <div className="param-grid">
-                        <div className="form-group">
-                            <label className="form-label">Bet Amount</label>
-                            <input type="number" name="betAmount" value={config.betAmount} onChange={handleChange} className="form-input" min="1" />
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label">Initial Capital</label>
-                            <input type="number" name="initialCapital" value={config.initialCapital} onChange={handleChange} className="form-input" min="1" />
-                        </div>
-                    </div>
-                    <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
-                        <input type="checkbox" id="renderEnv" name="renderEnv" checked={config.renderEnv} onChange={handleChange} />
-                        <label htmlFor="renderEnv" className="form-label" style={{ marginBottom: 0 }}>Render environment every N steps</label>
-                        {config.renderEnv && (
-                            <input type="number" name="renderUpFreq" value={config.renderUpFreq} onChange={handleChange} className="form-input" style={{ width: '80px', marginLeft: 'auto' }} />
-                        )}
-                    </div>
-                </fieldset>
+                            {/* DATASET GROUP */}
+                            <fieldset className="control-fieldset">
+                                <legend className="control-legend" style={{ color: '#D4AF37' }}>
+                                    <Database size={16} /> Training Data
+                                </legend>
 
-                {/* DATASET GROUP (Model Tab Variant) */}
-                <fieldset className="control-fieldset">
-                    <legend className="control-legend" style={{ color: '#D4AF37' }}>
-                        <Database size={16} /> Training Data
-                    </legend>
+                                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <input type="checkbox" id="useDataGen" name="useDataGen" checked={newConfig.useDataGen} onChange={handleNewChange} />
+                                    <label htmlFor="useDataGen" className="form-label" style={{ marginBottom: 0 }}>Use data generator (N samples)</label>
+                                    {newConfig.useDataGen && (
+                                        <input type="number" name="numGeneratedSamples" value={newConfig.numGeneratedSamples} onChange={handleNewChange} className="form-input" style={{ width: '100px', marginLeft: 'auto' }} />
+                                    )}
+                                </div>
 
-                    <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <input type="checkbox" id="useDataGen" name="useDataGen" checked={config.useDataGen} onChange={handleChange} />
-                        <label htmlFor="useDataGen" className="form-label" style={{ marginBottom: 0 }}>Use data generator (N samples)</label>
-                        {config.useDataGen && (
-                            <input type="number" name="numGeneratedSamples" value={config.numGeneratedSamples} onChange={handleChange} className="form-input" style={{ width: '100px', marginLeft: 'auto' }} />
-                        )}
-                    </div>
+                                <div className="param-grid" style={{ marginTop: '0.5rem' }}>
+                                    <div className="form-group">
+                                        <label className="form-label">Train Sample Size</label>
+                                        <input type="number" name="trainSampleSize" value={newConfig.trainSampleSize} onChange={handleNewChange} className="form-input" step="0.05" max="1.0" />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Validation Size</label>
+                                        <input type="number" name="validationSize" value={newConfig.validationSize} onChange={handleNewChange} className="form-input" step="0.05" max="1.0" />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Split Seed</label>
+                                        <input type="number" name="splitSeed" value={newConfig.splitSeed} onChange={handleNewChange} className="form-input" />
+                                    </div>
+                                </div>
+                                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                    <input type="checkbox" id="setShuffle" name="setShuffle" checked={newConfig.setShuffle} onChange={handleNewChange} />
+                                    <label htmlFor="setShuffle" className="form-label" style={{ marginBottom: 0 }}>Shuffle with buffer</label>
+                                    {newConfig.setShuffle && (
+                                        <input type="number" name="shuffleSize" value={newConfig.shuffleSize} onChange={handleNewChange} className="form-input" style={{ width: '80px', marginLeft: 'auto' }} />
+                                    )}
+                                </div>
+                            </fieldset>
 
-                    <div className="param-grid" style={{ marginTop: '0.5rem' }}>
-                        <div className="form-group">
-                            <label className="form-label">Train Sample Size</label>
-                            <input type="number" name="trainSampleSize" value={config.trainSampleSize} onChange={handleChange} className="form-input" step="0.05" max="1.0" />
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label">Validation Size</label>
-                            <input type="number" name="validationSize" value={config.validationSize} onChange={handleChange} className="form-input" step="0.05" max="1.0" />
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label">Split Seed</label>
-                            <input type="number" name="splitSeed" value={config.splitSeed} onChange={handleChange} className="form-input" />
-                        </div>
-                    </div>
-                    <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
-                        <input type="checkbox" id="setShuffle" name="setShuffle" checked={config.setShuffle} onChange={handleChange} />
-                        <label htmlFor="setShuffle" className="form-label" style={{ marginBottom: 0 }}>Shuffle with buffer</label>
-                        {config.setShuffle && (
-                            <input type="number" name="shuffleSize" value={config.shuffleSize} onChange={handleChange} className="form-input" style={{ width: '80px', marginLeft: 'auto' }} />
-                        )}
-                    </div>
-                </fieldset>
+                            {/* SESSION GROUP */}
+                            <fieldset className="control-fieldset">
+                                <legend className="control-legend" style={{ color: '#94a3b8' }}>
+                                    <Cpu size={16} /> Session
+                                </legend>
+                                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <input type="checkbox" id="deviceGPU" name="deviceGPU" checked={newConfig.deviceGPU} onChange={handleNewChange} />
+                                    <label htmlFor="deviceGPU" className="form-label" style={{ marginBottom: 0 }}>Use GPU (Device ID)</label>
+                                    {newConfig.deviceGPU && (
+                                        <input type="number" name="deviceID" value={newConfig.deviceID} onChange={handleNewChange} className="form-input" style={{ width: '80px', marginLeft: 'auto' }} />
+                                    )}
+                                </div>
 
-                {/* SESSION GROUP */}
-                <fieldset className="control-fieldset">
-                    <legend className="control-legend" style={{ color: '#94a3b8' }}>
-                        <Cpu size={16} /> Session
-                    </legend>
-                    <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <input type="checkbox" id="deviceGPU" name="deviceGPU" checked={config.deviceGPU} onChange={handleChange} />
-                        <label htmlFor="deviceGPU" className="form-label" style={{ marginBottom: 0 }}>Use GPU (Device ID)</label>
-                        {config.deviceGPU && (
-                            <input type="number" name="deviceID" value={config.deviceID} onChange={handleChange} className="form-input" style={{ width: '80px', marginLeft: 'auto' }} />
-                        )}
-                    </div>
+                                <div className="param-grid">
+                                    <div className="form-group">
+                                        <label className="form-label">Workers</label>
+                                        <input type="number" name="numWorkers" value={newConfig.numWorkers} onChange={handleNewChange} className="form-input" />
+                                    </div>
+                                </div>
+                            </fieldset>
 
-                    <div className="param-grid">
-                        <div className="form-group">
-                            <label className="form-label">Workers</label>
-                            <input type="number" name="numWorkers" value={config.numWorkers} onChange={handleChange} className="form-input" />
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label">Add. Episodes</label>
-                            <input type="number" name="numAdditionalEpisodes" value={config.numAdditionalEpisodes} onChange={handleChange} className="form-input" />
-                        </div>
+                            <button type="submit" className="btn-primary">
+                                <Play /> Start Training
+                            </button>
+                        </form>
                     </div>
-                </fieldset>
+                </details>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                    <button type="submit" className="btn-primary">
-                        <Play /> Start Training
-                    </button>
-                    <button type="button" className="btn-primary" style={{ backgroundColor: '#D4AF37' }}>
-                        <RefreshCw /> Resume
-                    </button>
-                </div>
-            </form>
+                <details className="training-accordion">
+                    <summary className="training-accordion-summary">
+                        <span className="training-accordion-title">
+                            <RefreshCw size={18} /> Resume Training Session
+                        </span>
+                    </summary>
+                    <div className="training-accordion-content">
+                        <fieldset className="control-fieldset">
+                            <legend className="control-legend" style={{ color: '#D4AF37' }}>
+                                <RefreshCw size={16} /> Resume
+                            </legend>
+                            <div className="form-group">
+                                <label className="form-label">Additional epochs</label>
+                                <input type="number" name="numAdditionalEpisodes" value={resumeConfig.numAdditionalEpisodes} onChange={handleResumeChange} className="form-input" min="1" />
+                            </div>
+                        </fieldset>
+
+                        <button type="button" className="btn-primary" style={{ backgroundColor: '#D4AF37' }} onClick={handleResume}>
+                            <RefreshCw /> Resume
+                        </button>
+                    </div>
+                </details>
+            </div>
         </div>
     );
 };

@@ -160,6 +160,49 @@
   min-width: 350px;
 }
 
+.training-accordions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.training-accordion {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--card-bg);
+}
+
+.training-accordion-summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  padding: 0.9rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 700;
+  color: var(--roulette-black);
+  background: #fafafa;
+}
+
+.training-accordion-summary::-webkit-details-marker {
+  display: none;
+}
+
+.training-accordion-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.training-accordion-content {
+  padding: 1rem;
+  border-top: 2px solid var(--bg-light);
+  overflow-y: auto;
+  max-height: calc(100vh - 360px);
+}
+
 .form-group {
   margin-bottom: 1.25rem;
 }
