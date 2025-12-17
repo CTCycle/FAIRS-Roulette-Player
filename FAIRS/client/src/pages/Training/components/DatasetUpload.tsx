@@ -9,6 +9,9 @@ interface FileItem {
 
 export const DatasetUpload: React.FC = () => {
     const [files, setFiles] = useState<FileItem[]>([]);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
+    const [uploadMessage, setUploadMessage] = useState<string>('');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const formatSize = (bytes: number) => {
@@ -19,14 +22,30 @@ export const DatasetUpload: React.FC = () => {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     };
 
+    const isSupportedFile = (file: File) => {
+        const extension = file.name.split('.').pop()?.toLowerCase();
+        return extension === 'csv' || extension === 'xlsx' || extension === 'xls';
+    };
+
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
-            const newFiles: FileItem[] = Array.from(e.target.files).map(file => ({
-                name: file.name,
-                size: file.size,
-                type: file.type
-            }));
-            setFiles(prev => [...prev, ...newFiles]);
+            const file = e.target.files[0] ?? null;
+            if (!file) return;
+            if (!isSupportedFile(file)) {
+                setUploadStatus('error');
+                setUploadMessage('Unsupported file. Please upload a CSV or XLSX.');
+                return;
+            }
+            setSelectedFile(file);
+            setUploadStatus('idle');
+            setUploadMessage('');
+            setFiles([
+                {
+                    name: file.name,
+                    size: file.size,
+                    type: file.type,
+                },
+            ]);
         }
     };
 
@@ -38,20 +57,70 @@ export const DatasetUpload: React.FC = () => {
     const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        if (e.dataTransfer.files) {
-            const newFiles: FileItem[] = Array.from(e.dataTransfer.files).map(file => ({
+        const file = e.dataTransfer.files?.[0] ?? null;
+        if (!file) return;
+        if (!isSupportedFile(file)) {
+            setUploadStatus('error');
+            setUploadMessage('Unsupported file. Please upload a CSV or XLSX.');
+            return;
+        }
+        setSelectedFile(file);
+        setUploadStatus('idle');
+        setUploadMessage('');
+        setFiles([
+            {
                 name: file.name,
                 size: file.size,
-                type: file.type
-            }));
-            setFiles(prev => [...prev, ...newFiles]);
-        }
+                type: file.type,
+            },
+        ]);
     };
 
     const clearFiles = () => {
         setFiles([]);
+        setSelectedFile(null);
+        setUploadStatus('idle');
+        setUploadMessage('');
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
+        }
+    };
+
+    const uploadDataset = async () => {
+        if (!selectedFile) {
+            setUploadStatus('error');
+            setUploadMessage('Select a CSV/XLSX file first.');
+            return;
+        }
+
+        const endpoint = '/data/upload?table=ROULETTE_SERIES';
+
+        setUploadStatus('uploading');
+        setUploadMessage('Uploading and importing dataset...');
+
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!response.ok) {
+                const errorPayload = (await response.json().catch(() => null)) as { detail?: string } | null;
+                const detail = errorPayload?.detail ?? `Upload failed (HTTP ${response.status}).`;
+                throw new Error(detail);
+            }
+
+            const payload = (await response.json().catch(() => null)) as { rows_imported?: number } | null;
+            const rows = payload?.rows_imported ?? 0;
+            setUploadStatus('success');
+            setUploadMessage(`Imported ${rows} rows into the database.`);
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Upload failed.';
+            setUploadStatus('error');
+            setUploadMessage(message);
         }
     };
 
@@ -75,16 +144,14 @@ export const DatasetUpload: React.FC = () => {
                     <strong>Click to upload</strong> or drag and drop
                 </div>
                 <div className="upload-hint">
-                    Supports loose images or folders (CSV/XLSX for structured data)
+                    Supports CSV/XLSX datasets
                 </div>
                 <input
                     type="file"
                     ref={fileInputRef}
                     onChange={handleFileChange}
                     style={{ display: 'none' }}
-                    multiple
-                    // @ts-expect-error webkitdirectory is non-standard but supported
-                    webkitdirectory=""
+                    accept=".csv,.xlsx,.xls"
                 />
             </div>
 
@@ -95,6 +162,46 @@ export const DatasetUpload: React.FC = () => {
             >
                 <Upload /> Upload Data
             </button>
+
+            <button
+                type="button"
+                className="btn-primary"
+                onClick={uploadDataset}
+                disabled={!selectedFile || uploadStatus === 'uploading'}
+                style={{ marginTop: '0.75rem', opacity: !selectedFile || uploadStatus === 'uploading' ? 0.7 : 1 }}
+            >
+                <Upload /> Import Into DB
+            </button>
+
+            {uploadMessage && (
+                <div
+                    style={{
+                        marginTop: '0.75rem',
+                        padding: '0.75rem',
+                        borderRadius: '6px',
+                        background:
+                            uploadStatus === 'success'
+                                ? '#ECFDF5'
+                                : uploadStatus === 'error'
+                                    ? '#FEF2F2'
+                                    : '#EFF6FF',
+                        color:
+                            uploadStatus === 'success'
+                                ? '#065F46'
+                                : uploadStatus === 'error'
+                                    ? '#991B1B'
+                                    : '#1E40AF',
+                        border:
+                            uploadStatus === 'success'
+                                ? '1px solid #A7F3D0'
+                                : uploadStatus === 'error'
+                                    ? '1px solid #FECACA'
+                                    : '1px solid #BFDBFE',
+                    }}
+                >
+                    {uploadMessage}
+                </div>
+            )}
 
             <div className="file-list">
                 {files.length > 0 ? (

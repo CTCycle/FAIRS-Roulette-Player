@@ -3,7 +3,6 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 
-from FAIRS.server.utils.variables import env_variables
 from FAIRS.server.routes.endpoint import router as general_router
 from FAIRS.server.routes.upload import router as upload_router
 from FAIRS.server.utils.configurations import server_settings
