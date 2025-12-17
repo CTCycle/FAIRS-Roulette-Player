@@ -17,5 +17,11 @@
     "ssl_ca": null,
     "connect_timeout": 10,
     "insert_batch_size": 1000
+  },
+
+  "training": {
+    "websocket_update_interval_ms": 1000,
+    "default_episodes": 10,
+    "default_max_steps_episode": 2000
   }
 }

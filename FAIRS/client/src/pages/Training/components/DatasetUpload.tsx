@@ -158,19 +158,11 @@ export const DatasetUpload: React.FC = () => {
             <button
                 type="button"
                 className="btn-primary"
-                onClick={() => fileInputRef.current?.click()}
-            >
-                <Upload /> Upload Data
-            </button>
-
-            <button
-                type="button"
-                className="btn-primary"
                 onClick={uploadDataset}
                 disabled={!selectedFile || uploadStatus === 'uploading'}
-                style={{ marginTop: '0.75rem', opacity: !selectedFile || uploadStatus === 'uploading' ? 0.7 : 1 }}
+                style={{ opacity: !selectedFile || uploadStatus === 'uploading' ? 0.7 : 1 }}
             >
-                <Upload /> Import Into DB
+                <Upload /> Upload Data
             </button>
 
             {uploadMessage && (

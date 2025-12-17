@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './Training.css';
 import { DatasetUpload } from './components/DatasetUpload';
 import { TrainingControls } from './components/TrainingControls';
+import { TrainingDashboard } from './components/TrainingDashboard';
 
 const TrainingPage: React.FC = () => {
+    const [isTraining, setIsTraining] = useState(false);
+
     return (
         <div className="training-page">
             <div className="page-header">
@@ -12,8 +15,10 @@ const TrainingPage: React.FC = () => {
 
             <div className="training-content">
                 <DatasetUpload />
-                <TrainingControls />
+                <TrainingControls onTrainingStart={() => setIsTraining(true)} />
             </div>
+
+            <TrainingDashboard isActive={isTraining} />
         </div>
     );
 };

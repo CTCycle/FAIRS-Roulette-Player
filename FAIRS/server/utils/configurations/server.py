@@ -47,9 +47,17 @@ class DatabaseSettings:
 
 # -----------------------------------------------------------------------------
 @dataclass(frozen=True)
+class TrainingSettings:
+    websocket_update_interval_ms: int
+    default_episodes: int
+    default_max_steps_episode: int
+
+# -----------------------------------------------------------------------------
+@dataclass(frozen=True)
 class ServerSettings:
     fastapi: FastAPISettings
-    database: DatabaseSettings     
+    database: DatabaseSettings
+    training: TrainingSettings     
 
 
 # [BUILDER FUNCTIONS]
@@ -99,14 +107,31 @@ def build_database_settings(payload: dict[str, Any] | Any) -> DatabaseSettings:
     )
 
 # -----------------------------------------------------------------------------
+def build_training_settings(payload: dict[str, Any] | Any) -> TrainingSettings:
+    data = ensure_mapping(payload)
+    return TrainingSettings(
+        websocket_update_interval_ms=coerce_int(
+            data.get("websocket_update_interval_ms"), 1000, minimum=100, maximum=10000
+        ),
+        default_episodes=coerce_int(
+            data.get("default_episodes"), 10, minimum=1
+        ),
+        default_max_steps_episode=coerce_int(
+            data.get("default_max_steps_episode"), 2000, minimum=100
+        ),
+    )
+
+# -----------------------------------------------------------------------------
 def build_server_settings(data: dict[str, Any] | Any) -> ServerSettings:
     payload = ensure_mapping(data)
     fastapi_payload = ensure_mapping(payload.get("fastapi"))
     database_payload = ensure_mapping(payload.get("database"))
+    training_payload = ensure_mapping(payload.get("training"))
   
     return ServerSettings(
         fastapi=build_fastapi_settings(fastapi_payload),
         database=build_database_settings(database_payload),
+        training=build_training_settings(training_payload),
     )
 
 
