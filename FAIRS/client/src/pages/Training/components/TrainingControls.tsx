@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings, Play, RefreshCw, Cpu, Layers, Database, Activity } from 'lucide-react';
+import { Settings, Play, RefreshCw, Cpu, Layers, Database, Activity, HardDrive, Save, BarChart2 } from 'lucide-react';
 
 interface TrainingControlsProps {
     onTrainingStart?: () => void;
@@ -20,8 +20,8 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({ onTrainingSt
         betAmount: 10,
         initialCapital: 1000,
         renderEnv: false,
-        renderUpFreq: 0,
-        // Dataset (Training Specific)
+        renderUpFreq: 50,
+        // Dataset
         useDataGen: false,
         numGeneratedSamples: 10000,
         trainSampleSize: 1.0,
@@ -29,10 +29,22 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({ onTrainingSt
         splitSeed: 42,
         setShuffle: true,
         shuffleSize: 256,
-        // Session
+        // Session - Training
+        episodes: 10,
+        maxStepsEpisode: 2000,
+        batchSize: 32,
+        learningRate: 0.0001,
+        trainingSeed: 42,
+        // Session - Device
         deviceGPU: false,
         deviceID: 0,
-        numWorkers: 0
+        // Memory
+        maxMemorySize: 10000,
+        replayBufferSize: 1000,
+        // Checkpointing
+        saveCheckpoints: false,
+        checkpointsFreq: 1,
+        useTensorboard: false
     });
 
     const [resumeConfig, setResumeConfig] = useState({
@@ -59,6 +71,7 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({ onTrainingSt
         e.preventDefault();
 
         const config = {
+            // Agent
             perceptive_field_size: Number(newConfig.perceptiveField),
             QNet_neurons: Number(newConfig.numNeurons),
             embedding_dimensions: Number(newConfig.embeddingDims),
@@ -67,14 +80,34 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({ onTrainingSt
             minimum_exploration_rate: Number(newConfig.minExplorationRate),
             discount_rate: Number(newConfig.discountRate),
             model_update_frequency: Number(newConfig.modelUpdateFreq),
+            // Environment
             bet_amount: Number(newConfig.betAmount),
             initial_capital: Number(newConfig.initialCapital),
+            render_environment: newConfig.renderEnv,
+            render_update_frequency: Number(newConfig.renderUpFreq),
+            // Dataset
             use_data_generator: newConfig.useDataGen,
             num_generated_samples: Number(newConfig.numGeneratedSamples),
             sample_size: Number(newConfig.trainSampleSize),
+            validation_size: Number(newConfig.validationSize),
             seed: Number(newConfig.splitSeed),
+            shuffle_dataset: newConfig.setShuffle,
+            shuffle_size: Number(newConfig.shuffleSize),
+            // Session
+            episodes: Number(newConfig.episodes),
+            max_steps_episode: Number(newConfig.maxStepsEpisode),
+            batch_size: Number(newConfig.batchSize),
+            learning_rate: Number(newConfig.learningRate),
+            training_seed: Number(newConfig.trainingSeed),
             use_device_GPU: newConfig.deviceGPU,
             device_ID: Number(newConfig.deviceID),
+            // Memory
+            max_memory_size: Number(newConfig.maxMemorySize),
+            replay_buffer_size: Number(newConfig.replayBufferSize),
+            // Checkpointing
+            save_checkpoints: newConfig.saveCheckpoints,
+            checkpoints_frequency: Number(newConfig.checkpointsFreq),
+            use_tensorboard: newConfig.useTensorboard,
         };
 
         try {
@@ -252,19 +285,73 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({ onTrainingSt
                                 <legend className="control-legend" style={{ color: '#94a3b8' }}>
                                     <Cpu size={16} /> Session
                                 </legend>
-                                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <div className="param-grid">
+                                    <div className="form-group">
+                                        <label className="form-label">Episodes</label>
+                                        <input type="number" name="episodes" value={newConfig.episodes} onChange={handleNewChange} className="form-input" min="1" />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Max Steps</label>
+                                        <input type="number" name="maxStepsEpisode" value={newConfig.maxStepsEpisode} onChange={handleNewChange} className="form-input" min="100" />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Batch Size</label>
+                                        <input type="number" name="batchSize" value={newConfig.batchSize} onChange={handleNewChange} className="form-input" min="1" />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Learning Rate</label>
+                                        <input type="number" name="learningRate" value={newConfig.learningRate} onChange={handleNewChange} className="form-input" step="0.0001" min="0" />
+                                    </div>
+                                </div>
+                                <div className="param-grid">
+                                    <div className="form-group">
+                                        <label className="form-label">Training Seed</label>
+                                        <input type="number" name="trainingSeed" value={newConfig.trainingSeed} onChange={handleNewChange} className="form-input" />
+                                    </div>
+                                </div>
+                                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
                                     <input type="checkbox" id="deviceGPU" name="deviceGPU" checked={newConfig.deviceGPU} onChange={handleNewChange} />
                                     <label htmlFor="deviceGPU" className="form-label" style={{ marginBottom: 0 }}>Use GPU (Device ID)</label>
                                     {newConfig.deviceGPU && (
-                                        <input type="number" name="deviceID" value={newConfig.deviceID} onChange={handleNewChange} className="form-input" style={{ width: '80px', marginLeft: 'auto' }} />
+                                        <input type="number" name="deviceID" value={newConfig.deviceID} onChange={handleNewChange} className="form-input" style={{ width: '60px', marginLeft: 'auto' }} />
                                     )}
                                 </div>
+                            </fieldset>
 
+                            {/* MEMORY GROUP */}
+                            <fieldset className="control-fieldset">
+                                <legend className="control-legend" style={{ color: '#7c3aed' }}>
+                                    <HardDrive size={16} /> Memory
+                                </legend>
                                 <div className="param-grid">
                                     <div className="form-group">
-                                        <label className="form-label">Workers</label>
-                                        <input type="number" name="numWorkers" value={newConfig.numWorkers} onChange={handleNewChange} className="form-input" />
+                                        <label className="form-label">Max Memory</label>
+                                        <input type="number" name="maxMemorySize" value={newConfig.maxMemorySize} onChange={handleNewChange} className="form-input" min="100" />
                                     </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Replay Buffer</label>
+                                        <input type="number" name="replayBufferSize" value={newConfig.replayBufferSize} onChange={handleNewChange} className="form-input" min="100" />
+                                    </div>
+                                </div>
+                            </fieldset>
+
+                            {/* CHECKPOINTING GROUP */}
+                            <fieldset className="control-fieldset">
+                                <legend className="control-legend" style={{ color: '#06b6d4' }}>
+                                    <Save size={16} /> Checkpointing
+                                </legend>
+                                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <input type="checkbox" id="saveCheckpoints" name="saveCheckpoints" checked={newConfig.saveCheckpoints} onChange={handleNewChange} />
+                                    <label htmlFor="saveCheckpoints" className="form-label" style={{ marginBottom: 0 }}>Save every N episodes</label>
+                                    {newConfig.saveCheckpoints && (
+                                        <input type="number" name="checkpointsFreq" value={newConfig.checkpointsFreq} onChange={handleNewChange} className="form-input" style={{ width: '60px', marginLeft: 'auto' }} min="1" />
+                                    )}
+                                </div>
+                                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                    <input type="checkbox" id="useTensorboard" name="useTensorboard" checked={newConfig.useTensorboard} onChange={handleNewChange} />
+                                    <label htmlFor="useTensorboard" className="form-label" style={{ marginBottom: 0 }}>
+                                        <BarChart2 size={14} style={{ marginRight: '0.25rem' }} /> Enable TensorBoard
+                                    </label>
                                 </div>
                             </fieldset>
 

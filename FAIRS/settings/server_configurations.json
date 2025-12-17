@@ -1,10 +1,9 @@
-{  
+{
   "fastapi": {
     "title": "FAIRS Roulette Backend",
     "description": "FastAPI backend",
-    "version": "0.1.0"    
+    "version": "0.1.0"
   },
-    
   "database": {
     "embedded_database": true,
     "engine": null,
@@ -18,10 +17,15 @@
     "connect_timeout": 10,
     "insert_batch_size": 1000
   },
-
   "training": {
     "websocket_update_interval_ms": 1000,
     "default_episodes": 10,
     "default_max_steps_episode": 2000
+  },
+  "device": {
+    "jit_compile": false,
+    "jit_backend": "inductor",
+    "num_workers": 0,
+    "use_mixed_precision": false
   }
 }

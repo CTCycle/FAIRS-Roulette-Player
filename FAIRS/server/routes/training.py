@@ -4,7 +4,8 @@ import asyncio
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, WebSocket, WebSocketDisconnect, status
-from pydantic import BaseModel
+
+from FAIRS.server.schemas.training import TrainingConfig, ResumeConfig
 
 from FAIRS.server.utils.configurations import server_settings
 from FAIRS.server.utils.logger import logger
@@ -15,45 +16,6 @@ from FAIRS.server.utils.services.training.serializer import DataSerializerExtens
 
 
 router = APIRouter(prefix="/training", tags=["training"])
-
-
-###############################################################################
-class TrainingConfig(BaseModel):
-    # Agent parameters
-    perceptive_field_size: int = 64
-    QNet_neurons: int = 64
-    embedding_dimensions: int = 200
-    exploration_rate: float = 0.75
-    exploration_rate_decay: float = 0.995
-    minimum_exploration_rate: float = 0.10
-    discount_rate: float = 0.50
-    model_update_frequency: int = 10
-    # Environment parameters
-    bet_amount: int = 10
-    initial_capital: int = 1000
-    # Dataset parameters
-    use_data_generator: bool = False
-    num_generated_samples: int = 10000
-    sample_size: float = 1.0
-    seed: int = 42
-    # Session parameters
-    episodes: int = 10
-    max_steps_episode: int = 2000
-    batch_size: int = 32
-    replay_buffer_size: int = 1000
-    max_memory_size: int = 10000
-    use_device_GPU: bool = False
-    device_ID: int = 0
-    use_mixed_precision: bool = False
-    learning_rate: float = 0.0001
-    training_seed: int = 42
-    jit_compile: bool = False
-
-
-###############################################################################
-class ResumeConfig(BaseModel):
-    checkpoint: str
-    additional_episodes: int = 10
 
 
 ###############################################################################
