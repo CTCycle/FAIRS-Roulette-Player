@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
 import { Settings, Play, RefreshCw, Cpu, Layers, Database, Activity } from 'lucide-react';
 
-export const TrainingControls: React.FC = () => {
+interface TrainingControlsProps {
+    onTrainingStart?: () => void;
+}
+
+export const TrainingControls: React.FC<TrainingControlsProps> = ({ onTrainingStart }) => {
     const [newConfig, setNewConfig] = useState({
         // Agent
         perceptiveField: 64,
@@ -51,13 +55,73 @@ export const TrainingControls: React.FC = () => {
         }));
     };
 
-    const handleNewSubmit = (e: React.FormEvent) => {
+    const handleNewSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log('Starting new training session with config:', newConfig);
+
+        const config = {
+            perceptive_field_size: Number(newConfig.perceptiveField),
+            QNet_neurons: Number(newConfig.numNeurons),
+            embedding_dimensions: Number(newConfig.embeddingDims),
+            exploration_rate: Number(newConfig.explorationRate),
+            exploration_rate_decay: Number(newConfig.explorationRateDecay),
+            minimum_exploration_rate: Number(newConfig.minExplorationRate),
+            discount_rate: Number(newConfig.discountRate),
+            model_update_frequency: Number(newConfig.modelUpdateFreq),
+            bet_amount: Number(newConfig.betAmount),
+            initial_capital: Number(newConfig.initialCapital),
+            use_data_generator: newConfig.useDataGen,
+            num_generated_samples: Number(newConfig.numGeneratedSamples),
+            sample_size: Number(newConfig.trainSampleSize),
+            seed: Number(newConfig.splitSeed),
+            use_device_GPU: newConfig.deviceGPU,
+            device_ID: Number(newConfig.deviceID),
+        };
+
+        try {
+            const response = await fetch('/training/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(config),
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                console.error('Training start failed:', error);
+                alert(`Failed to start training: ${error.detail || 'Unknown error'}`);
+                return;
+            }
+
+            console.log('Training started successfully');
+            onTrainingStart?.();
+        } catch (err) {
+            console.error('Error starting training:', err);
+            alert('Failed to connect to training server');
+        }
     };
 
-    const handleResume = () => {
-        console.log('Resuming training session with config:', resumeConfig);
+    const handleResume = async () => {
+        try {
+            const response = await fetch('/training/resume', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    checkpoint: '', // TODO: Add checkpoint selector
+                    additional_episodes: Number(resumeConfig.numAdditionalEpisodes),
+                }),
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                console.error('Resume training failed:', error);
+                alert(`Failed to resume training: ${error.detail || 'Unknown error'}`);
+                return;
+            }
+
+            console.log('Resume training started successfully');
+        } catch (err) {
+            console.error('Error resuming training:', err);
+            alert('Failed to connect to training server');
+        }
     };
 
     return (

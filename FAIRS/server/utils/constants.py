@@ -55,3 +55,10 @@ CHECKPOINTS_SUMMARY_COLUMNS = [
     "loss",
     "accuracy",
 ]
+
+# [TRAINING CONSTANTS]
+###############################################################################
+NUMBERS: int = 37
+STATES: int = 47
+PAD_VALUE: int = -1
+CHECKPOINT_PATH = join(RESOURCES_PATH, "checkpoints")
