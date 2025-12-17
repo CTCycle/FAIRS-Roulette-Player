@@ -15,7 +15,8 @@
     "ssl": false,
     "ssl_ca": null,
     "connect_timeout": 10,
-    "insert_batch_size": 1000
+    "insert_batch_size": 1000,
+    "fetch_row_limit": 100
   },
   "training": {
     "websocket_update_interval_ms": 1000,

@@ -3,9 +3,9 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 
-from FAIRS.server.routes.endpoint import router as general_router
 from FAIRS.server.routes.upload import router as upload_router
 from FAIRS.server.routes.training import router as training_router
+from FAIRS.server.routes.database import router as database_router
 from FAIRS.server.utils.configurations import server_settings
 
 ###############################################################################
@@ -15,9 +15,9 @@ app = FastAPI(
     description=server_settings.fastapi.description,
 )
 
-app.include_router(general_router)
 app.include_router(upload_router)
 app.include_router(training_router)
+app.include_router(database_router)
 
 @app.get("/")
 def redirect_to_docs() -> RedirectResponse:

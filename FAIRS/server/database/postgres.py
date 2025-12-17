@@ -121,3 +121,25 @@ class PostgresRepository:
             )
             value = result.scalar() or 0
         return int(value)
+
+    # -------------------------------------------------------------------------
+    def load_paginated(self, table_name: str, offset: int, limit: int) -> pd.DataFrame:
+        with self.engine.connect() as conn:
+            inspector = inspect(conn)
+            if not inspector.has_table(table_name):
+                logger.warning("Table %s does not exist", table_name)
+                return pd.DataFrame()
+            query = sqlalchemy.text(
+                f'SELECT * FROM "{table_name}" LIMIT :limit OFFSET :offset'
+            )
+            data = pd.read_sql(query, conn, params={"limit": limit, "offset": offset})
+        return data
+
+    # -------------------------------------------------------------------------
+    def count_columns(self, table_name: str) -> int:
+        with self.engine.connect() as conn:
+            inspector = inspect(conn)
+            if not inspector.has_table(table_name):
+                return 0
+            columns = inspector.get_columns(table_name)
+        return len(columns)
