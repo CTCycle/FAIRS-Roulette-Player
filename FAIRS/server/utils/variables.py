@@ -3,8 +3,8 @@ from __future__ import annotations
 import os
 from dotenv import load_dotenv
 
-from APP.server.utils.constants import ENV_FILE_PATH
-from APP.server.utils.logger import logger
+from FAIRS.server.utils.constants import ENV_FILE_PATH
+from FAIRS.server.utils.logger import logger
 
 
 # [LOAD ENVIRONMENT VARIABLES]

@@ -10,10 +10,10 @@ from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
 
-from APP.server.utils.configurations import DatabaseSettings
-from APP.server.utils.constants import DATA_PATH, DATABASE_FILENAME
-from APP.server.utils.logger import logger
-from APP.server.database.schema import Base
+from FAIRS.server.utils.configurations import DatabaseSettings
+from FAIRS.server.utils.constants import DATA_PATH, DATABASE_FILENAME
+from FAIRS.server.utils.logger import logger
+from FAIRS.server.database.schema import Base
 
 
 # [SQLITE DATABASE]

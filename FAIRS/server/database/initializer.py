@@ -5,12 +5,12 @@ import urllib.parse
 import sqlalchemy
 from sqlalchemy.exc import SQLAlchemyError
 
-from APP.server.utils.configurations import DatabaseSettings, server_settings
-from APP.server.database.postgres import PostgresRepository
-from APP.server.database.schema import Base
-from APP.server.database.sqlite import SQLiteRepository
-from APP.server.database.utils import normalize_postgres_engine
-from APP.server.utils.logger import logger
+from FAIRS.server.utils.configurations import DatabaseSettings, server_settings
+from FAIRS.server.database.postgres import PostgresRepository
+from FAIRS.server.database.schema import Base
+from FAIRS.server.database.sqlite import SQLiteRepository
+from FAIRS.server.database.utils import normalize_postgres_engine
+from FAIRS.server.utils.logger import logger
 
 
 ###############################################################################

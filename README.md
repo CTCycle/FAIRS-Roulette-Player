@@ -28,7 +28,7 @@ Standard setup:
 # 4. Usage
 Backend (any OS):
 1. Ensure environment variables in `APP/setup/settings/.env` reflect the desired host/port.
-2. From the repo root: `uvicorn APP.server.app:app --host 0.0.0.0 --port 8000`.
+2. From the repo root: `uvicorn FAIRS.server.app:app --host 0.0.0.0 --port 8000`.
 
 Frontend:
 1. `cd APP/client`
@@ -64,4 +64,3 @@ Frontend:
 
 # 5. License
 This project is licensed under the MIT License. See `LICENSE` for details.
-
