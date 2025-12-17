@@ -1,18 +1,19 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any, cast
 
 import pandas as pd
 
-from APP.server.utils.constants import (
-    GEONAMES_TABLE,
-    GEONAMES_COLUMNS,
-    GIBS_LAYERS_TABLE,
-    GIBS_LAYER_COLUMNS,
-    SEARCH_SESSION_COLUMNS,
-    SEARCH_SESSIONS_TABLE,
+from FAIRS.server.database.database import database
+from FAIRS.server.utils.constants import (
+    CHECKPOINTS_SUMMARY_COLUMNS,
+    CHECKPOINTS_SUMMARY_TABLE,
+    PREDICTED_GAMES_COLUMNS,
+    PREDICTED_GAMES_TABLE,
+    ROULETTE_SERIES_COLUMNS,
+    ROULETTE_SERIES_TABLE,
 )
-from APP.server.database.database import database
 
 
 ###############################################################################
@@ -21,28 +22,37 @@ class DataSerializer:
         pass
 
     # -----------------------------------------------------------------------------
-    def upsert_this(self, records: list[dict[str, Any]]) -> None:
-        if not records:
-            return
-        frame = pd.DataFrame.from_records(records)
-        frame = frame.reindex(columns=COLUMNS)
-        frame = frame.where(pd.notnull(frame), cast(Any, None))
-        database.upsert_into_database(frame, GEONAMES_TABLE)
+    def load_roulette_series(self) -> pd.DataFrame:
+        return database.load_from_database(ROULETTE_SERIES_TABLE)
 
     # -----------------------------------------------------------------------------
-    def upsert_gibs_layers(self, layers: list[dict[str, Any]]) -> None:
-        if not layers:
-            return
-        frame = pd.DataFrame.from_records(layers)
-        frame = frame.reindex(columns=GIBS_LAYER_COLUMNS)
-        frame = frame.where(pd.notnull(frame), cast(Any, None))
-        database.upsert_into_database(frame, GIBS_LAYERS_TABLE)
+    def load_predicted_games(self) -> pd.DataFrame:
+        return database.load_from_database(PREDICTED_GAMES_TABLE)
 
     # -----------------------------------------------------------------------------
-    def insert_search_session(self, session: dict[str, Any]) -> None:
-        if not session:
+    def load_checkpoints_summary(self) -> pd.DataFrame:
+        return database.load_from_database(CHECKPOINTS_SUMMARY_TABLE)
+
+    # -----------------------------------------------------------------------------
+    def save_roulette_series(self, dataset: pd.DataFrame) -> None:
+        if dataset.empty:
             return
-        frame = pd.DataFrame.from_records([session])
-        frame = frame.reindex(columns=SEARCH_SESSION_COLUMNS)
+        frame = dataset.reindex(columns=ROULETTE_SERIES_COLUMNS)
         frame = frame.where(pd.notnull(frame), cast(Any, None))
-        database.upsert_into_database(frame, SEARCH_SESSIONS_TABLE)
+        database.save_into_database(frame, ROULETTE_SERIES_TABLE)
+
+    # -----------------------------------------------------------------------------
+    def save_predicted_games(self, dataset: pd.DataFrame) -> None:
+        if dataset.empty:
+            return
+        frame = dataset.reindex(columns=PREDICTED_GAMES_COLUMNS)
+        frame = frame.where(pd.notnull(frame), cast(Any, None))
+        database.save_into_database(frame, PREDICTED_GAMES_TABLE)
+
+    # -----------------------------------------------------------------------------
+    def upsert_checkpoints_summary(self, dataset: pd.DataFrame) -> None:
+        if dataset.empty:
+            return
+        frame = dataset.reindex(columns=CHECKPOINTS_SUMMARY_COLUMNS)
+        frame = frame.where(pd.notnull(frame), cast(Any, None))
+        database.upsert_into_database(frame, CHECKPOINTS_SUMMARY_TABLE)

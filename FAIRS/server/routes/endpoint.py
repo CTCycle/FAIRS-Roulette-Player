@@ -1,21 +1,11 @@
 from __future__ import annotations
 
-import asyncio
-import base64
-import json
-from datetime import datetime, time
-from io import BytesIO
+from collections.abc import Callable
 from typing import Any
 
-from fastapi import APIRouter, Body, HTTPException, status
-from fastapi.encoders import jsonable_encoder
-from fastapi.responses import JSONResponse
-from pydantic import ValidationError
+from fastapi import APIRouter, Body, status
 
-from APP.server.schemas.base import GeneralModel
-
-from APP.server.utils.configurations import server_settings
-from APP.server.utils.logger import logger
+from FAIRS.server.schemas.base import GeneralModel
 
 
 router = APIRouter(prefix="/base", tags=["tags"])
@@ -32,27 +22,16 @@ class Endpoint:
     # -------------------------------------------------------------------------
     def first_method(
         self,
-        payload: GeneralModel | None,
-        response_payload: dict[str, Any] | None,        
-    ) -> dict[str, Any] | None:        
-        if payload:
-            # do something
-            pass
-        try:
-            # do something
-            pass           
-       
-        except (TypeError, ValueError):
-            return None
-    
-        return response_payload 
+        payload: GeneralModel = Body(...),
+    ) -> dict[str, Any]:
+        return {"param_A": payload.param_A, "param_B": payload.param_B}
 
     # -------------------------------------------------------------------------
     def add_routes(self) -> None:
         self.router.add_api_route(
             "/base",
             self.first_method,
-            methods=["POST"], # or get
+            methods=["POST"],
             status_code=status.HTTP_200_OK,
         )
 
@@ -60,4 +39,3 @@ class Endpoint:
 
 base_endpoint = Endpoint(router=router)
 base_endpoint.add_routes()
-

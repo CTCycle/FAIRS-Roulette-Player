@@ -5,7 +5,7 @@ from os.path import abspath, join
 # [PATHS]
 ###############################################################################
 ROOT_DIR = abspath(join(__file__, "../../../.."))
-PROJECT_DIR = join(ROOT_DIR, "APP")
+PROJECT_DIR = join(ROOT_DIR, "FAIRS")
 SETTING_PATH = join(PROJECT_DIR, "settings")
 RESOURCES_PATH = join(PROJECT_DIR, "resources")
 DATA_PATH = join(RESOURCES_PATH, "database")
@@ -26,12 +26,32 @@ CONSTANT = 1.0
 
 # [DATABASE TABLES]
 ###############################################################################
-GEONAMES_TABLE = "TABLE"
+ROULETTE_SERIES_TABLE = "ROULETTE_SERIES"
+PREDICTED_GAMES_TABLE = "PREDICTED_GAMES"
+CHECKPOINTS_SUMMARY_TABLE = "CHECKPOINTS_SUMMARY"
 
 # [DATABASE COLUMNS]
 ###############################################################################
-TABLE_COLUMNS = [
-    "A",
-    "B",
-    "C",
+ROULETTE_SERIES_COLUMNS = ["id", "extraction", "color", "color_code", "position"]
+PREDICTED_GAMES_COLUMNS = ["id", "checkpoint", "extraction", "predicted_action"]
+CHECKPOINTS_SUMMARY_COLUMNS = [
+    "checkpoint",
+    "sample_size",
+    "seed",
+    "precision",
+    "episodes",
+    "max_steps_episode",
+    "batch_size",
+    "jit_compile",
+    "has_tensorboard_logs",
+    "learning_rate",
+    "neurons",
+    "embedding_dimensions",
+    "perceptive_field_size",
+    "exploration_rate",
+    "exploration_rate_decay",
+    "discount_rate",
+    "model_update_frequency",
+    "loss",
+    "accuracy",
 ]

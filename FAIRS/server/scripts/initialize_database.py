@@ -3,9 +3,9 @@ from __future__ import annotations
 import json
 import time
 
-from APP.server.database.initializer import initialize_database
-from APP.server.utils.constants import SERVER_CONFIGURATION_FILE
-from APP.server.utils.logger import logger
+from FAIRS.server.database.initializer import initialize_database
+from FAIRS.server.utils.constants import SERVER_CONFIGURATION_FILE
+from FAIRS.server.utils.logger import logger
 
 
 # -----------------------------------------------------------------------------
