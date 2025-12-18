@@ -13,7 +13,7 @@ from FAIRS.server.database.schema import (
 from FAIRS.server.utils.configurations import server_settings
 
 
-router = APIRouter(prefix="/api/database", tags=["database"])
+router = APIRouter(prefix="/database", tags=["database"])
 
 
 TABLE_REGISTRY: dict[str, tuple[str, Any]] = {
