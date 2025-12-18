@@ -41,7 +41,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
         setError(null);
 
         try {
-            const response = await fetch(`/inference/sessions/${config.sessionId}/step`, {
+            const response = await fetch(`/api/inference/sessions/${config.sessionId}/step`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ extraction }),

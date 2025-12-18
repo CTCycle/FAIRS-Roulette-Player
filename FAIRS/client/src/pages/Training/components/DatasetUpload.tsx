@@ -100,7 +100,7 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
             return;
         }
 
-        const endpoint = '/data/upload?table=ROULETTE_SERIES';
+        const endpoint = '/api/data/upload?table=ROULETTE_SERIES';
 
         onStateChange({
             uploadStatus: 'uploading',

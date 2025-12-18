@@ -52,7 +52,7 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive }
 
     const patchRuntimeSettings = async (nextSettings: TrainingRuntimeSettings) => {
         try {
-            const response = await fetch('/training/settings', {
+            const response = await fetch('/api/training/settings', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(nextSettings),
@@ -73,7 +73,7 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive }
     useEffect(() => {
         const loadSettings = async () => {
             try {
-                const response = await fetch('/training/settings');
+                const response = await fetch('/api/training/settings');
                 if (!response.ok) {
                     return;
                 }
@@ -110,7 +110,7 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive }
             }
 
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${protocol}//${window.location.host}/training/ws`;
+            const wsUrl = `${protocol}//${window.location.host}/api/training/ws`;
             const ws = new WebSocket(wsUrl);
 
             ws.onopen = () => {

@@ -27,7 +27,7 @@ export const InferenceSetup: React.FC<InferenceSetupProps> = ({
     useEffect(() => {
         const loadCheckpoints = async () => {
             try {
-                const response = await fetch('/training/checkpoints');
+                const response = await fetch('/api/training/checkpoints');
                 if (!response.ok) {
                     return;
                 }
@@ -65,7 +65,7 @@ export const InferenceSetup: React.FC<InferenceSetupProps> = ({
         const formData = new FormData();
         formData.append('file', file);
 
-        const response = await fetch('/data/upload?table=PREDICTED_GAMES', {
+        const response = await fetch('/api/data/upload?table=PREDICTED_GAMES', {
             method: 'POST',
             body: formData,
         });
@@ -78,7 +78,7 @@ export const InferenceSetup: React.FC<InferenceSetupProps> = ({
     };
 
     const startSession = async () => {
-        const response = await fetch('/inference/sessions/start', {
+        const response = await fetch('/api/inference/sessions/start', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

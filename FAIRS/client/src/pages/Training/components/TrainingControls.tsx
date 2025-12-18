@@ -73,7 +73,7 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
         };
 
         try {
-            const response = await fetch('/training/start', {
+            const response = await fetch('/api/training/start', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(config),
@@ -96,7 +96,7 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
 
     const handleResume = async () => {
         try {
-            const response = await fetch('/training/resume', {
+            const response = await fetch('/api/training/resume', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
