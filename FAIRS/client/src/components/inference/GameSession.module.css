@@ -138,3 +138,27 @@
 .outcomeLoss {
     color: var(--danger);
 }
+
+.endSessionBtn {
+    background-color: transparent;
+    color: var(--text-secondary);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    transition: all 0.2s;
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    margin-top: var(--spacing-md);
+    width: 100%;
+}
+
+.endSessionBtn:hover {
+    background-color: var(--danger);
+    border-color: var(--danger);
+    color: white;
+}

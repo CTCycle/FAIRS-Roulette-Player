@@ -49,6 +49,7 @@ const InferencePage: React.FC = () => {
                     history={history}
                     onSessionStateChange={handleSessionStateChange}
                     onAddHistoryStep={handleAddHistoryStep}
+                    onEndSession={() => dispatch({ type: 'RESET_INFERENCE_SESSION' })}
                 />
             )}
         </div>
