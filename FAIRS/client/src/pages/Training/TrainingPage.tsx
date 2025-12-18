@@ -28,6 +28,10 @@ const TrainingPage: React.FC = () => {
                         dispatch({ type: 'SET_DATASET_UPLOAD_STATE', payload: updates })
                     }
                     onReset={() => dispatch({ type: 'RESET_DATASET_UPLOAD' })}
+                    newConfig={newConfig}
+                    onNewConfigChange={(updates) =>
+                        dispatch({ type: 'SET_TRAINING_NEW_CONFIG', payload: updates })
+                    }
                 />
                 <TrainingControls
                     newConfig={newConfig}
@@ -42,7 +46,7 @@ const TrainingPage: React.FC = () => {
                 />
             </div>
 
-            <TrainingDashboard isActive={isTraining} />
+            <TrainingDashboard isActive={isTraining} onTrainingEnd={() => setIsTraining(false)} />
         </div>
     );
 };

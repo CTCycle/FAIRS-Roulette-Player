@@ -24,10 +24,12 @@ class RouletteEmbedding(keras.layers.Layer):
         self.embedding_dims = embedding_dims
         self.numbers = numbers
         self.mask_padding = mask_padding
+        # mask_zero=False because we handle masking manually in _compute_mask_internal
+        # and don't want Keras to propagate masks to downstream layers (Flatten doesn't support it)
         self.numbers_embedding = layers.Embedding(
             input_dim=self.numbers,
             output_dim=self.embedding_dims,
-            mask_zero=mask_padding,
+            mask_zero=False,
         )
         self.embedding_scale: Any = keras.ops.sqrt(self.embedding_dims)
 
@@ -37,7 +39,7 @@ class RouletteEmbedding(keras.layers.Layer):
         embedded_numbers *= self.embedding_scale
 
         if self.mask_padding:
-            mask = self.compute_mask(inputs)
+            mask = self._compute_mask_internal(inputs)
             mask = keras.ops.expand_dims(
                 keras.ops.cast(mask, keras.config.floatx()), axis=-1
             )
@@ -47,6 +49,13 @@ class RouletteEmbedding(keras.layers.Layer):
 
     # -------------------------------------------------------------------------
     def compute_mask(self, inputs, previous_mask=None) -> Any:
+        # Do not propagate mask to downstream layers (Flatten doesn't support it)
+        # The mask is only used internally in call() to zero out padding
+        return None
+
+    # -------------------------------------------------------------------------
+    def _compute_mask_internal(self, inputs) -> Any:
+        """Internal method to compute mask for use in call()."""
         mask = keras.ops.not_equal(inputs, PAD_VALUE)
         return mask
 

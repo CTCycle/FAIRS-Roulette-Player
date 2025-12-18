@@ -200,7 +200,8 @@
   padding: 1rem;
   border-top: 2px solid var(--bg-light);
   overflow-y: auto;
-  max-height: calc(100vh - 360px);
+  /* Increased max-height for taller accordions */
+  max-height: calc(100vh - 200px);
 }
 
 .form-group {
