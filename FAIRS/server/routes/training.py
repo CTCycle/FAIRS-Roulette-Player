@@ -52,7 +52,8 @@ class TrainingState:
             try:
                 await ws.send_json({"type": message_type, "data": data})
             except Exception:
-                self.active_websockets.remove(ws)
+                if ws in self.active_websockets:
+                    self.active_websockets.remove(ws)
 
     # -------------------------------------------------------------------------
     async def broadcast_env(self, payload: dict[str, Any]) -> None:
