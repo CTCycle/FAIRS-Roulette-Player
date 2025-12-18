@@ -5,18 +5,19 @@ import { Check, History } from 'lucide-react';
 
 interface GameSessionProps {
     config: GameConfig;
+    sessionState: SessionState;
+    history: GameStep[];
+    onSessionStateChange: (updates: Partial<SessionState>) => void;
+    onAddHistoryStep: (step: GameStep) => void;
 }
 
-export const GameSession: React.FC<GameSessionProps> = ({ config }) => {
-    const [state, setState] = useState<SessionState>({
-        isActive: true,
-        currentCapital: config.initialCapital,
-        currentBet: config.betAmount,
-        history: [],
-        lastPrediction: config.initialPrediction,
-        totalSteps: 0
-    });
-
+export const GameSession: React.FC<GameSessionProps> = ({
+    config,
+    sessionState,
+    history,
+    onSessionStateChange,
+    onAddHistoryStep,
+}) => {
     const [realExtraction, setRealExtraction] = useState<string>('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -60,19 +61,21 @@ export const GameSession: React.FC<GameSessionProps> = ({ config }) => {
                 realExtraction: Number(result.real_extraction),
                 predictedAction: Number(result.predicted_action),
                 predictedActionDesc: String(result.predicted_action_desc),
-                betAmount: state.currentBet,
+                betAmount: sessionState.currentBet,
                 outcome,
                 capitalAfter: newCapital,
                 timestamp: new Date().toLocaleTimeString(),
             };
 
-            setState(prev => ({
-                ...prev,
+            // Update session state via global context
+            onSessionStateChange({
                 currentCapital: newCapital,
-                history: [step, ...prev.history].slice(0, 50),
                 totalSteps: Number(result.step),
                 lastPrediction: result.next_prediction,
-            }));
+            });
+
+            // Add history step via global context
+            onAddHistoryStep(step);
 
             setRealExtraction('');
         } catch (err) {
@@ -83,6 +86,9 @@ export const GameSession: React.FC<GameSessionProps> = ({ config }) => {
         }
     };
 
+    // Use history from props, but reverse for display (newest first)
+    const displayHistory = [...history].reverse().slice(0, 50);
+
     return (
         <div className={styles.sessionContainer}>
             <div className={styles.leftPanel}>
@@ -92,23 +98,23 @@ export const GameSession: React.FC<GameSessionProps> = ({ config }) => {
                         <div className={styles.statItem}>
                             <span className={styles.statLabel}>Current Capital</span>
                             <span className={styles.statValue} style={{ color: 'var(--primary-accent)' }}>
-                                € {state.currentCapital.toFixed(2)}
+                                € {sessionState.currentCapital.toFixed(2)}
                             </span>
                         </div>
                         <div className={styles.statItem}>
                             <span className={styles.statLabel}>Profit/Loss</span>
-                            <span className={`${styles.statValue} ${state.currentCapital >= config.initialCapital ? styles.outcomeWin : styles.outcomeLoss}`}>
-                                {(state.currentCapital - config.initialCapital) >= 0 ? '+' : ''}
-                                € {(state.currentCapital - config.initialCapital).toFixed(2)}
+                            <span className={`${styles.statValue} ${sessionState.currentCapital >= config.initialCapital ? styles.outcomeWin : styles.outcomeLoss}`}>
+                                {(sessionState.currentCapital - config.initialCapital) >= 0 ? '+' : ''}
+                                € {(sessionState.currentCapital - config.initialCapital).toFixed(2)}
                             </span>
                         </div>
                         <div className={styles.statItem}>
                             <span className={styles.statLabel}>Bet Amount</span>
-                            <span className={styles.statValue}>€ {state.currentBet}</span>
+                            <span className={styles.statValue}>€ {sessionState.currentBet}</span>
                         </div>
                         <div className={styles.statItem}>
                             <span className={styles.statLabel}>Steps</span>
-                            <span className={styles.statValue}>{state.totalSteps}</span>
+                            <span className={styles.statValue}>{sessionState.totalSteps}</span>
                         </div>
                     </div>
                 </div>
@@ -117,11 +123,11 @@ export const GameSession: React.FC<GameSessionProps> = ({ config }) => {
                 <div className={styles.predictionCard}>
                     <div className={styles.predictionTitle}>AI Suggestion</div>
                     <div className={styles.predictionValue}>
-                        {state.lastPrediction?.description}
+                        {sessionState.lastPrediction?.description}
                     </div>
-                    {state.lastPrediction?.confidence && (
+                    {sessionState.lastPrediction?.confidence && (
                         <div className={styles.predictionDesc}>
-                            Confidence: {(state.lastPrediction.confidence * 100).toFixed(0)}%
+                            Confidence: {(sessionState.lastPrediction.confidence * 100).toFixed(0)}%
                         </div>
                     )}
                 </div>
@@ -135,7 +141,7 @@ export const GameSession: React.FC<GameSessionProps> = ({ config }) => {
                                     Real Extraction (0-36)
                                 </label>
                                 <input
-                                    type="text" // text to better control parsing
+                                    type="text"
                                     className={styles.numberInput}
                                     value={realExtraction}
                                     onChange={(e) => setRealExtraction(cleanNum(e.target.value))}
@@ -172,7 +178,7 @@ export const GameSession: React.FC<GameSessionProps> = ({ config }) => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {state.history.map((step) => (
+                                {displayHistory.map((step) => (
                                     <tr key={step.step}>
                                         <td>#{step.step}</td>
                                         <td style={{ fontWeight: 'bold' }}>{step.realExtraction}</td>
@@ -183,7 +189,7 @@ export const GameSession: React.FC<GameSessionProps> = ({ config }) => {
                                         <td>{step.capitalAfter.toFixed(2)}</td>
                                     </tr>
                                 ))}
-                                {state.history.length === 0 && (
+                                {displayHistory.length === 0 && (
                                     <tr>
                                         <td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
                                             No history yet. Start playing!

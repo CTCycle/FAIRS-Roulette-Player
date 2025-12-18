@@ -1,68 +1,34 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Settings, Play, RefreshCw, Cpu, Layers, Database, Activity, HardDrive, Save, BarChart2 } from 'lucide-react';
+import type { TrainingNewConfig, TrainingResumeConfig } from '../../../context/AppStateContext';
 
 interface TrainingControlsProps {
+    newConfig: TrainingNewConfig;
+    resumeConfig: TrainingResumeConfig;
+    onNewConfigChange: (updates: Partial<TrainingNewConfig>) => void;
+    onResumeConfigChange: (updates: Partial<TrainingResumeConfig>) => void;
     onTrainingStart?: () => void;
 }
 
-export const TrainingControls: React.FC<TrainingControlsProps> = ({ onTrainingStart }) => {
-    const [newConfig, setNewConfig] = useState({
-        // Agent
-        perceptiveField: 64,
-        numNeurons: 64,
-        embeddingDims: 200,
-        explorationRate: 0.75,
-        explorationRateDecay: 0.995,
-        minExplorationRate: 0.10,
-        discountRate: 0.50,
-        modelUpdateFreq: 10,
-        // Environment
-        betAmount: 10,
-        initialCapital: 1000,
-        // Dataset
-        useDataGen: false,
-        numGeneratedSamples: 10000,
-        trainSampleSize: 1.0,
-        validationSize: 0.20,
-        splitSeed: 42,
-        setShuffle: true,
-        shuffleSize: 256,
-        // Session - Training
-        episodes: 10,
-        maxStepsEpisode: 2000,
-        batchSize: 32,
-        learningRate: 0.0001,
-        trainingSeed: 42,
-        // Session - Device
-        deviceGPU: false,
-        deviceID: 0,
-        // Memory
-        maxMemorySize: 10000,
-        replayBufferSize: 1000,
-        // Checkpointing
-        saveCheckpoints: false,
-        checkpointsFreq: 1,
-        useTensorboard: false
-    });
-
-    const [resumeConfig, setResumeConfig] = useState({
-        numAdditionalEpisodes: 10
-    });
-
+export const TrainingControls: React.FC<TrainingControlsProps> = ({
+    newConfig,
+    resumeConfig,
+    onNewConfigChange,
+    onResumeConfigChange,
+    onTrainingStart,
+}) => {
     const handleNewChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value, type, checked } = e.target;
-        setNewConfig(prev => ({
-            ...prev,
+        onNewConfigChange({
             [name]: type === 'checkbox' ? checked : value
-        }));
+        } as Partial<TrainingNewConfig>);
     };
 
     const handleResumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-        setResumeConfig(prev => ({
-            ...prev,
-            [name]: value
-        }));
+        onResumeConfigChange({
+            [name]: Number(value)
+        } as Partial<TrainingResumeConfig>);
     };
 
     const handleNewSubmit = async (e: React.FormEvent) => {
