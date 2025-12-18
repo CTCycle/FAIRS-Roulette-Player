@@ -1,20 +1,28 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import type { GameConfig } from '../../types/inference';
+import type { InferenceSetupState } from '../../context/AppStateContext';
 import styles from './InferenceSetup.module.css';
 import { Play } from 'lucide-react';
 
 interface InferenceSetupProps {
+    setup: InferenceSetupState;
+    onSetupChange: (updates: Partial<InferenceSetupState>) => void;
     onStartSession: (config: GameConfig) => void;
 }
 
-export const InferenceSetup: React.FC<InferenceSetupProps> = ({ onStartSession }) => {
-    const [initialCapital, setInitialCapital] = useState<number>(100);
-    const [betAmount, setBetAmount] = useState<number>(1);
-    const [checkpoint, setCheckpoint] = useState<string>('');
+export const InferenceSetup: React.FC<InferenceSetupProps> = ({
+    setup,
+    onSetupChange,
+    onStartSession,
+}) => {
+    const { initialCapital, betAmount, checkpoint, datasetFileMetadata } = setup;
+
+    // Keep actual File object in local state (not serializable for context)
     const [datasetFile, setDatasetFile] = useState<File | null>(null);
     const [checkpoints, setCheckpoints] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         const loadCheckpoints = async () => {
@@ -26,8 +34,8 @@ export const InferenceSetup: React.FC<InferenceSetupProps> = ({ onStartSession }
                 const data = await response.json();
                 if (Array.isArray(data)) {
                     setCheckpoints(data);
-                    if (data.length > 0) {
-                        setCheckpoint(String(data[0]));
+                    if (data.length > 0 && !checkpoint) {
+                        onSetupChange({ checkpoint: String(data[0]) });
                     }
                 }
             } catch (err) {
@@ -36,11 +44,19 @@ export const InferenceSetup: React.FC<InferenceSetupProps> = ({ onStartSession }
         };
 
         loadCheckpoints();
-    }, []);
+    }, [checkpoint, onSetupChange]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
-            setDatasetFile(e.target.files[0]);
+            const file = e.target.files[0];
+            setDatasetFile(file);
+            onSetupChange({
+                datasetFileMetadata: {
+                    name: file.name,
+                    size: file.size,
+                    type: file.type,
+                },
+            });
             setError(null);
         }
     };
@@ -123,7 +139,7 @@ export const InferenceSetup: React.FC<InferenceSetupProps> = ({ onStartSession }
                 <select
                     className={styles.select}
                     value={checkpoint}
-                    onChange={(e) => setCheckpoint(e.target.value)}
+                    onChange={(e) => onSetupChange({ checkpoint: e.target.value })}
                     disabled={checkpoints.length === 0}
                 >
                     {checkpoints.length === 0 ? (
@@ -142,7 +158,7 @@ export const InferenceSetup: React.FC<InferenceSetupProps> = ({ onStartSession }
                     type="number"
                     className={styles.input}
                     value={initialCapital}
-                    onChange={(e) => setInitialCapital(Number(e.target.value))}
+                    onChange={(e) => onSetupChange({ initialCapital: Number(e.target.value) })}
                     min="1"
                 />
             </div>
@@ -153,7 +169,7 @@ export const InferenceSetup: React.FC<InferenceSetupProps> = ({ onStartSession }
                     type="number"
                     className={styles.input}
                     value={betAmount}
-                    onChange={(e) => setBetAmount(Number(e.target.value))}
+                    onChange={(e) => onSetupChange({ betAmount: Number(e.target.value) })}
                     min="1"
                 />
             </div>
@@ -163,14 +179,17 @@ export const InferenceSetup: React.FC<InferenceSetupProps> = ({ onStartSession }
                 <div className={styles.fileInputWrapper}>
                     <input
                         type="file"
+                        ref={fileInputRef}
                         accept=".csv,.xlsx"
                         onChange={handleFileChange}
                         className={styles.input}
                         style={{ width: '100%' }}
                     />
                 </div>
-                {datasetFile && (
-                    <span className={styles.uploadedFile}>Selected: {datasetFile.name}</span>
+                {(datasetFile || datasetFileMetadata) && (
+                    <span className={styles.uploadedFile}>
+                        Selected: {datasetFile?.name || datasetFileMetadata?.name}
+                    </span>
                 )}
             </div>
 
@@ -180,7 +199,11 @@ export const InferenceSetup: React.FC<InferenceSetupProps> = ({ onStartSession }
                 </div>
             )}
 
-            <button className={styles.button} onClick={handleStart} disabled={!datasetFile || !checkpoint || isLoading}>
+            <button
+                className={styles.button}
+                onClick={handleStart}
+                disabled={(!datasetFile && !datasetFileMetadata) || !checkpoint || isLoading}
+            >
                 <Play size={20} />
                 {isLoading ? 'Starting...' : 'Start Session'}
             </button>

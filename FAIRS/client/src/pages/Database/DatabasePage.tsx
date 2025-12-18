@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { RefreshCw, Database, Table2 } from 'lucide-react';
+import { useAppState } from '../../context/AppStateContext';
 import './Database.css';
 
 interface TableInfo {
@@ -7,25 +8,11 @@ interface TableInfo {
     verbose_name: string;
 }
 
-interface TableStats {
-    table_name: string;
-    verbose_name: string;
-    row_count: number;
-    column_count: number;
-}
-
-interface TableData {
-    columns: string[];
-    rows: Record<string, unknown>[];
-    offset: number;
-    limit: number;
-}
-
 const DatabasePage: React.FC = () => {
+    const { state, dispatch } = useAppState();
+    const { selectedTable, tableData, tableStats } = state.database;
+
     const [tables, setTables] = useState<TableInfo[]>([]);
-    const [selectedTable, setSelectedTable] = useState<string>('');
-    const [tableData, setTableData] = useState<TableData | null>(null);
-    const [tableStats, setTableStats] = useState<TableStats | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -65,25 +52,25 @@ const DatabasePage: React.FC = () => {
                 statsResponse.json()
             ]);
 
-            setTableData(data);
-            setTableStats(stats);
+            dispatch({ type: 'SET_DATABASE_TABLE_DATA', payload: data });
+            dispatch({ type: 'SET_DATABASE_TABLE_STATS', payload: stats });
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Unknown error');
-            setTableData(null);
-            setTableStats(null);
+            dispatch({ type: 'SET_DATABASE_TABLE_DATA', payload: null });
+            dispatch({ type: 'SET_DATABASE_TABLE_STATS', payload: null });
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [dispatch]);
 
     const handleTableChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
         const tableName = event.target.value;
-        setSelectedTable(tableName);
+        dispatch({ type: 'SET_DATABASE_SELECTED_TABLE', payload: tableName });
         if (tableName) {
             fetchTableData(tableName);
         } else {
-            setTableData(null);
-            setTableStats(null);
+            dispatch({ type: 'SET_DATABASE_TABLE_DATA', payload: null });
+            dispatch({ type: 'SET_DATABASE_TABLE_STATS', payload: null });
         }
     };
 
