@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from io import BytesIO
+import math
 from typing import Any, Literal
 
 import gymnasium as gym
 import numpy as np
 import pandas as pd
+from PIL import Image, ImageDraw, ImageFont
 from gymnasium import spaces
 
 from FAIRS.server.utils.constants import NUMBERS, PAD_VALUE, STATES
@@ -159,6 +162,146 @@ class BetsAndRewards:
 
 
 ###############################################################################
+class RouletteWheelRenderer:
+    def __init__(self, red_numbers: list[int], black_numbers: list[int]) -> None:
+        self.red_numbers = set(red_numbers)
+        self.black_numbers = set(black_numbers)
+        self.odd_numbers = {n for n in range(1, NUMBERS) if n % 2 == 1}
+        self.even_numbers = {n for n in range(1, NUMBERS) if n % 2 == 0}
+        self.low_numbers = {n for n in range(1, 19)}
+        self.high_numbers = {n for n in range(19, NUMBERS)}
+        self.first_dozen_numbers = {n for n in range(1, 13)}
+        self.second_dozen_numbers = {n for n in range(13, 25)}
+        self.third_dozen_numbers = {n for n in range(25, NUMBERS)}
+
+        self.size = 720
+        self.background_color = (15, 23, 42, 255)
+        self.base_green = (0, 147, 60, 235)
+        self.base_red = (227, 29, 43, 235)
+        self.base_black = (26, 26, 26, 235)
+        self.action_highlight = (124, 58, 237, 120)
+        self.extraction_highlight = (250, 204, 21, 160)
+        self.label_color = (255, 255, 255, 230)
+        self.rim_color = (226, 232, 240, 160)
+
+        self.font = ImageFont.load_default()
+
+    # -------------------------------------------------------------------------
+    def render(
+        self,
+        episode: int,
+        time_step: int,
+        action: int,
+        extracted_number: int,
+        capital: int | float,
+        reward: int | float,
+    ) -> bytes:
+        image = Image.new("RGBA", (self.size, self.size), self.background_color)
+        draw = ImageDraw.Draw(image)
+
+        center_x = self.size / 2
+        center_y = self.size / 2
+        radius = int(self.size * 0.38)
+        label_radius = int(self.size * 0.43)
+        inner_radius = int(self.size * 0.16)
+        rim_radius = radius + int(self.size * 0.015)
+
+        bbox = (
+            int(center_x - radius),
+            int(center_y - radius),
+            int(center_x + radius),
+            int(center_y + radius),
+        )
+        rim_bbox = (
+            int(center_x - rim_radius),
+            int(center_y - rim_radius),
+            int(center_x + rim_radius),
+            int(center_y + rim_radius),
+        )
+
+        highlight_numbers = self.get_action_highlights(action)
+        degrees_per_slice = 360.0 / float(NUMBERS)
+        start_angle_offset = -90.0
+
+        draw.ellipse(rim_bbox, outline=self.rim_color, width=3)
+
+        for number in range(NUMBERS):
+            start = start_angle_offset + number * degrees_per_slice
+            end = start + degrees_per_slice
+            base_color = self.get_number_color(number)
+            draw.pieslice(bbox, start=start, end=end, fill=base_color)
+
+            if number in highlight_numbers:
+                draw.pieslice(bbox, start=start, end=end, fill=self.action_highlight)
+            if number == extracted_number:
+                draw.pieslice(bbox, start=start, end=end, fill=self.extraction_highlight)
+
+            mid_angle = (start + end) / 2.0
+            angle_rad = math.radians(mid_angle)
+            label_x = center_x + label_radius * math.cos(angle_rad)
+            label_y = center_y + label_radius * math.sin(angle_rad)
+            label = str(number)
+            left, top, right, bottom = draw.textbbox((0, 0), label, font=self.font)
+            text_width = right - left
+            text_height = bottom - top
+            draw.text(
+                (label_x - text_width / 2, label_y - text_height / 2),
+                label,
+                font=self.font,
+                fill=self.label_color,
+            )
+
+        inner_bbox = (
+            int(center_x - inner_radius),
+            int(center_y - inner_radius),
+            int(center_x + inner_radius),
+            int(center_y + inner_radius),
+        )
+        draw.ellipse(inner_bbox, fill=self.background_color, outline=self.rim_color, width=2)
+
+        header = f"Episode {episode + 1} • Step {time_step}"
+        footer = f"Capital: {capital} • Reward: {reward} • Extracted: {extracted_number}"
+        draw.text((20, 20), header, font=self.font, fill=self.label_color)
+        draw.text((20, self.size - 30), footer, font=self.font, fill=self.label_color)
+
+        buffer = BytesIO()
+        image.save(buffer, format="PNG", optimize=True)
+        return buffer.getvalue()
+
+    # -------------------------------------------------------------------------
+    def get_number_color(self, number: int) -> tuple[int, int, int, int]:
+        if number == 0:
+            return self.base_green
+        if number in self.red_numbers:
+            return self.base_red
+        return self.base_black
+
+    # -------------------------------------------------------------------------
+    def get_action_highlights(self, action: int) -> set[int]:
+        if 0 <= action <= 36:
+            return {action}
+        if action == 37:
+            return set(self.red_numbers)
+        if action == 38:
+            return set(self.black_numbers)
+        if action == 40:
+            return set(self.odd_numbers)
+        if action == 41:
+            return set(self.even_numbers)
+        if action == 42:
+            return set(self.low_numbers)
+        if action == 43:
+            return set(self.high_numbers)
+        if action == 44:
+            return set(self.first_dozen_numbers)
+        if action == 45:
+            return set(self.second_dozen_numbers)
+        if action == 46:
+            return set(self.third_dozen_numbers)
+        return set()
+
+
+###############################################################################
 class RouletteEnvironment(gym.Env):
     def __init__(
         self, data: pd.DataFrame, configuration: dict[str, Any], checkpoint_path: str
@@ -177,6 +320,7 @@ class RouletteEnvironment(gym.Env):
 
         self.black_numbers = self.player.black_numbers
         self.red_numbers = self.player.red_numbers
+        self.renderer = RouletteWheelRenderer(self.red_numbers, self.black_numbers)
 
         self.numbers = list(range(NUMBERS))
         self.action_space = spaces.Discrete(STATES)
@@ -190,6 +334,17 @@ class RouletteEnvironment(gym.Env):
         self.steps = 0
         self.reward = 0
         self.done = False
+
+    # -------------------------------------------------------------------------
+    def render_frame(self, episode: int, time_step: int, action: int, extracted_number: int) -> bytes:
+        return self.renderer.render(
+            episode=episode,
+            time_step=time_step,
+            action=action,
+            extracted_number=extracted_number,
+            capital=self.capital,
+            reward=self.reward,
+        )
 
     # -------------------------------------------------------------------------
     def reset(self, start_over: bool = False, seed: int | None = None) -> np.ndarray:

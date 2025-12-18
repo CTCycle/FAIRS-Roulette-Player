@@ -24,13 +24,27 @@ class TrainingState:
         self.is_training = False
         self.current_trainer: DQNTraining | None = None
         self.active_websockets: list[WebSocket] = []
-        self.latest_stats: dict[str, Any] = {}
+        self.latest_stats: dict[str, Any] = {
+            "epoch": 0,
+            "total_epochs": 0,
+            "time_step": 0,
+            "loss": 0.0,
+            "rmse": 0.0,
+            "reward": 0,
+            "total_reward": 0,
+            "capital": 0,
+            "status": "idle",
+        }
+        self.history_points: list[dict[str, Any]] = []
+        self.max_history_points = 2000
+        self.latest_env: dict[str, Any] = {}
         self.runtime_settings = TrainingRuntimeSettings()
 
     # -------------------------------------------------------------------------
     async def broadcast_update(self, message: dict[str, Any]) -> None:
-        self.latest_stats = message
-        await self.broadcast_message("update", message)
+        self.latest_stats = {**self.latest_stats, **message}
+        self.add_history_point(self.latest_stats)
+        await self.broadcast_message("update", self.latest_stats)
 
     # -------------------------------------------------------------------------
     async def broadcast_message(self, message_type: str, data: dict[str, Any]) -> None:
@@ -39,6 +53,37 @@ class TrainingState:
                 await ws.send_json({"type": message_type, "data": data})
             except Exception:
                 self.active_websockets.remove(ws)
+
+    # -------------------------------------------------------------------------
+    async def broadcast_env(self, payload: dict[str, Any]) -> None:
+        self.latest_env = payload
+        await self.broadcast_message("env", payload)
+
+    # -------------------------------------------------------------------------
+    def add_history_point(self, stats: dict[str, Any]) -> None:
+        if stats.get("status") != "training":
+            return
+        time_step = stats.get("time_step")
+        loss = stats.get("loss")
+        rmse = stats.get("rmse")
+        epoch = stats.get("epoch")
+        if not isinstance(time_step, int):
+            return
+        if not isinstance(loss, (int, float)) or not isinstance(rmse, (int, float)):
+            return
+        if not isinstance(epoch, int):
+            return
+        if time_step <= 0:
+            return
+
+        point = {"time_step": time_step, "loss": float(loss), "rmse": float(rmse), "epoch": epoch}
+        if self.history_points and self.history_points[-1].get("time_step") == time_step:
+            self.history_points[-1] = point
+        else:
+            self.history_points.append(point)
+
+        if len(self.history_points) > self.max_history_points:
+            self.history_points = self.history_points[-self.max_history_points:]
 
 
 
@@ -75,6 +120,8 @@ class TrainingEndpoint:
             render_environment=configuration["render_environment"],
             render_update_frequency=configuration["render_update_frequency"],
         )
+        self.training_state.history_points = []
+        self.training_state.latest_env = {}
         background_tasks.add_task(self.run_training_task, configuration)
 
         return {
@@ -122,7 +169,7 @@ class TrainingEndpoint:
                 await self.training_state.broadcast_update(stats)
 
             async def ws_env_callback(payload: dict[str, Any]) -> None:
-                await self.training_state.broadcast_message("env", payload)
+                await self.training_state.broadcast_env(payload)
 
             model, history = await trainer.train_model(
                 Q_model,
@@ -141,15 +188,10 @@ class TrainingEndpoint:
 
             # Notify completion
             await self.training_state.broadcast_update({
+                "status": "completed",
+                "message": "Training completed",
                 "epoch": configuration.get("episodes", 10),
                 "total_epochs": configuration.get("episodes", 10),
-                "time_step": 0,
-                "loss": history["history"]["loss"][-1] if history["history"]["loss"] else 0,
-                "rmse": history["history"]["metrics"][-1] if history["history"]["metrics"] else 0,
-                "reward": 0,
-                "total_reward": 0,
-                "capital": 0,
-                "status": "completed",
             })
 
             logger.info("Training completed successfully")
@@ -176,6 +218,8 @@ class TrainingEndpoint:
                 detail="Training is already in progress.",
             )
 
+        self.training_state.history_points = []
+        self.training_state.latest_env = {}
         background_tasks.add_task(
             self.run_resume_task, config.checkpoint, config.additional_episodes
         )
@@ -223,7 +267,7 @@ class TrainingEndpoint:
                 await self.training_state.broadcast_update(stats)
 
             async def ws_env_callback(payload: dict[str, Any]) -> None:
-                await self.training_state.broadcast_message("env", payload)
+                await self.training_state.broadcast_env(payload)
 
             model, history = await trainer.resume_training(
                 model,
@@ -264,6 +308,8 @@ class TrainingEndpoint:
         return {
             "is_training": self.training_state.is_training,
             "latest_stats": self.training_state.latest_stats,
+            "history": self.training_state.history_points,
+            "latest_env": self.training_state.latest_env,
             "active_connections": len(self.training_state.active_websockets),
             "runtime_settings": self.training_state.runtime_settings.model_dump(),
         }
@@ -314,6 +360,8 @@ class TrainingEndpoint:
                     "is_training": self.training_state.is_training,
                     "latest_stats": self.training_state.latest_stats,
                     "runtime_settings": self.training_state.runtime_settings.model_dump(),
+                    "history": self.training_state.history_points,
+                    "latest_env": self.training_state.latest_env,
                 }
             })
 
