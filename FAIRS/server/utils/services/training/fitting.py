@@ -52,6 +52,36 @@ class DQNTraining:
         self.render_update_frequency = render_update_frequency
 
     # -------------------------------------------------------------------------
+    async def maybe_send_environment_update(
+        self,
+        ws_env_callback: Callable[[dict[str, Any]], Any] | None,
+        episode: int,
+        time_step: int,
+        action: int,
+        extraction: int,
+        reward: int | float,
+        total_reward: int | float,
+        capital: int | float,
+    ) -> None:
+        if not ws_env_callback or not self.render_environment:
+            return
+        if time_step % self.render_update_frequency != 0:
+            return
+
+        try:
+            await ws_env_callback({
+                "episode": episode + 1,
+                "time_step": time_step,
+                "action": int(action),
+                "extraction": int(extraction),
+                "reward": reward,
+                "total_reward": total_reward,
+                "capital": capital,
+            })
+        except Exception:
+            pass
+
+    # -------------------------------------------------------------------------
     def update_session_stats(
         self,
         scores: dict,
@@ -181,23 +211,16 @@ class DQNTraining:
                 if time_step % self.update_frequency == 0:
                     target_model.set_weights(model.get_weights())
 
-                if (
-                    ws_env_callback
-                    and self.render_environment
-                    and time_step % self.render_update_frequency == 0
-                ):
-                    try:
-                        await ws_env_callback({
-                            "episode": episode + 1,
-                            "time_step": time_step,
-                            "action": int(action),
-                            "extraction": int(extraction),
-                            "reward": reward,
-                            "total_reward": total_reward,
-                            "capital": environment.capital,
-                        })
-                    except Exception:
-                        pass
+                await self.maybe_send_environment_update(
+                    ws_env_callback,
+                    episode,
+                    time_step,
+                    int(action),
+                    int(extraction),
+                    reward,
+                    total_reward,
+                    environment.capital,
+                )
 
                 # Send WebSocket update at configured interval
                 if ws_callback and self.should_send_ws_update():
