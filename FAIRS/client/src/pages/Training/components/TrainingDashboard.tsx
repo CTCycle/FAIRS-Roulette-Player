@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Activity, Zap, TrendingUp, DollarSign, Target, Clock, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
 
+import { TrainingLossChart, type TrainingHistoryPoint } from './TrainingLossChart';
+
 interface TrainingStats {
     epoch: number;
     total_epochs: number;
@@ -19,9 +21,29 @@ interface TrainingRuntimeSettings {
     render_update_frequency: number;
 }
 
+interface TrainingEnvPayload {
+    episode: number;
+    time_step: number;
+    action: number;
+    extraction: number;
+    reward: number;
+    total_reward: number;
+    capital: number;
+    image_base64?: string;
+    image_mime?: string;
+}
+
+interface TrainingConnectionPayload {
+    is_training: boolean;
+    latest_stats: TrainingStats;
+    runtime_settings?: TrainingRuntimeSettings;
+    history?: TrainingHistoryPoint[];
+    latest_env?: TrainingEnvPayload;
+}
+
 interface WebSocketMessage {
     type: 'connection' | 'update' | 'pong' | 'ping' | 'settings' | 'env';
-    data?: TrainingStats | { is_training: boolean; latest_stats: TrainingStats; runtime_settings?: TrainingRuntimeSettings } | TrainingRuntimeSettings;
+    data?: TrainingStats | TrainingConnectionPayload | TrainingRuntimeSettings | TrainingEnvPayload;
 }
 
 interface TrainingDashboardProps {
@@ -47,9 +69,13 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
         render_environment: false,
         render_update_frequency: 50,
     });
+    const [historyPoints, setHistoryPoints] = useState<TrainingHistoryPoint[]>([]);
+    const [envPayload, setEnvPayload] = useState<TrainingEnvPayload | null>(null);
     const wsRef = useRef<WebSocket | null>(null);
     const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const settingsUpdateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const maxHistoryPoints = 2000;
 
     const patchRuntimeSettings = async (nextSettings: TrainingRuntimeSettings) => {
         try {
@@ -106,6 +132,9 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
             return;
         }
 
+        setHistoryPoints([]);
+        setEnvPayload(null);
+
         const connectWebSocket = () => {
             if (wsRef.current?.readyState === WebSocket.OPEN) {
                 return;
@@ -125,22 +154,46 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                     const message: WebSocketMessage = JSON.parse(event.data);
 
                     if (message.type === 'connection' && message.data) {
-                        const connData = message.data as { is_training: boolean; latest_stats: TrainingStats; runtime_settings?: TrainingRuntimeSettings };
+                        const connData = message.data as TrainingConnectionPayload;
                         if (connData.latest_stats && Object.keys(connData.latest_stats).length > 0) {
                             setStats(connData.latest_stats);
                         }
                         if (connData.runtime_settings) {
                             setRuntimeSettings(connData.runtime_settings);
                         }
+                        if (connData.history && Array.isArray(connData.history)) {
+                            setHistoryPoints(connData.history.slice(-maxHistoryPoints));
+                        }
+                        if (connData.latest_env && typeof connData.latest_env === 'object') {
+                            setEnvPayload(connData.latest_env);
+                        }
                     } else if (message.type === 'update' && message.data) {
                         const updatedStats = message.data as TrainingStats;
                         setStats(updatedStats);
+                        if (updatedStats.status === 'training' && updatedStats.time_step > 0) {
+                            const nextPoint: TrainingHistoryPoint = {
+                                time_step: updatedStats.time_step,
+                                loss: updatedStats.loss,
+                                rmse: updatedStats.rmse,
+                                epoch: updatedStats.epoch,
+                            };
+                            setHistoryPoints((prev) => {
+                                if (prev.length && prev[prev.length - 1].time_step === nextPoint.time_step) {
+                                    const next = prev.slice(0, -1).concat([nextPoint]);
+                                    return next;
+                                }
+                                const next = prev.concat([nextPoint]);
+                                return next.length > maxHistoryPoints ? next.slice(-maxHistoryPoints) : next;
+                            });
+                        }
                         // Notify parent when training ends
                         if (updatedStats.status === 'completed' || updatedStats.status === 'error') {
                             onTrainingEnd?.();
                         }
                     } else if (message.type === 'settings' && message.data) {
                         setRuntimeSettings(message.data as TrainingRuntimeSettings);
+                    } else if (message.type === 'env' && message.data) {
+                        setEnvPayload(message.data as TrainingEnvPayload);
                     } else if (message.type === 'ping') {
                         ws.send('ping');
                     }
@@ -211,6 +264,10 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                 return 'Waiting to start';
         }
     };
+
+    const envImageSrc = envPayload?.image_base64
+        ? `data:${envPayload.image_mime || 'image/png'};base64,${envPayload.image_base64}`
+        : null;
 
     return (
         <div className="training-dashboard">
@@ -350,6 +407,37 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                         <span className="metric-value">{stats.time_step}</span>
                     </div>
                 </div>
+            </div>
+
+            <div className={`dashboard-visuals ${runtimeSettings.render_environment ? 'with-env' : ''}`}>
+                <div className="visual-card">
+                    <div className="visual-card-header">
+                        <span className="visual-card-title">Real-time Loss</span>
+                        <div className="visual-card-legend">
+                            <span className="legend-item"><span className="legend-dot loss"></span>Loss</span>
+                            <span className="legend-item"><span className="legend-dot rmse"></span>RMSE</span>
+                        </div>
+                    </div>
+                    <TrainingLossChart points={historyPoints} />
+                </div>
+
+                {runtimeSettings.render_environment && (
+                    <div className="visual-card">
+                        <div className="visual-card-header">
+                            <span className="visual-card-title">Environment</span>
+                            <span className="visual-card-subtitle">
+                                {envPayload ? `Episode ${envPayload.episode} • Step ${envPayload.time_step}` : 'Waiting for frames...'}
+                            </span>
+                        </div>
+                        <div className="env-frame">
+                            {envImageSrc ? (
+                                <img className="env-image" src={envImageSrc} alt="Roulette environment rendering" />
+                            ) : (
+                                <div className="training-chart-empty">Waiting for environment frames...</div>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import asyncio
 import time
 from collections.abc import Callable
@@ -55,6 +56,7 @@ class DQNTraining:
     async def maybe_send_environment_update(
         self,
         ws_env_callback: Callable[[dict[str, Any]], Any] | None,
+        environment: RouletteEnvironment,
         episode: int,
         time_step: int,
         action: int,
@@ -69,6 +71,7 @@ class DQNTraining:
             return
 
         try:
+            image_bytes = environment.render_frame(episode, time_step, action, extraction)
             await ws_env_callback({
                 "episode": episode + 1,
                 "time_step": time_step,
@@ -77,6 +80,8 @@ class DQNTraining:
                 "reward": reward,
                 "total_reward": total_reward,
                 "capital": capital,
+                "image_base64": base64.b64encode(image_bytes).decode("ascii"),
+                "image_mime": "image/png",
             })
         except Exception:
             pass
@@ -213,6 +218,7 @@ class DQNTraining:
 
                 await self.maybe_send_environment_update(
                     ws_env_callback,
+                    environment,
                     episode,
                     time_step,
                     int(action),
