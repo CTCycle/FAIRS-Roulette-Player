@@ -31,7 +31,7 @@ const InferencePage: React.FC = () => {
     };
 
     return (
-        <div style={{ height: '100%', padding: '1rem' }}>
+        <div style={{ height: '100%', padding: '2rem' }}>
             {!gameConfig ? (
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                     <InferenceSetup

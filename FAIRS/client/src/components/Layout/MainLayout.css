@@ -1,13 +1,16 @@
 .main-layout {
     display: flex;
-    min-height: 100vh;
+    height: 100vh;
+    overflow: hidden;
 }
 
 .content-area {
     flex: 1;
     margin-left: 250px;
     /* Width of sidebar */
-    padding: var(--spacing-xl);
+    /* Padding removed to allow pages to control their full layout */
     background-color: var(--bg-primary);
-    overflow-y: auto;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }

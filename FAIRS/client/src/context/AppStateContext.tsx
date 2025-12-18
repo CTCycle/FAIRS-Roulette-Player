@@ -63,6 +63,7 @@ export interface TrainingNewConfig {
     saveCheckpoints: boolean;
     checkpointsFreq: number;
     useTensorboard: boolean;
+    numWorkers: number;
 }
 
 export interface TrainingResumeConfig {
@@ -142,6 +143,7 @@ const initialNewConfig: TrainingNewConfig = {
     saveCheckpoints: false,
     checkpointsFreq: 1,
     useTensorboard: false,
+    numWorkers: 4,
 };
 
 const initialResumeConfig: TrainingResumeConfig = {
