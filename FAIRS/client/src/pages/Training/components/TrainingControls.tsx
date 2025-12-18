@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, Play, RefreshCw, Cpu, Layers, Database, Activity, HardDrive, Save, BarChart2 } from 'lucide-react';
+import { Settings, Play, RefreshCw, Cpu, Layers, Activity, HardDrive, Save, BarChart2 } from 'lucide-react';
 import type { TrainingNewConfig, TrainingResumeConfig } from '../../../context/AppStateContext';
 
 interface TrainingControlsProps {
@@ -198,42 +198,6 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
                                 </div>
                             </fieldset>
 
-                            {/* DATASET GROUP */}
-                            <fieldset className="control-fieldset">
-                                <legend className="control-legend" style={{ color: '#D4AF37' }}>
-                                    <Database size={16} /> Training Data
-                                </legend>
-
-                                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <input type="checkbox" id="useDataGen" name="useDataGen" checked={newConfig.useDataGen} onChange={handleNewChange} />
-                                    <label htmlFor="useDataGen" className="form-label" style={{ marginBottom: 0 }}>Use data generator (N samples)</label>
-                                    {newConfig.useDataGen && (
-                                        <input type="number" name="numGeneratedSamples" value={newConfig.numGeneratedSamples} onChange={handleNewChange} className="form-input" style={{ width: '100px', marginLeft: 'auto' }} />
-                                    )}
-                                </div>
-
-                                <div className="param-grid" style={{ marginTop: '0.5rem' }}>
-                                    <div className="form-group">
-                                        <label className="form-label">Train Sample Size</label>
-                                        <input type="number" name="trainSampleSize" value={newConfig.trainSampleSize} onChange={handleNewChange} className="form-input" step="0.05" max="1.0" />
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label">Validation Size</label>
-                                        <input type="number" name="validationSize" value={newConfig.validationSize} onChange={handleNewChange} className="form-input" step="0.05" max="1.0" />
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label">Split Seed</label>
-                                        <input type="number" name="splitSeed" value={newConfig.splitSeed} onChange={handleNewChange} className="form-input" />
-                                    </div>
-                                </div>
-                                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
-                                    <input type="checkbox" id="setShuffle" name="setShuffle" checked={newConfig.setShuffle} onChange={handleNewChange} />
-                                    <label htmlFor="setShuffle" className="form-label" style={{ marginBottom: 0 }}>Shuffle with buffer</label>
-                                    {newConfig.setShuffle && (
-                                        <input type="number" name="shuffleSize" value={newConfig.shuffleSize} onChange={handleNewChange} className="form-input" style={{ width: '80px', marginLeft: 'auto' }} />
-                                    )}
-                                </div>
-                            </fieldset>
 
                             {/* SESSION GROUP */}
                             <fieldset className="control-fieldset">

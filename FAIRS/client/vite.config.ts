@@ -14,9 +14,16 @@ export default defineConfig({
         port: 7861,
         strictPort: false,
         proxy: {
+            '/api/training/ws': {
+                target: apiTarget,
+                ws: true,
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/api/, ''),
+            },
             '/api': {
                 target: apiTarget,
                 changeOrigin: true,
+                ws: true,
                 rewrite: (path) => path.replace(/^\/api/, ''),
             },
         },
@@ -26,9 +33,16 @@ export default defineConfig({
         port: 7861,
         strictPort: false,
         proxy: {
+            '/api/training/ws': {
+                target: apiTarget,
+                ws: true,
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/api/, ''),
+            },
             '/api': {
                 target: apiTarget,
                 changeOrigin: true,
+                ws: true,
                 rewrite: (path) => path.replace(/^\/api/, ''),
             },
         },

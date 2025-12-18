@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
-import { Upload, Folder, File, X } from 'lucide-react';
-import type { FileMetadata } from '../../../context/AppStateContext';
+import { Upload, Folder, File, X, Database } from 'lucide-react';
+import type { FileMetadata, TrainingNewConfig } from '../../../context/AppStateContext';
 
 interface DatasetUploadProps {
     files: FileMetadata[];
@@ -12,6 +12,9 @@ interface DatasetUploadProps {
         uploadMessage?: string;
     }) => void;
     onReset: () => void;
+    // New props for generator config
+    newConfig: TrainingNewConfig;
+    onNewConfigChange: (updates: Partial<TrainingNewConfig>) => void;
 }
 
 export const DatasetUpload: React.FC<DatasetUploadProps> = ({
@@ -20,6 +23,8 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
     uploadMessage,
     onStateChange,
     onReset,
+    newConfig,
+    onNewConfigChange,
 }) => {
     // Keep actual File object in local ref (not serializable for context)
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -137,6 +142,13 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
         }
     };
 
+    const handleConfigChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value, type, checked } = e.target;
+        onNewConfigChange({
+            [name]: type === 'checkbox' ? checked : value
+        } as Partial<TrainingNewConfig>);
+    };
+
     return (
         <div className="card dataset-section">
             <div className="card-header">
@@ -244,6 +256,46 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
                     <X size={16} /> Clear Selection
                 </button>
             )}
+
+            <hr style={{ margin: '1.5rem 0', borderColor: '#e2e8f0' }} />
+
+            {/* DATASET CONFIG GROUP */}
+            <fieldset className="control-fieldset">
+                <legend className="control-legend" style={{ color: '#D4AF37' }}>
+                    <Database size={16} /> Training Data
+                </legend>
+
+                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <input type="checkbox" id="useDataGen" name="useDataGen" checked={newConfig.useDataGen} onChange={handleConfigChange} />
+                    <label htmlFor="useDataGen" className="form-label" style={{ marginBottom: 0 }}>Use data generator (N samples)</label>
+                    {newConfig.useDataGen && (
+                        <input type="number" name="numGeneratedSamples" value={newConfig.numGeneratedSamples} onChange={handleConfigChange} className="form-input" style={{ width: '100px', marginLeft: 'auto' }} />
+                    )}
+                </div>
+
+                <div className="param-grid" style={{ marginTop: '0.5rem', gridTemplateColumns: '1fr 1fr' }}>
+                    <div className="form-group">
+                        <label className="form-label">Train Sample Size</label>
+                        <input type="number" name="trainSampleSize" value={newConfig.trainSampleSize} onChange={handleConfigChange} className="form-input" step="0.05" max="1.0" />
+                    </div>
+                    <div className="form-group">
+                        <label className="form-label">Validation Size</label>
+                        <input type="number" name="validationSize" value={newConfig.validationSize} onChange={handleConfigChange} className="form-input" step="0.05" max="1.0" />
+                    </div>
+                </div>
+                <div className="form-group" style={{ marginTop: '0.5rem' }}>
+                    <label className="form-label">Split Seed</label>
+                    <input type="number" name="splitSeed" value={newConfig.splitSeed} onChange={handleConfigChange} className="form-input" />
+                </div>
+
+                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+                    <input type="checkbox" id="setShuffle" name="setShuffle" checked={newConfig.setShuffle} onChange={handleConfigChange} />
+                    <label htmlFor="setShuffle" className="form-label" style={{ marginBottom: 0 }}>Shuffle with buffer</label>
+                    {newConfig.setShuffle && (
+                        <input type="number" name="shuffleSize" value={newConfig.shuffleSize} onChange={handleConfigChange} className="form-input" style={{ width: '80px', marginLeft: 'auto' }} />
+                    )}
+                </div>
+            </fieldset>
         </div>
     );
 };

@@ -26,9 +26,10 @@ interface WebSocketMessage {
 
 interface TrainingDashboardProps {
     isActive: boolean;
+    onTrainingEnd?: () => void;
 }
 
-export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive }) => {
+export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, onTrainingEnd }) => {
     const [stats, setStats] = useState<TrainingStats>({
         epoch: 0,
         total_epochs: 0,
@@ -101,6 +102,7 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive }
                 reconnectTimeoutRef.current = null;
             }
             setIsConnected(false);
+            setConnectionError(null);
             return;
         }
 
@@ -131,7 +133,12 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive }
                             setRuntimeSettings(connData.runtime_settings);
                         }
                     } else if (message.type === 'update' && message.data) {
-                        setStats(message.data as TrainingStats);
+                        const updatedStats = message.data as TrainingStats;
+                        setStats(updatedStats);
+                        // Notify parent when training ends
+                        if (updatedStats.status === 'completed' || updatedStats.status === 'error') {
+                            onTrainingEnd?.();
+                        }
                     } else if (message.type === 'settings' && message.data) {
                         setRuntimeSettings(message.data as TrainingRuntimeSettings);
                     } else if (message.type === 'ping') {

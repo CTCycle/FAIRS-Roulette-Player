@@ -9,6 +9,8 @@ from keras import activations, layers
 ###############################################################################
 @keras.saving.register_keras_serializable(package="CustomLayers", name="AddNorm")
 class AddNorm(keras.layers.Layer):
+    supports_masking = True
+
     def __init__(self, epsilon: float = 10e-5, **kwargs) -> None:
         super(AddNorm, self).__init__(**kwargs)
         self.epsilon = epsilon
@@ -44,6 +46,8 @@ class AddNorm(keras.layers.Layer):
 ###############################################################################
 @keras.saving.register_keras_serializable(package="CustomLayers", name="QScoreNet")
 class QScoreNet(keras.layers.Layer):
+    supports_masking = True
+
     def __init__(self, dense_units: int, output_size: int, seed: int, **kwargs) -> None:
         super(QScoreNet, self).__init__(**kwargs)
         self.dense_units = dense_units
@@ -94,6 +98,8 @@ class QScoreNet(keras.layers.Layer):
 ###############################################################################
 @keras.saving.register_keras_serializable(package="CustomLayers", name="BatchNormDense")
 class BatchNormDense(layers.Layer):
+    supports_masking = True
+
     def __init__(self, units: int, **kwargs) -> None:
         super(BatchNormDense, self).__init__(**kwargs)
         self.units = units

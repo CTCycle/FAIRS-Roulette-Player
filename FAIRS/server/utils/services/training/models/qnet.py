@@ -51,6 +51,9 @@ class FAIRSnet:
         layer = BatchNormDense(self.neurons)(embeddings)
         layer = BatchNormDense(self.neurons)(layer)
         layer = layers.Dropout(rate=0.3, seed=self.seed)(layer)
+        # Flatten the 3D timeseries output to 2D before merging with gain context
+        layer = layers.Flatten()(layer)
+        layer = BatchNormDense(self.neurons)(layer)
 
         ctx = BatchNormDense(self.neurons // 2)(self.gain_input)
         ctx = BatchNormDense(self.neurons)(ctx)

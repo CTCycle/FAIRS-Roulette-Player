@@ -27,10 +27,12 @@ class TrainingState:
         self.latest_stats: dict[str, Any] = {}
         self.runtime_settings = TrainingRuntimeSettings()
 
+    # -------------------------------------------------------------------------
     async def broadcast_update(self, message: dict[str, Any]) -> None:
         self.latest_stats = message
         await self.broadcast_message("update", message)
 
+    # -------------------------------------------------------------------------
     async def broadcast_message(self, message_type: str, data: dict[str, Any]) -> None:
         for ws in self.active_websockets[:]:
             try:
@@ -39,7 +41,6 @@ class TrainingState:
                 self.active_websockets.remove(ws)
 
 
-training_state = TrainingState()
 
 
 ###############################################################################
@@ -48,6 +49,7 @@ class TrainingEndpoint:
         self.router = router
         self.data_serializer = DataSerializerExtension()
         self.model_serializer = ModelSerializer()
+        self.training_state = TrainingState()
 
     # -------------------------------------------------------------------------
     async def start_training(
@@ -55,7 +57,7 @@ class TrainingEndpoint:
         config: TrainingConfig,
         background_tasks: BackgroundTasks,
     ) -> dict[str, Any]:
-        if training_state.is_training:
+        if self.training_state.is_training:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Training is already in progress.",
@@ -65,11 +67,11 @@ class TrainingEndpoint:
         overrides = config.model_dump(exclude_unset=True)
         configuration = {**base_config, **overrides}
         if "render_environment" not in overrides:
-            configuration["render_environment"] = training_state.runtime_settings.render_environment
+            configuration["render_environment"] = self.training_state.runtime_settings.render_environment
         if "render_update_frequency" not in overrides:
-            configuration["render_update_frequency"] = training_state.runtime_settings.render_update_frequency
+            configuration["render_update_frequency"] = self.training_state.runtime_settings.render_update_frequency
 
-        training_state.runtime_settings = TrainingRuntimeSettings(
+        self.training_state.runtime_settings = TrainingRuntimeSettings(
             render_environment=configuration["render_environment"],
             render_update_frequency=configuration["render_update_frequency"],
         )
@@ -83,7 +85,7 @@ class TrainingEndpoint:
 
     # -------------------------------------------------------------------------
     async def run_training_task(self, configuration: dict[str, Any]) -> None:
-        training_state.is_training = True
+        self.training_state.is_training = True
 
         try:
             logger.info("Starting training pipeline")
@@ -113,14 +115,14 @@ class TrainingEndpoint:
 
             # Train
             trainer = DQNTraining(configuration)
-            training_state.current_trainer = trainer
+            self.training_state.current_trainer = trainer
             logger.info("Start training with reinforcement learning model")
 
             async def ws_callback(stats: dict[str, Any]) -> None:
-                await training_state.broadcast_update(stats)
+                await self.training_state.broadcast_update(stats)
 
             async def ws_env_callback(payload: dict[str, Any]) -> None:
-                await training_state.broadcast_message("env", payload)
+                await self.training_state.broadcast_message("env", payload)
 
             model, history = await trainer.train_model(
                 Q_model,
@@ -138,7 +140,7 @@ class TrainingEndpoint:
             )
 
             # Notify completion
-            await training_state.broadcast_update({
+            await self.training_state.broadcast_update({
                 "epoch": configuration.get("episodes", 10),
                 "total_epochs": configuration.get("episodes", 10),
                 "time_step": 0,
@@ -154,13 +156,13 @@ class TrainingEndpoint:
 
         except Exception as exc:
             logger.exception("Training failed")
-            await training_state.broadcast_update({
+            await self.training_state.broadcast_update({
                 "status": "error",
                 "message": str(exc),
             })
         finally:
-            training_state.is_training = False
-            training_state.current_trainer = None
+            self.training_state.is_training = False
+            self.training_state.current_trainer = None
 
     # -------------------------------------------------------------------------
     async def resume_training(
@@ -168,7 +170,7 @@ class TrainingEndpoint:
         config: ResumeConfig,
         background_tasks: BackgroundTasks,
     ) -> dict[str, Any]:
-        if training_state.is_training:
+        if self.training_state.is_training:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Training is already in progress.",
@@ -189,7 +191,7 @@ class TrainingEndpoint:
     async def run_resume_task(
         self, checkpoint_name: str, additional_episodes: int
     ) -> None:
-        training_state.is_training = True
+        self.training_state.is_training = True
 
         try:
             logger.info(f"Loading {checkpoint_name} checkpoint")
@@ -214,14 +216,14 @@ class TrainingEndpoint:
 
             # Train
             trainer = DQNTraining(train_config)
-            training_state.current_trainer = trainer
+            self.training_state.current_trainer = trainer
             logger.info("Resuming training with reinforcement learning model")
 
             async def ws_callback(stats: dict[str, Any]) -> None:
-                await training_state.broadcast_update(stats)
+                await self.training_state.broadcast_update(stats)
 
             async def ws_env_callback(payload: dict[str, Any]) -> None:
-                await training_state.broadcast_message("env", payload)
+                await self.training_state.broadcast_message("env", payload)
 
             model, history = await trainer.resume_training(
                 model,
@@ -240,7 +242,7 @@ class TrainingEndpoint:
                 checkpoint_path, history, train_config
             )
 
-            await training_state.broadcast_update({
+            await self.training_state.broadcast_update({
                 "status": "completed",
                 "message": "Resume training completed",
             })
@@ -249,48 +251,48 @@ class TrainingEndpoint:
 
         except Exception as exc:
             logger.exception("Resume training failed")
-            await training_state.broadcast_update({
+            await self.training_state.broadcast_update({
                 "status": "error",
                 "message": str(exc),
             })
         finally:
-            training_state.is_training = False
-            training_state.current_trainer = None
+            self.training_state.is_training = False
+            self.training_state.current_trainer = None
 
     # -------------------------------------------------------------------------
     def get_status(self) -> dict[str, Any]:
         return {
-            "is_training": training_state.is_training,
-            "latest_stats": training_state.latest_stats,
-            "active_connections": len(training_state.active_websockets),
-            "runtime_settings": training_state.runtime_settings.model_dump(),
+            "is_training": self.training_state.is_training,
+            "latest_stats": self.training_state.latest_stats,
+            "active_connections": len(self.training_state.active_websockets),
+            "runtime_settings": self.training_state.runtime_settings.model_dump(),
         }
 
     # -------------------------------------------------------------------------
     def get_settings(self) -> dict[str, Any]:
-        return training_state.runtime_settings.model_dump()
+        return self.training_state.runtime_settings.model_dump()
 
     # -------------------------------------------------------------------------
     async def update_settings(self, settings: TrainingRuntimeSettings) -> dict[str, Any]:
-        training_state.runtime_settings = settings
-        if training_state.current_trainer:
-            training_state.current_trainer.update_render_settings(
+        self.training_state.runtime_settings = settings
+        if self.training_state.current_trainer:
+            self.training_state.current_trainer.update_render_settings(
                 settings.render_environment,
                 settings.render_update_frequency,
             )
-        await training_state.broadcast_message("settings", settings.model_dump())
+        await self.training_state.broadcast_message("settings", settings.model_dump())
         return {"status": "updated", "settings": settings.model_dump()}
 
     # -------------------------------------------------------------------------
     def stop_training(self) -> dict[str, Any]:
-        if not training_state.is_training:
+        if not self.training_state.is_training:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="No training is in progress.",
             )
 
-        if training_state.current_trainer:
-            training_state.current_trainer.cancel_training()
+        if self.training_state.current_trainer:
+            self.training_state.current_trainer.cancel_training()
 
         return {"status": "stopping", "message": "Training stop requested"}
 
@@ -301,17 +303,17 @@ class TrainingEndpoint:
     # -------------------------------------------------------------------------
     async def websocket_endpoint(self, websocket: WebSocket) -> None:
         await websocket.accept()
-        training_state.active_websockets.append(websocket)
-        logger.info(f"WebSocket connected. Total connections: {len(training_state.active_websockets)}")
+        self.training_state.active_websockets.append(websocket)
+        logger.info(f"WebSocket connected. Total connections: {len(self.training_state.active_websockets)}")
 
         try:
             # Send initial state
             await websocket.send_json({
                 "type": "connection",
                 "data": {
-                    "is_training": training_state.is_training,
-                    "latest_stats": training_state.latest_stats,
-                    "runtime_settings": training_state.runtime_settings.model_dump(),
+                    "is_training": self.training_state.is_training,
+                    "latest_stats": self.training_state.latest_stats,
+                    "runtime_settings": self.training_state.runtime_settings.model_dump(),
                 }
             })
 
@@ -322,16 +324,19 @@ class TrainingEndpoint:
                     if data == "ping":
                         await websocket.send_json({"type": "pong"})
                 except asyncio.TimeoutError:
-                    await websocket.send_json({"type": "ping"})
+                    try:
+                        await websocket.send_json({"type": "ping"})
+                    except Exception:
+                        break
 
         except WebSocketDisconnect:
             logger.info("WebSocket disconnected")
         except Exception as exc:
             logger.warning(f"WebSocket error: {exc}")
         finally:
-            if websocket in training_state.active_websockets:
-                training_state.active_websockets.remove(websocket)
-            logger.info(f"WebSocket removed. Total connections: {len(training_state.active_websockets)}")
+            if websocket in self.training_state.active_websockets:
+                self.training_state.active_websockets.remove(websocket)
+            logger.info(f"WebSocket removed. Total connections: {len(self.training_state.active_websockets)}")
 
     # -------------------------------------------------------------------------
     def add_routes(self) -> None:
@@ -377,7 +382,7 @@ class TrainingEndpoint:
             methods=["GET"],
             status_code=status.HTTP_200_OK,
         )
-        self.router.add_websocket_route("/ws", self.websocket_endpoint)
+        self.router.add_api_websocket_route("/ws", self.websocket_endpoint)
 
 
 training_endpoint = TrainingEndpoint(router=router)
