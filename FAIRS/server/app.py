@@ -6,6 +6,7 @@ from fastapi.responses import RedirectResponse
 from FAIRS.server.routes.upload import router as upload_router
 from FAIRS.server.routes.training import router as training_router
 from FAIRS.server.routes.database import router as database_router
+from FAIRS.server.routes.inference import router as inference_router
 from FAIRS.server.utils.configurations import server_settings
 
 ###############################################################################
@@ -17,6 +18,7 @@ app = FastAPI(
 
 app.include_router(upload_router)
 app.include_router(training_router)
+app.include_router(inference_router)
 app.include_router(database_router)
 
 @app.get("/")

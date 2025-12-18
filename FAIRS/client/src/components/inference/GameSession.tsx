@@ -13,15 +13,13 @@ export const GameSession: React.FC<GameSessionProps> = ({ config }) => {
         currentCapital: config.initialCapital,
         currentBet: config.betAmount,
         history: [],
-        lastPrediction: {
-            action: 1, // Mock initial prediction (e.g., Red)
-            description: 'Bet on Red',
-            confidence: 0.75
-        },
+        lastPrediction: config.initialPrediction,
         totalSteps: 0
     });
 
     const [realExtraction, setRealExtraction] = useState<string>('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const cleanNum = (val: string) => {
         // allow only 0-36
@@ -33,48 +31,56 @@ export const GameSession: React.FC<GameSessionProps> = ({ config }) => {
         return String(num);
     }
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (realExtraction === '') return;
 
         const extraction = parseInt(realExtraction);
-        const prediction = state.lastPrediction;
+        setIsSubmitting(true);
+        setError(null);
 
-        // Mock Win/Loss Logic (Simplified)
-        // In a real app, this would check if extraction matches prediction.action logic
-        // For now, let's say Action 1 = Red, Action 0 = Black (roughly even/odd for demo)
-        const isWin = Math.random() > 0.5;
-        const outcome = isWin ? state.currentBet : -state.currentBet;
-        const newCapital = state.currentCapital + outcome;
+        try {
+            const response = await fetch(`/inference/sessions/${config.sessionId}/step`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ extraction }),
+            });
 
-        const step: GameStep = {
-            step: state.totalSteps + 1,
-            realExtraction: extraction,
-            predictedAction: prediction?.action || 0,
-            predictedActionDesc: prediction?.description || 'Unknown',
-            betAmount: state.currentBet,
-            outcome: outcome,
-            capitalAfter: newCapital,
-            timestamp: new Date().toLocaleTimeString()
-        };
-
-        // Mock Next Prediction
-        const nextPredAction = Math.floor(Math.random() * 3); // 0, 1, 2
-        const nextPredDesc = nextPredAction === 0 ? 'Bet on Black' : (nextPredAction === 1 ? 'Bet on Red' : 'Skip Bet');
-
-        setState(prev => ({
-            ...prev,
-            currentCapital: newCapital,
-            history: [step, ...prev.history].slice(0, 50), // keep last 50
-            totalSteps: prev.totalSteps + 1,
-            lastPrediction: {
-                action: nextPredAction,
-                description: nextPredDesc,
-                confidence: 0.6 + Math.random() * 0.3
+            if (!response.ok) {
+                const payload = await response.json().catch(() => null);
+                const detail = payload && typeof payload === 'object' && 'detail' in payload ? String(payload.detail) : 'Step failed.';
+                throw new Error(detail);
             }
-        }));
 
-        setRealExtraction('');
+            const result = await response.json();
+            const newCapital = Number(result.capital_after);
+            const outcome = Number(result.reward);
+            const step: GameStep = {
+                step: Number(result.step),
+                realExtraction: Number(result.real_extraction),
+                predictedAction: Number(result.predicted_action),
+                predictedActionDesc: String(result.predicted_action_desc),
+                betAmount: state.currentBet,
+                outcome,
+                capitalAfter: newCapital,
+                timestamp: new Date().toLocaleTimeString(),
+            };
+
+            setState(prev => ({
+                ...prev,
+                currentCapital: newCapital,
+                history: [step, ...prev.history].slice(0, 50),
+                totalSteps: Number(result.step),
+                lastPrediction: result.next_prediction,
+            }));
+
+            setRealExtraction('');
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Unable to submit step.';
+            setError(message);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -136,10 +142,15 @@ export const GameSession: React.FC<GameSessionProps> = ({ config }) => {
                                     autoFocus
                                 />
                             </div>
-                            <button type="submit" className={styles.submitBtn} disabled={realExtraction === ''}>
+                            <button type="submit" className={styles.submitBtn} disabled={realExtraction === '' || isSubmitting}>
                                 <Check /> Submit Result
                             </button>
                         </div>
+                        {error && (
+                            <div style={{ marginTop: '0.75rem', color: 'var(--danger, #ff6b6b)' }}>
+                                {error}
+                            </div>
+                        )}
                     </form>
                 </div>
             </div>

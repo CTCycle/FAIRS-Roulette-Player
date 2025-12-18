@@ -1,8 +1,10 @@
 export interface GameConfig {
     initialCapital: number;
     betAmount: number;
-    checkpoint: string | null;
-    datasetName: string | null;
+    checkpoint: string;
+    datasetName: string;
+    sessionId: string;
+    initialPrediction: PredictionResult;
 }
 
 export interface PredictionResult {
