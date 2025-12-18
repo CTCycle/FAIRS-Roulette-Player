@@ -55,7 +55,7 @@
 /* Controls row */
 .database-controls {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     gap: 1rem;
     flex-wrap: wrap;
 }
