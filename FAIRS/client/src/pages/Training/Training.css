@@ -44,23 +44,23 @@
 /* Card Styles */
 .card {
   background-color: var(--card-bg);
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
-  padding: 1.5rem;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.05);
+  padding: 2rem;
   display: flex;
   flex-direction: column;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.03);
 }
 
 .card:hover {
-  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 20px 40px -5px rgba(0, 0, 0, 0.08);
 }
 
 .card-header {
-  margin-bottom: 1.5rem;
-  border-bottom: 2px solid var(--bg-light);
-  padding-bottom: 0.5rem;
+  margin-bottom: 2rem;
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
 .card-title {
@@ -82,13 +82,13 @@
 }
 
 .upload-area {
-  border: 2px dashed #ccc;
-  border-radius: 8px;
+  border: 2px dashed #E2E8F0;
+  border-radius: 16px;
   padding: 3rem 1.5rem;
   text-align: center;
   cursor: pointer;
   transition: all 0.2s;
-  background-color: #FAFAFA;
+  background-color: #F8FAFC;
 }
 
 .upload-area:hover,
@@ -220,8 +220,8 @@
 .form-input {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid #D1D5DB;
-  border-radius: 6px;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
   font-size: 0.95rem;
   transition: border-color 0.2s;
   background-color: #fff;
@@ -246,7 +246,7 @@
   background-color: var(--roulette-green);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
@@ -273,9 +273,9 @@
 
 /* Fieldset frames for configuration sections - DARKER BORDER */
 .control-fieldset {
-  border: 1px solid #9CA3AF;
+  border: 1px solid #E2E8F0;
   /* Darker gray border */
-  border-radius: 8px;
+  border-radius: 16px;
   padding: 1rem;
   margin-bottom: 1.5rem;
 }
