@@ -50,6 +50,14 @@ class DataSerializer:
         database.save_into_database(frame, PREDICTED_GAMES_TABLE)
 
     # -----------------------------------------------------------------------------
+    def append_predicted_games(self, dataset: pd.DataFrame) -> None:
+        if dataset.empty:
+            return
+        frame = dataset.reindex(columns=PREDICTED_GAMES_COLUMNS)
+        frame = frame.where(pd.notnull(frame), cast(Any, None))
+        database.append_into_database(frame, PREDICTED_GAMES_TABLE)
+
+    # -----------------------------------------------------------------------------
     def upsert_checkpoints_summary(self, dataset: pd.DataFrame) -> None:
         if dataset.empty:
             return

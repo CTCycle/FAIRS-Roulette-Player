@@ -109,6 +109,13 @@ class PostgresRepository:
             df.to_sql(table_name, conn, if_exists="append", index=False)
 
     # -------------------------------------------------------------------------
+    def append_into_database(self, df: pd.DataFrame, table_name: str) -> None:
+        if df.empty:
+            return
+        with self.engine.begin() as conn:
+            df.to_sql(table_name, conn, if_exists="append", index=False)
+
+    # -------------------------------------------------------------------------
     def upsert_into_database(self, df: pd.DataFrame, table_name: str) -> None:
         table_cls = self.get_table_class(table_name)
         self.upsert_dataframe(df, table_cls)
