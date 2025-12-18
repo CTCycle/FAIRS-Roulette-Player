@@ -26,6 +26,8 @@ class DQNTraining:
         self.selected_device = configuration.get("device", "cpu")
         self.device_id = configuration.get("device_id", 0)
         self.mixed_precision = configuration.get("mixed_precision", False)
+        self.render_environment = configuration.get("render_environment", False)
+        self.render_update_frequency = configuration.get("render_update_frequency", 50)
         self.configuration = configuration
 
         self.agent = DQNAgent(configuration)
@@ -43,6 +45,11 @@ class DQNTraining:
         self.ws_update_interval_ms = server_settings.training.websocket_update_interval_ms
         self.last_ws_update_time = 0.0
         self.is_cancelled = False
+
+    # -------------------------------------------------------------------------
+    def update_render_settings(self, render_environment: bool, render_update_frequency: int) -> None:
+        self.render_environment = render_environment
+        self.render_update_frequency = render_update_frequency
 
     # -------------------------------------------------------------------------
     def update_session_stats(
@@ -115,6 +122,7 @@ class DQNTraining:
         state_size: int,
         checkpoint_path: str,
         ws_callback: Callable[[dict[str, Any]], Any] | None = None,
+        ws_env_callback: Callable[[dict[str, Any]], Any] | None = None,
     ) -> Model:
         scores = None
         total_steps = 0
@@ -173,6 +181,24 @@ class DQNTraining:
                 if time_step % self.update_frequency == 0:
                     target_model.set_weights(model.get_weights())
 
+                if (
+                    ws_env_callback
+                    and self.render_environment
+                    and time_step % self.render_update_frequency == 0
+                ):
+                    try:
+                        await ws_env_callback({
+                            "episode": episode + 1,
+                            "time_step": time_step,
+                            "action": int(action),
+                            "extraction": int(extraction),
+                            "reward": reward,
+                            "total_reward": total_reward,
+                            "capital": environment.capital,
+                        })
+                    except Exception:
+                        pass
+
                 # Send WebSocket update at configured interval
                 if ws_callback and self.should_send_ws_update():
                     stats = self.get_latest_stats(episode, episodes)
@@ -199,6 +225,7 @@ class DQNTraining:
         data: pd.DataFrame,
         checkpoint_path: str,
         ws_callback: Callable[[dict[str, Any]], Any] | None = None,
+        ws_env_callback: Callable[[dict[str, Any]], Any] | None = None,
     ) -> tuple[Model, dict[str, Any]]:
         environment = RouletteEnvironment(data, self.configuration, checkpoint_path)
         episodes = self.configuration.get("episodes", 10)
@@ -217,6 +244,7 @@ class DQNTraining:
             state_size,
             checkpoint_path,
             ws_callback=ws_callback,
+            ws_env_callback=ws_env_callback,
         )
 
         history = {
@@ -239,6 +267,7 @@ class DQNTraining:
         session: dict | None = None,
         additional_epochs: int = 10,
         ws_callback: Callable[[dict[str, Any]], Any] | None = None,
+        ws_env_callback: Callable[[dict[str, Any]], Any] | None = None,
     ) -> tuple[Model, dict[str, Any]]:
         environment = RouletteEnvironment(data, self.configuration, checkpoint_path)
         from_episode = 0 if not session else session.get("total_episodes", 0)
@@ -257,6 +286,7 @@ class DQNTraining:
             state_size,
             checkpoint_path,
             ws_callback=ws_callback,
+            ws_env_callback=ws_env_callback,
         )
 
         history = {
