@@ -14,9 +14,14 @@ interface TrainingStats {
     message?: string;
 }
 
+interface TrainingRuntimeSettings {
+    render_environment: boolean;
+    render_update_frequency: number;
+}
+
 interface WebSocketMessage {
-    type: 'connection' | 'update' | 'pong' | 'ping';
-    data?: TrainingStats | { is_training: boolean; latest_stats: TrainingStats };
+    type: 'connection' | 'update' | 'pong' | 'ping' | 'settings' | 'env';
+    data?: TrainingStats | { is_training: boolean; latest_stats: TrainingStats; runtime_settings?: TrainingRuntimeSettings } | TrainingRuntimeSettings;
 }
 
 interface TrainingDashboardProps {
@@ -37,8 +42,52 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive }
     });
     const [isConnected, setIsConnected] = useState(false);
     const [connectionError, setConnectionError] = useState<string | null>(null);
+    const [runtimeSettings, setRuntimeSettings] = useState<TrainingRuntimeSettings>({
+        render_environment: false,
+        render_update_frequency: 50,
+    });
     const wsRef = useRef<WebSocket | null>(null);
     const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const settingsUpdateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const patchRuntimeSettings = async (nextSettings: TrainingRuntimeSettings) => {
+        try {
+            const response = await fetch('/training/settings', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(nextSettings),
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                console.error('Failed to update runtime settings:', error);
+                return;
+            }
+
+            setRuntimeSettings(nextSettings);
+        } catch (err) {
+            console.error('Failed to update runtime settings:', err);
+        }
+    };
+
+    useEffect(() => {
+        const loadSettings = async () => {
+            try {
+                const response = await fetch('/training/settings');
+                if (!response.ok) {
+                    return;
+                }
+                const data = await response.json();
+                if (data && typeof data === 'object') {
+                    setRuntimeSettings(data as TrainingRuntimeSettings);
+                }
+            } catch (err) {
+                console.error('Failed to load runtime settings:', err);
+            }
+        };
+
+        loadSettings();
+    }, []);
 
     useEffect(() => {
         // Only connect when training is active
@@ -74,12 +123,17 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive }
                     const message: WebSocketMessage = JSON.parse(event.data);
 
                     if (message.type === 'connection' && message.data) {
-                        const connData = message.data as { is_training: boolean; latest_stats: TrainingStats };
+                        const connData = message.data as { is_training: boolean; latest_stats: TrainingStats; runtime_settings?: TrainingRuntimeSettings };
                         if (connData.latest_stats && Object.keys(connData.latest_stats).length > 0) {
                             setStats(connData.latest_stats);
                         }
+                        if (connData.runtime_settings) {
+                            setRuntimeSettings(connData.runtime_settings);
+                        }
                     } else if (message.type === 'update' && message.data) {
                         setStats(message.data as TrainingStats);
+                    } else if (message.type === 'settings' && message.data) {
+                        setRuntimeSettings(message.data as TrainingRuntimeSettings);
                     } else if (message.type === 'ping') {
                         ws.send('ping');
                     }
@@ -114,6 +168,9 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive }
             }
             if (reconnectTimeoutRef.current) {
                 clearTimeout(reconnectTimeoutRef.current);
+            }
+            if (settingsUpdateTimeoutRef.current) {
+                clearTimeout(settingsUpdateTimeoutRef.current);
             }
         };
     }, [isActive]);
@@ -158,6 +215,44 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive }
                 <div className={`connection-status ${isConnected ? 'connected' : 'disconnected'}`}>
                     <span className="connection-dot"></span>
                     {isConnected ? 'Connected' : 'Disconnected'}
+                </div>
+            </div>
+
+            <div className="dashboard-settings">
+                <div className="dashboard-settings-row">
+                    <input
+                        type="checkbox"
+                        id="renderEnvironment"
+                        checked={runtimeSettings.render_environment}
+                        onChange={(e) => {
+                            const next = { ...runtimeSettings, render_environment: e.target.checked };
+                            setRuntimeSettings(next);
+                            patchRuntimeSettings(next);
+                        }}
+                    />
+                    <label htmlFor="renderEnvironment" className="form-label" style={{ marginBottom: 0 }}>
+                        Render environment every N steps
+                    </label>
+                    <input
+                        type="number"
+                        className="form-input"
+                        min="1"
+                        value={runtimeSettings.render_update_frequency}
+                        disabled={!runtimeSettings.render_environment}
+                        onChange={(e) => {
+                            const value = Number(e.target.value);
+                            const next = { ...runtimeSettings, render_update_frequency: value };
+                            setRuntimeSettings(next);
+
+                            if (settingsUpdateTimeoutRef.current) {
+                                clearTimeout(settingsUpdateTimeoutRef.current);
+                            }
+                            settingsUpdateTimeoutRef.current = setTimeout(() => {
+                                patchRuntimeSettings(next);
+                            }, 300);
+                        }}
+                        style={{ width: '90px', marginLeft: 'auto' }}
+                    />
                 </div>
             </div>
 

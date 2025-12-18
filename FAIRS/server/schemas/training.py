@@ -57,3 +57,9 @@ class ResumeConfig(BaseModel):
     
     checkpoint: str
     additional_episodes: int = Field(10, ge=1)
+
+
+###############################################################################
+class TrainingRuntimeSettings(BaseModel):
+    render_environment: bool = False
+    render_update_frequency: int = Field(50, ge=1)

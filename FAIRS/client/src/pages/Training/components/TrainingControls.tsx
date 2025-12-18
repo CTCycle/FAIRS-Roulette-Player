@@ -19,8 +19,6 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({ onTrainingSt
         // Environment
         betAmount: 10,
         initialCapital: 1000,
-        renderEnv: false,
-        renderUpFreq: 50,
         // Dataset
         useDataGen: false,
         numGeneratedSamples: 10000,
@@ -83,8 +81,6 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({ onTrainingSt
             // Environment
             bet_amount: Number(newConfig.betAmount),
             initial_capital: Number(newConfig.initialCapital),
-            render_environment: newConfig.renderEnv,
-            render_update_frequency: Number(newConfig.renderUpFreq),
             // Dataset
             use_data_generator: newConfig.useDataGen,
             num_generated_samples: Number(newConfig.numGeneratedSamples),
@@ -233,13 +229,6 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({ onTrainingSt
                                         <label className="form-label">Initial Capital</label>
                                         <input type="number" name="initialCapital" value={newConfig.initialCapital} onChange={handleNewChange} className="form-input" min="1" />
                                     </div>
-                                </div>
-                                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
-                                    <input type="checkbox" id="renderEnv" name="renderEnv" checked={newConfig.renderEnv} onChange={handleNewChange} />
-                                    <label htmlFor="renderEnv" className="form-label" style={{ marginBottom: 0 }}>Render environment every N steps</label>
-                                    {newConfig.renderEnv && (
-                                        <input type="number" name="renderUpFreq" value={newConfig.renderUpFreq} onChange={handleNewChange} className="form-input" style={{ width: '80px', marginLeft: 'auto' }} />
-                                    )}
                                 </div>
                             </fieldset>
 
