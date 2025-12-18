@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+# Load environment variables early (before Keras imports)
+from FAIRS.server.utils.variables import env_variables  # noqa: F401
+
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 
