@@ -21,7 +21,7 @@ class TrainingConfig(BaseModel):
     bet_amount: int = Field(10, ge=1)
     initial_capital: int = Field(1000, ge=1)
     render_environment: bool = False
-    render_update_frequency: int = Field(50, ge=1)
+    render_update_frequency: int = Field(20, ge=1)
     
     # Dataset parameters
     use_data_generator: bool = False
@@ -62,4 +62,4 @@ class ResumeConfig(BaseModel):
 ###############################################################################
 class TrainingRuntimeSettings(BaseModel):
     render_environment: bool = False
-    render_update_frequency: int = Field(50, ge=1)
+    render_update_frequency: int = Field(20, ge=1)

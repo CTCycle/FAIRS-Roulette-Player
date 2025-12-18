@@ -53,6 +53,7 @@ class TrainingSettings:
     websocket_update_interval_ms: int
     default_episodes: int
     default_max_steps_episode: int
+    default_render_update_frequency: int
 
 # -----------------------------------------------------------------------------
 @dataclass(frozen=True)
@@ -131,6 +132,9 @@ def build_training_settings(payload: dict[str, Any] | Any) -> TrainingSettings:
         ),
         default_max_steps_episode=coerce_int(
             data.get("default_max_steps_episode"), 2000, minimum=100
+        ),
+        default_render_update_frequency=coerce_int(
+            data.get("default_render_update_frequency"), 20, minimum=1
         ),
     )
 

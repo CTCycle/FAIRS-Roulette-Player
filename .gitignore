@@ -3,6 +3,7 @@ FAIRS/resources/database/**
 FAIRS/resources/runtimes/**
 FAIRS/resources/runtimes/uv_cache/**
 FAIRS/resources/logs/**
+FAIRS/resources/checkpoints/**
 FAIRS/client/node_modules/
 FAIRS/client/dist/
 FAIRS/client/dist-ssr/
@@ -15,7 +16,6 @@ FAIRS/client/.env
 FAIRS/client/*.local
 !.env.example
 !.env.sample
-!FAIRS/resources/templates/.env
 
 # Python
 __pycache__/

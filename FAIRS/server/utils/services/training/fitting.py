@@ -28,7 +28,7 @@ class DQNTraining:
         self.device_id = configuration.get("device_id", 0)
         self.mixed_precision = configuration.get("mixed_precision", False)
         self.render_environment = configuration.get("render_environment", False)
-        self.render_update_frequency = configuration.get("render_update_frequency", 50)
+        self.render_update_frequency = configuration.get("render_update_frequency", 20)
         self.configuration = configuration
 
         self.agent = DQNAgent(configuration)
@@ -66,8 +66,6 @@ class DQNTraining:
         capital: int | float,
     ) -> None:
         if not ws_env_callback or not self.render_environment:
-            return
-        if time_step % self.render_update_frequency != 0:
             return
 
         try:
@@ -216,25 +214,28 @@ class DQNTraining:
                 if time_step % self.update_frequency == 0:
                     target_model.set_weights(model.get_weights())
 
-                await self.maybe_send_environment_update(
-                    ws_env_callback,
-                    environment,
-                    episode,
-                    time_step,
-                    int(action),
-                    int(extraction),
-                    reward,
-                    total_reward,
-                    environment.capital,
-                )
-
-                # Send WebSocket update at configured interval
-                if ws_callback and self.should_send_ws_update():
-                    stats = self.get_latest_stats(episode, episodes)
-                    try:
-                        await ws_callback(stats)
-                    except Exception:
-                        pass
+                # Send WebSocket updates (stats + environment) at configured step interval
+                if time_step % self.render_update_frequency == 0:
+                    # Send stats update
+                    if ws_callback:
+                        stats = self.get_latest_stats(episode, episodes)
+                        try:
+                            await ws_callback(stats)
+                        except Exception:
+                            pass
+                    
+                    # Send environment render if enabled
+                    await self.maybe_send_environment_update(
+                        ws_env_callback,
+                        environment,
+                        episode,
+                        time_step,
+                        int(action),
+                        int(extraction),
+                        reward,
+                        total_reward,
+                        environment.capital,
+                    )
 
                 total_steps += 1
                 if done:
