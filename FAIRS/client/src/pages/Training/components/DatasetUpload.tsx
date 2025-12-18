@@ -265,7 +265,7 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
                     <Database size={16} /> Training Data
                 </legend>
 
-                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div className="form-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.5rem' }}>
                     <input type="checkbox" id="useDataGen" name="useDataGen" checked={newConfig.useDataGen} onChange={handleConfigChange} />
                     <label htmlFor="useDataGen" className="form-label" style={{ marginBottom: 0 }}>Use data generator (N samples)</label>
                     {newConfig.useDataGen && (
@@ -288,7 +288,7 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
                     <input type="number" name="splitSeed" value={newConfig.splitSeed} onChange={handleConfigChange} className="form-input" />
                 </div>
 
-                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <div className="form-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
                     <input type="checkbox" id="setShuffle" name="setShuffle" checked={newConfig.setShuffle} onChange={handleConfigChange} />
                     <label htmlFor="setShuffle" className="form-label" style={{ marginBottom: 0 }}>Shuffle with buffer</label>
                     {newConfig.setShuffle && (

@@ -64,6 +64,7 @@ class InferenceSession:
 
         self.step_count += 1
         next_prediction = self.player.predict_next()
+        self.last_prediction = next_prediction  # Update for next step
         step_payload = {
             "step": int(self.step_count),
             "real_extraction": int(extraction),

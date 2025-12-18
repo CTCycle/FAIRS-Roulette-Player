@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings, Play, RefreshCw, Cpu, Layers, Activity, HardDrive, Save, BarChart2, ChevronsDown, ChevronsRight } from 'lucide-react';
+import { Settings, Play, RefreshCw, Cpu, Layers, Activity, HardDrive, Save, ChevronsDown, ChevronsRight } from 'lucide-react';
 import type { TrainingNewConfig, TrainingResumeConfig } from '../../../context/AppStateContext';
 
 interface TrainingControlsProps {
@@ -181,7 +181,7 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
                                             <input type="number" name="explorationRateDecay" value={newConfig.explorationRateDecay} onChange={handleNewChange} className="form-input" step="0.001" max="1.0" />
                                         </div>
                                         <div className="form-group">
-                                            <label className="form-label">Min Rate</label>
+                                            <label className="form-label">Min Explore Rate</label>
                                             <input type="number" name="minExplorationRate" value={newConfig.minExplorationRate} onChange={handleNewChange} className="form-input" step="0.01" max="1.0" />
                                         </div>
                                         <div className="form-group">
@@ -231,14 +231,14 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
                                         <Save size={16} /> Checkpointing
                                     </legend>
                                     <div className="param-grid">
-                                        <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <div className="form-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.5rem' }}>
                                             <input type="checkbox" id="saveCheckpoints" name="saveCheckpoints" checked={newConfig.saveCheckpoints} onChange={handleNewChange} />
                                             <label htmlFor="saveCheckpoints" className="form-label" style={{ marginBottom: 0 }}>Save every N episodes</label>
                                             {newConfig.saveCheckpoints && (
                                                 <input type="number" name="checkpointsFreq" value={newConfig.checkpointsFreq} onChange={handleNewChange} className="form-input" style={{ width: '60px', marginLeft: 'auto' }} min="1" />
                                             )}
                                         </div>
-                                        <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <div className="form-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.5rem' }}>
                                             <input type="checkbox" id="useTensorboard" name="useTensorboard" checked={newConfig.useTensorboard} onChange={handleNewChange} />
                                             <label htmlFor="useTensorboard" className="form-label" style={{ marginBottom: 0 }}>
                                                 Enable TensorBoard
@@ -279,7 +279,7 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
                                         </div>
                                     </div>
 
-                                    <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                    <div className="form-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
                                         <input type="checkbox" id="deviceGPU" name="deviceGPU" checked={newConfig.deviceGPU} onChange={handleNewChange} />
                                         <label htmlFor="deviceGPU" className="form-label" style={{ marginBottom: 0 }}>Use GPU (Device ID)</label>
                                         {newConfig.deviceGPU && (

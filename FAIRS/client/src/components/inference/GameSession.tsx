@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { GameConfig, SessionState, GameStep } from '../../types/inference';
 import styles from './GameSession.module.css';
-import { Check, History } from 'lucide-react';
+import { Check, History, X } from 'lucide-react';
 
 interface GameSessionProps {
     config: GameConfig;
@@ -9,6 +9,7 @@ interface GameSessionProps {
     history: GameStep[];
     onSessionStateChange: (updates: Partial<SessionState>) => void;
     onAddHistoryStep: (step: GameStep) => void;
+    onEndSession: () => void;
 }
 
 export const GameSession: React.FC<GameSessionProps> = ({
@@ -17,6 +18,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
     history,
     onSessionStateChange,
     onAddHistoryStep,
+    onEndSession,
 }) => {
     const [realExtraction, setRealExtraction] = useState<string>('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -158,6 +160,13 @@ export const GameSession: React.FC<GameSessionProps> = ({
                             </div>
                         )}
                     </form>
+                    <button
+                        type="button"
+                        className={styles.endSessionBtn}
+                        onClick={onEndSession}
+                    >
+                        <X size={18} /> End Session
+                    </button>
                 </div>
             </div>
 

@@ -38,7 +38,7 @@
 .training-content {
   display: flex;
   gap: 2rem;
-  flex: 1;
+  /* flex: 1 removed to prevent forcing full height */
 }
 
 /* Card Styles */
@@ -46,7 +46,7 @@
   background-color: var(--card-bg);
   border-radius: 20px;
   box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.05);
-  padding: 2rem;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -84,7 +84,7 @@
 .upload-area {
   border: 2px dashed #E2E8F0;
   border-radius: 16px;
-  padding: 3rem 1.5rem;
+  padding: 2rem 1rem;
   text-align: center;
   cursor: pointer;
   transition: all 0.2s;
@@ -247,6 +247,18 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
+}
+
+.param-grid .form-group {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  margin-bottom: 0;
+}
+
+.param-grid .form-group .form-input,
+.param-grid .form-group .form-select {
+  margin-top: auto;
 }
 
 .btn-primary {
