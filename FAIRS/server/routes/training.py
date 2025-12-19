@@ -247,6 +247,35 @@ class TrainingEndpoint:
             )
             model.summary(expand_nested=True)
 
+            # Restore previous history points from checkpoint session
+            if session and "history" in session:
+                prev_history = session["history"]
+                prev_episodes = prev_history.get("episode", [])
+                prev_time_steps = prev_history.get("time_step", [])
+                prev_losses = prev_history.get("loss", [])
+                prev_metrics = prev_history.get("metrics", [])
+                prev_val_losses = prev_history.get("val_loss", [])
+                prev_val_rmses = prev_history.get("val_rmse", [])
+
+                restored_points = []
+                for i in range(len(prev_time_steps)):
+                    point = {
+                        "time_step": prev_time_steps[i] if i < len(prev_time_steps) else 0,
+                        "loss": float(prev_losses[i]) if i < len(prev_losses) else 0.0,
+                        "rmse": float(prev_metrics[i]) if i < len(prev_metrics) else 0.0,
+                        "val_loss": float(prev_val_losses[i]) if prev_val_losses and i < len(prev_val_losses) else 0.0,
+                        "val_rmse": float(prev_val_rmses[i]) if prev_val_rmses and i < len(prev_val_rmses) else 0.0,
+                        "epoch": prev_episodes[i] if i < len(prev_episodes) else 0,
+                    }
+                    restored_points.append(point)
+
+                self.training_state.history_points = restored_points
+                logger.info(f"Restored {len(restored_points)} history points from checkpoint")
+            else:
+                self.training_state.history_points = []
+
+            self.training_state.latest_env = {}
+
             # Set device
             logger.info("Setting device for training operations")
             device = DeviceConfig(train_config)
@@ -262,7 +291,7 @@ class TrainingEndpoint:
                 logger.info(f"Roulette series has been loaded ({len(dataset)} extractions)")
 
             # Train
-            trainer = DQNTraining(train_config)
+            trainer = DQNTraining(train_config, session=session)
             self.training_state.current_trainer = trainer
             logger.info("Resuming training with reinforcement learning model")
 

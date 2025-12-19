@@ -20,7 +20,7 @@ from FAIRS.server.utils.services.training.environment import RouletteEnvironment
 
 ###############################################################################
 class DQNTraining:
-    def __init__(self, configuration: dict[str, Any]) -> None:
+    def __init__(self, configuration: dict[str, Any], session: dict | None = None) -> None:
         set_random_seed(configuration.get("training_seed", 42))
         self.batch_size = configuration.get("batch_size", 32)
         self.update_frequency = configuration.get("model_update_frequency", 10)
@@ -33,18 +33,35 @@ class DQNTraining:
         self.configuration = configuration
 
         self.agent = DQNAgent(configuration)
-        self.session_stats = {
-            "episode": [],
-            "time_step": [],
-            "loss": [],
-            "metrics": [],
-            "img_reward": [],  # validation reward
-            "val_loss": [],
-            "val_rmse": [],
-            "reward": [],
-            "total_reward": [],
-            "capital": [],
-        }
+
+        # Restore session_stats from checkpoint if provided (for resume training)
+        if session and "history" in session:
+            prev_history = session["history"]
+            self.session_stats = {
+                "episode": list(prev_history.get("episode", [])),
+                "time_step": list(prev_history.get("time_step", [])),
+                "loss": list(prev_history.get("loss", [])),
+                "metrics": list(prev_history.get("metrics", [])),
+                "img_reward": list(prev_history.get("img_reward", [])),
+                "val_loss": list(prev_history.get("val_loss", [])),
+                "val_rmse": list(prev_history.get("val_rmse", [])),
+                "reward": list(prev_history.get("reward", [])),
+                "total_reward": list(prev_history.get("total_reward", [])),
+                "capital": list(prev_history.get("capital", [])),
+            }
+        else:
+            self.session_stats = {
+                "episode": [],
+                "time_step": [],
+                "loss": [],
+                "metrics": [],
+                "img_reward": [],  # validation reward
+                "val_loss": [],
+                "val_rmse": [],
+                "reward": [],
+                "total_reward": [],
+                "capital": [],
+            }
 
         # WebSocket update related
         self.ws_update_interval_ms = server_settings.training.websocket_update_interval_ms

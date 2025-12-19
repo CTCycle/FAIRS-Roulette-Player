@@ -71,6 +71,7 @@ export interface TrainingNewConfig {
 }
 
 export interface TrainingResumeConfig {
+    selectedCheckpoint: string;
     numAdditionalEpisodes: number;
 }
 
@@ -155,6 +156,7 @@ const initialNewConfig: TrainingNewConfig = {
 };
 
 const initialResumeConfig: TrainingResumeConfig = {
+    selectedCheckpoint: '',
     numAdditionalEpisodes: 10,
 };
 
