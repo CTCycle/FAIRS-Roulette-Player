@@ -23,6 +23,9 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
     const [datasetOptions, setDatasetOptions] = useState<string[]>([]);
     const [datasetError, setDatasetError] = useState<string | null>(null);
     const [datasetLoading, setDatasetLoading] = useState(false);
+    const [checkpointOptions, setCheckpointOptions] = useState<string[]>([]);
+    const [checkpointsLoading, setCheckpointsLoading] = useState(false);
+    const [checkpointsError, setCheckpointsError] = useState<string | null>(null);
 
     const handleNewChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -37,8 +40,12 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
         } as Partial<TrainingNewConfig>);
     };
 
-    const handleResumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleResumeChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
+        if (name === 'selectedCheckpoint') {
+            onResumeConfigChange({ selectedCheckpoint: value });
+            return;
+        }
         onResumeConfigChange({
             [name]: Number(value)
         } as Partial<TrainingResumeConfig>);
@@ -71,6 +78,34 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
     useEffect(() => {
         void loadDatasetOptions();
     }, [datasetRefreshKey]);
+
+    const loadCheckpointOptions = async () => {
+        setCheckpointsLoading(true);
+        try {
+            const response = await fetch('/api/training/checkpoints');
+            if (!response.ok) {
+                throw new Error('Failed to load checkpoints');
+            }
+            const data = await response.json();
+            const checkpoints = Array.isArray(data) ? data : [];
+            setCheckpointOptions(checkpoints);
+            if (resumeConfig.selectedCheckpoint && !checkpoints.includes(resumeConfig.selectedCheckpoint)) {
+                onResumeConfigChange({ selectedCheckpoint: '' });
+            }
+            setCheckpointsError(null);
+        } catch (err) {
+            setCheckpointOptions([]);
+            setCheckpointsError('Unable to load checkpoints.');
+        } finally {
+            setCheckpointsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeSection === 'resume') {
+            void loadCheckpointOptions();
+        }
+    }, [activeSection]);
 
     const handleNewSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -141,12 +176,16 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
     };
 
     const handleResume = async () => {
+        if (!resumeConfig.selectedCheckpoint) {
+            alert('Please select a checkpoint to resume from.');
+            return;
+        }
         try {
             const response = await fetch('/api/training/resume', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    checkpoint: '', // TODO: Add checkpoint selector
+                    checkpoint: resumeConfig.selectedCheckpoint,
                     additional_episodes: Number(resumeConfig.numAdditionalEpisodes),
                 }),
             });
@@ -159,6 +198,7 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
             }
 
             console.log('Resume training started successfully');
+            onTrainingStart?.();
         } catch (err) {
             console.error('Error resuming training:', err);
             alert('Failed to connect to training server');
@@ -452,13 +492,35 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
                                     <RefreshCw size={16} /> Resume
                                 </legend>
                                 <div className="form-group">
+                                    <label className="form-label">Checkpoint</label>
+                                    <select
+                                        name="selectedCheckpoint"
+                                        value={resumeConfig.selectedCheckpoint}
+                                        onChange={handleResumeChange}
+                                        className="form-select"
+                                        disabled={checkpointsLoading}
+                                    >
+                                        <option value="">Select a checkpoint...</option>
+                                        {checkpointOptions.map((checkpoint) => (
+                                            <option key={checkpoint} value={checkpoint}>
+                                                {checkpoint}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {checkpointsError && (
+                                        <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#b91c1c' }}>
+                                            {checkpointsError}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="form-group">
                                     <label className="form-label">Additional epochs</label>
                                     <input type="number" name="numAdditionalEpisodes" value={resumeConfig.numAdditionalEpisodes} onChange={handleResumeChange} className="form-input" min="1" />
                                 </div>
                             </fieldset>
 
                             <div className="form-actions">
-                                <button type="button" className="btn-primary btn-narrow" style={{ backgroundColor: '#D4AF37' }} onClick={handleResume}>
+                                <button type="button" className="btn-primary btn-narrow" style={{ backgroundColor: '#D4AF37' }} onClick={handleResume} disabled={!resumeConfig.selectedCheckpoint}>
                                     <RefreshCw /> Resume
                                 </button>
                             </div>
