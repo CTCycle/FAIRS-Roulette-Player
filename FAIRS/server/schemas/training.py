@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from pydantic import BaseModel, Field
 
 
@@ -20,10 +21,9 @@ class TrainingConfig(BaseModel):
     # Environment parameters
     bet_amount: int = Field(10, ge=1)
     initial_capital: int = Field(1000, ge=1)
-    render_environment: bool = False
-    render_update_frequency: int = Field(20, ge=1)
     
     # Dataset parameters
+    dataset_name: str | None = None
     use_data_generator: bool = False
     num_generated_samples: int = Field(10000, ge=100)
     sample_size: float = Field(1.0, gt=0.0, le=1.0)
@@ -44,6 +44,9 @@ class TrainingConfig(BaseModel):
     # Device parameters
     use_device_GPU: bool = False
     device_ID: int = Field(0, ge=0)
+    use_mixed_precision: bool = False
+    jit_compile: bool = False
+    jit_backend: str = Field("inductor", min_length=1)
     
     # Checkpointing
     save_checkpoints: bool = False
@@ -52,14 +55,12 @@ class TrainingConfig(BaseModel):
 
 
 ###############################################################################
+
+
+
+###############################################################################
 class ResumeConfig(BaseModel):
     """Configuration for resuming a training session from a checkpoint."""
     
     checkpoint: str
     additional_episodes: int = Field(10, ge=1)
-
-
-###############################################################################
-class TrainingRuntimeSettings(BaseModel):
-    render_environment: bool = False
-    render_update_frequency: int = Field(20, ge=1)

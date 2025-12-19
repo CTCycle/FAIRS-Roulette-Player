@@ -30,12 +30,24 @@ class DatasetImportService:
         self.encoder = RouletteSeriesEncoder()
 
     # -------------------------------------------------------------------------
-    def normalize(self, dataframe: pd.DataFrame, table: DatasetTable) -> pd.DataFrame:
+    def normalize(
+        self,
+        dataframe: pd.DataFrame,
+        table: DatasetTable,
+        dataset_name: str | None = None,
+    ) -> pd.DataFrame:
         if dataframe.empty:
             return dataframe
 
         if table == ROULETTE_SERIES_TABLE:
             normalized = dataframe.copy()
+            if dataset_name is not None:
+                cleaned_name = dataset_name.strip()
+                normalized["dataset_name"] = cleaned_name if cleaned_name else "default"
+            elif "dataset_name" not in normalized.columns:
+                normalized["dataset_name"] = "default"
+            else:
+                normalized["dataset_name"] = normalized["dataset_name"].fillna("default")
             if "color" not in normalized.columns or "position" not in normalized.columns:
                 normalized = self.encoder.encode(normalized)
             if "id" not in normalized.columns:
@@ -67,7 +79,12 @@ class DatasetImportService:
         raise ValueError(f"Unsupported table: {table}")
 
     # -------------------------------------------------------------------------
-    def import_dataframe(self, dataframe: pd.DataFrame, table: DatasetTable) -> int:
-        normalized = self.normalize(dataframe, table)
+    def import_dataframe(
+        self,
+        dataframe: pd.DataFrame,
+        table: DatasetTable,
+        dataset_name: str | None = None,
+    ) -> int:
+        normalized = self.normalize(dataframe, table, dataset_name)
         self.persist(normalized, table)
         return int(len(normalized))

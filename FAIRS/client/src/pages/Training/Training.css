@@ -37,8 +37,8 @@
 
 .training-content {
   display: flex;
-  gap: 2rem;
-  /* flex: 1 removed to prevent forcing full height */
+  flex-direction: column;
+  gap: 1rem;
 }
 
 /* Card Styles */
@@ -58,7 +58,7 @@
 }
 
 .card-header {
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
   padding-bottom: 0;
   border-bottom: none;
 }
@@ -78,34 +78,54 @@
 
 /* Dataset Upload Section */
 .dataset-section {
-  flex: 1;
+  width: 100%;
+}
+
+.dataset-layout-container {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.dataset-upload-controls {
+  flex: 3;
+}
+
+.dataset-file-info {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
 }
 
 .upload-area {
   border: 2px dashed #E2E8F0;
-  border-radius: 16px;
-  padding: 2rem 1rem;
+  border-radius: 12px;
+  padding: 1.5rem 1rem;
   text-align: center;
   cursor: pointer;
   transition: all 0.2s;
   background-color: #F8FAFC;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
 .upload-area:hover,
-.upload-area.active {
+.dataset-upload-controls .upload-area.active {
   border-color: var(--roulette-green);
   background-color: #F0FDF4;
 }
 
 .upload-icon {
-  width: 48px;
-  height: 48px;
+  width: 32px;
+  height: 32px;
   color: #9CA3AF;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
 }
 
 .upload-text {
-  font-size: 1rem;
+  font-size: 0.95rem;
   color: #6B7280;
 }
 
@@ -116,10 +136,13 @@
 }
 
 .file-list {
-  margin-top: 1.5rem;
+  background: #fafafa;
+  border-radius: 8px;
+  border: 1px solid #eee;
   flex-grow: 1;
   overflow-y: auto;
-  min-height: 200px;
+  max-height: 200px;
+  min-height: 80px;
 }
 
 .file-item {
@@ -156,8 +179,11 @@
 
 /* Training Controls Section */
 .controls-section {
-  flex: 1;
-  min-width: 350px;
+  width: 100%;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  border: none;
 }
 
 .training-accordions {
@@ -307,6 +333,32 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+/* New Grid Layout for Accordion Content */
+.training-config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.training-config-grid .control-fieldset {
+  margin-bottom: 0;
+  height: 100%;
+}
+
+.form-actions {
+  margin-top: 1.5rem;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.btn-primary.btn-narrow {
+  width: auto;
+  min-width: 250px;
+  padding: 0.8rem 3rem;
+  margin-top: 0;
 }
 
 /* Training Dashboard */

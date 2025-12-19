@@ -5,7 +5,7 @@ from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, WebSocket, WebSocketDisconnect, status
 
-from FAIRS.server.schemas.training import ResumeConfig, TrainingConfig, TrainingRuntimeSettings
+from FAIRS.server.schemas.training import ResumeConfig, TrainingConfig
 
 from FAIRS.server.utils.configurations import server_settings
 from FAIRS.server.utils.logger import logger
@@ -30,7 +30,10 @@ class TrainingState:
             "time_step": 0,
             "loss": 0.0,
             "rmse": 0.0,
+            "val_loss": 0.0,
+            "val_rmse": 0.0,
             "reward": 0,
+            "val_reward": 0.0,
             "total_reward": 0,
             "capital": 0,
             "status": "idle",
@@ -38,7 +41,7 @@ class TrainingState:
         self.history_points: list[dict[str, Any]] = []
         self.max_history_points = 2000
         self.latest_env: dict[str, Any] = {}
-        self.runtime_settings = TrainingRuntimeSettings()
+
 
     # -------------------------------------------------------------------------
     async def broadcast_update(self, message: dict[str, Any]) -> None:
@@ -77,7 +80,14 @@ class TrainingState:
         if time_step <= 0:
             return
 
-        point = {"time_step": time_step, "loss": float(loss), "rmse": float(rmse), "epoch": epoch}
+        point = {
+            "time_step": time_step, 
+            "loss": float(loss), 
+            "rmse": float(rmse), 
+            "val_loss": float(stats.get("val_loss", 0.0)),
+            "val_rmse": float(stats.get("val_rmse", 0.0)),
+            "epoch": epoch
+        }
         if self.history_points and self.history_points[-1].get("time_step") == time_step:
             self.history_points[-1] = point
         else:
@@ -112,15 +122,7 @@ class TrainingEndpoint:
         base_config = TrainingConfig().model_dump()
         overrides = config.model_dump(exclude_unset=True)
         configuration = {**base_config, **overrides}
-        if "render_environment" not in overrides:
-            configuration["render_environment"] = self.training_state.runtime_settings.render_environment
-        if "render_update_frequency" not in overrides:
-            configuration["render_update_frequency"] = self.training_state.runtime_settings.render_update_frequency
 
-        self.training_state.runtime_settings = TrainingRuntimeSettings(
-            render_environment=configuration["render_environment"],
-            render_update_frequency=configuration["render_update_frequency"],
-        )
         self.training_state.history_points = []
         self.training_state.latest_env = {}
         background_tasks.add_task(self.run_training_task, configuration)
@@ -312,23 +314,10 @@ class TrainingEndpoint:
             "history": self.training_state.history_points,
             "latest_env": self.training_state.latest_env,
             "active_connections": len(self.training_state.active_websockets),
-            "runtime_settings": self.training_state.runtime_settings.model_dump(),
+            "active_connections": len(self.training_state.active_websockets),
         }
 
-    # -------------------------------------------------------------------------
-    def get_settings(self) -> dict[str, Any]:
-        return self.training_state.runtime_settings.model_dump()
 
-    # -------------------------------------------------------------------------
-    async def update_settings(self, settings: TrainingRuntimeSettings) -> dict[str, Any]:
-        self.training_state.runtime_settings = settings
-        if self.training_state.current_trainer:
-            self.training_state.current_trainer.update_render_settings(
-                settings.render_environment,
-                settings.render_update_frequency,
-            )
-        await self.training_state.broadcast_message("settings", settings.model_dump())
-        return {"status": "updated", "settings": settings.model_dump()}
 
     # -------------------------------------------------------------------------
     def stop_training(self) -> dict[str, Any]:
@@ -360,7 +349,7 @@ class TrainingEndpoint:
                 "data": {
                     "is_training": self.training_state.is_training,
                     "latest_stats": self.training_state.latest_stats,
-                    "runtime_settings": self.training_state.runtime_settings.model_dump(),
+
                     "history": self.training_state.history_points,
                     "latest_env": self.training_state.latest_env,
                 }
@@ -407,18 +396,7 @@ class TrainingEndpoint:
             methods=["GET"],
             status_code=status.HTTP_200_OK,
         )
-        self.router.add_api_route(
-            "/settings",
-            self.get_settings,
-            methods=["GET"],
-            status_code=status.HTTP_200_OK,
-        )
-        self.router.add_api_route(
-            "/settings",
-            self.update_settings,
-            methods=["PATCH"],
-            status_code=status.HTTP_200_OK,
-        )
+
         self.router.add_api_route(
             "/stop",
             self.stop_training,

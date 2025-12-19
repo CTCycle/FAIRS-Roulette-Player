@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from sqlalchemy import (
     BigInteger,
     Column,
@@ -19,12 +21,13 @@ Base = declarative_base()
 ###############################################################################
 class RouletteSeries(Base):
     __tablename__ = "ROULETTE_SERIES"
+    dataset_name = Column(String, primary_key=True)
     id = Column(Integer, primary_key=True)
     extraction = Column(Integer)
     color = Column(String)
     color_code = Column(Integer)
     position = Column(Integer)
-    __table_args__ = (UniqueConstraint("id"),)
+    __table_args__ = (UniqueConstraint("id", "dataset_name"),)
 
 
 ###############################################################################

@@ -9,7 +9,10 @@ interface TrainingStats {
     time_step: number;
     loss: number;
     rmse: number;
+    val_loss?: number;
+    val_rmse?: number;
     reward: number;
+    val_reward?: number;
     total_reward: number;
     capital: number;
     status: 'idle' | 'training' | 'completed' | 'error';
@@ -65,56 +68,14 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
     });
     const [isConnected, setIsConnected] = useState(false);
     const [connectionError, setConnectionError] = useState<string | null>(null);
-    const [runtimeSettings, setRuntimeSettings] = useState<TrainingRuntimeSettings>({
-        render_environment: false,
-        render_update_frequency: 50,
-    });
     const [historyPoints, setHistoryPoints] = useState<TrainingHistoryPoint[]>([]);
     const [envPayload, setEnvPayload] = useState<TrainingEnvPayload | null>(null);
     const wsRef = useRef<WebSocket | null>(null);
     const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const settingsUpdateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const maxHistoryPoints = 2000;
 
-    const patchRuntimeSettings = async (nextSettings: TrainingRuntimeSettings) => {
-        try {
-            const response = await fetch('/api/training/settings', {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(nextSettings),
-            });
 
-            if (!response.ok) {
-                const error = await response.json();
-                console.error('Failed to update runtime settings:', error);
-                return;
-            }
-
-            setRuntimeSettings(nextSettings);
-        } catch (err) {
-            console.error('Failed to update runtime settings:', err);
-        }
-    };
-
-    useEffect(() => {
-        const loadSettings = async () => {
-            try {
-                const response = await fetch('/api/training/settings');
-                if (!response.ok) {
-                    return;
-                }
-                const data = await response.json();
-                if (data && typeof data === 'object') {
-                    setRuntimeSettings(data as TrainingRuntimeSettings);
-                }
-            } catch (err) {
-                console.error('Failed to load runtime settings:', err);
-            }
-        };
-
-        loadSettings();
-    }, []);
 
     useEffect(() => {
         // Only connect when training is active
@@ -158,9 +119,6 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                         if (connData.latest_stats && Object.keys(connData.latest_stats).length > 0) {
                             setStats(connData.latest_stats);
                         }
-                        if (connData.runtime_settings) {
-                            setRuntimeSettings(connData.runtime_settings);
-                        }
                         if (connData.history && Array.isArray(connData.history)) {
                             setHistoryPoints(connData.history.slice(-maxHistoryPoints));
                         }
@@ -175,6 +133,8 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                                 time_step: updatedStats.time_step,
                                 loss: updatedStats.loss,
                                 rmse: updatedStats.rmse,
+                                val_loss: updatedStats.val_loss,
+                                val_rmse: updatedStats.val_rmse,
                                 epoch: updatedStats.epoch,
                             };
                             setHistoryPoints((prev) => {
@@ -190,8 +150,6 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                         if (updatedStats.status === 'completed' || updatedStats.status === 'error') {
                             onTrainingEnd?.();
                         }
-                    } else if (message.type === 'settings' && message.data) {
-                        setRuntimeSettings(message.data as TrainingRuntimeSettings);
                     } else if (message.type === 'env' && message.data) {
                         setEnvPayload(message.data as TrainingEnvPayload);
                     } else if (message.type === 'ping') {
@@ -225,12 +183,6 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
         return () => {
             if (wsRef.current) {
                 wsRef.current.close();
-            }
-            if (reconnectTimeoutRef.current) {
-                clearTimeout(reconnectTimeoutRef.current);
-            }
-            if (settingsUpdateTimeoutRef.current) {
-                clearTimeout(settingsUpdateTimeoutRef.current);
             }
         };
     }, [isActive]);
@@ -282,43 +234,7 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                 </div>
             </div>
 
-            <div className="dashboard-settings">
-                <div className="dashboard-settings-row">
-                    <input
-                        type="checkbox"
-                        id="renderEnvironment"
-                        checked={runtimeSettings.render_environment}
-                        onChange={(e) => {
-                            const next = { ...runtimeSettings, render_environment: e.target.checked };
-                            setRuntimeSettings(next);
-                            patchRuntimeSettings(next);
-                        }}
-                    />
-                    <label htmlFor="renderEnvironment" className="form-label" style={{ marginBottom: 0 }}>
-                        Render environment every N steps
-                    </label>
-                    <input
-                        type="number"
-                        className="form-input"
-                        min="1"
-                        value={runtimeSettings.render_update_frequency}
-                        disabled={!runtimeSettings.render_environment}
-                        onChange={(e) => {
-                            const value = Number(e.target.value);
-                            const next = { ...runtimeSettings, render_update_frequency: value };
-                            setRuntimeSettings(next);
 
-                            if (settingsUpdateTimeoutRef.current) {
-                                clearTimeout(settingsUpdateTimeoutRef.current);
-                            }
-                            settingsUpdateTimeoutRef.current = setTimeout(() => {
-                                patchRuntimeSettings(next);
-                            }, 300);
-                        }}
-                        style={{ width: '90px', marginLeft: 'auto' }}
-                    />
-                </div>
-            </div>
 
             {connectionError && (
                 <div className="dashboard-error">
@@ -409,19 +325,21 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                 </div>
             </div>
 
-            <div className={`dashboard-visuals ${runtimeSettings.render_environment ? 'with-env' : ''}`}>
+            <div className={`dashboard-visuals ${envPayload ? 'with-env' : ''}`}>
                 <div className="visual-card">
                     <div className="visual-card-header">
                         <span className="visual-card-title">Real-time Loss</span>
                         <div className="visual-card-legend">
                             <span className="legend-item"><span className="legend-dot loss"></span>Loss</span>
                             <span className="legend-item"><span className="legend-dot rmse"></span>RMSE</span>
+                            <span className="legend-item" style={{ opacity: 0.7 }}><span className="legend-dot loss" style={{ opacity: 0.5 }}></span>Val Loss</span>
+                            <span className="legend-item" style={{ opacity: 0.7 }}><span className="legend-dot rmse" style={{ opacity: 0.5 }}></span>Val RMSE</span>
                         </div>
                     </div>
                     <TrainingLossChart points={historyPoints} />
                 </div>
 
-                {runtimeSettings.render_environment && (
+                {envPayload && (
                     <div className="visual-card">
                         <div className="visual-card-header">
                             <span className="visual-card-title">Environment</span>

@@ -54,6 +54,7 @@ class TrainingSettings:
     default_episodes: int
     default_max_steps_episode: int
     default_render_update_frequency: int
+    render_environment: bool
 
 # -----------------------------------------------------------------------------
 @dataclass(frozen=True)
@@ -136,6 +137,7 @@ def build_training_settings(payload: dict[str, Any] | Any) -> TrainingSettings:
         default_render_update_frequency=coerce_int(
             data.get("default_render_update_frequency"), 20, minimum=1
         ),
+        render_environment=coerce_bool(data.get("render_environment"), False),
     )
 
 # -----------------------------------------------------------------------------

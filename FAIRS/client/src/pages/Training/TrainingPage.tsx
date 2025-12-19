@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAppState } from '../../context/AppStateContext';
 import './Training.css';
 import { DatasetUpload } from './components/DatasetUpload';
@@ -8,9 +8,21 @@ import { TrainingDashboard } from './components/TrainingDashboard';
 const TrainingPage: React.FC = () => {
     const { state, dispatch } = useAppState();
     const { isTraining, datasetUpload, newConfig, resumeConfig } = state.training;
+    const [datasetRefreshKey, setDatasetRefreshKey] = useState(0);
 
     const setIsTraining = (value: boolean) => {
         dispatch({ type: 'SET_TRAINING_IS_TRAINING', payload: value });
+    };
+
+    const handleDatasetUploadStateChange = (updates: {
+        files?: typeof datasetUpload.files;
+        uploadStatus?: typeof datasetUpload.uploadStatus;
+        uploadMessage?: string;
+    }) => {
+        dispatch({ type: 'SET_DATASET_UPLOAD_STATE', payload: updates });
+        if (updates.uploadStatus === 'success') {
+            setDatasetRefreshKey((prev) => prev + 1);
+        }
     };
 
     return (
@@ -24,14 +36,8 @@ const TrainingPage: React.FC = () => {
                     files={datasetUpload.files}
                     uploadStatus={datasetUpload.uploadStatus}
                     uploadMessage={datasetUpload.uploadMessage}
-                    onStateChange={(updates) =>
-                        dispatch({ type: 'SET_DATASET_UPLOAD_STATE', payload: updates })
-                    }
+                    onStateChange={handleDatasetUploadStateChange}
                     onReset={() => dispatch({ type: 'RESET_DATASET_UPLOAD' })}
-                    newConfig={newConfig}
-                    onNewConfigChange={(updates) =>
-                        dispatch({ type: 'SET_TRAINING_NEW_CONFIG', payload: updates })
-                    }
                 />
                 <TrainingControls
                     newConfig={newConfig}
@@ -43,6 +49,7 @@ const TrainingPage: React.FC = () => {
                         dispatch({ type: 'SET_TRAINING_RESUME_CONFIG', payload: updates })
                     }
                     onTrainingStart={() => setIsTraining(true)}
+                    datasetRefreshKey={datasetRefreshKey}
                 />
             </div>
 
