@@ -1,0 +1,220 @@
+/* Data Preparation Page Styles - Copied and Adapted from Training.css */
+:root {
+    --roulette-red: #E31D2B;
+    --roulette-black: #1A1A1A;
+    --roulette-green: #00933C;
+    --roulette-gold: #D4AF37;
+    --bg-light: #F4F4F9;
+    --card-bg: #FFFFFF;
+    --text-dark: #333333;
+    --text-light: #FFFFFF;
+}
+
+.data-preparation-page {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    padding: 2rem;
+    background-color: var(--bg-light);
+    height: 100%;
+    overflow-y: auto;
+    font-family: 'Inter', system-ui, sans-serif;
+    color: var(--text-dark);
+}
+
+.page-header {
+    margin-bottom: 1rem;
+}
+
+.page-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--roulette-black);
+    margin: 0;
+    border-left: 5px solid var(--roulette-red);
+    padding-left: 1rem;
+}
+
+.page-subtitle {
+    margin-top: 0.5rem;
+    padding-left: 1.2rem;
+    color: #555;
+    font-size: 1rem;
+}
+
+.preparation-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+/* Card Styles */
+.card {
+    background-color: var(--card-bg);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.05);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+.card:hover {
+    box-shadow: 0 20px 40px -5px rgba(0, 0, 0, 0.08);
+}
+
+.card-header {
+    margin-bottom: 1rem;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.card-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--roulette-black);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.card-title svg {
+    color: var(--roulette-red);
+}
+
+/* Dataset Upload Section */
+.dataset-section {
+    width: 100%;
+}
+
+.dataset-layout-container {
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+}
+
+.dataset-upload-controls {
+    flex: 3;
+}
+
+.dataset-file-info {
+    flex: 2;
+    display: flex;
+    flex-direction: column;
+}
+
+.upload-area {
+    border: 2px dashed #E2E8F0;
+    border-radius: 12px;
+    padding: 1.5rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background-color: #F8FAFC;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.upload-area:hover,
+.dataset-upload-controls .upload-area.active {
+    border-color: var(--roulette-green);
+    background-color: #F0FDF4;
+}
+
+.upload-icon {
+    width: 32px;
+    height: 32px;
+    color: #9CA3AF;
+    margin-bottom: 0.5rem;
+}
+
+.upload-text {
+    font-size: 0.95rem;
+    color: #6B7280;
+}
+
+.upload-hint {
+    font-size: 0.875rem;
+    color: #9CA3AF;
+    margin-top: 0.5rem;
+}
+
+.file-list {
+    background: #fafafa;
+    border-radius: 8px;
+    border: 1px solid #eee;
+    flex-grow: 1;
+    overflow-y: auto;
+    max-height: 200px;
+    min-height: 80px;
+}
+
+.file-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem;
+    border-bottom: 1px solid #eee;
+    font-size: 0.9rem;
+}
+
+.file-item:last-child {
+    border-bottom: none;
+}
+
+.file-icon {
+    margin-right: 0.75rem;
+    color: var(--roulette-black);
+    width: 18px;
+    height: 18px;
+}
+
+.file-name {
+    flex-grow: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-size {
+    color: #9CA3AF;
+    font-size: 0.8rem;
+    margin-left: 1rem;
+}
+
+.btn-primary {
+    width: 100%;
+    padding: 1rem;
+    background-color: var(--roulette-green);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.btn-primary:hover {
+    background-color: #007A32;
+}
+
+.btn-primary:active {
+    transform: translateY(1px);
+}
+
+.text-muted {
+    color: #888;
+    font-style: italic;
+    padding: 1rem;
+    text-align: center;
+    border: 1px dashed #eee;
+    border-radius: 8px;
+}
