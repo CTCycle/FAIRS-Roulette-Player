@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppStateProvider } from './context/AppStateContext';
 import MainLayout from './components/Layout/MainLayout';
+import DataPreparationPage from './pages/DataPreparation/DataPreparationPage';
 import TrainingPage from './pages/Training/TrainingPage';
 import InferencePage from './pages/Inference/InferencePage';
 import DatabasePage from './pages/Database/DatabasePage';
@@ -12,7 +13,8 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<MainLayout />}>
-            <Route index element={<Navigate to="/training" replace />} />
+            <Route index element={<Navigate to="/preparation" replace />} />
+            <Route path="preparation" element={<DataPreparationPage />} />
             <Route path="training" element={<TrainingPage />} />
             <Route path="inference" element={<InferencePage />} />
             <Route path="database" element={<DatabasePage />} />
