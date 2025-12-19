@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from os.path import abspath, join
 
 # [PATHS]
@@ -32,7 +33,14 @@ CHECKPOINTS_SUMMARY_TABLE = "CHECKPOINTS_SUMMARY"
 
 # [DATABASE COLUMNS]
 ###############################################################################
-ROULETTE_SERIES_COLUMNS = ["id", "extraction", "color", "color_code", "position"]
+ROULETTE_SERIES_COLUMNS = [
+    "id",
+    "dataset_name",
+    "extraction",
+    "color",
+    "color_code",
+    "position",
+]
 PREDICTED_GAMES_COLUMNS = ["id", "checkpoint", "extraction", "predicted_action"]
 CHECKPOINTS_SUMMARY_COLUMNS = [
     "checkpoint",

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Settings, Play, RefreshCw, Cpu, Layers, Activity, HardDrive, Save, ChevronsDown, ChevronsRight } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Settings, Play, RefreshCw, Cpu, Layers, Activity, HardDrive, Save, Database, ChevronsDown, ChevronsRight } from 'lucide-react';
 import type { TrainingNewConfig, TrainingResumeConfig } from '../../../context/AppStateContext';
 
 interface TrainingControlsProps {
@@ -8,6 +8,7 @@ interface TrainingControlsProps {
     onNewConfigChange: (updates: Partial<TrainingNewConfig>) => void;
     onResumeConfigChange: (updates: Partial<TrainingResumeConfig>) => void;
     onTrainingStart?: () => void;
+    datasetRefreshKey: number;
 }
 
 export const TrainingControls: React.FC<TrainingControlsProps> = ({
@@ -16,13 +17,23 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
     onNewConfigChange,
     onResumeConfigChange,
     onTrainingStart,
+    datasetRefreshKey,
 }) => {
     const [activeSection, setActiveSection] = useState<'new' | 'resume' | null>('new');
+    const [datasetOptions, setDatasetOptions] = useState<string[]>([]);
+    const [datasetError, setDatasetError] = useState<string | null>(null);
+    const [datasetLoading, setDatasetLoading] = useState(false);
 
-    const handleNewChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value, type, checked } = e.target;
+    const handleNewChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        if (e.target instanceof HTMLInputElement && e.target.type === 'checkbox') {
+            onNewConfigChange({
+                [name]: e.target.checked
+            } as Partial<TrainingNewConfig>);
+            return;
+        }
         onNewConfigChange({
-            [name]: type === 'checkbox' ? checked : value
+            [name]: value
         } as Partial<TrainingNewConfig>);
     };
 
@@ -32,6 +43,34 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
             [name]: Number(value)
         } as Partial<TrainingResumeConfig>);
     };
+
+    const loadDatasetOptions = async () => {
+        setDatasetLoading(true);
+        try {
+            const response = await fetch('/api/database/roulette-series/datasets');
+            if (!response.ok) {
+                throw new Error('Failed to load datasets');
+            }
+            const data = await response.json();
+            const datasets = Array.isArray(data?.datasets)
+                ? data.datasets.filter((name: unknown) => typeof name === 'string' && name.trim().length > 0)
+                : [];
+            setDatasetOptions(datasets);
+            if (newConfig.datasetName && !datasets.includes(newConfig.datasetName)) {
+                onNewConfigChange({ datasetName: '' });
+            }
+            setDatasetError(null);
+        } catch (err) {
+            setDatasetOptions([]);
+            setDatasetError('Unable to load dataset names.');
+        } finally {
+            setDatasetLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        void loadDatasetOptions();
+    }, [datasetRefreshKey]);
 
     const handleNewSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -50,6 +89,7 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
             bet_amount: Number(newConfig.betAmount),
             initial_capital: Number(newConfig.initialCapital),
             // Dataset
+            dataset_name: newConfig.datasetName,
             use_data_generator: newConfig.useDataGen,
             num_generated_samples: Number(newConfig.numGeneratedSamples),
             sample_size: Number(newConfig.trainSampleSize),
@@ -65,6 +105,9 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
             training_seed: Number(newConfig.trainingSeed),
             use_device_GPU: newConfig.deviceGPU,
             device_ID: Number(newConfig.deviceID),
+            use_mixed_precision: newConfig.useMixedPrecision,
+            jit_compile: newConfig.jitCompile,
+            jit_backend: newConfig.jitBackend,
             num_workers: Number(newConfig.numWorkers),
             // Memory
             max_memory_size: Number(newConfig.maxMemorySize),
@@ -149,7 +192,7 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
                     </div>
                     {activeSection === 'new' && (
                         <div className="training-accordion-content">
-                            <form onSubmit={handleNewSubmit}>
+                            <form onSubmit={handleNewSubmit} className="training-config-grid">
                                 {/* AGENT GROUP */}
                                 <fieldset className="control-fieldset">
                                     <legend className="control-legend" style={{ color: '#E31D2B' }}>
@@ -207,6 +250,8 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
                                         </div>
                                     </div>
                                 </fieldset>
+
+
 
                                 {/* MEMORY GROUP */}
                                 <fieldset className="control-fieldset">
@@ -280,18 +325,110 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
                                     </div>
 
                                     <div className="form-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                        <input type="checkbox" id="useMixedPrecision" name="useMixedPrecision" checked={newConfig.useMixedPrecision} onChange={handleNewChange} />
+                                        <label htmlFor="useMixedPrecision" className="form-label" style={{ marginBottom: 0 }}>Mixed precision policy</label>
+                                    </div>
+
+                                    <div className="form-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                        <input type="checkbox" id="jitCompile" name="jitCompile" checked={newConfig.jitCompile} onChange={handleNewChange} />
+                                        <label htmlFor="jitCompile" className="form-label" style={{ marginBottom: 0 }}>Use JIT compiler</label>
+                                        {newConfig.jitCompile && (
+                                            <select
+                                                name="jitBackend"
+                                                value={newConfig.jitBackend}
+                                                onChange={handleNewChange}
+                                                className="form-select"
+                                                style={{ width: '160px', marginLeft: 'auto' }}
+                                            >
+                                                <option value="eager">eager</option>
+                                                <option value="aot_eager">aot_eager</option>
+                                                <option value="aot_cudagraphs">aot_cudagraphs</option>
+                                                <option value="inductor">inductor</option>
+                                                <option value="nvprims_nvfuser">nvprims_nvfuser</option>
+                                                <option value="xla">xla</option>
+                                            </select>
+                                        )}
+                                    </div>
+
+                                    <div className="form-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
                                         <input type="checkbox" id="deviceGPU" name="deviceGPU" checked={newConfig.deviceGPU} onChange={handleNewChange} />
                                         <label htmlFor="deviceGPU" className="form-label" style={{ marginBottom: 0 }}>Use GPU (Device ID)</label>
                                         {newConfig.deviceGPU && (
                                             <input type="number" name="deviceID" value={newConfig.deviceID} onChange={handleNewChange} className="form-input" style={{ width: '60px', marginLeft: 'auto' }} />
                                         )}
                                     </div>
+                                </fieldset>
 
-                                    {/* Start Button Inside Session */}
-                                    <button type="submit" className="btn-primary" style={{ marginTop: '1.5rem' }}>
+                                {/* DATASET GROUP */}
+                                <fieldset className="control-fieldset">
+                                    <legend className="control-legend" style={{ color: '#D4AF37' }}>
+                                        <Database size={16} /> Dataset
+                                    </legend>
+
+                                    {/* Existing Dataset Selection */}
+                                    <div className="form-group">
+                                        <label className="form-label">Training Dataset</label>
+                                        <select
+                                            name="datasetName"
+                                            value={newConfig.datasetName}
+                                            onChange={handleNewChange}
+                                            className="form-select"
+                                            disabled={datasetLoading}
+                                        >
+                                            <option value="">All datasets</option>
+                                            {datasetOptions.map((dataset) => (
+                                                <option key={dataset} value={dataset}>
+                                                    {dataset}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        {datasetError && (
+                                            <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#b91c1c' }}>
+                                                {datasetError}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <hr style={{ margin: '1rem 0', borderColor: '#E2E8F0', opacity: 0.5 }} />
+
+                                    {/* Merged Generator Controls */}
+                                    <div className="form-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.5rem' }}>
+                                        <input type="checkbox" id="useDataGen" name="useDataGen" checked={newConfig.useDataGen} onChange={handleNewChange} />
+                                        <label htmlFor="useDataGen" className="form-label" style={{ marginBottom: 0 }}>Use data generator (N samples)</label>
+                                        {newConfig.useDataGen && (
+                                            <input type="number" name="numGeneratedSamples" value={newConfig.numGeneratedSamples} onChange={handleNewChange} className="form-input" style={{ width: '100px', marginLeft: 'auto' }} />
+                                        )}
+                                    </div>
+
+                                    <div className="param-grid" style={{ marginTop: '0.5rem', gridTemplateColumns: '1fr 1fr' }}>
+                                        <div className="form-group">
+                                            <label className="form-label">Train Sample Size</label>
+                                            <input type="number" name="trainSampleSize" value={newConfig.trainSampleSize} onChange={handleNewChange} className="form-input" step="0.05" max="1.0" />
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="form-label">Validation Size</label>
+                                            <input type="number" name="validationSize" value={newConfig.validationSize} onChange={handleNewChange} className="form-input" step="0.05" max="1.0" />
+                                        </div>
+                                    </div>
+                                    <div className="form-group" style={{ marginTop: '0.5rem' }}>
+                                        <label className="form-label">Split Seed</label>
+                                        <input type="number" name="splitSeed" value={newConfig.splitSeed} onChange={handleNewChange} className="form-input" />
+                                    </div>
+
+                                    <div className="form-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                        <input type="checkbox" id="setShuffle" name="setShuffle" checked={newConfig.setShuffle} onChange={handleNewChange} />
+                                        <label htmlFor="setShuffle" className="form-label" style={{ marginBottom: 0 }}>Shuffle with buffer</label>
+                                        {newConfig.setShuffle && (
+                                            <input type="number" name="shuffleSize" value={newConfig.shuffleSize} onChange={handleNewChange} className="form-input" style={{ width: '80px', marginLeft: 'auto' }} />
+                                        )}
+                                    </div>
+                                </fieldset>
+
+                                <div className="form-actions" style={{ gridColumn: '1 / -1' }}>
+                                    <button type="submit" className="btn-primary btn-narrow">
                                         <Play /> Start Training
                                     </button>
-                                </fieldset>
+                                </div>
                             </form>
                         </div>
                     )}
@@ -320,9 +457,11 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
                                 </div>
                             </fieldset>
 
-                            <button type="button" className="btn-primary" style={{ backgroundColor: '#D4AF37' }} onClick={handleResume}>
-                                <RefreshCw /> Resume
-                            </button>
+                            <div className="form-actions">
+                                <button type="button" className="btn-primary btn-narrow" style={{ backgroundColor: '#D4AF37' }} onClick={handleResume}>
+                                    <RefreshCw /> Resume
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>

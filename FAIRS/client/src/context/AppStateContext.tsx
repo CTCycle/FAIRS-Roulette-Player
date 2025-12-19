@@ -44,6 +44,7 @@ export interface TrainingNewConfig {
     modelUpdateFreq: number;
     betAmount: number;
     initialCapital: number;
+    datasetName: string;
     useDataGen: boolean;
     numGeneratedSamples: number;
     trainSampleSize: number;
@@ -58,6 +59,9 @@ export interface TrainingNewConfig {
     trainingSeed: number;
     deviceGPU: boolean;
     deviceID: number;
+    useMixedPrecision: boolean;
+    jitCompile: boolean;
+    jitBackend: string;
     maxMemorySize: number;
     replayBufferSize: number;
     saveCheckpoints: boolean;
@@ -124,6 +128,7 @@ const initialNewConfig: TrainingNewConfig = {
     modelUpdateFreq: 10,
     betAmount: 10,
     initialCapital: 1000,
+    datasetName: '',
     useDataGen: false,
     numGeneratedSamples: 10000,
     trainSampleSize: 1.0,
@@ -138,6 +143,9 @@ const initialNewConfig: TrainingNewConfig = {
     trainingSeed: 42,
     deviceGPU: false,
     deviceID: 0,
+    useMixedPrecision: false,
+    jitCompile: false,
+    jitBackend: 'inductor',
     maxMemorySize: 10000,
     replayBufferSize: 1000,
     saveCheckpoints: false,

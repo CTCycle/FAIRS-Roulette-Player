@@ -39,7 +39,20 @@ class DataSerializer:
             return
         frame = dataset.reindex(columns=ROULETTE_SERIES_COLUMNS)
         frame = frame.where(pd.notnull(frame), cast(Any, None))
-        database.save_into_database(frame, ROULETTE_SERIES_TABLE)
+        dataset_names = [
+            name
+            for name in frame["dataset_name"].dropna().unique().tolist()
+            if str(name).strip()
+        ]
+        if not dataset_names:
+            database.save_into_database(frame, ROULETTE_SERIES_TABLE)
+            return
+
+        for dataset_name in dataset_names:
+            database.delete_from_database(
+                ROULETTE_SERIES_TABLE, {"dataset_name": dataset_name}
+            )
+        database.append_into_database(frame, ROULETTE_SERIES_TABLE)
 
     # -----------------------------------------------------------------------------
     def save_predicted_games(self, dataset: pd.DataFrame) -> None:

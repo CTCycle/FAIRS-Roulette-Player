@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 import json
 import os
 from datetime import datetime
@@ -40,16 +41,36 @@ class DataSerializerExtension:
 
         seed = configuration.get("seed", 42)
         sample_size = configuration.get("sample_size", 1.0)
-        dataset = self.load_roulette_dataset(sample_size, seed)
+        dataset_name = configuration.get("dataset_name")
+        if isinstance(dataset_name, str):
+            dataset_name = dataset_name.strip()
+        if not dataset_name:
+            dataset_name = None
+        dataset = self.load_roulette_dataset(sample_size, seed, dataset_name)
+        if dataset.empty or "extraction" not in dataset.columns:
+            if dataset_name:
+                raise ValueError(
+                    f"No roulette dataset available for '{dataset_name}'."
+                )
+            raise ValueError("No roulette dataset available for training.")
         dataset = self.encoder.encode(dataset)
 
         return dataset, False
 
     # -------------------------------------------------------------------------
     def load_roulette_dataset(
-        self, sample_size: float = 1.0, seed: int = 42
+        self,
+        sample_size: float = 1.0,
+        seed: int = 42,
+        dataset_name: str | None = None,
     ) -> pd.DataFrame:
         dataset = database.load_from_database(ROULETTE_SERIES_TABLE)
+        if dataset.empty:
+            return dataset
+        if dataset_name and "dataset_name" in dataset.columns:
+            dataset = dataset[dataset["dataset_name"] == dataset_name]
+        if dataset.empty:
+            return dataset
         if sample_size < 1.0:
             dataset = dataset.sample(frac=sample_size, random_state=seed)
         return dataset

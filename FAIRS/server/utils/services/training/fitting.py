@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import asyncio
 import time
+from collections import deque
 from collections.abc import Callable
 from typing import Any
 
@@ -27,8 +28,8 @@ class DQNTraining:
         self.selected_device = configuration.get("device", "cpu")
         self.device_id = configuration.get("device_id", 0)
         self.mixed_precision = configuration.get("mixed_precision", False)
-        self.render_environment = configuration.get("render_environment", False)
-        self.render_update_frequency = configuration.get("render_update_frequency", 20)
+        # Load render settings from server config
+        self.render_environment = server_settings.training.render_environment
         self.configuration = configuration
 
         self.agent = DQNAgent(configuration)
@@ -37,6 +38,9 @@ class DQNTraining:
             "time_step": [],
             "loss": [],
             "metrics": [],
+            "img_reward": [],  # validation reward
+            "val_loss": [],
+            "val_rmse": [],
             "reward": [],
             "total_reward": [],
             "capital": [],
@@ -47,10 +51,7 @@ class DQNTraining:
         self.last_ws_update_time = 0.0
         self.is_cancelled = False
 
-    # -------------------------------------------------------------------------
-    def update_render_settings(self, render_environment: bool, render_update_frequency: int) -> None:
-        self.render_environment = render_environment
-        self.render_update_frequency = render_update_frequency
+
 
     # -------------------------------------------------------------------------
     async def maybe_send_environment_update(
@@ -88,6 +89,7 @@ class DQNTraining:
     def update_session_stats(
         self,
         scores: dict,
+        val_scores: dict | None,
         episode: int,
         time_step: int,
         reward: int | float,
@@ -105,6 +107,19 @@ class DQNTraining:
         self.session_stats["reward"].append(reward)
         self.session_stats["total_reward"].append(total_reward)
         self.session_stats["capital"].append(capital)
+
+        if val_scores:
+            self.session_stats["val_loss"].append(val_scores.get("loss", 0.0))
+            self.session_stats["val_rmse"].append(val_scores.get("root_mean_squared_error", 0.0))
+            self.session_stats["img_reward"].append(val_scores.get("reward", 0.0))
+        else:
+            # Carry forward last value or 0.0
+            last_val_loss = self.session_stats["val_loss"][-1] if self.session_stats["val_loss"] else 0.0
+            last_val_rmse = self.session_stats["val_rmse"][-1] if self.session_stats["val_rmse"] else 0.0
+            last_val_reward = self.session_stats["img_reward"][-1] if self.session_stats["img_reward"] else 0.0
+            self.session_stats["val_loss"].append(last_val_loss)
+            self.session_stats["val_rmse"].append(last_val_rmse)
+            self.session_stats["img_reward"].append(last_val_reward)
 
     # -------------------------------------------------------------------------
     def get_latest_stats(self, episode: int, total_episodes: int) -> dict[str, Any]:
@@ -126,7 +141,10 @@ class DQNTraining:
             "time_step": self.session_stats["time_step"][-1],
             "loss": self.session_stats["loss"][-1],
             "rmse": self.session_stats["metrics"][-1],
+            "val_loss": self.session_stats["val_loss"][-1] if self.session_stats["val_loss"] else 0.0,
+            "val_rmse": self.session_stats["val_rmse"][-1] if self.session_stats["val_rmse"] else 0.0,
             "reward": self.session_stats["reward"][-1],
+            "val_reward": self.session_stats["img_reward"][-1] if self.session_stats["img_reward"] else 0.0,
             "total_reward": self.session_stats["total_reward"][-1],
             "capital": self.session_stats["capital"][-1],
             "status": "training",
@@ -156,9 +174,49 @@ class DQNTraining:
         checkpoint_path: str,
         ws_callback: Callable[[dict[str, Any]], Any] | None = None,
         ws_env_callback: Callable[[dict[str, Any]], Any] | None = None,
+        val_environment: RouletteEnvironment | None = None,
     ) -> Model:
         scores = None
         total_steps = 0
+
+        async def run_validation(val_env: RouletteEnvironment, steps: int = 100) -> dict[str, float]:
+            val_state = val_env.reset()
+            val_state = np.reshape(val_state, shape=(1, state_size))
+            val_total_reward = 0
+            val_memory = deque(maxlen=steps + 10)
+            
+            for _ in range(steps):
+                gain = val_env.capital / val_env.initial_capital
+                gain = np.reshape(gain, shape=(1, 1))
+                
+                # Greedy action (epsilon=0 for validation usually, or low)
+                # We'll use the act method but force epsilon=0 if we could, 
+                # but DQNAgent doesn't expose epsilon override in act().
+                # We can backup generic epsilon and restore it, or just rely on current epsilon.
+                # Usually validation is done greedily.
+                old_eps = self.agent.epsilon
+                self.agent.epsilon = 0.0
+                action = self.agent.act(model, val_state, gain)
+                self.agent.epsilon = old_eps
+                
+                next_state, reward, done, extraction = val_env.step(action)
+                val_total_reward += reward
+                next_state = np.reshape(next_state, [1, state_size])
+                
+                next_gain = val_env.capital / val_env.initial_capital
+                next_gain = np.reshape(next_gain, shape=(1, 1))
+                
+                val_memory.append((val_state, action, reward, gain, next_gain, next_state, done))
+                val_state = next_state
+                
+                if done:
+                    val_state = val_env.reset()
+                    val_state = np.reshape(val_state, shape=(1, state_size))
+
+            # Evaluate batch
+            val_metrics = self.agent.evaluate_batch(model, target_model, val_env, val_memory, self.batch_size)
+            val_metrics["reward"] = val_total_reward / steps # Average reward per step
+            return val_metrics
 
         for i, episode in enumerate(range(start_episode, episodes)):
             if self.is_cancelled:
@@ -194,8 +252,15 @@ class DQNTraining:
                     scores = self.agent.replay(
                         model, target_model, environment, self.batch_size
                     )
+                    
+                    # Run Validation periodically (e.g., every 100 steps)
+                    val_scores = None
+                    if val_environment and time_step % 100 == 0:
+                        val_scores = await run_validation(val_environment, steps=50)
+
                     self.update_session_stats(
                         scores,
+                        val_scores,
                         episode,
                         time_step,
                         reward,
@@ -204,18 +269,14 @@ class DQNTraining:
                     )
 
                     if time_step % 50 == 0:
-                        logger.info(
-                            f"Loss: {scores['loss']} | RMSE: {scores['root_mean_squared_error']}"
-                        )
-                        logger.info(
-                            f"Episode {episode + 1}/{episodes} - Time steps: {time_step} - Capital: {environment.capital} - Total Reward: {total_reward}"
-                        )
+                        # logger.info(f"Loss: {scores['loss']} | RMSE: {scores['root_mean_squared_error']}")
+                        pass
 
                 if time_step % self.update_frequency == 0:
                     target_model.set_weights(model.get_weights())
 
-                # Send WebSocket updates (stats + environment) at configured step interval
-                if time_step % self.render_update_frequency == 0:
+                # Send WebSocket updates (stats + environment) based on time interval
+                if self.should_send_ws_update():
                     # Send stats update
                     if ws_callback:
                         stats = self.get_latest_stats(episode, episodes)
@@ -265,6 +326,18 @@ class DQNTraining:
         logger.info(
             f"Size of the observation space (previous extractions): {state_size}"
         )
+
+        # Split data for validation
+        validation_split = self.configuration.get("validation_size", 0.0)
+        val_environment = None
+        if validation_split > 0.0:
+            split_idx = int(len(data) * (1 - validation_split))
+            train_data = data.iloc[:split_idx]
+            val_data = data.iloc[split_idx:]
+            environment = RouletteEnvironment(train_data, self.configuration, checkpoint_path)
+            val_environment = RouletteEnvironment(val_data, self.configuration, checkpoint_path)
+            logger.info(f"Splitting data: Train ({len(train_data)}) | Validation ({len(val_data)})")
+
         model = await self.train_with_reinforcement_learning(
             model,
             target_model,
@@ -275,6 +348,7 @@ class DQNTraining:
             checkpoint_path,
             ws_callback=ws_callback,
             ws_env_callback=ws_env_callback,
+            val_environment=val_environment,
         )
 
         history = {

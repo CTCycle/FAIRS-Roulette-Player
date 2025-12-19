@@ -32,6 +32,9 @@ class DatabaseBackend(Protocol):
     def upsert_into_database(self, df: pd.DataFrame, table_name: str) -> None: ...
 
     # -------------------------------------------------------------------------
+    def delete_from_database(self, table_name: str, conditions: dict[str, Any]) -> None: ...
+
+    # -------------------------------------------------------------------------
     def count_rows(self, table_name: str) -> int: ...
 
     # -------------------------------------------------------------------------
@@ -39,6 +42,9 @@ class DatabaseBackend(Protocol):
 
     # -------------------------------------------------------------------------
     def count_columns(self, table_name: str) -> int: ...
+
+    # -------------------------------------------------------------------------
+    def load_distinct_values(self, table_name: str, column_name: str) -> list[str]: ...
    
 
 BackendFactory = Callable[[DatabaseSettings], DatabaseBackend]
@@ -97,6 +103,10 @@ class FAIRSDatabase:
         self.backend.upsert_into_database(df, table_name)
 
     # -------------------------------------------------------------------------
+    def delete_from_database(self, table_name: str, conditions: dict[str, Any]) -> None:
+        self.backend.delete_from_database(table_name, conditions)
+
+    # -------------------------------------------------------------------------
     def count_rows(self, table_name: str) -> int:
         return self.backend.count_rows(table_name)
 
@@ -107,6 +117,10 @@ class FAIRSDatabase:
     # -------------------------------------------------------------------------
     def count_columns(self, table_name: str) -> int:
         return self.backend.count_columns(table_name)
+
+    # -------------------------------------------------------------------------
+    def load_distinct_values(self, table_name: str, column_name: str) -> list[str]:
+        return self.backend.load_distinct_values(table_name, column_name)
 
 
 database = FAIRSDatabase()

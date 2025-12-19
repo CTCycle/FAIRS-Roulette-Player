@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, status
@@ -10,6 +11,7 @@ from FAIRS.server.database.schema import (
     PredictedGames,
     RouletteSeries,
 )
+from FAIRS.server.utils.constants import ROULETTE_SERIES_TABLE
 from FAIRS.server.utils.configurations import server_settings
 
 
@@ -73,6 +75,11 @@ class DatabaseEndpoint:
         }
 
     # -------------------------------------------------------------------------
+    def list_roulette_datasets(self) -> dict[str, Any]:
+        datasets = database.load_distinct_values(ROULETTE_SERIES_TABLE, "dataset_name")
+        return {"datasets": datasets}
+
+    # -------------------------------------------------------------------------
     def add_routes(self) -> None:
         self.router.add_api_route(
             "/tables",
@@ -89,6 +96,12 @@ class DatabaseEndpoint:
         self.router.add_api_route(
             "/tables/{table_name}/stats",
             self.get_table_stats,
+            methods=["GET"],
+            status_code=status.HTTP_200_OK,
+        )
+        self.router.add_api_route(
+            "/roulette-series/datasets",
+            self.list_roulette_datasets,
             methods=["GET"],
             status_code=status.HTTP_200_OK,
         )

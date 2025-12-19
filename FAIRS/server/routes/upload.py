@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+import os
 from typing import Any
 
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile, status
@@ -14,7 +15,7 @@ router = APIRouter(prefix="/data", tags=["data"])
 
 
 ###############################################################################
-class Endpoint:
+class DataUploadEndpoint:
     def __init__(self, router: APIRouter) -> None:
         self.router = router
         self.loader = TabularFileLoader()
@@ -33,6 +34,10 @@ class Endpoint:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Missing filename.",
             )
+        dataset_name = None
+        if table == "ROULETTE_SERIES":
+            base_name = os.path.splitext(os.path.basename(file.filename))[0].strip()
+            dataset_name = base_name if base_name else "dataset"
 
         try:
             content = await file.read()
@@ -63,7 +68,9 @@ class Endpoint:
             ) from exc
 
         try:
-            imported = self.importer.import_dataframe(dataframe, table)
+            imported = self.importer.import_dataframe(
+                dataframe, table, dataset_name=dataset_name
+            )
         except ValueError as exc:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -93,5 +100,5 @@ class Endpoint:
         )
 
 
-upload_endpoint = Endpoint(router=router)
+upload_endpoint = DataUploadEndpoint(router=router)
 upload_endpoint.add_routes()

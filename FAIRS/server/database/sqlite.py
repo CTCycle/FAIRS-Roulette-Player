@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 import os
 from typing import Any
 
@@ -98,6 +99,24 @@ class SQLiteRepository:
         table_cls = self.get_table_class(table_name)
         self.upsert_dataframe(df, table_cls)
 
+    # -------------------------------------------------------------------------
+    def delete_from_database(self, table_name: str, conditions: dict[str, Any]) -> None:
+        if not conditions:
+            return
+        with self.engine.begin() as conn:
+            inspector = inspect(conn)
+            if not inspector.has_table(table_name):
+                logger.warning("Table %s does not exist", table_name)
+                return
+            columns = {column["name"] for column in inspector.get_columns(table_name)}
+            for key in conditions:
+                if key not in columns:
+                    logger.warning("Column %s does not exist in %s", key, table_name)
+                    return
+            clauses = " AND ".join([f'"{key}" = :{key}' for key in conditions])
+            query = sqlalchemy.text(f'DELETE FROM "{table_name}" WHERE {clauses}')
+            conn.execute(query, conditions)
+
     # -----------------------------------------------------------------------------
     def count_rows(self, table_name: str) -> int:
         with self.engine.connect() as conn:
@@ -128,3 +147,19 @@ class SQLiteRepository:
                 return 0
             columns = inspector.get_columns(table_name)
         return len(columns)
+
+    # -----------------------------------------------------------------------------
+    def load_distinct_values(self, table_name: str, column_name: str) -> list[str]:
+        with self.engine.connect() as conn:
+            inspector = inspect(conn)
+            if not inspector.has_table(table_name):
+                return []
+            columns = {column["name"] for column in inspector.get_columns(table_name)}
+            if column_name not in columns:
+                return []
+            query = sqlalchemy.text(
+                f'SELECT DISTINCT "{column_name}" FROM "{table_name}" ORDER BY "{column_name}"'
+            )
+            rows = conn.execute(query).fetchall()
+        values = [row[0] for row in rows if row[0] is not None]
+        return [str(value) for value in values]
