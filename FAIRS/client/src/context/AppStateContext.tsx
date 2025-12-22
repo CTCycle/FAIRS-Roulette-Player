@@ -60,8 +60,6 @@ export interface TrainingNewConfig {
     deviceGPU: boolean;
     deviceID: number;
     useMixedPrecision: boolean;
-    jitCompile: boolean;
-    jitBackend: string;
     maxMemorySize: number;
     replayBufferSize: number;
     saveCheckpoints: boolean;
@@ -145,8 +143,6 @@ const initialNewConfig: TrainingNewConfig = {
     deviceGPU: false,
     deviceID: 0,
     useMixedPrecision: false,
-    jitCompile: false,
-    jitBackend: 'inductor',
     maxMemorySize: 10000,
     replayBufferSize: 1000,
     saveCheckpoints: false,
