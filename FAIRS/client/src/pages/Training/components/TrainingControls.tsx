@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Settings, Play, RefreshCw, Cpu, Layers, Activity, HardDrive, Save, Database, ChevronsDown, ChevronsRight } from 'lucide-react';
+import { Settings, Play, RefreshCw, Cpu, Layers, Activity, Database, ChevronsDown, ChevronsRight } from 'lucide-react';
 import type { TrainingNewConfig, TrainingResumeConfig } from '../../../context/AppStateContext';
 
 interface TrainingControlsProps {
@@ -141,8 +141,6 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
             use_device_GPU: newConfig.deviceGPU,
             device_ID: Number(newConfig.deviceID),
             use_mixed_precision: newConfig.useMixedPrecision,
-            jit_compile: newConfig.jitCompile,
-            jit_backend: newConfig.jitBackend,
             num_workers: Number(newConfig.numWorkers),
             // Memory
             max_memory_size: Number(newConfig.maxMemorySize),
@@ -232,13 +230,13 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
                     </div>
                     {activeSection === 'new' && (
                         <div className="training-accordion-content">
-                            <form onSubmit={handleNewSubmit} className="training-config-grid">
-                                {/* AGENT GROUP */}
+                            <form onSubmit={handleNewSubmit}>
+                                {/* === AGENT CONFIGURATION === */}
                                 <fieldset className="control-fieldset">
-                                    <legend className="control-legend" style={{ color: '#E31D2B' }}>
-                                        <Activity size={16} /> Agent
+                                    <legend className="control-legend">
+                                        <Activity size={16} className="text-blue-500" /> Agent Configuration
                                     </legend>
-                                    <div className="param-grid columns-4">
+                                    <div className="training-pro-grid">
                                         <div className="form-group">
                                             <label className="form-label">Perceptive Field</label>
                                             <input type="number" name="perceptiveField" value={newConfig.perceptiveField} onChange={handleNewChange} className="form-input" max="1024" />
@@ -274,12 +272,12 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
                                     </div>
                                 </fieldset>
 
-                                {/* ENVIRONMENT GROUP */}
+                                {/* === ENVIRONMENT & MEMORY === */}
                                 <fieldset className="control-fieldset">
-                                    <legend className="control-legend" style={{ color: '#00933C' }}>
-                                        <Layers size={16} /> Environment
+                                    <legend className="control-legend">
+                                        <Layers size={16} /> Environment & Memory
                                     </legend>
-                                    <div className="param-grid columns-2">
+                                    <div className="training-pro-grid">
                                         <div className="form-group">
                                             <label className="form-label">Bet Amount</label>
                                             <input type="number" name="betAmount" value={newConfig.betAmount} onChange={handleNewChange} className="form-input" min="1" />
@@ -288,17 +286,6 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
                                             <label className="form-label">Initial Capital</label>
                                             <input type="number" name="initialCapital" value={newConfig.initialCapital} onChange={handleNewChange} className="form-input" min="1" />
                                         </div>
-                                    </div>
-                                </fieldset>
-
-
-
-                                {/* MEMORY GROUP */}
-                                <fieldset className="control-fieldset">
-                                    <legend className="control-legend" style={{ color: '#7c3aed' }}>
-                                        <HardDrive size={16} /> Memory
-                                    </legend>
-                                    <div className="param-grid columns-2">
                                         <div className="form-group">
                                             <label className="form-label">Max Memory</label>
                                             <input type="number" name="maxMemorySize" value={newConfig.maxMemorySize} onChange={handleNewChange} className="form-input" min="100" />
@@ -310,34 +297,84 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
                                     </div>
                                 </fieldset>
 
-                                {/* CHECKPOINTING GROUP */}
+                                {/* === DATASET === */}
                                 <fieldset className="control-fieldset">
-                                    <legend className="control-legend" style={{ color: '#06b6d4' }}>
-                                        <Save size={16} /> Checkpointing
+                                    <legend className="control-legend">
+                                        <Database size={16} /> Dataset Configuration
                                     </legend>
-                                    <div className="param-grid columns-2">
-                                        <div className="checkbox-group">
-                                            <div className="inline-input-group">
-                                                <input type="checkbox" id="saveCheckpoints" name="saveCheckpoints" checked={newConfig.saveCheckpoints} onChange={handleNewChange} />
-                                                <label htmlFor="saveCheckpoints">Save every N episodes</label>
-                                                {newConfig.saveCheckpoints && (
-                                                    <input type="number" name="checkpointsFreq" value={newConfig.checkpointsFreq} onChange={handleNewChange} className="form-input inline-input" min="1" />
-                                                )}
+                                    <div className="training-pro-grid">
+                                        <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                                            <label className="form-label">Training Dataset</label>
+                                            <select
+                                                name="datasetName"
+                                                value={newConfig.datasetName}
+                                                onChange={handleNewChange}
+                                                className="form-select"
+                                                disabled={datasetLoading}
+                                            >
+                                                <option value="">All datasets</option>
+                                                {datasetOptions.map((dataset) => (
+                                                    <option key={dataset} value={dataset}>
+                                                        {dataset}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            {datasetError && (
+                                                <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#dc2626' }}>
+                                                    {datasetError}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="form-label">Train / Validation Split</label>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                                                <input type="number" name="trainSampleSize" value={newConfig.trainSampleSize} onChange={handleNewChange} className="form-input" step="0.05" placeholder="Train %" title="Training Sample Size" />
+                                                <input type="number" name="validationSize" value={newConfig.validationSize} onChange={handleNewChange} className="form-input" step="0.05" placeholder="Val %" title="Validation Size" />
                                             </div>
                                         </div>
-                                        <div className="checkbox-group">
-                                            <input type="checkbox" id="useTensorboard" name="useTensorboard" checked={newConfig.useTensorboard} onChange={handleNewChange} />
-                                            <label htmlFor="useTensorboard">Enable TensorBoard</label>
+                                        <div className="form-group">
+                                            <label className="form-label">Split Seed</label>
+                                            <input type="number" name="splitSeed" value={newConfig.splitSeed} onChange={handleNewChange} className="form-input" />
                                         </div>
+                                    </div>
+
+                                    {/* Dataset Toggles */}
+                                    <div className="options-row">
+                                        {/* Data Generator Toggle */}
+                                        <label className="checkbox-visual">
+                                            <input type="checkbox" name="useDataGen" checked={newConfig.useDataGen} onChange={handleNewChange} />
+                                            <span>Use synthetic data generator</span>
+                                        </label>
+                                        {newConfig.useDataGen && (
+                                            <div className="inline-input-group">
+                                                <input type="number" name="numGeneratedSamples" value={newConfig.numGeneratedSamples} onChange={handleNewChange} className="form-input inline-input-sm" />
+                                                <span style={{ fontSize: '0.85rem', color: '#64748b' }}>samples</span>
+                                            </div>
+                                        )}
+
+                                        {/* Shuffle Toggle */}
+                                        <div style={{ width: '1px', height: '20px', background: '#e2e8f0', margin: '0 0.5rem' }}></div>
+
+                                        <label className="checkbox-visual">
+                                            <input type="checkbox" name="setShuffle" checked={newConfig.setShuffle} onChange={handleNewChange} />
+                                            <span>Shuffle buffer</span>
+                                        </label>
+                                        {newConfig.setShuffle && (
+                                            <div className="inline-input-group">
+                                                <input type="number" name="shuffleSize" value={newConfig.shuffleSize} onChange={handleNewChange} className="form-input inline-input-sm" />
+                                                <span style={{ fontSize: '0.85rem', color: '#64748b' }}>size</span>
+                                            </div>
+                                        )}
                                     </div>
                                 </fieldset>
 
-                                {/* SESSION GROUP (Now at bottom) */}
+
+                                {/* === SESSION & COMPUTE === */}
                                 <fieldset className="control-fieldset">
-                                    <legend className="control-legend" style={{ color: '#94a3b8' }}>
-                                        <Cpu size={16} /> Session
+                                    <legend className="control-legend">
+                                        <Cpu size={16} /> Session & Compute
                                     </legend>
-                                    <div className="param-grid columns-3">
+                                    <div className="training-pro-grid">
                                         <div className="form-group">
                                             <label className="form-label">Episodes</label>
                                             <input type="number" name="episodes" value={newConfig.episodes} onChange={handleNewChange} className="form-input" min="1" />
@@ -355,134 +392,58 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
                                             <input type="number" name="learningRate" value={newConfig.learningRate} onChange={handleNewChange} className="form-input" step="0.0001" min="0" />
                                         </div>
                                         <div className="form-group">
-                                            <label className="form-label">Workers</label>
-                                            <input type="number" name="numWorkers" value={newConfig.numWorkers} onChange={handleNewChange} className="form-input" min="0" />
-                                        </div>
-                                        <div className="form-group">
                                             <label className="form-label">Training Seed</label>
                                             <input type="number" name="trainingSeed" value={newConfig.trainingSeed} onChange={handleNewChange} className="form-input" />
                                         </div>
-                                    </div>
-
-                                    {/* SESSION PARAMETERS CONTINUE HERE */}
-
-                                    <div className="param-grid columns-2" style={{ marginTop: '1.5rem', borderTop: '1px solid #eee', paddingTop: '1rem' }}>
-                                        {/* Hardware Acceleration */}
-                                        <div className="checkbox-group">
-                                            <div className="inline-input-group">
-                                                <input type="checkbox" id="deviceGPU" name="deviceGPU" checked={newConfig.deviceGPU} onChange={handleNewChange} />
-                                                <label htmlFor="deviceGPU">Use GPU</label>
-                                                {newConfig.deviceGPU && (
-                                                    <input type="number" name="deviceID" value={newConfig.deviceID} onChange={handleNewChange} className="form-input inline-input" placeholder="ID" />
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        <div className="checkbox-group">
-                                            <input type="checkbox" id="useMixedPrecision" name="useMixedPrecision" checked={newConfig.useMixedPrecision} onChange={handleNewChange} />
-                                            <label htmlFor="useMixedPrecision">Mixed precision policy</label>
-                                        </div>
-
-                                        <div className="checkbox-group">
-                                            <div className="inline-input-group">
-                                                <input type="checkbox" id="jitCompile" name="jitCompile" checked={newConfig.jitCompile} onChange={handleNewChange} />
-                                                <label htmlFor="jitCompile">JIT Compile</label>
-                                                {newConfig.jitCompile && (
-                                                    <select
-                                                        name="jitBackend"
-                                                        value={newConfig.jitBackend}
-                                                        onChange={handleNewChange}
-                                                        className="form-select"
-                                                        style={{ width: '150px' }}
-                                                    >
-                                                        <option value="eager">eager</option>
-                                                        <option value="aot_eager">aot_eager</option>
-                                                        <option value="aot_cudagraphs">aot_cudagraphs</option>
-                                                        <option value="inductor">inductor</option>
-                                                        <option value="nvprims_nvfuser">nvprims_nvfuser</option>
-                                                        <option value="xla">xla</option>
-                                                    </select>
-                                                )}
-                                            </div>
+                                        <div className="form-group">
+                                            <label className="form-label">Workers</label>
+                                            <input type="number" name="numWorkers" value={newConfig.numWorkers} onChange={handleNewChange} className="form-input" min="0" />
                                         </div>
                                     </div>
-                                </fieldset>
 
-                                {/* DATASET GROUP */}
-                                <fieldset className="control-fieldset">
-                                    <legend className="control-legend" style={{ color: '#D4AF37' }}>
-                                        <Database size={16} /> Dataset
-                                    </legend>
+                                    {/* Configuration Options */}
+                                    <div className="options-row">
+                                        {/* GPU & Precision */}
+                                        <label className="checkbox-visual">
+                                            <input type="checkbox" name="deviceGPU" checked={newConfig.deviceGPU} onChange={handleNewChange} />
+                                            <span>Use GPU</span>
+                                        </label>
+                                        {newConfig.deviceGPU && (
+                                            <div className="inline-input-group">
+                                                <input type="number" name="deviceID" value={newConfig.deviceID} onChange={handleNewChange} className="form-input inline-input-sm" placeholder="ID" />
+                                            </div>
+                                        )}
 
-                                    {/* Existing Dataset Selection */}
-                                    <div className="form-group">
-                                        <label className="form-label">Training Dataset</label>
-                                        <select
-                                            name="datasetName"
-                                            value={newConfig.datasetName}
-                                            onChange={handleNewChange}
-                                            className="form-select"
-                                            disabled={datasetLoading}
-                                        >
-                                            <option value="">All datasets</option>
-                                            {datasetOptions.map((dataset) => (
-                                                <option key={dataset} value={dataset}>
-                                                    {dataset}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        {datasetError && (
-                                            <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#b91c1c' }}>
-                                                {datasetError}
+                                        <label className="checkbox-visual">
+                                            <input type="checkbox" name="useMixedPrecision" checked={newConfig.useMixedPrecision} onChange={handleNewChange} />
+                                            <span>Mixed Precision</span>
+                                        </label>
+
+                                        <div style={{ flexBasis: '100%', height: 0 }}></div> {/* Break Row */}
+
+                                        {/* Checkpointing & Tensorboard */}
+                                        <label className="checkbox-visual">
+                                            <input type="checkbox" name="useTensorboard" checked={newConfig.useTensorboard} onChange={handleNewChange} />
+                                            <span>Enable TensorBoard</span>
+                                        </label>
+
+                                        <label className="checkbox-visual">
+                                            <input type="checkbox" name="saveCheckpoints" checked={newConfig.saveCheckpoints} onChange={handleNewChange} />
+                                            <span>Save Checkpoints</span>
+                                        </label>
+                                        {newConfig.saveCheckpoints && (
+                                            <div className="inline-input-group">
+                                                <span style={{ fontSize: '0.85rem', color: '#64748b' }}>every</span>
+                                                <input type="number" name="checkpointsFreq" value={newConfig.checkpointsFreq} onChange={handleNewChange} className="form-input inline-input-sm" />
+                                                <span style={{ fontSize: '0.85rem', color: '#64748b' }}>episodes</span>
                                             </div>
                                         )}
                                     </div>
-
-                                    <hr style={{ margin: '1rem 0', borderColor: '#E2E8F0', opacity: 0.5 }} />
-
-                                    {/* Merged Generator Controls */}
-                                    {/* Merged Generator Controls */}
-                                    <div className="param-grid columns-2" style={{ alignItems: 'end' }}>
-                                        <div className="checkbox-group" style={{ height: 'auto', marginBottom: '1.25rem' }}>
-                                            <div className="inline-input-group">
-                                                <input type="checkbox" id="useDataGen" name="useDataGen" checked={newConfig.useDataGen} onChange={handleNewChange} />
-                                                <label htmlFor="useDataGen">Use data generator (N samples)</label>
-                                                {newConfig.useDataGen && (
-                                                    <input type="number" name="numGeneratedSamples" value={newConfig.numGeneratedSamples} onChange={handleNewChange} className="form-input inline-input" />
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        <div className="checkbox-group" style={{ height: 'auto', marginBottom: '1.25rem' }}>
-                                            <div className="inline-input-group">
-                                                <input type="checkbox" id="setShuffle" name="setShuffle" checked={newConfig.setShuffle} onChange={handleNewChange} />
-                                                <label htmlFor="setShuffle">Shuffle with buffer</label>
-                                                {newConfig.setShuffle && (
-                                                    <input type="number" name="shuffleSize" value={newConfig.shuffleSize} onChange={handleNewChange} className="form-input inline-input" />
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="param-grid columns-3">
-                                        <div className="form-group">
-                                            <label className="form-label">Train Sample Size</label>
-                                            <input type="number" name="trainSampleSize" value={newConfig.trainSampleSize} onChange={handleNewChange} className="form-input" step="0.05" max="1.0" />
-                                        </div>
-                                        <div className="form-group">
-                                            <label className="form-label">Validation Size</label>
-                                            <input type="number" name="validationSize" value={newConfig.validationSize} onChange={handleNewChange} className="form-input" step="0.05" max="1.0" />
-                                        </div>
-                                        <div className="form-group">
-                                            <label className="form-label">Split Seed</label>
-                                            <input type="number" name="splitSeed" value={newConfig.splitSeed} onChange={handleNewChange} className="form-input" />
-                                        </div>
-                                    </div>
                                 </fieldset>
 
-                                <div className="form-actions" style={{ gridColumn: '1 / -1' }}>
+                                <div className="form-actions">
                                     <button type="submit" className="btn-primary btn-narrow">
-                                        <Play /> Start Training
+                                        <Play size={18} /> Start Training Session
                                     </button>
                                 </div>
                             </form>
