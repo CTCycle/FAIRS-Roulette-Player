@@ -238,7 +238,7 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
                                     <legend className="control-legend" style={{ color: '#E31D2B' }}>
                                         <Activity size={16} /> Agent
                                     </legend>
-                                    <div className="param-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+                                    <div className="param-grid columns-4">
                                         <div className="form-group">
                                             <label className="form-label">Perceptive Field</label>
                                             <input type="number" name="perceptiveField" value={newConfig.perceptiveField} onChange={handleNewChange} className="form-input" max="1024" />
@@ -279,7 +279,7 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
                                     <legend className="control-legend" style={{ color: '#00933C' }}>
                                         <Layers size={16} /> Environment
                                     </legend>
-                                    <div className="param-grid">
+                                    <div className="param-grid columns-2">
                                         <div className="form-group">
                                             <label className="form-label">Bet Amount</label>
                                             <input type="number" name="betAmount" value={newConfig.betAmount} onChange={handleNewChange} className="form-input" min="1" />
@@ -298,7 +298,7 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
                                     <legend className="control-legend" style={{ color: '#7c3aed' }}>
                                         <HardDrive size={16} /> Memory
                                     </legend>
-                                    <div className="param-grid">
+                                    <div className="param-grid columns-2">
                                         <div className="form-group">
                                             <label className="form-label">Max Memory</label>
                                             <input type="number" name="maxMemorySize" value={newConfig.maxMemorySize} onChange={handleNewChange} className="form-input" min="100" />
@@ -315,19 +315,19 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
                                     <legend className="control-legend" style={{ color: '#06b6d4' }}>
                                         <Save size={16} /> Checkpointing
                                     </legend>
-                                    <div className="param-grid">
-                                        <div className="form-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.5rem' }}>
-                                            <input type="checkbox" id="saveCheckpoints" name="saveCheckpoints" checked={newConfig.saveCheckpoints} onChange={handleNewChange} />
-                                            <label htmlFor="saveCheckpoints" className="form-label" style={{ marginBottom: 0 }}>Save every N episodes</label>
-                                            {newConfig.saveCheckpoints && (
-                                                <input type="number" name="checkpointsFreq" value={newConfig.checkpointsFreq} onChange={handleNewChange} className="form-input" style={{ width: '60px', marginLeft: 'auto' }} min="1" />
-                                            )}
+                                    <div className="param-grid columns-2">
+                                        <div className="checkbox-group">
+                                            <div className="inline-input-group">
+                                                <input type="checkbox" id="saveCheckpoints" name="saveCheckpoints" checked={newConfig.saveCheckpoints} onChange={handleNewChange} />
+                                                <label htmlFor="saveCheckpoints">Save every N episodes</label>
+                                                {newConfig.saveCheckpoints && (
+                                                    <input type="number" name="checkpointsFreq" value={newConfig.checkpointsFreq} onChange={handleNewChange} className="form-input inline-input" min="1" />
+                                                )}
+                                            </div>
                                         </div>
-                                        <div className="form-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.5rem' }}>
+                                        <div className="checkbox-group">
                                             <input type="checkbox" id="useTensorboard" name="useTensorboard" checked={newConfig.useTensorboard} onChange={handleNewChange} />
-                                            <label htmlFor="useTensorboard" className="form-label" style={{ marginBottom: 0 }}>
-                                                Enable TensorBoard
-                                            </label>
+                                            <label htmlFor="useTensorboard">Enable TensorBoard</label>
                                         </div>
                                     </div>
                                 </fieldset>
@@ -337,7 +337,7 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
                                     <legend className="control-legend" style={{ color: '#94a3b8' }}>
                                         <Cpu size={16} /> Session
                                     </legend>
-                                    <div className="param-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                                    <div className="param-grid columns-3">
                                         <div className="form-group">
                                             <label className="form-label">Episodes</label>
                                             <input type="number" name="episodes" value={newConfig.episodes} onChange={handleNewChange} className="form-input" min="1" />
@@ -364,38 +364,47 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
                                         </div>
                                     </div>
 
-                                    <div className="form-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
-                                        <input type="checkbox" id="useMixedPrecision" name="useMixedPrecision" checked={newConfig.useMixedPrecision} onChange={handleNewChange} />
-                                        <label htmlFor="useMixedPrecision" className="form-label" style={{ marginBottom: 0 }}>Mixed precision policy</label>
-                                    </div>
+                                    {/* SESSION PARAMETERS CONTINUE HERE */}
 
-                                    <div className="form-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
-                                        <input type="checkbox" id="jitCompile" name="jitCompile" checked={newConfig.jitCompile} onChange={handleNewChange} />
-                                        <label htmlFor="jitCompile" className="form-label" style={{ marginBottom: 0 }}>Use JIT compiler</label>
-                                        {newConfig.jitCompile && (
-                                            <select
-                                                name="jitBackend"
-                                                value={newConfig.jitBackend}
-                                                onChange={handleNewChange}
-                                                className="form-select"
-                                                style={{ width: '160px', marginLeft: 'auto' }}
-                                            >
-                                                <option value="eager">eager</option>
-                                                <option value="aot_eager">aot_eager</option>
-                                                <option value="aot_cudagraphs">aot_cudagraphs</option>
-                                                <option value="inductor">inductor</option>
-                                                <option value="nvprims_nvfuser">nvprims_nvfuser</option>
-                                                <option value="xla">xla</option>
-                                            </select>
-                                        )}
-                                    </div>
+                                    <div className="param-grid columns-2" style={{ marginTop: '1.5rem', borderTop: '1px solid #eee', paddingTop: '1rem' }}>
+                                        {/* Hardware Acceleration */}
+                                        <div className="checkbox-group">
+                                            <div className="inline-input-group">
+                                                <input type="checkbox" id="deviceGPU" name="deviceGPU" checked={newConfig.deviceGPU} onChange={handleNewChange} />
+                                                <label htmlFor="deviceGPU">Use GPU</label>
+                                                {newConfig.deviceGPU && (
+                                                    <input type="number" name="deviceID" value={newConfig.deviceID} onChange={handleNewChange} className="form-input inline-input" placeholder="ID" />
+                                                )}
+                                            </div>
+                                        </div>
 
-                                    <div className="form-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
-                                        <input type="checkbox" id="deviceGPU" name="deviceGPU" checked={newConfig.deviceGPU} onChange={handleNewChange} />
-                                        <label htmlFor="deviceGPU" className="form-label" style={{ marginBottom: 0 }}>Use GPU (Device ID)</label>
-                                        {newConfig.deviceGPU && (
-                                            <input type="number" name="deviceID" value={newConfig.deviceID} onChange={handleNewChange} className="form-input" style={{ width: '60px', marginLeft: 'auto' }} />
-                                        )}
+                                        <div className="checkbox-group">
+                                            <input type="checkbox" id="useMixedPrecision" name="useMixedPrecision" checked={newConfig.useMixedPrecision} onChange={handleNewChange} />
+                                            <label htmlFor="useMixedPrecision">Mixed precision policy</label>
+                                        </div>
+
+                                        <div className="checkbox-group">
+                                            <div className="inline-input-group">
+                                                <input type="checkbox" id="jitCompile" name="jitCompile" checked={newConfig.jitCompile} onChange={handleNewChange} />
+                                                <label htmlFor="jitCompile">JIT Compile</label>
+                                                {newConfig.jitCompile && (
+                                                    <select
+                                                        name="jitBackend"
+                                                        value={newConfig.jitBackend}
+                                                        onChange={handleNewChange}
+                                                        className="form-select"
+                                                        style={{ width: '150px' }}
+                                                    >
+                                                        <option value="eager">eager</option>
+                                                        <option value="aot_eager">aot_eager</option>
+                                                        <option value="aot_cudagraphs">aot_cudagraphs</option>
+                                                        <option value="inductor">inductor</option>
+                                                        <option value="nvprims_nvfuser">nvprims_nvfuser</option>
+                                                        <option value="xla">xla</option>
+                                                    </select>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
                                 </fieldset>
 
@@ -432,15 +441,30 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
                                     <hr style={{ margin: '1rem 0', borderColor: '#E2E8F0', opacity: 0.5 }} />
 
                                     {/* Merged Generator Controls */}
-                                    <div className="form-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.5rem' }}>
-                                        <input type="checkbox" id="useDataGen" name="useDataGen" checked={newConfig.useDataGen} onChange={handleNewChange} />
-                                        <label htmlFor="useDataGen" className="form-label" style={{ marginBottom: 0 }}>Use data generator (N samples)</label>
-                                        {newConfig.useDataGen && (
-                                            <input type="number" name="numGeneratedSamples" value={newConfig.numGeneratedSamples} onChange={handleNewChange} className="form-input" style={{ width: '100px', marginLeft: 'auto' }} />
-                                        )}
+                                    {/* Merged Generator Controls */}
+                                    <div className="param-grid columns-2" style={{ alignItems: 'end' }}>
+                                        <div className="checkbox-group" style={{ height: 'auto', marginBottom: '1.25rem' }}>
+                                            <div className="inline-input-group">
+                                                <input type="checkbox" id="useDataGen" name="useDataGen" checked={newConfig.useDataGen} onChange={handleNewChange} />
+                                                <label htmlFor="useDataGen">Use data generator (N samples)</label>
+                                                {newConfig.useDataGen && (
+                                                    <input type="number" name="numGeneratedSamples" value={newConfig.numGeneratedSamples} onChange={handleNewChange} className="form-input inline-input" />
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="checkbox-group" style={{ height: 'auto', marginBottom: '1.25rem' }}>
+                                            <div className="inline-input-group">
+                                                <input type="checkbox" id="setShuffle" name="setShuffle" checked={newConfig.setShuffle} onChange={handleNewChange} />
+                                                <label htmlFor="setShuffle">Shuffle with buffer</label>
+                                                {newConfig.setShuffle && (
+                                                    <input type="number" name="shuffleSize" value={newConfig.shuffleSize} onChange={handleNewChange} className="form-input inline-input" />
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    <div className="param-grid" style={{ marginTop: '0.5rem', gridTemplateColumns: '1fr 1fr' }}>
+                                    <div className="param-grid columns-3">
                                         <div className="form-group">
                                             <label className="form-label">Train Sample Size</label>
                                             <input type="number" name="trainSampleSize" value={newConfig.trainSampleSize} onChange={handleNewChange} className="form-input" step="0.05" max="1.0" />
@@ -449,18 +473,10 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
                                             <label className="form-label">Validation Size</label>
                                             <input type="number" name="validationSize" value={newConfig.validationSize} onChange={handleNewChange} className="form-input" step="0.05" max="1.0" />
                                         </div>
-                                    </div>
-                                    <div className="form-group" style={{ marginTop: '0.5rem' }}>
-                                        <label className="form-label">Split Seed</label>
-                                        <input type="number" name="splitSeed" value={newConfig.splitSeed} onChange={handleNewChange} className="form-input" />
-                                    </div>
-
-                                    <div className="form-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
-                                        <input type="checkbox" id="setShuffle" name="setShuffle" checked={newConfig.setShuffle} onChange={handleNewChange} />
-                                        <label htmlFor="setShuffle" className="form-label" style={{ marginBottom: 0 }}>Shuffle with buffer</label>
-                                        {newConfig.setShuffle && (
-                                            <input type="number" name="shuffleSize" value={newConfig.shuffleSize} onChange={handleNewChange} className="form-input" style={{ width: '80px', marginLeft: 'auto' }} />
-                                        )}
+                                        <div className="form-group">
+                                            <label className="form-label">Split Seed</label>
+                                            <input type="number" name="splitSeed" value={newConfig.splitSeed} onChange={handleNewChange} className="form-input" />
+                                        </div>
                                     </div>
                                 </fieldset>
 
@@ -528,6 +544,6 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
                     )}
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
