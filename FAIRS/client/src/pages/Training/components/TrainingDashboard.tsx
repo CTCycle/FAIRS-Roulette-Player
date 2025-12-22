@@ -217,9 +217,10 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
         }
     };
 
-    const envImageSrc = envPayload?.image_base64
-        ? `data:${envPayload.image_mime || 'image/png'};base64,${envPayload.image_base64}`
-        : null;
+    // Environment image source - logic preserved but not rendered in UI
+    // const envImageSrc = envPayload?.image_base64
+    //     ? `data:${envPayload.image_mime || 'image/png'};base64,${envPayload.image_base64}`
+    //     : null;
 
     return (
         <div className="training-dashboard">
@@ -325,7 +326,7 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                 </div>
             </div>
 
-            <div className={`dashboard-visuals ${envPayload ? 'with-env' : ''}`}>
+            <div className="dashboard-visuals">
                 <div className="visual-card">
                     <div className="visual-card-header">
                         <span className="visual-card-title">Real-time Loss</span>
@@ -338,24 +339,6 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                     </div>
                     <TrainingLossChart points={historyPoints} />
                 </div>
-
-                {envPayload && (
-                    <div className="visual-card">
-                        <div className="visual-card-header">
-                            <span className="visual-card-title">Environment</span>
-                            <span className="visual-card-subtitle">
-                                {envPayload ? `Episode ${envPayload.episode} • Step ${envPayload.time_step}` : 'Waiting for frames...'}
-                            </span>
-                        </div>
-                        <div className="env-frame">
-                            {envImageSrc ? (
-                                <img className="env-image" src={envImageSrc} alt="Roulette environment rendering" />
-                            ) : (
-                                <div className="training-chart-empty">Waiting for environment frames...</div>
-                            )}
-                        </div>
-                    </div>
-                )}
             </div>
         </div>
     );

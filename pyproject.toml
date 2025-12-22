@@ -10,19 +10,31 @@ requires-python = ">=3.12,<3.13"
 dependencies = [
     "fastapi==0.118.0",
     "uvicorn>=0.30.0",
+    "torch==2.9.0+cu130",    
+    "tensorflow-cpu==2.20.0",
+    "keras==3.12",   
     "numpy==2.3.2",
     "pandas==2.3.3",
     "tqdm==4.67.1",    
     "SQLAlchemy==2.0.43",
     "psycopg[binary]==3.3.1",
     "python-multipart>=0.0.12",
-    "python-dotenv==1.1.0",    
-    "pytest==8.3.3",
-    "folium==0.17.0",
-    "pillow==11.0.0",
+    "python-dotenv==1.1.0",
+    "triton-windows==3.4.0.post20",     
+    "gymnasium==1.2.2",    
     "openpyxl>=3.1.5",
 
 ]
 
 [tool.hatch.build.targets.wheel]
 packages = ["FAIRS"] 
+
+[[tool.uv.index]]
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true 
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu130" }
+# torchvision = { index = "pytorch-cu130" }
+# torchaudio  = { index = "pytorch-cu130" }
