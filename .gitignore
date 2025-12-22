@@ -1,4 +1,5 @@
 # Project-specific generated/runtime artifacts
+docs/**
 FAIRS/resources/database/**
 FAIRS/resources/runtimes/**
 FAIRS/resources/runtimes/uv_cache/**
@@ -55,7 +56,6 @@ Thumbs.db
 *.sqlite*
 *.exe
 *.gz
-AGENTS.MD
 
 !.gitkeep
 !FAIRS/settings/server_configurations.json
