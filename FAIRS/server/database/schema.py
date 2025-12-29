@@ -31,12 +31,25 @@ class RouletteSeries(Base):
 
 
 ###############################################################################
+class InferenceContext(Base):
+    __tablename__ = "INFERENCE_CONTEXT"
+    dataset_name = Column(String, primary_key=True)
+    id = Column(Integer, primary_key=True)
+    extraction = Column(Integer)
+    uploaded_at = Column(DateTime, default=func.now())
+    __table_args__ = (UniqueConstraint("id", "dataset_name"),)
+
+
+###############################################################################
 class PredictedGames(Base):
     __tablename__ = "PREDICTED_GAMES"
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    session_id = Column(String)
+    dataset_name = Column(String)
     checkpoint = Column(String)
     extraction = Column(Integer)
     predicted_action = Column(String)
+    timestamp = Column(DateTime, default=func.now())
     __table_args__ = (UniqueConstraint("id"),)
 
 

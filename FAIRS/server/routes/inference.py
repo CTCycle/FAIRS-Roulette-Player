@@ -31,10 +31,12 @@ class InferenceSession:
         self,
         session_id: str,
         checkpoint: str,
+        dataset_name: str,
         player: RoulettePlayer,
     ) -> None:
         self.session_id = session_id
         self.checkpoint = checkpoint
+        self.dataset_name = dataset_name
         self.player = player
         self.step_count = 0
         self.last_seen = time.time()
@@ -123,6 +125,9 @@ class InferenceEndpoint:
     # -----------------------------------------------------------------------------
     def start_session(self, payload: InferenceStartRequest) -> InferenceStartResponse:
         checkpoint = payload.checkpoint
+        dataset_name = payload.dataset_name
+        session_id = uuid.uuid4().hex
+
         try:
             logger.info("Loading %s checkpoint for inference", checkpoint)
             model, train_config, _, _ = self.model_serializer.load_checkpoint(checkpoint)
@@ -146,7 +151,7 @@ class InferenceEndpoint:
             ) from exc
 
         try:
-            player = RoulettePlayer(model, configuration)
+            player = RoulettePlayer(model, configuration, session_id, dataset_name)
             prediction = player.predict_next()
         except ValueError as exc:
             raise HTTPException(
@@ -160,8 +165,7 @@ class InferenceEndpoint:
                 detail="Unable to start inference session.",
             ) from exc
 
-        session_id = uuid.uuid4().hex
-        session = InferenceSession(session_id, checkpoint, player)
+        session = InferenceSession(session_id, checkpoint, dataset_name, player)
         session.last_prediction = prediction
         inference_state.create_session(session)
 

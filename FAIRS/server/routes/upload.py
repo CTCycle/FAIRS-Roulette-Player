@@ -35,7 +35,7 @@ class DataUploadEndpoint:
                 detail="Missing filename.",
             )
         dataset_name = None
-        if table == "ROULETTE_SERIES":
+        if table in ["ROULETTE_SERIES", "INFERENCE_CONTEXT"]:
             base_name = os.path.splitext(os.path.basename(file.filename))[0].strip()
             dataset_name = base_name if base_name else "dataset"
 

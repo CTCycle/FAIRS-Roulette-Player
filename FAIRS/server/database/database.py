@@ -45,6 +45,14 @@ class DatabaseBackend(Protocol):
 
     # -------------------------------------------------------------------------
     def load_distinct_values(self, table_name: str, column_name: str) -> list[str]: ...
+
+    # -------------------------------------------------------------------------
+    def load_filtered(
+        self, table_name: str, conditions: dict[str, Any]
+    ) -> pd.DataFrame: ...
+
+    # -------------------------------------------------------------------------
+    def clear_table(self, table_name: str) -> None: ...
    
 
 BackendFactory = Callable[[DatabaseSettings], DatabaseBackend]
@@ -121,6 +129,16 @@ class FAIRSDatabase:
     # -------------------------------------------------------------------------
     def load_distinct_values(self, table_name: str, column_name: str) -> list[str]:
         return self.backend.load_distinct_values(table_name, column_name)
+
+    # -------------------------------------------------------------------------
+    def load_filtered(
+        self, table_name: str, conditions: dict[str, Any]
+    ) -> pd.DataFrame:
+        return self.backend.load_filtered(table_name, conditions)
+
+    # -------------------------------------------------------------------------
+    def clear_table(self, table_name: str) -> None:
+        self.backend.clear_table(table_name)
 
 
 database = FAIRSDatabase()

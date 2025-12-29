@@ -65,7 +65,7 @@ export const InferenceSetup: React.FC<InferenceSetupProps> = ({
         const formData = new FormData();
         formData.append('file', file);
 
-        const response = await fetch('/api/data/upload?table=PREDICTED_GAMES', {
+        const response = await fetch('/api/data/upload?table=INFERENCE_CONTEXT', {
             method: 'POST',
             body: formData,
         });
@@ -77,12 +77,13 @@ export const InferenceSetup: React.FC<InferenceSetupProps> = ({
         }
     };
 
-    const startSession = async () => {
+    const startSession = async (datasetName: string) => {
         const response = await fetch('/api/inference/sessions/start', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 checkpoint,
+                dataset_name: datasetName,
                 game_capital: initialCapital,
                 game_bet: betAmount,
             }),
@@ -112,7 +113,8 @@ export const InferenceSetup: React.FC<InferenceSetupProps> = ({
 
         try {
             await uploadDataset(datasetFile);
-            const session = await startSession();
+            const datasetName = datasetFile.name.replace(/\.[^/.]+$/, '') || 'context';
+            const session = await startSession(datasetName);
 
             onStartSession({
                 initialCapital,

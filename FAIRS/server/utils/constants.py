@@ -28,6 +28,7 @@ CONSTANT = 1.0
 # [DATABASE TABLES]
 ###############################################################################
 ROULETTE_SERIES_TABLE = "ROULETTE_SERIES"
+INFERENCE_CONTEXT_TABLE = "INFERENCE_CONTEXT"
 PREDICTED_GAMES_TABLE = "PREDICTED_GAMES"
 CHECKPOINTS_SUMMARY_TABLE = "CHECKPOINTS_SUMMARY"
 
@@ -41,7 +42,16 @@ ROULETTE_SERIES_COLUMNS = [
     "color_code",
     "position",
 ]
-PREDICTED_GAMES_COLUMNS = ["id", "checkpoint", "extraction", "predicted_action"]
+INFERENCE_CONTEXT_COLUMNS = ["id", "dataset_name", "extraction", "uploaded_at"]
+PREDICTED_GAMES_COLUMNS = [
+    "id",
+    "session_id",
+    "dataset_name",
+    "checkpoint",
+    "extraction",
+    "predicted_action",
+    "timestamp",
+]
 CHECKPOINTS_SUMMARY_COLUMNS = [
     "checkpoint",
     "sample_size",

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import datetime
 from typing import Any
 
 import numpy as np
@@ -15,9 +16,17 @@ from FAIRS.server.utils.services.training.environment import BetsAndRewards
 
 ###############################################################################
 class RoulettePlayer:
-    def __init__(self, model: Model, configuration: dict[str, Any]) -> None:
+    def __init__(
+        self,
+        model: Model,
+        configuration: dict[str, Any],
+        session_id: str,
+        dataset_name: str,
+    ) -> None:
         set_random_seed(configuration.get("seed", 42))
 
+        self.session_id = session_id
+        self.dataset_name = dataset_name
         self.perceptive_size = int(configuration.get("perceptive_field_size", 64))
         self.initial_capital = int(configuration.get("game_capital", 100))
         self.bet_amount = int(configuration.get("game_bet", 1))
@@ -37,25 +46,15 @@ class RoulettePlayer:
         self.configuration = configuration
 
         self.serializer = DataSerializer()
-        self.dataset = self.serializer.load_predicted_games()
-        self.next_game_id = self.get_next_game_id(self.dataset)
-
-    # -----------------------------------------------------------------------------
-    def get_next_game_id(self, dataset: pd.DataFrame) -> int:
-        if dataset.empty or "id" not in dataset.columns:
-            return 1
-        series = pd.to_numeric(dataset["id"], errors="coerce").dropna()
-        if series.empty:
-            return 1
-        return int(series.max()) + 1
+        self.context = self.serializer.load_inference_context(dataset_name)
 
     # -----------------------------------------------------------------------------
     def initialize_states(self) -> None:
-        if self.dataset.empty or "extraction" not in self.dataset.columns:
-            raise ValueError("Inference dataset is empty or missing extraction column.")
-        extractions = pd.to_numeric(self.dataset["extraction"], errors="coerce").dropna()
+        if self.context.empty or "extraction" not in self.context.columns:
+            raise ValueError("Inference context is empty or missing extraction column.")
+        extractions = pd.to_numeric(self.context["extraction"], errors="coerce").dropna()
         if extractions.empty:
-            raise ValueError("Inference dataset contains no extractions.")
+            raise ValueError("Inference context contains no extractions.")
 
         perceptive_candidates = extractions.to_numpy(dtype=np.int32, copy=False)
         state = np.full(
@@ -141,13 +140,14 @@ class RoulettePlayer:
             return
         true_extraction = int(self.true_extraction) if self.true_extraction is not None else None
         row = {
-            "id": int(self.next_game_id),
+            "session_id": self.session_id,
+            "dataset_name": self.dataset_name,
             "checkpoint": checkpoint_name,
             "extraction": true_extraction,
             "predicted_action": self.next_action_desc,
+            "timestamp": datetime.now(),
         }
 
         self.serializer.append_predicted_games(pd.DataFrame([row]))
-        self.dataset = pd.concat([self.dataset, pd.DataFrame([row])], ignore_index=True)
-        self.next_game_id += 1
+
 
