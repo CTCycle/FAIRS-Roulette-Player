@@ -12,16 +12,16 @@ dependencies = [
     "uvicorn>=0.30.0",
     "torch==2.9.0+cu130",    
     "keras==3.12",   
-    "numpy==2.3.2",
+    "numpy==2.2.6",
     "pandas==2.3.3",
     "tqdm==4.67.1",    
     "SQLAlchemy==2.0.43",
     "psycopg[binary]==3.3.1",
-    "python-multipart>=0.0.12",
+    "python-multipart>=0.0.21",
     "python-dotenv==1.1.0",
     "triton-windows==3.4.0.post20",     
     "gymnasium==1.2.2",    
-    "openpyxl>=3.1.5",
+    "openpyxl>=3.1.5"  
 
 ]
 
