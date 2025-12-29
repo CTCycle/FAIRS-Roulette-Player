@@ -78,6 +78,22 @@ if exist "%DOTENV%" (
 set "PATH=%nodejs_dir%;%PATH%"
 
 REM ============================================================================
+REM == Configure pytest / Playwright options
+REM ============================================================================
+if not defined E2E_HEADLESS set "E2E_HEADLESS=true"
+if not defined E2E_BROWSER set "E2E_BROWSER=chromium"
+if not defined E2E_SLOWMO set "E2E_SLOWMO=0"
+if not defined E2E_PWDEBUG set "E2E_PWDEBUG=0"
+
+set "PYTEST_ARGS=tests -v --tb=short"
+if defined E2E_BROWSER set "PYTEST_ARGS=!PYTEST_ARGS! --browser !E2E_BROWSER!"
+if /i "!E2E_HEADLESS!"=="false" set "PYTEST_ARGS=!PYTEST_ARGS! --headed"
+if /i "!E2E_HEADLESS!"=="0" set "PYTEST_ARGS=!PYTEST_ARGS! --headed"
+if not "!E2E_SLOWMO!"=="0" set "PYTEST_ARGS=!PYTEST_ARGS! --slowmo !E2E_SLOWMO!"
+if /i "!E2E_PWDEBUG!"=="1" set "PWDEBUG=1" & set "PYTEST_ARGS=!PYTEST_ARGS! --headed"
+if /i "!E2E_PWDEBUG!"=="true" set "PWDEBUG=1" & set "PYTEST_ARGS=!PYTEST_ARGS! --headed"
+
+REM ============================================================================
 REM == Install Playwright browsers if needed
 REM ============================================================================
 echo [STEP 1/4] Checking Playwright browsers...
@@ -135,7 +151,7 @@ echo.
 echo ============================================================================
 
 pushd "%root_folder%" >nul
-"%uv_exe%" run --python "%python_exe%" python -m pytest tests -v --tb=short
+"%uv_exe%" run --python "%python_exe%" python -m pytest %PYTEST_ARGS%
 set "test_result=%ERRORLEVEL%"
 popd >nul
 
