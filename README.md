@@ -62,17 +62,27 @@ The main interface streamlines navigation across the application's core services
 - Upload CSV/XLSX roulette series into the embedded database.
 - Review upload status and confirm the dataset name that will be available for training.
 
+![dataset_prep](FAIRS/assets/figures/dataset_prep.png)
+
 **Training tab:**
 - Configure agent, dataset, session, and checkpoint options for a new run.
 - Resume from an existing checkpoint with additional episodes.
 - Track loss/RMSE, rewards, capital, and progress from the live dashboard.
 
+![training_page](FAIRS/assets/figures/training_page.png)
+
 **Inference tab:**
 - Upload an inference context, select a checkpoint, and start a session.
 - Submit real extractions to receive the next prediction and track capital.
 
+
+![inference_page](FAIRS/assets/figures/inference_page.png)
+
+
 **Database tab:**
 - Browse stored tables with pagination and quick stats (columns/rows).
+
+![database_browser](FAIRS/assets/figures/database_browser.png)
 
 ### 5.1 Setup and Maintenance
 `setup_and_maintenance.bat` launches a lightweight maintenance console with these options:
