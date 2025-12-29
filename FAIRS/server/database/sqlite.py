@@ -80,12 +80,40 @@ class SQLiteRepository:
         return data
 
     # -------------------------------------------------------------------------
+    def load_filtered(
+        self, table_name: str, conditions: dict[str, Any]
+    ) -> pd.DataFrame:
+        with self.engine.connect() as conn:
+            inspector = inspect(conn)
+            if not inspector.has_table(table_name):
+                logger.warning("Table %s does not exist", table_name)
+                return pd.DataFrame()
+            if not conditions:
+                return pd.read_sql_table(table_name, conn)
+            columns = {column["name"] for column in inspector.get_columns(table_name)}
+            for key in conditions:
+                if key not in columns:
+                    logger.warning("Column %s does not exist in %s", key, table_name)
+                    return pd.DataFrame()
+            clauses = " AND ".join([f'"{key}" = :{key}' for key in conditions])
+            query = sqlalchemy.text(f'SELECT * FROM "{table_name}" WHERE {clauses}')
+            data = pd.read_sql(query, conn, params=conditions)
+        return data
+
+    # -------------------------------------------------------------------------
     def save_into_database(self, df: pd.DataFrame, table_name: str) -> None:
         with self.engine.begin() as conn:
             inspector = inspect(conn)
             if inspector.has_table(table_name):
                 conn.execute(sqlalchemy.text(f'DELETE FROM "{table_name}"'))
             df.to_sql(table_name, conn, if_exists="append", index=False)
+
+    # -------------------------------------------------------------------------
+    def clear_table(self, table_name: str) -> None:
+        with self.engine.begin() as conn:
+            inspector = inspect(conn)
+            if inspector.has_table(table_name):
+                conn.execute(sqlalchemy.text(f'DELETE FROM "{table_name}"'))
 
     # -------------------------------------------------------------------------
     def append_into_database(self, df: pd.DataFrame, table_name: str) -> None:

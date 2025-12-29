@@ -9,6 +9,8 @@ from FAIRS.server.database.database import database
 from FAIRS.server.utils.constants import (
     CHECKPOINTS_SUMMARY_COLUMNS,
     CHECKPOINTS_SUMMARY_TABLE,
+    INFERENCE_CONTEXT_COLUMNS,
+    INFERENCE_CONTEXT_TABLE,
     PREDICTED_GAMES_COLUMNS,
     PREDICTED_GAMES_TABLE,
     ROULETTE_SERIES_COLUMNS,
@@ -24,6 +26,12 @@ class DataSerializer:
     # -----------------------------------------------------------------------------
     def load_roulette_series(self) -> pd.DataFrame:
         return database.load_from_database(ROULETTE_SERIES_TABLE)
+
+    # -----------------------------------------------------------------------------
+    def load_inference_context(self, dataset_name: str) -> pd.DataFrame:
+        return database.load_filtered(
+            INFERENCE_CONTEXT_TABLE, {"dataset_name": dataset_name}
+        )
 
     # -----------------------------------------------------------------------------
     def load_predicted_games(self) -> pd.DataFrame:
@@ -55,6 +63,15 @@ class DataSerializer:
         database.append_into_database(frame, ROULETTE_SERIES_TABLE)
 
     # -----------------------------------------------------------------------------
+    def save_inference_context(self, dataset: pd.DataFrame) -> None:
+        if dataset.empty:
+            return
+        frame = dataset.reindex(columns=INFERENCE_CONTEXT_COLUMNS)
+        frame = frame.where(pd.notnull(frame), cast(Any, None))
+        database.clear_table(INFERENCE_CONTEXT_TABLE)
+        database.append_into_database(frame, INFERENCE_CONTEXT_TABLE)
+
+    # -----------------------------------------------------------------------------
     def save_predicted_games(self, dataset: pd.DataFrame) -> None:
         if dataset.empty:
             return
@@ -77,3 +94,4 @@ class DataSerializer:
         frame = dataset.reindex(columns=CHECKPOINTS_SUMMARY_COLUMNS)
         frame = frame.where(pd.notnull(frame), cast(Any, None))
         database.upsert_into_database(frame, CHECKPOINTS_SUMMARY_TABLE)
+

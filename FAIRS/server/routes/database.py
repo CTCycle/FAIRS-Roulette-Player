@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Query, status
 from FAIRS.server.database.database import database
 from FAIRS.server.database.schema import (
     CheckpointSummary,
+    InferenceContext,
     PredictedGames,
     RouletteSeries,
 )
@@ -20,6 +21,7 @@ router = APIRouter(prefix="/database", tags=["database"])
 
 TABLE_REGISTRY: dict[str, tuple[str, Any]] = {
     "ROULETTE_SERIES": ("Roulette Series", RouletteSeries),
+    "INFERENCE_CONTEXT": ("Inference Context", InferenceContext),
     "PREDICTED_GAMES": ("Predicted Games", PredictedGames),
     "CHECKPOINTS_SUMMARY": ("Checkpoints Summary", CheckpointSummary),
 }
