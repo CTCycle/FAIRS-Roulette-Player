@@ -69,7 +69,7 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
     const [isConnected, setIsConnected] = useState(false);
     const [connectionError, setConnectionError] = useState<string | null>(null);
     const [historyPoints, setHistoryPoints] = useState<TrainingHistoryPoint[]>([]);
-    const [envPayload, setEnvPayload] = useState<TrainingEnvPayload | null>(null);
+    const [_envPayload, setEnvPayload] = useState<TrainingEnvPayload | null>(null);
     const wsRef = useRef<WebSocket | null>(null);
     const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
