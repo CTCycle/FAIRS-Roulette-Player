@@ -100,6 +100,7 @@ class TestInferenceSessionFlow:
             assert next_response.ok
             next_data = next_response.json()
             assert "prediction" in next_data
+            assert next_data["prediction"] is not None, "Prediction should not be None"
             
             # Submit a step with a sample extraction
             step_response = api_context.post(f"/inference/sessions/{session_id}/step", data={
@@ -110,6 +111,7 @@ class TestInferenceSessionFlow:
             assert "step" in step_data
             assert "reward" in step_data
             assert "next_prediction" in step_data
+            assert step_data["next_prediction"] is not None, "Next prediction should not be None"
             
         finally:
             # Always shutdown the session

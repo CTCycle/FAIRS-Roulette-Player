@@ -49,15 +49,13 @@ class TestDataUploadEndpoint:
             }
         )
         
-        # This may succeed or fail depending on column requirements
-        # A 200 means success, 400 means validation error (both are acceptable)
-        assert response.status in [200, 400]
+        # This should succeed for a valid CSV
+        assert response.ok, f"Expected 200, got {response.status}: {response.text()}"
         
-        if response.ok:
-            data = response.json()
-            assert "rows_imported" in data
-            assert "table" in data
-            assert data["table"] == "ROULETTE_SERIES"
+        data = response.json()
+        assert "rows_imported" in data
+        assert "table" in data
+        assert data["table"] == "ROULETTE_SERIES"
 
     def test_upload_empty_file_returns_400(self, api_context: APIRequestContext):
         """POST /data/upload with empty content should return 400."""
@@ -110,5 +108,5 @@ class TestDataUploadEdgeCases:
                 }
             }
         )
-        # May succeed or fail based on column validation
-        assert response.status in [200, 400]
+        # This should succeed if the separator is handled correctly
+        assert response.ok, f"Expected 200, got {response.status}: {response.text()}"

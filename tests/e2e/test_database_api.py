@@ -33,6 +33,10 @@ class TestDatabaseEndpoints:
         assert "rows" in data
         assert "offset" in data
         assert "limit" in data
+        # Strict key check
+        assert set(data.keys()) == {"columns", "rows", "offset", "limit", "total_count"} or \
+               set(data.keys()) == {"columns", "rows", "offset", "limit"}
+        
         assert isinstance(data["columns"], list)
         assert isinstance(data["rows"], list)
 

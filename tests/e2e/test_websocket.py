@@ -64,8 +64,7 @@ class TestTrainingWebSocket:
         """, ws_url)
         
         # WebSocket should have connected
-        assert result.get("connected") or result.get("message") is not None, \
-            f"WebSocket connection failed: {result}"
+        assert result.get("connected") is True, f"WebSocket connection failed: {result}"
 
     def test_websocket_receives_initial_state(self, page: Page, base_url: str, api_base_url: str):
         """

@@ -65,17 +65,17 @@ class TestTrainingEndpoints:
         POST /training/start should return 409 if training is already in progress.
         Note: This test requires training to be running. It may be skipped in CI.
         """
-        # First check if training is already running
-        status_response = api_context.get("/training/status")
-        status_data = status_response.json()
+        # Ensure training is running
+        api_context.post("/training/stop") # Clean slate
+        start_response = api_context.post("/training/start", data=MINIMAL_TRAINING_CONFIG)
+        assert start_response.ok, "Failed to start setup training"
         
-        if status_data.get("is_training"):
-            # Attempt to start again with minimal config
-            response = api_context.post("/training/start", data=MINIMAL_TRAINING_CONFIG)
-            assert response.status == 409
-        else:
-            # Skip this test if no training is running
-            pass  # Could use pytest.skip() here
+        # Attempt to start again with minimal config
+        response = api_context.post("/training/start", data=MINIMAL_TRAINING_CONFIG)
+        assert response.status == 409
+        
+        # Cleanup
+        api_context.post("/training/stop")
 
     def test_start_training_with_minimal_config(self, api_context: APIRequestContext):
         """
@@ -83,16 +83,14 @@ class TestTrainingEndpoints:
         Uses smallest possible values to minimize test duration.
         """
         # Check if training is already running
-        status_response = api_context.get("/training/status")
-        if status_response.json().get("is_training"):
-            # Don't start another training session
-            return
+        # Ensure clean state
+        api_context.post("/training/stop")
         
         # Start training with minimal config
         response = api_context.post("/training/start", data=MINIMAL_TRAINING_CONFIG)
         
-        # Either it starts (200) or fails validation (422) or conflict (409)
-        assert response.status in [200, 422, 409]
+        # Should succeed
+        assert response.ok, f"Expected 200, got {response.status}: {response.text()}"
         
         if response.ok:
             data = response.json()
@@ -112,20 +110,22 @@ class TestTrainingLifecycle:
         Uses minimal configuration for speed.
         """
         # Skip if training already running
-        status_response = api_context.get("/training/status")
-        if status_response.json().get("is_training"):
-            return
+        # Ensure clean state
+        api_context.post("/training/stop")
         
         # Start training
         start_response = api_context.post("/training/start", data=MINIMAL_TRAINING_CONFIG)
-        
-        if not start_response.ok:
-            return  # Skip if can't start
+        assert start_response.ok, "Failed to start training"
         
         # Verify training is running
         time.sleep(0.5)
         status = api_context.get("/training/status").json()
+        assert status.get("is_training") is True
         
         # Stop training
         stop_response = api_context.post("/training/stop")
-        assert stop_response.status in [200, 400]  # 400 if already stopped
+        assert stop_response.ok
+        
+        # Verify stopped
+        status = api_context.get("/training/status").json()
+        assert status.get("is_training") is False
