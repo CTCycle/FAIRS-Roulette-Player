@@ -5,6 +5,9 @@ FAIRS is a research project dedicated to predicting upcoming outcomes in online 
 
 During training, the DQN agent learns to identify patterns within these sequences, and to select the actions associated with the highest Q-scores-signals of potentially more rewarding decisions. In doing so, FAIRS adapts sequence modeling techniques to the inherently random and structured nature of roulette outcomes, aiming to refine predictive accuracy in an environment defined by uncertainty.
 
+### 1.1 Project Status
+> **Work in Progress**: This project is still under active development. It will be updated regularly, but please be aware that you may encounter bugs, issues, or incomplete features as we refine the codebase.
+
 ## 2. FAIRSnet model
 FAIRSnet is a specialized neural network designed for roulette prediction within reinforcement learning contexts. Its core objective is forecasting the action most likely to yield the highest reward by analyzing the current state of the game, represented by a predefined series of recent outcomes (the perceived field). The model learns through interactions with the roulette environment, exploring multiple strategic betting options, including:
 
@@ -30,7 +33,7 @@ The project targets Windows 10/11 and requires roughly 2 GB of free disk space
 
 1. **Download the project**: clone the repository or extract the release archive into a writable location (avoid paths that require admin privileges).
 2. **Configure environment variables**: copy `FAIRS/resources/templates/.env` into `FAIRS/setup/.env` and adjust values (e.g., backend selection).
-3. **Run `start_on_windows.bat`**: the bootstrapper installs a portable Python 3.12 build, downloads Astral’s `uv`, syncs dependencies from `pyproject.toml`, prunes caches, then launches the UI through `uv run`. The script is idempotent—rerun it any time to repair the environment or re-open the app.
+3. **Run `start_on_windows.bat`**: the bootstrapper installs a portable Python 3.12 build, downloads Astral’s `uv`, syncs dependencies from `pyproject.toml`, prunes caches, then launches the **Web Application** through `uv run`. The script is idempotent—rerun it any time to repair the environment or re-open the app.
 
 Running the script the first time can take several minutes depending on bandwidth. Subsequent runs reuse the cached Python runtime and only re-sync packages when `pyproject.toml` changes.
 
@@ -61,7 +64,7 @@ The main interface streamlines navigation across the application's core services
 - Trigger the validation pipeline to compute descriptive stats, roulette transitions, outlier detection, and quality gates. Metrics are saved under `resources/database/validation` for later review.
 - Export or delete data directly from the menu bar actions without leaving the UI.
 
-![data tab](legacy/FAIRS/assets/data_tab.png)
+![data tab](FAIRS/assets/figures/data_tab.png)
 
 **Model tab (training, inference, evaluation):**
 - Configure data generation, train/validation splits, augmentation, and batching behavior before launching a new training run.
@@ -71,13 +74,13 @@ The main interface streamlines navigation across the application's core services
 - Execute inference in two modes: batch predictions for stored samples or the interactive Roulette console that simulates bets, capital depletion, and exit conditions in real time.
 - Evaluate checkpoints with accuracy, sparse categorical loss, confusion summaries, and optional detailed reports ready to share with collaborators.
 
-![model tab](legacy/FAIRS/assets/model_tab.png)
+![model tab](FAIRS/assets/figures/model_tab.png)
 
 **Viewer tab:** visualization hub.
 - Browse plots generated during dataset or model evaluation, and real-time roulette enviornment rendering
 - Useful for quick sanity checks without leaving the application.
 
-![viewer tab](legacy/FAIRS/assets/viewer_tab.png)
+![viewer tab](FAIRS/assets/figures/viewer_tab.png)
 
 ### 5.1 Setup and Maintenance
 `setup_and_maintenance.bat` launches a lightweight maintenance console with these options:
@@ -102,8 +105,7 @@ Environmental variables reside in `FAIRS/setup/.env`. Copy the template from `re
 
 | Variable              | Description                                                               |
 |-----------------------|---------------------------------------------------------------------------|
-| KERAS_BACKEND         | Backend for Keras 3; keep `torch` unless you explicitly need TensorFlow.  |
-| TF_CPP_MIN_LOG_LEVEL  | Controls TensorFlow logging verbosity (set to `2` to suppress INFO logs). |
+| KERAS_BACKEND         | Backend for Keras 3; set to `torch` as the project uses PyTorch.          |
 | MPLBACKEND            | Matplotlib backend; `Agg` keeps plotting headless for worker threads.     |
 
 ## 6. License

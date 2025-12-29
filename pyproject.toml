@@ -11,7 +11,6 @@ dependencies = [
     "fastapi==0.118.0",
     "uvicorn>=0.30.0",
     "torch==2.9.0+cu130",    
-    "tensorflow-cpu==2.20.0",
     "keras==3.12",   
     "numpy==2.3.2",
     "pandas==2.3.3",
