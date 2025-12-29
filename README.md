@@ -5,108 +5,106 @@ FAIRS is a research project dedicated to predicting upcoming outcomes in online 
 
 During training, the DQN agent learns to identify patterns within these sequences, and to select the actions associated with the highest Q-scores-signals of potentially more rewarding decisions. In doing so, FAIRS adapts sequence modeling techniques to the inherently random and structured nature of roulette outcomes, aiming to refine predictive accuracy in an environment defined by uncertainty.
 
-### 1.1 Project Status
 > **Work in Progress**: This project is still under active development. It will be updated regularly, but please be aware that you may encounter bugs, issues, or incomplete features as we refine the codebase.
 
 ## 2. FAIRSnet model
 FAIRSnet is a specialized neural network designed for roulette prediction within reinforcement learning contexts. Its core objective is forecasting the action most likely to yield the highest reward by analyzing the current state of the game, represented by a predefined series of recent outcomes (the perceived field). The model learns through interactions with the roulette environment, exploring multiple strategic betting options, including:
 
-- Betting on a specific number (0–36)
+- Betting on a specific number (0-36)
 - Betting on color outcomes (red or black)
 - Betting on numerical ranges (high or low)
 - Betting on specific dozen ranges
 - Choosing to abstain from betting and exit the game
 
-While roulette outcomes are theoretically random, some online platforms may use algorithms that exhibit patterns or slight autoregressive tendencies. The model is trained on a dataset built from past experiences, using reinforcement learning to optimize decision-making through DQN policy. The Q-Network head predicts Q-values that represents the confidence level for each possible outcome (suggested action). The model is trained using the Mean Squared Error (MSE) loss function, while tracking the Mean Absolute Percentage Error (MAPE) as a key metric. 
+While roulette outcomes are theoretically random, some online platforms may use algorithms that exhibit patterns or slight autoregressive tendencies. The model is trained on a dataset built from past experiences, using reinforcement learning to optimize decision-making through DQN policy. The Q-Network head predicts Q-values that represents the confidence level for each possible outcome (suggested action). The model is trained using the Mean Squared Error (MSE) loss function, while tracking RMSE during training.
 
 The application currently ships with the following functional blocks:
 
-- **Dataset ingestion and validation:** CSV sources are imported into the embedded SQLite database, then profiled through descriptive statistics, transition matrices, sparsity checks, and consistency rules.
-- **Training services:** Automatic preprocessing (roulette-wheel encoding, train/validation split, shuffling, synthetic sample generation) feeds the FAIRSnet agent. Training can start from scratch or resume from checkpoints, with support for learning-rate tuning, epsilon-greedy exploration scheduling, replay-buffer sizing, and TensorBoard logging.
-- **Inference console:** Any stored checkpoint can be loaded for batched predictions or interactive roulette sessions that simulate capital, bet sizing, and exit strategies.
-- **Evaluation dashboards:** Classification accuracy, sparse categorical loss, and custom metrics are computed on demand, producing structured reports and checkpoint summaries for auditing.
-- **Viewer tools:** Real-time renders of the simulated roulette environment and historical training charts are accessible through the Viewer tab, enabling quick diagnosis of convergence issues.
-- **Configuration management:** All UI controls are backed by the configuration service, making it easy to persist, reload, and share experiment presets.
+- **Dataset ingestion:** CSV/XLSX sources are imported into the embedded SQLite database from the Data Prep page.
+- **Training services:** The training pipeline supports synthetic data generation, dataset sampling/shuffling, and checkpointed DQN training with live WebSocket updates.
+- **Inference sessions:** Load any stored checkpoint, upload an inference context, and run a step-by-step roulette session that logs predictions.
+- **Database browser:** Inspect stored roulette series, inference contexts, predicted games, and checkpoint summaries in the Database tab.
 
 ## 3. Installation
-The project targets Windows 10/11 and requires roughly 2 GB of free disk space for the embedded Python runtime, dependencies, checkpoints, and datasets. A CUDA-capable NVIDIA GPU is recommended but not mandatory. Ensure you have the latest GPU drivers installed when enabling TorchInductor + Triton acceleration.
+The project targets Windows 10/11 and requires roughly 2 GB of free disk space for the embedded Python runtime, dependencies, checkpoints, and datasets. A CUDA-capable NVIDIA GPU is recommended but not mandatory.
 
 1. **Download the project**: clone the repository or extract the release archive into a writable location (avoid paths that require admin privileges).
-2. **Configure environment variables**: copy `FAIRS/resources/templates/.env` into `FAIRS/setup/.env` and adjust values (e.g., backend selection).
-3. **Run `start_on_windows.bat`**: the bootstrapper installs a portable Python 3.12 build, downloads Astral’s `uv`, syncs dependencies from `pyproject.toml`, prunes caches, then launches the **Web Application** through `uv run`. The script is idempotent—rerun it any time to repair the environment or re-open the app.
+2. **Configure environment variables (optional)**: copy `FAIRS/resources/templates/.env` into `FAIRS/settings/.env` and add overrides such as host/port values if needed.
+3. **Run `start_on_windows.bat`**: the bootstrapper installs portable Python 3.12 and Node.js runtimes, downloads Astral's `uv`, syncs dependencies from `pyproject.toml`, then launches the backend (FastAPI) and frontend (Vite preview). The script is idempotent - rerun it any time to repair the environment or re-open the app.
 
 Running the script the first time can take several minutes depending on bandwidth. Subsequent runs reuse the cached Python runtime and only re-sync packages when `pyproject.toml` changes.
 
 ### 4.1 Just-In-Time (JIT) Compiler
-`torch.compile` is enabled throughout the training and inference pipelines. TorchInductor optimizes the computation graph, performs kernel fusion, and lowers operations to Triton-generated kernels on NVIDIA GPUs or to optimized CPU kernels otherwise. Triton is bundled automatically so no separate CUDA toolkit installation is required.
+`torch.compile` can be enabled via `FAIRS/settings/server_configurations.json` (`device.jit_compile`). When enabled, TorchInductor optimizes the computation graph for compatible devices. Triton is bundled automatically so no separate CUDA toolkit installation is required.
 
 ### 4.2 Manual or developer installation
 If you prefer managing Python yourself (for debugging or CI):
 
 1. Install Python 3.12.x and `uv` (https://github.com/astral-sh/uv).
 2. From the repository root run `uv sync` to create a virtual environment with the versions pinned in `pyproject.toml`.
-3. Copy `.env` as described earlier and ensure the `KERAS_BACKEND` is set to `torch`.
-4. Launch the UI with `uv run python FAIRS/app/app.py`.
+3. Copy `.env` as described earlier if you need to override host/port values.
+4. Launch the backend with `uv run python -m uvicorn FAIRS.server.app:app`.
+5. In `FAIRS/client`, run `npm install` followed by `npm run build` and `npm run preview`.
 
 ## 5. How to use
-Launch the application by double-clicking `start_on_windows.bat` (or via `uv run python FAIRS/src/app/app.py`). On startup the UI loads the last-used configuration, scans the resources folder, and initializes worker pools so long-running jobs (training, inference, validation) do not block the interface.
+Launch the application by double-clicking `start_on_windows.bat`. On startup the UI connects to the FastAPI backend and uses WebSockets for live training updates.
 
-1. **Prepare data**: verify that `resources/database/dataset` (training) and `resources/database/inference` (inference) contain the expected files. 
-2. **Adjust configuration**: use the toolbar to load/save configuration templates or modify each parameter manually from the UI.
-3. **Run a pipeline**: pick an action under the Data, Model, or Viewer tabs. Progress bars, log panes, and popup notifications keep you informed. Background workers can be interrupted at any time.
+1. **Prepare data**: upload a CSV/XLSX dataset in the Data Prep tab (stored in the embedded SQLite database).
+2. **Train**: configure a new training run or resume a checkpoint in the Training tab.
+3. **Run inference**: upload an inference context, select a checkpoint, and step through predictions in the Inference tab.
+4. **Inspect data**: use the Database tab to browse stored tables and metadata.
 
 On Windows, run `start_on_windows.bat` to launch the application. Please note that some antivirus software, such as Avast, may flag or quarantine python.exe when called by the .bat file. If you encounter unusual behavior, consider adding an exception in your antivirus settings.
 
-The main interface streamlines navigation across the application's core services, including dataset evaluation, model training and evaluation, and inference. Users can easily visualize generated plots and browse both training and inference images. Model training supports customizable configurations and also allows resuming previous sessions using pretrained models.
+The main interface streamlines navigation across the application's core services: dataset preparation, model training, inference, and database browsing. Model training supports customizable configurations and resuming from pretrained checkpoints.
 
-**Dataset tab (ingestion, profiling, validation):**
-- Import CSV streams into the SQLite backend with a single click (`Load data`), optionally limiting sample size and seeding random shuffles for deterministic experiments.
-- Trigger the validation pipeline to compute descriptive stats, roulette transitions, outlier detection, and quality gates. Metrics are saved under `resources/database/validation` for later review.
-- Export or delete data directly from the menu bar actions without leaving the UI.
+**Data Prep tab:**
+- Upload CSV/XLSX roulette series into the embedded database.
+- Review upload status and confirm the dataset name that will be available for training.
 
-![data tab](FAIRS/assets/figures/data_tab.png)
+**Training tab:**
+- Configure agent, dataset, session, and checkpoint options for a new run.
+- Resume from an existing checkpoint with additional episodes.
+- Track loss/RMSE, rewards, capital, and progress from the live dashboard.
 
-**Model tab (training, inference, evaluation):**
-- Configure data generation, train/validation splits, augmentation, and batching behavior before launching a new training run.
-- Fine-tune the FAIRSnet agent by adjusting perceptive field size, embedding dimensions, exploration schedule, and optimization parameters from the Training and Agent sections.
-- Enable optional services such as TensorBoard streaming, real-time history callbacks, GPU selection, mixed precision, and TorchInductor compilation to match your hardware.
-- Resume a checkpointed run, refresh the checkpoint list, and generate summary reports that include loss/accuracy snapshots plus metadata (episodes, replay buffer size, etc.).
-- Execute inference in two modes: batch predictions for stored samples or the interactive Roulette console that simulates bets, capital depletion, and exit conditions in real time.
-- Evaluate checkpoints with accuracy, sparse categorical loss, confusion summaries, and optional detailed reports ready to share with collaborators.
+**Inference tab:**
+- Upload an inference context, select a checkpoint, and start a session.
+- Submit real extractions to receive the next prediction and track capital.
 
-![model tab](FAIRS/assets/figures/model_tab.png)
-
-**Viewer tab:** visualization hub.
-- Browse plots generated during dataset or model evaluation, and real-time roulette enviornment rendering
-- Useful for quick sanity checks without leaving the application.
-
-![viewer tab](FAIRS/assets/figures/viewer_tab.png)
+**Database tab:**
+- Browse stored tables with pagination and quick stats (columns/rows).
 
 ### 5.1 Setup and Maintenance
 `setup_and_maintenance.bat` launches a lightweight maintenance console with these options:
 
-- **Update project**: performs a `git pull` (or fetches release artifacts) so the local checkout stays in sync.
 - **Remove logs**: clears `resources/logs` to save disk space or to reset diagnostics before a new run.
-- **Open tools**: quick shortcuts to DB Browser for SQLite or other external utilities defined in the script.
+- **Uninstall app**: removes local runtimes, caches, and frontend artifacts.
+- **Initialize database**: runs the server-side initialization script.
 
 
 ### 5.2 Resources
-This folder organizes data and results across various stages of the project, such as data validation, model training, and evaluation. By default, all data is stored within an SQLite database; however, users have the option to export data into separate CSV files if desired. To visualize and interact with SQLite database files, we recommend downloading and installing the DB Browser for SQLite, available at: https://sqlitebrowser.org/dl/. The directory structure includes the following folders:
+This folder organizes data and results across training, inference, and runtime setup. By default, all data is stored within an SQLite database; an external DB can be configured via `FAIRS/settings/server_configurations.json`. The directory structure includes:
 
 - **checkpoints:**  pretrained model checkpoints are stored here, and can be used either for resuming training or performing inference with an already trained model.
 
-- **database:** collected adsorption data, processed data and validation results will be stored within the embedded SQLite database. Validation outputs will be saved separately within *database/validation*. Data used for inference with a pretrained checkpoint is located in *database/inference* (a template of the expected dataset columns is available at *resources/templates/FAIRS_predictions.csv*). 
+- **database:** embedded SQLite database (`sqlite.db`) containing roulette series, inference contexts, predicted games, and checkpoint summaries.
 
-- **logs:** log files are saved here
+- **logs:** application log files.
 
-- **templates:** reference template files can be found here
+- **runtimes:** portable Python/Node.js runtimes installed by `start_on_windows.bat`.
 
-Environmental variables reside in `FAIRS/setup/.env`. Copy the template from `resources/templates/.env` and adjust as needed:
+- **templates:** reference template files (including the `.env` starter).
 
-| Variable              | Description                                                               |
-|-----------------------|---------------------------------------------------------------------------|
-| KERAS_BACKEND         | Backend for Keras 3; set to `torch` as the project uses PyTorch.          |
-| MPLBACKEND            | Matplotlib backend; `Agg` keeps plotting headless for worker threads.     |
+Environmental variables reside in `FAIRS/settings/.env`. Copy the template from `resources/templates/.env` and adjust as needed:
+
+| Variable      | Description                                                                 |
+|---------------|-----------------------------------------------------------------------------|
+| FASTAPI_HOST  | Backend host for the FastAPI server (used by the launcher).                |
+| FASTAPI_PORT  | Backend port for the FastAPI server (used by the launcher).                |
+| UI_HOST       | Frontend host for the Vite preview server.                                 |
+| UI_PORT       | Frontend port for the Vite preview server.                                 |
+| RELOAD        | Set to `true` to enable auto-reload for the backend.                       |
+| MPLBACKEND    | Matplotlib backend; `Agg` keeps plotting headless for worker threads.      |
 
 ## 6. License
 This project is licensed under the terms of the MIT license. See the LICENSE file for details.
