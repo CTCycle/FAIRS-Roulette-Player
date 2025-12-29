@@ -119,6 +119,8 @@ class TrainingEndpoint:
                 detail="Training is already in progress.",
             )
 
+        self.training_state.is_training = True
+
         base_config = TrainingConfig().model_dump()
         overrides = config.model_dump(exclude_unset=True)
         configuration = {**base_config, **overrides}
@@ -220,6 +222,8 @@ class TrainingEndpoint:
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Training is already in progress.",
             )
+
+        self.training_state.is_training = True
 
         self.training_state.history_points = []
         self.training_state.latest_env = {}
