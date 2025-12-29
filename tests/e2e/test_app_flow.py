@@ -36,12 +36,13 @@ class TestNavigationFlow:
         
         # Try to find and click the Database link
         # Update the selector based on your actual UI
-        db_link = page.get_by_text("Database", exact=False)
-        if db_link.count() > 0:
-            db_link.first.click()
-            page.wait_for_load_state("networkidle")
-            # URL should now contain "database"
-            expect(page).to_have_url(re.compile(".*database.*", re.IGNORECASE))
+        db_link = page.get_by_text("Database", exact=False).first
+        expect(db_link).to_be_visible()
+        db_link.click()
+        
+        page.wait_for_load_state("networkidle")
+        # URL should now contain "database"
+        expect(page).to_have_url(re.compile(".*database.*", re.IGNORECASE))
 
     def test_navigate_to_training_page(self, page: Page, base_url: str):
         """Should be able to navigate to the Training page."""
@@ -49,11 +50,12 @@ class TestNavigationFlow:
         page.wait_for_load_state("networkidle")
         
         # Try to find and click the Training link
-        training_link = page.get_by_text("Training", exact=False)
-        if training_link.count() > 0:
-            training_link.first.click()
-            page.wait_for_load_state("networkidle")
-            expect(page).to_have_url(re.compile(".*training.*", re.IGNORECASE))
+        training_link = page.get_by_text("Training", exact=False).first
+        expect(training_link).to_be_visible()
+        training_link.click()
+        
+        page.wait_for_load_state("networkidle")
+        expect(page).to_have_url(re.compile(".*training.*", re.IGNORECASE))
 
     def test_navigate_to_inference_page(self, page: Page, base_url: str):
         """Should be able to navigate to the Inference page."""
@@ -61,11 +63,12 @@ class TestNavigationFlow:
         page.wait_for_load_state("networkidle")
         
         # Try to find and click the Inference link
-        inference_link = page.get_by_text("Inference", exact=False)
-        if inference_link.count() > 0:
-            inference_link.first.click()
-            page.wait_for_load_state("networkidle")
-            expect(page).to_have_url(re.compile(".*inference.*", re.IGNORECASE))
+        inference_link = page.get_by_text("Inference", exact=False).first
+        expect(inference_link).to_be_visible()
+        inference_link.click()
+        
+        page.wait_for_load_state("networkidle")
+        expect(page).to_have_url(re.compile(".*inference.*", re.IGNORECASE))
 
 
 class TestDatabasePage:
