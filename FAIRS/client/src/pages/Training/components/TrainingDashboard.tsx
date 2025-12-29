@@ -72,9 +72,13 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
     const [_envPayload, setEnvPayload] = useState<TrainingEnvPayload | null>(null);
     const wsRef = useRef<WebSocket | null>(null);
     const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const isActiveRef = useRef(isActive);
 
     const maxHistoryPoints = 2000;
 
+    useEffect(() => {
+        isActiveRef.current = isActive;
+    }, [isActive]);
 
 
     useEffect(() => {
@@ -97,7 +101,7 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
         setEnvPayload(null);
 
         const connectWebSocket = () => {
-            if (wsRef.current?.readyState === WebSocket.OPEN) {
+            if (wsRef.current && [WebSocket.OPEN, WebSocket.CONNECTING].includes(wsRef.current.readyState)) {
                 return;
             }
 
@@ -162,8 +166,11 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
 
             ws.onclose = () => {
                 setIsConnected(false);
+                if (wsRef.current === ws) {
+                    wsRef.current = null;
+                }
                 // Only reconnect if still active
-                if (isActive) {
+                if (isActiveRef.current) {
                     reconnectTimeoutRef.current = setTimeout(() => {
                         connectWebSocket();
                     }, 3000);
@@ -183,6 +190,7 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
         return () => {
             if (wsRef.current) {
                 wsRef.current.close();
+                wsRef.current = null;
             }
         };
     }, [isActive]);
@@ -331,10 +339,10 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                     <div className="visual-card-header">
                         <span className="visual-card-title">Real-time Loss</span>
                         <div className="visual-card-legend">
-                            <span className="legend-item"><span className="legend-dot loss"></span>Loss</span>
-                            <span className="legend-item"><span className="legend-dot rmse"></span>RMSE</span>
-                            <span className="legend-item" style={{ opacity: 0.7 }}><span className="legend-dot loss" style={{ opacity: 0.5 }}></span>Val Loss</span>
-                            <span className="legend-item" style={{ opacity: 0.7 }}><span className="legend-dot rmse" style={{ opacity: 0.5 }}></span>Val RMSE</span>
+                            <span className="legend-item"><span className="legend-dot loss"></span>Loss (train)</span>
+                            <span className="legend-item"><span className="legend-dot rmse"></span>RMSE (train)</span>
+                            <span className="legend-item" style={{ opacity: 0.7 }}><span className="legend-dot loss" style={{ opacity: 0.5 }}></span>Loss (validation, dashed)</span>
+                            <span className="legend-item" style={{ opacity: 0.7 }}><span className="legend-dot rmse" style={{ opacity: 0.5 }}></span>RMSE (validation, dashed)</span>
                         </div>
                     </div>
                     <TrainingLossChart points={historyPoints} />

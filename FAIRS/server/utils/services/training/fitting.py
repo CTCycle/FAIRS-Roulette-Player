@@ -286,8 +286,30 @@ class DQNTraining:
                     )
 
                     if time_step % 50 == 0:
-                        # logger.info(f"Loss: {scores['loss']} | RMSE: {scores['root_mean_squared_error']}")
-                        pass
+                        loss_value = scores.get("loss", 0.0)
+                        rmse_value = scores.get("root_mean_squared_error", 0.0)
+                        if hasattr(loss_value, "item"):
+                            loss_value = loss_value.item()
+                        if hasattr(rmse_value, "item"):
+                            rmse_value = rmse_value.item()
+
+                        val_summary = ""
+                        if val_scores:
+                            val_loss = val_scores.get("loss", 0.0)
+                            val_rmse = val_scores.get("root_mean_squared_error", 0.0)
+                            if hasattr(val_loss, "item"):
+                                val_loss = val_loss.item()
+                            if hasattr(val_rmse, "item"):
+                                val_rmse = val_rmse.item()
+                            val_summary = f" | Val Loss: {val_loss:.6f} | Val RMSE: {val_rmse:.6f}"
+
+                        logger.info(
+                            "Step %s | Loss: %.6f | RMSE: %.6f%s",
+                            time_step,
+                            loss_value,
+                            rmse_value,
+                            val_summary,
+                        )
 
                 if time_step % self.update_frequency == 0:
                     target_model.set_weights(model.get_weights())
