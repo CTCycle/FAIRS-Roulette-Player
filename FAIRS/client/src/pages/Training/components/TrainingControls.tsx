@@ -338,33 +338,45 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
                                         </div>
                                     </div>
 
+
                                     {/* Dataset Toggles */}
-                                    <div className="options-row">
+                                    <div className="dataset-options-grid" style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: '1fr 1fr',
+                                        gap: '1rem',
+                                        marginTop: '1rem',
+                                        padding: '1rem',
+                                        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                                        borderRadius: '6px',
+                                        border: '1px solid rgba(255, 255, 255, 0.05)'
+                                    }}>
                                         {/* Data Generator Toggle */}
-                                        <label className="checkbox-visual">
-                                            <input type="checkbox" name="useDataGen" checked={newConfig.useDataGen} onChange={handleNewChange} />
-                                            <span>Use synthetic data generator</span>
-                                        </label>
-                                        {newConfig.useDataGen && (
-                                            <div className="inline-input-group">
-                                                <input type="number" name="numGeneratedSamples" value={newConfig.numGeneratedSamples} onChange={handleNewChange} className="form-input inline-input-sm" />
-                                                <span style={{ fontSize: '0.85rem', color: '#64748b' }}>samples</span>
-                                            </div>
-                                        )}
+                                        <div className="dataset-option-group">
+                                            <label className="checkbox-visual" style={{ marginBottom: '0.5rem' }}>
+                                                <input type="checkbox" name="useDataGen" checked={newConfig.useDataGen} onChange={handleNewChange} />
+                                                <span style={{ fontWeight: 500 }}>Use synthetic data generator</span>
+                                            </label>
+                                            {newConfig.useDataGen && (
+                                                <div className="inline-input-group" style={{ marginLeft: '1.8rem' }}>
+                                                    <input type="number" name="numGeneratedSamples" value={newConfig.numGeneratedSamples} onChange={handleNewChange} className="form-input inline-input-sm" />
+                                                    <span style={{ fontSize: '0.85rem', color: '#64748b' }}>samples</span>
+                                                </div>
+                                            )}
+                                        </div>
 
                                         {/* Shuffle Toggle */}
-                                        <div style={{ width: '1px', height: '20px', background: '#e2e8f0', margin: '0 0.5rem' }}></div>
-
-                                        <label className="checkbox-visual">
-                                            <input type="checkbox" name="setShuffle" checked={newConfig.setShuffle} onChange={handleNewChange} />
-                                            <span>Shuffle buffer</span>
-                                        </label>
-                                        {newConfig.setShuffle && (
-                                            <div className="inline-input-group">
-                                                <input type="number" name="shuffleSize" value={newConfig.shuffleSize} onChange={handleNewChange} className="form-input inline-input-sm" />
-                                                <span style={{ fontSize: '0.85rem', color: '#64748b' }}>size</span>
-                                            </div>
-                                        )}
+                                        <div className="dataset-option-group">
+                                            <label className="checkbox-visual" style={{ marginBottom: '0.5rem' }}>
+                                                <input type="checkbox" name="setShuffle" checked={newConfig.setShuffle} onChange={handleNewChange} />
+                                                <span style={{ fontWeight: 500 }}>Shuffle buffer</span>
+                                            </label>
+                                            {newConfig.setShuffle && (
+                                                <div className="inline-input-group" style={{ marginLeft: '1.8rem' }}>
+                                                    <input type="number" name="shuffleSize" value={newConfig.shuffleSize} onChange={handleNewChange} className="form-input inline-input-sm" />
+                                                    <span style={{ fontSize: '0.85rem', color: '#64748b' }}>size</span>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </fieldset>
 
@@ -401,43 +413,87 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
                                         </div>
                                     </div>
 
+
                                     {/* Configuration Options */}
-                                    <div className="options-row">
-                                        {/* GPU & Precision */}
-                                        <label className="checkbox-visual">
-                                            <input type="checkbox" name="deviceGPU" checked={newConfig.deviceGPU} onChange={handleNewChange} />
-                                            <span>Use GPU</span>
-                                        </label>
-                                        {newConfig.deviceGPU && (
-                                            <div className="inline-input-group">
-                                                <input type="number" name="deviceID" value={newConfig.deviceID} onChange={handleNewChange} className="form-input inline-input-sm" placeholder="ID" />
+                                    <div className="session-options-container" style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: '1fr 1fr',
+                                        gap: '1.5rem',
+                                        marginTop: '1.5rem'
+                                    }}>
+                                        {/* Hardware Acceleration Column */}
+                                        <div className="session-option-column" style={{
+                                            padding: '1rem',
+                                            backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                                            borderRadius: '6px',
+                                            border: '1px solid rgba(255, 255, 255, 0.05)'
+                                        }}>
+                                            <h4 style={{
+                                                fontSize: '0.9rem',
+                                                fontWeight: 600,
+                                                color: '#94a3b8',
+                                                marginBottom: '0.75rem',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '0.05em'
+                                            }}>Hardware Acceleration</h4>
+
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                                <div>
+                                                    <label className="checkbox-visual">
+                                                        <input type="checkbox" name="deviceGPU" checked={newConfig.deviceGPU} onChange={handleNewChange} />
+                                                        <span>Use GPU</span>
+                                                    </label>
+                                                    {newConfig.deviceGPU && (
+                                                        <div className="inline-input-group" style={{ marginLeft: '1.8rem', marginTop: '0.5rem' }}>
+                                                            <input type="number" name="deviceID" value={newConfig.deviceID} onChange={handleNewChange} className="form-input inline-input-sm" placeholder="ID" />
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <label className="checkbox-visual">
+                                                    <input type="checkbox" name="useMixedPrecision" checked={newConfig.useMixedPrecision} onChange={handleNewChange} />
+                                                    <span>Mixed Precision</span>
+                                                </label>
                                             </div>
-                                        )}
+                                        </div>
 
-                                        <label className="checkbox-visual">
-                                            <input type="checkbox" name="useMixedPrecision" checked={newConfig.useMixedPrecision} onChange={handleNewChange} />
-                                            <span>Mixed Precision</span>
-                                        </label>
+                                        {/* Monitoring & Persistence Column */}
+                                        <div className="session-option-column" style={{
+                                            padding: '1rem',
+                                            backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                                            borderRadius: '6px',
+                                            border: '1px solid rgba(255, 255, 255, 0.05)'
+                                        }}>
+                                            <h4 style={{
+                                                fontSize: '0.9rem',
+                                                fontWeight: 600,
+                                                color: '#94a3b8',
+                                                marginBottom: '0.75rem',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '0.05em'
+                                            }}>Monitoring & Persistence</h4>
 
-                                        <div style={{ flexBasis: '100%', height: 0 }}></div> {/* Break Row */}
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                                <label className="checkbox-visual">
+                                                    <input type="checkbox" name="useTensorboard" checked={newConfig.useTensorboard} onChange={handleNewChange} />
+                                                    <span>Enable TensorBoard</span>
+                                                </label>
 
-                                        {/* Checkpointing & Tensorboard */}
-                                        <label className="checkbox-visual">
-                                            <input type="checkbox" name="useTensorboard" checked={newConfig.useTensorboard} onChange={handleNewChange} />
-                                            <span>Enable TensorBoard</span>
-                                        </label>
-
-                                        <label className="checkbox-visual">
-                                            <input type="checkbox" name="saveCheckpoints" checked={newConfig.saveCheckpoints} onChange={handleNewChange} />
-                                            <span>Save Checkpoints</span>
-                                        </label>
-                                        {newConfig.saveCheckpoints && (
-                                            <div className="inline-input-group">
-                                                <span style={{ fontSize: '0.85rem', color: '#64748b' }}>every</span>
-                                                <input type="number" name="checkpointsFreq" value={newConfig.checkpointsFreq} onChange={handleNewChange} className="form-input inline-input-sm" />
-                                                <span style={{ fontSize: '0.85rem', color: '#64748b' }}>episodes</span>
+                                                <div>
+                                                    <label className="checkbox-visual">
+                                                        <input type="checkbox" name="saveCheckpoints" checked={newConfig.saveCheckpoints} onChange={handleNewChange} />
+                                                        <span>Save Checkpoints</span>
+                                                    </label>
+                                                    {newConfig.saveCheckpoints && (
+                                                        <div className="inline-input-group" style={{ marginLeft: '1.8rem', marginTop: '0.5rem' }}>
+                                                            <span style={{ fontSize: '0.85rem', color: '#64748b' }}>every</span>
+                                                            <input type="number" name="checkpointsFreq" value={newConfig.checkpointsFreq} onChange={handleNewChange} className="form-input inline-input-sm" />
+                                                            <span style={{ fontSize: '0.85rem', color: '#64748b' }}>episodes</span>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
-                                        )}
+                                        </div>
                                     </div>
                                 </fieldset>
 
