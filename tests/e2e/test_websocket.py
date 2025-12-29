@@ -2,26 +2,37 @@
 E2E tests for WebSocket connections.
 Tests the training WebSocket endpoint.
 """
-import asyncio
 import json
+from urllib.parse import urlparse
+
 from playwright.sync_api import Page
 
 
 class TestTrainingWebSocket:
     """Tests for the /training/ws WebSocket endpoint."""
 
-    def test_websocket_connection_via_page(self, page: Page, base_url: str):
+    def _build_ws_url(self, api_base_url: str) -> str:
+        base = api_base_url.rstrip("/")
+        parsed = urlparse(base)
+        if parsed.scheme:
+            scheme = "wss" if parsed.scheme == "https" else "ws"
+            path = parsed.path.rstrip("/")
+            return f"{scheme}://{parsed.netloc}{path}/training/ws"
+        return f"ws://{base}/training/ws"
+
+    def test_websocket_connection_via_page(self, page: Page, base_url: str, api_base_url: str):
         """
         Test that the training WebSocket establishes a connection.
         Uses the browser's WebSocket API through Playwright.
         """
         page.goto(base_url)
+        ws_url = self._build_ws_url(api_base_url)
         
         # Execute JavaScript to test WebSocket connection
         result = page.evaluate("""
-            async () => {
+            async (wsUrl) => {
                 return new Promise((resolve) => {
-                    const ws = new WebSocket('ws://localhost:8000/training/ws');
+                    const ws = new WebSocket(wsUrl);
                     let connectionResult = { connected: false, message: null };
                     
                     ws.onopen = () => {
@@ -50,22 +61,23 @@ class TestTrainingWebSocket:
                     }, 5000);
                 });
             }
-        """)
+        """, ws_url)
         
         # WebSocket should have connected
         assert result.get("connected") or result.get("message") is not None, \
             f"WebSocket connection failed: {result}"
 
-    def test_websocket_receives_initial_state(self, page: Page, base_url: str):
+    def test_websocket_receives_initial_state(self, page: Page, base_url: str, api_base_url: str):
         """
         Test that the WebSocket sends initial connection state.
         """
         page.goto(base_url)
+        ws_url = self._build_ws_url(api_base_url)
         
         result = page.evaluate("""
-            async () => {
+            async (wsUrl) => {
                 return new Promise((resolve) => {
-                    const ws = new WebSocket('ws://localhost:8000/training/ws');
+                    const ws = new WebSocket(wsUrl);
                     
                     ws.onmessage = (event) => {
                         try {
@@ -87,7 +99,7 @@ class TestTrainingWebSocket:
                     }, 5000);
                 });
             }
-        """)
+        """, ws_url)
         
         # Should receive a connection message with initial state
         if result.get("type") == "connection":
@@ -96,16 +108,17 @@ class TestTrainingWebSocket:
             assert "is_training" in data
             assert "latest_stats" in data
 
-    def test_websocket_ping_pong(self, page: Page, base_url: str):
+    def test_websocket_ping_pong(self, page: Page, base_url: str, api_base_url: str):
         """
         Test that the WebSocket responds to ping with pong.
         """
         page.goto(base_url)
+        ws_url = self._build_ws_url(api_base_url)
         
         result = page.evaluate("""
-            async () => {
+            async (wsUrl) => {
                 return new Promise((resolve) => {
-                    const ws = new WebSocket('ws://localhost:8000/training/ws');
+                    const ws = new WebSocket(wsUrl);
                     let gotPong = false;
                     
                     ws.onopen = () => {
@@ -134,7 +147,7 @@ class TestTrainingWebSocket:
                     }, 3000);
                 });
             }
-        """)
+        """, ws_url)
         
         # Should have received pong response
         assert result.get("gotPong", False), "Did not receive pong response"
