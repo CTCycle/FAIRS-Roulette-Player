@@ -18,7 +18,7 @@ set "uv_exe=%uv_dir%\uv.exe"
 set "uv_zip_path=%uv_dir%\uv.zip"
 set "UV_CACHE_DIR=%runtimes_dir%\uv_cache"
 
-set "py_version=3.14.2"
+set "py_version=3.14.1"
 set "python_zip_filename=python-%py_version%-embed-amd64.zip"
 set "python_zip_url=https://www.python.org/ftp/python/%py_version%/%python_zip_filename%"
 set "python_zip_path=%python_dir%\%python_zip_filename%"
@@ -223,6 +223,11 @@ set "UI_URL=http://!UI_HOST!:!UI_PORT!"
 set "RELOAD_FLAG="
 if /i "!RELOAD!"=="true" set "RELOAD_FLAG=--reload"
 
+REM Ensure the embeddable runtime is used (avoid picking up Conda/other Python DLLs)
+set "PYTHONHOME=%python_dir%"
+set "PYTHONPATH="
+set "PYTHONNOUSERSITE=1"
+
 REM ============================================================================
 REM Start backend and frontend
 REM ============================================================================
@@ -260,7 +265,6 @@ if not exist "%FRONTEND_DIST%" (
 ) else (
   echo [INFO] Frontend build already present at "%FRONTEND_DIST%".
 )
-
 echo [RUN] Launching frontend
 pushd "%FRONTEND_DIR%" >nul
 call :kill_port %UI_PORT%
