@@ -75,7 +75,17 @@ if exist "%DOTENV%" (
     )
 )
 
-set "PATH=%nodejs_dir%;%PATH%"
+REM ============================================================================
+REM == Force portable runtimes (avoid global Python/npm)
+REM ============================================================================
+set "PATH=%python_dir%;%nodejs_dir%;%PATH%"
+set "PYTHONHOME=%python_dir%"
+set "PYTHONPATH="
+set "PYTHONNOUSERSITE=1"
+set "VIRTUAL_ENV="
+set "__PYVENV_LAUNCHER__="
+set "PYTHON=%python_exe%"
+set "npm_config_python=%python_exe%"
 
 REM ============================================================================
 REM == Configure pytest / Playwright options
