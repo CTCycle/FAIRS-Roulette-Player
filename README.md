@@ -1,123 +1,116 @@
 # FAIRS: Fabulous Automated Intelligent Roulette System
 
-## 1. Introduction
-FAIRS is a research project dedicated to predicting upcoming outcomes in online roulette through a Deep Q-Network (DQN) agent. Instead of relying solely on immediate, isolated results, FAIRS utilizes sequences of past roulette spins, incorporating a perceptive field of historical outcomes as input. This approach allows the model to detect temporal patterns that might influence future events. Additionally, random number generation can be used to simulate a genuinely unpredictable game environment, mirroring the behavior of a real roulette wheel.
+## 1. Project Overview
+FAIRS is a research application for experimenting with roulette prediction using reinforcement learning. It provides a FastAPI backend for data ingestion, training, and inference, and a web UI for running sessions and reviewing results. The system stores datasets, checkpoints, and session outputs in an embedded SQLite database and uses a Windows launcher that installs portable runtimes and starts the backend and frontend together. This project is intended for educational and research use and does not guarantee predictive accuracy.
 
-During training, the DQN agent learns to identify patterns within these sequences, and to select the actions associated with the highest Q-scores-signals of potentially more rewarding decisions. In doing so, FAIRS adapts sequence modeling techniques to the inherently random and structured nature of roulette outcomes, aiming to refine predictive accuracy in an environment defined by uncertainty.
-
-> **Work in Progress**: This project is still under active development. It will be updated regularly, but please be aware that you may encounter bugs, issues, or incomplete features as we refine the codebase.
-
-## 2. FAIRSnet model
-FAIRSnet is a specialized neural network designed for roulette prediction within reinforcement learning contexts. Its core objective is forecasting the action most likely to yield the highest reward by analyzing the current state of the game, represented by a predefined series of recent outcomes (the perceived field). The model learns through interactions with the roulette environment, exploring multiple strategic betting options, including:
-
-- Betting on a specific number (0-36)
-- Betting on color outcomes (red or black)
-- Betting on numerical ranges (high or low)
-- Betting on specific dozen ranges
-- Choosing to abstain from betting and exit the game
-
-While roulette outcomes are theoretically random, some online platforms may use algorithms that exhibit patterns or slight autoregressive tendencies. The model is trained on a dataset built from past experiences, using reinforcement learning to optimize decision-making through DQN policy. The Q-Network head predicts Q-values that represents the confidence level for each possible outcome (suggested action). The model is trained using the Mean Squared Error (MSE) loss function, while tracking RMSE during training.
-
-The application currently ships with the following functional blocks:
-
-- **Dataset ingestion:** CSV/XLSX sources are imported into the embedded SQLite database from the Data Prep page.
-- **Training services:** The training pipeline supports synthetic data generation, dataset sampling/shuffling, and checkpointed DQN training with live WebSocket updates.
-- **Inference sessions:** Load any stored checkpoint, upload an inference context, and run a step-by-step roulette session that logs predictions.
-- **Database browser:** Inspect stored roulette series, inference contexts, predicted games, and checkpoint summaries in the Database tab.
+## 2. Model and Dataset (Optional)
+FAIRS uses a Deep Q-Network (DQN) agent trained with reinforcement learning over sequences of recent roulette outcomes. The state representation is a fixed-length window of prior spins, and actions correspond to common roulette betting choices plus a no-bet option. Training and evaluation data come from user-provided CSV/XLSX uploads and optional synthetic sequences generated inside the app; no dataset is bundled with the repository.
 
 ## 3. Installation
-The project targets Windows 10/11 and requires roughly 2 GB of free disk space for the embedded Python runtime, dependencies, checkpoints, and datasets. A CUDA-capable NVIDIA GPU is recommended but not mandatory.
 
-1. **Download the project**: clone the repository or extract the release archive into a writable location (avoid paths that require admin privileges).
-2. **Configure environment variables (optional)**: copy `FAIRS/resources/templates/.env` into `FAIRS/settings/.env` and add overrides such as host/port values if needed.
-3. **Run `start_on_windows.bat`**: the bootstrapper installs portable Python 3.12 and Node.js runtimes, downloads Astral's `uv`, syncs dependencies from `pyproject.toml`, then launches the backend (FastAPI) and frontend (Vite preview). The script is idempotent - rerun it any time to repair the environment or re-open the app.
+### 3.1 Windows (One Click Setup)
+Run `FAIRS/start_on_windows.bat` from the repository. The launcher automatically:
+1. Downloads portable Python 3.14, uv, and Node.js into `FAIRS/resources/runtimes`.
+2. Installs Python dependencies from `pyproject.toml`.
+3. Installs frontend dependencies and builds the UI.
+4. Starts the backend and frontend and opens the browser.
 
-Running the script the first time can take several minutes depending on bandwidth. Subsequent runs reuse the cached Python runtime and only re-sync packages when `pyproject.toml` changes.
+The first run downloads runtimes and builds the frontend. Subsequent runs reuse the cached runtimes and the existing frontend build when available. The installation is portable and stays inside the project folder without modifying global system settings.
 
-### 4.1 Just-In-Time (JIT) Compiler
-`torch.compile` can be enabled via `FAIRS/settings/server_configurations.json` (`device.jit_compile`). When enabled, TorchInductor optimizes the computation graph for compatible devices. Triton is bundled automatically so no separate CUDA toolkit installation is required.
+### 3.2 macOS / Linux (Manual Setup)
+Prerequisites:
+- Python 3.14+ and `uv`
+- Node.js 22.x (same major version used by the Windows launcher)
 
-### 4.2 Manual or developer installation
-If you prefer managing Python yourself (for debugging or CI):
+Installation steps:
+1. Clone the repository.
+2. (Optional) Copy `FAIRS/resources/templates/.env` to `FAIRS/settings/.env` and edit overrides.
+3. Install backend dependencies:
 
-1. Install Python 3.12.x and `uv` (https://github.com/astral-sh/uv).
-2. From the repository root run `uv sync` to create a virtual environment with the versions pinned in `pyproject.toml`.
-3. Copy `.env` as described earlier if you need to override host/port values.
-4. Launch the backend with `uv run python -m uvicorn FAIRS.server.app:app`.
-5. In `FAIRS/client`, run `npm install` followed by `npm run build` and `npm run preview`.
+```bash
+uv sync
+```
 
-## 5. How to use
-Launch the application by double-clicking `start_on_windows.bat`. On startup the UI connects to the FastAPI backend and uses WebSockets for live training updates.
+4. Start the backend:
 
-1. **Prepare data**: upload a CSV/XLSX dataset in the Data Prep tab (stored in the embedded SQLite database).
-2. **Train**: configure a new training run or resume a checkpoint in the Training tab.
-3. **Run inference**: upload an inference context, select a checkpoint, and step through predictions in the Inference tab.
-4. **Inspect data**: use the Database tab to browse stored tables and metadata.
+```bash
+uv run python -m uvicorn FAIRS.server.app:app --host 127.0.0.1 --port 8000
+```
 
-On Windows, run `start_on_windows.bat` to launch the application. Please note that some antivirus software, such as Avast, may flag or quarantine python.exe when called by the .bat file. If you encounter unusual behavior, consider adding an exception in your antivirus settings.
+5. Build and start the frontend:
 
-The main interface streamlines navigation across the application's core services: dataset preparation, model training, inference, and database browsing. Model training supports customizable configurations and resuming from pretrained checkpoints.
+```bash
+cd FAIRS/client
+npm install
+npm run build
+npm run preview -- --host 127.0.0.1 --port 7861 --strictPort
+```
 
-**Data Prep tab:**
-- Upload CSV/XLSX roulette series into the embedded database.
-- Review upload status and confirm the dataset name that will be available for training.
+## 4. How to Use
 
+### 4.1 Windows
+- Launch the app by double-clicking `FAIRS/start_on_windows.bat`.
+- The UI is available at `http://127.0.0.1:7861` and the backend API at `http://127.0.0.1:8000` by default. If you change host or port values in `.env`, use those instead.
+- If antivirus quarantines the portable Python runtime, allowlist `FAIRS/resources/runtimes/python`.
+
+### 4.2 macOS / Linux
+Start the backend and frontend in separate terminals:
+
+```bash
+uv run python -m uvicorn FAIRS.server.app:app --host 127.0.0.1 --port 8000
+```
+
+```bash
+cd FAIRS/client
+npm run preview -- --host 127.0.0.1 --port 7861 --strictPort
+```
+
+The UI is available at `http://127.0.0.1:7861` and the backend API at `http://127.0.0.1:8000`. FastAPI documentation is usually available at `http://127.0.0.1:8000/docs` unless disabled.
+
+### 4.3 Using the Application
+Typical workflow:
+- Load data by uploading CSV/XLSX roulette series in the Data Prep tab.
+- Configure and run training, or resume from an existing checkpoint, in the Training tab.
+- Run inference step-by-step with a selected checkpoint in the Inference tab.
+- Review stored datasets, sessions, and checkpoints in the Database tab.
+
+**Data Prep**: Upload CSV/XLSX datasets and confirm the stored dataset name for training.
 ![dataset_prep](FAIRS/assets/figures/dataset_prep.png)
 
-**Training tab:**
-- Configure agent, dataset, session, and checkpoint options for a new run.
-- Resume from an existing checkpoint with additional episodes.
-- Track loss/RMSE, rewards, capital, and progress from the live dashboard.
-
+**Training**: Configure a run, monitor loss/rewards, and resume from checkpoints.
 ![training_page](FAIRS/assets/figures/training_page.png)
 
-**Inference tab:**
-- Upload an inference context, select a checkpoint, and start a session.
-- Submit real extractions to receive the next prediction and track capital.
-
-
+**Inference**: Load a checkpoint and step through predictions for a roulette session.
 ![inference_page](FAIRS/assets/figures/inference_page.png)
 
-
-**Database tab:**
-- Browse stored tables with pagination and quick stats (columns/rows).
-
+**Database browser**: Browse stored tables and session metadata.
 ![database_browser](FAIRS/assets/figures/database_browser.png)
 
-### 5.1 Setup and Maintenance
-`setup_and_maintenance.bat` launches a lightweight maintenance console with these options:
+## 5. Setup and Maintenance
+- `FAIRS/setup_and_maintenance.bat`: Menu for removing logs, uninstalling local runtimes/frontend artifacts, and initializing the database.
+- `tests/run_tests.bat`: Runs end-to-end Playwright tests by starting the backend and frontend, executing pytest, and shutting down the servers (requires the Windows portable runtimes).
 
-- **Remove logs**: clears `resources/logs` to save disk space or to reset diagnostics before a new run.
-- **Uninstall app**: removes local runtimes, caches, and frontend artifacts.
-- **Initialize database**: runs the server-side initialization script.
+## 6. Resources
+`FAIRS/resources` stores runtime data and supporting files used by the application:
+- checkpoints: saved model checkpoints for resuming training or running inference.
+- database: embedded SQLite database used for datasets, sessions, and results.
+- logs: application log output.
+- runtimes: portable Python, uv, and Node.js installed by the Windows launcher.
+- templates: starter configuration files such as `.env`.
+
+## 7. Configuration
+Backend configuration is loaded from `FAIRS/settings/server_configurations.json`, and runtime environment variables are read from `FAIRS/settings/.env` (use `FAIRS/resources/templates/.env` as a starting point). The frontend uses the default Vite preview configuration and does not require a separate config file in this repository.
+
+| Variable | Description |
+|----------|-------------|
+| FASTAPI_HOST | Backend bind host, loaded from `FAIRS/settings/.env`, default `127.0.0.1`. |
+| FASTAPI_PORT | Backend port, loaded from `FAIRS/settings/.env`, default `8000`. |
+| UI_HOST | Frontend host for the Windows launcher, loaded from `FAIRS/settings/.env` by `FAIRS/start_on_windows.bat`, default `127.0.0.1`. |
+| UI_PORT | Frontend port for the Windows launcher, loaded from `FAIRS/settings/.env` by `FAIRS/start_on_windows.bat`, default `7861`. |
+| RELOAD | Enables backend auto-reload in the Windows launcher, loaded from `FAIRS/settings/.env` by `FAIRS/start_on_windows.bat`, default `false`. |
+| MPLBACKEND | Matplotlib backend for headless plotting, loaded from `FAIRS/settings/.env`, default `"Agg"`. |
+| KERAS_BACKEND | Keras backend selection, loaded from `FAIRS/settings/.env`, default `torch`. |
 
 
-### 5.2 Resources
-This folder organizes data and results across training, inference, and runtime setup. By default, all data is stored within an SQLite database; an external DB can be configured via `FAIRS/settings/server_configurations.json`. The directory structure includes:
-
-- **checkpoints:**  pretrained model checkpoints are stored here, and can be used either for resuming training or performing inference with an already trained model.
-
-- **database:** embedded SQLite database (`sqlite.db`) containing roulette series, inference contexts, predicted games, and checkpoint summaries.
-
-- **logs:** application log files.
-
-- **runtimes:** portable Python/Node.js runtimes installed by `start_on_windows.bat`.
-
-- **templates:** reference template files (including the `.env` starter).
-
-Environmental variables reside in `FAIRS/settings/.env`. Copy the template from `resources/templates/.env` and adjust as needed:
-
-| Variable      | Description                                                                 |
-|---------------|-----------------------------------------------------------------------------|
-| FASTAPI_HOST  | Backend host for the FastAPI server (used by the launcher).                |
-| FASTAPI_PORT  | Backend port for the FastAPI server (used by the launcher).                |
-| UI_HOST       | Frontend host for the Vite preview server.                                 |
-| UI_PORT       | Frontend port for the Vite preview server.                                 |
-| RELOAD        | Set to `true` to enable auto-reload for the backend.                       |
-| MPLBACKEND    | Matplotlib backend; `Agg` keeps plotting headless for worker threads.      |
-
-## 6. License
-This project is licensed under the terms of the MIT license. See the LICENSE file for details.
-
-## Disclaimer
-This project is for educational purposes only. It should not be used as a way to make easy money, since the model won't be able to accurately forecast numbers merely based on previous observations!
+## 8. License
+This project is licensed under the MIT license. See `LICENSE` for details.
