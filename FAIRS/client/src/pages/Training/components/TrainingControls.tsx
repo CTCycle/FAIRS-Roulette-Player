@@ -231,152 +231,167 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
                     {activeSection === 'new' && (
                         <div className="training-accordion-content">
                             <form onSubmit={handleNewSubmit}>
-                                {/* === AGENT CONFIGURATION === */}
-                                <fieldset className="control-fieldset">
-                                    <legend className="control-legend">
-                                        <Activity size={16} className="text-blue-500" /> Agent Configuration
-                                    </legend>
-                                    <div className="training-pro-grid">
-                                        <div className="form-group">
-                                            <label className="form-label">Perceptive Field</label>
-                                            <input type="number" name="perceptiveField" value={newConfig.perceptiveField} onChange={handleNewChange} className="form-input" max="1024" />
+                                {/* === AGENT CONFIGURATION + ENVIRONMENT/MEMORY (Side-by-Side) === */}
+                                <div className="controls-row-side-by-side">
+                                    {/* Agent Configuration (Left, 70%) */}
+                                    <fieldset className="control-fieldset control-fieldset-left">
+                                        <legend className="control-legend">
+                                            <Activity size={16} className="text-blue-500" /> Agent Configuration
+                                        </legend>
+                                        {/* Upper 2x2 grid */}
+                                        <div className="training-grid-2x2">
+                                            <div className="form-group">
+                                                <label className="form-label">Perceptive Field</label>
+                                                <input type="number" name="perceptiveField" value={newConfig.perceptiveField} onChange={handleNewChange} className="form-input" max="1024" />
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">QNet Neurons</label>
+                                                <input type="number" name="numNeurons" value={newConfig.numNeurons} onChange={handleNewChange} className="form-input" max="10000" />
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">Embedding Dims</label>
+                                                <input type="number" name="embeddingDims" value={newConfig.embeddingDims} onChange={handleNewChange} className="form-input" step="8" max="9999" />
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">Update Freq</label>
+                                                <input type="number" name="modelUpdateFreq" value={newConfig.modelUpdateFreq} onChange={handleNewChange} className="form-input" max="1000" />
+                                            </div>
                                         </div>
-                                        <div className="form-group">
-                                            <label className="form-label">QNet Neurons</label>
-                                            <input type="number" name="numNeurons" value={newConfig.numNeurons} onChange={handleNewChange} className="form-input" max="10000" />
+                                        <hr className="fieldset-separator-horizontal" />
+                                        {/* Lower 2x2 grid */}
+                                        <div className="training-grid-2x2">
+                                            <div className="form-group">
+                                                <label className="form-label">Explore Rate</label>
+                                                <input type="number" name="explorationRate" value={newConfig.explorationRate} onChange={handleNewChange} className="form-input" step="0.01" max="1.0" />
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">Decay</label>
+                                                <input type="number" name="explorationRateDecay" value={newConfig.explorationRateDecay} onChange={handleNewChange} className="form-input" step="0.001" max="1.0" />
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">Min Explore Rate</label>
+                                                <input type="number" name="minExplorationRate" value={newConfig.minExplorationRate} onChange={handleNewChange} className="form-input" step="0.01" max="1.0" />
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">Discount Rate</label>
+                                                <input type="number" name="discountRate" value={newConfig.discountRate} onChange={handleNewChange} className="form-input" step="0.01" max="1.0" />
+                                            </div>
                                         </div>
-                                        <div className="form-group">
-                                            <label className="form-label">Embedding Dims</label>
-                                            <input type="number" name="embeddingDims" value={newConfig.embeddingDims} onChange={handleNewChange} className="form-input" step="8" max="9999" />
-                                        </div>
-                                        <div className="form-group">
-                                            <label className="form-label">Update Freq</label>
-                                            <input type="number" name="modelUpdateFreq" value={newConfig.modelUpdateFreq} onChange={handleNewChange} className="form-input" max="1000" />
-                                        </div>
-                                        <div className="form-group">
-                                            <label className="form-label">Explore Rate</label>
-                                            <input type="number" name="explorationRate" value={newConfig.explorationRate} onChange={handleNewChange} className="form-input" step="0.01" max="1.0" />
-                                        </div>
-                                        <div className="form-group">
-                                            <label className="form-label">Decay</label>
-                                            <input type="number" name="explorationRateDecay" value={newConfig.explorationRateDecay} onChange={handleNewChange} className="form-input" step="0.001" max="1.0" />
-                                        </div>
-                                        <div className="form-group">
-                                            <label className="form-label">Min Explore Rate</label>
-                                            <input type="number" name="minExplorationRate" value={newConfig.minExplorationRate} onChange={handleNewChange} className="form-input" step="0.01" max="1.0" />
-                                        </div>
-                                        <div className="form-group">
-                                            <label className="form-label">Discount Rate</label>
-                                            <input type="number" name="discountRate" value={newConfig.discountRate} onChange={handleNewChange} className="form-input" step="0.01" max="1.0" />
-                                        </div>
-                                    </div>
-                                </fieldset>
+                                    </fieldset>
 
-                                {/* === ENVIRONMENT & MEMORY === */}
-                                <fieldset className="control-fieldset">
-                                    <legend className="control-legend">
-                                        <Layers size={16} /> Environment & Memory
-                                    </legend>
-                                    <div className="training-pro-grid">
-                                        <div className="form-group">
-                                            <label className="form-label">Bet Amount</label>
-                                            <input type="number" name="betAmount" value={newConfig.betAmount} onChange={handleNewChange} className="form-input" min="1" />
+                                    {/* Environment & Memory (Right, 30%) */}
+                                    <fieldset className="control-fieldset control-fieldset-right">
+                                        <legend className="control-legend">
+                                            <Layers size={16} /> Environment & Memory
+                                        </legend>
+                                        <div className="training-stack-vertical">
+                                            <div className="form-group">
+                                                <label className="form-label">Bet Amount</label>
+                                                <input type="number" name="betAmount" value={newConfig.betAmount} onChange={handleNewChange} className="form-input" min="1" />
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">Initial Capital</label>
+                                                <input type="number" name="initialCapital" value={newConfig.initialCapital} onChange={handleNewChange} className="form-input" min="1" />
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">Max Memory</label>
+                                                <input type="number" name="maxMemorySize" value={newConfig.maxMemorySize} onChange={handleNewChange} className="form-input" min="100" />
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">Replay Buffer</label>
+                                                <input type="number" name="replayBufferSize" value={newConfig.replayBufferSize} onChange={handleNewChange} className="form-input" min="100" />
+                                            </div>
                                         </div>
-                                        <div className="form-group">
-                                            <label className="form-label">Initial Capital</label>
-                                            <input type="number" name="initialCapital" value={newConfig.initialCapital} onChange={handleNewChange} className="form-input" min="1" />
-                                        </div>
-                                        <div className="form-group">
-                                            <label className="form-label">Max Memory</label>
-                                            <input type="number" name="maxMemorySize" value={newConfig.maxMemorySize} onChange={handleNewChange} className="form-input" min="100" />
-                                        </div>
-                                        <div className="form-group">
-                                            <label className="form-label">Replay Buffer</label>
-                                            <input type="number" name="replayBufferSize" value={newConfig.replayBufferSize} onChange={handleNewChange} className="form-input" min="100" />
-                                        </div>
-                                    </div>
-                                </fieldset>
+                                    </fieldset>
+                                </div>
 
                                 {/* === DATASET === */}
                                 <fieldset className="control-fieldset">
                                     <legend className="control-legend">
                                         <Database size={16} /> Dataset Configuration
                                     </legend>
-                                    <div className="training-pro-grid">
-                                        <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                                            <label className="form-label">Training Dataset</label>
-                                            <select
-                                                name="datasetName"
-                                                value={newConfig.datasetName}
-                                                onChange={handleNewChange}
-                                                className="form-select"
-                                                disabled={datasetLoading}
-                                            >
-                                                {datasetOptions.length === 0 ? (
-                                                    <option value="">No data available</option>
-                                                ) : (
-                                                    <>
-                                                        <option value="">All datasets</option>
-                                                        {datasetOptions.map((dataset) => (
-                                                            <option key={dataset} value={dataset}>
-                                                                {dataset}
-                                                            </option>
-                                                        ))}
-                                                    </>
+                                    <div className="controls-two-column">
+                                        {/* Left column - Database Selection & Splits (70%) */}
+                                        <div className="controls-column-left" style={{ flex: 7 }}>
+                                            <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                                                <label className="form-label">Training Dataset</label>
+                                                <select
+                                                    name="datasetName"
+                                                    value={newConfig.datasetName}
+                                                    onChange={handleNewChange}
+                                                    className="form-select"
+                                                    disabled={datasetLoading}
+                                                >
+                                                    {datasetOptions.length === 0 ? (
+                                                        <option value="">No data available</option>
+                                                    ) : (
+                                                        <>
+                                                            <option value="">All datasets</option>
+                                                            {datasetOptions.map((dataset) => (
+                                                                <option key={dataset} value={dataset}>
+                                                                    {dataset}
+                                                                </option>
+                                                            ))}
+                                                        </>
+                                                    )}
+                                                </select>
+                                                {datasetError && (
+                                                    <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#dc2626' }}>
+                                                        {datasetError}
+                                                    </div>
                                                 )}
-                                            </select>
-                                            {datasetError && (
-                                                <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#dc2626' }}>
-                                                    {datasetError}
+                                            </div>
+                                            <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                                                <label className="form-label">Train / Validation Split</label>
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                                                    <input type="number" name="trainSampleSize" value={newConfig.trainSampleSize} onChange={handleNewChange} className="form-input" step="0.05" placeholder="Train %" title="Training Sample Size" />
+                                                    <input type="number" name="validationSize" value={newConfig.validationSize} onChange={handleNewChange} className="form-input" step="0.05" placeholder="Val %" title="Validation Size" />
                                                 </div>
-                                            )}
-                                        </div>
-                                        <div className="form-group">
-                                            <label className="form-label">Train / Validation Split</label>
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                                                <input type="number" name="trainSampleSize" value={newConfig.trainSampleSize} onChange={handleNewChange} className="form-input" step="0.05" placeholder="Train %" title="Training Sample Size" />
-                                                <input type="number" name="validationSize" value={newConfig.validationSize} onChange={handleNewChange} className="form-input" step="0.05" placeholder="Val %" title="Validation Size" />
                                             </div>
-                                        </div>
-                                        <div className="form-group">
-                                            <label className="form-label">Split Seed</label>
-                                            <input type="number" name="splitSeed" value={newConfig.splitSeed} onChange={handleNewChange} className="form-input" />
-                                        </div>
-                                    </div>
-
-
-                                    {/* Dataset Toggles */}
-                                    <div className="dataset-options-grid" style={{
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        gap: '0.75rem',
-                                        marginTop: '1rem',
-                                        padding: '1rem',
-                                        backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                                        borderRadius: '6px',
-                                        border: '1px solid rgba(255, 255, 255, 0.05)'
-                                    }}>
-                                        {/* Data Generator Toggle */}
-                                        <div className="dataset-option-group" style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                                            <label className="checkbox-visual" style={{ marginBottom: 0 }}>
-                                                <input type="checkbox" name="useDataGen" checked={newConfig.useDataGen} onChange={handleNewChange} />
-                                                <span style={{ fontWeight: 500 }}>Use synthetic data generator</span>
-                                            </label>
-                                            <div className="inline-input-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: newConfig.useDataGen ? 1 : 0.5 }}>
-                                                <input type="number" name="numGeneratedSamples" value={newConfig.numGeneratedSamples} onChange={handleNewChange} className="form-input inline-input-sm" disabled={!newConfig.useDataGen} />
-                                                <span style={{ fontSize: '0.85rem', color: '#64748b' }}>samples</span>
+                                            <div className="form-group">
+                                                <label className="form-label">Split Seed</label>
+                                                <input type="number" name="splitSeed" value={newConfig.splitSeed} onChange={handleNewChange} className="form-input" />
                                             </div>
                                         </div>
 
-                                        {/* Shuffle Toggle */}
-                                        <div className="dataset-option-group" style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                                            <label className="checkbox-visual" style={{ marginBottom: 0 }}>
-                                                <input type="checkbox" name="setShuffle" checked={newConfig.setShuffle} onChange={handleNewChange} />
-                                                <span style={{ fontWeight: 500 }}>Shuffle buffer</span>
-                                            </label>
-                                            <div className="inline-input-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: newConfig.setShuffle ? 1 : 0.5 }}>
-                                                <input type="number" name="shuffleSize" value={newConfig.shuffleSize} onChange={handleNewChange} className="form-input inline-input-sm" disabled={!newConfig.setShuffle} />
-                                                <span style={{ fontSize: '0.85rem', color: '#64748b' }}>size</span>
+                                        {/* Vertical Separator */}
+                                        <div className="fieldset-separator-vertical" />
+
+                                        {/* Right column - Generator Toggles (30%) */}
+                                        <div className="controls-column-right" style={{ flex: 3 }}>
+                                            <div style={{
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                gap: '0.75rem',
+                                                padding: '0.75rem',
+                                                backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                                                borderRadius: '6px',
+                                                border: '1px solid rgba(255, 255, 255, 0.05)',
+                                                height: '100%'
+                                            }}>
+                                                {/* Data Generator Toggle */}
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                                                    <label className="checkbox-visual" style={{ marginBottom: 0 }}>
+                                                        <input type="checkbox" name="useDataGen" checked={newConfig.useDataGen} onChange={handleNewChange} />
+                                                        <span style={{ fontWeight: 500 }}>Synthetic generator</span>
+                                                    </label>
+                                                    <div className="inline-input-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: newConfig.useDataGen ? 1 : 0.5 }}>
+                                                        <input type="number" name="numGeneratedSamples" value={newConfig.numGeneratedSamples} onChange={handleNewChange} className="form-input inline-input-sm" disabled={!newConfig.useDataGen} />
+                                                        <span style={{ fontSize: '0.8rem', color: '#64748b' }}>samples</span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Shuffle Toggle */}
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                                                    <label className="checkbox-visual" style={{ marginBottom: 0 }}>
+                                                        <input type="checkbox" name="setShuffle" checked={newConfig.setShuffle} onChange={handleNewChange} />
+                                                        <span style={{ fontWeight: 500 }}>Shuffle buffer</span>
+                                                    </label>
+                                                    <div className="inline-input-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: newConfig.setShuffle ? 1 : 0.5 }}>
+                                                        <input type="number" name="shuffleSize" value={newConfig.shuffleSize} onChange={handleNewChange} className="form-input inline-input-sm" disabled={!newConfig.setShuffle} />
+                                                        <span style={{ fontSize: '0.8rem', color: '#64748b' }}>size</span>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -388,106 +403,101 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
                                     <legend className="control-legend">
                                         <Cpu size={16} /> Session & Compute
                                     </legend>
-                                    <div className="training-pro-grid">
-                                        <div className="form-group">
-                                            <label className="form-label">Episodes</label>
-                                            <input type="number" name="episodes" value={newConfig.episodes} onChange={handleNewChange} className="form-input" min="1" />
-                                        </div>
-                                        <div className="form-group">
-                                            <label className="form-label">Max Steps</label>
-                                            <input type="number" name="maxStepsEpisode" value={newConfig.maxStepsEpisode} onChange={handleNewChange} className="form-input" min="100" />
-                                        </div>
-                                        <div className="form-group">
-                                            <label className="form-label">Batch Size</label>
-                                            <input type="number" name="batchSize" value={newConfig.batchSize} onChange={handleNewChange} className="form-input" min="1" />
-                                        </div>
-                                        <div className="form-group">
-                                            <label className="form-label">Learning Rate</label>
-                                            <input type="number" name="learningRate" value={newConfig.learningRate} onChange={handleNewChange} className="form-input" step="0.0001" min="0" />
-                                        </div>
-                                        <div className="form-group">
-                                            <label className="form-label">Training Seed</label>
-                                            <input type="number" name="trainingSeed" value={newConfig.trainingSeed} onChange={handleNewChange} className="form-input" />
-                                        </div>
-                                        <div className="form-group">
-                                            <label className="form-label">Workers</label>
-                                            <input type="number" name="numWorkers" value={newConfig.numWorkers} onChange={handleNewChange} className="form-input" min="0" />
-                                        </div>
-                                    </div>
-
-
-                                    {/* Configuration Options */}
-                                    <div className="session-options-container" style={{
-                                        display: 'grid',
-                                        gridTemplateColumns: '1fr 1fr',
-                                        gap: '1.5rem',
-                                        marginTop: '1.5rem'
-                                    }}>
-                                        {/* Hardware Acceleration Column */}
-                                        <div className="session-option-column" style={{
-                                            padding: '1rem',
-                                            backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                                            borderRadius: '6px',
-                                            border: '1px solid rgba(255, 255, 255, 0.05)'
-                                        }}>
-                                            <h4 style={{
-                                                fontSize: '0.9rem',
-                                                fontWeight: 600,
-                                                color: '#94a3b8',
-                                                marginBottom: '0.75rem',
-                                                textTransform: 'uppercase',
-                                                letterSpacing: '0.05em'
-                                            }}>Hardware Acceleration</h4>
-
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                                                    <label className="checkbox-visual" style={{ marginBottom: 0 }}>
-                                                        <input type="checkbox" name="deviceGPU" checked={newConfig.deviceGPU} onChange={handleNewChange} />
-                                                        <span>Use GPU</span>
-                                                    </label>
-                                                    <div className="inline-input-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: newConfig.deviceGPU ? 1 : 0.5 }}>
-                                                        <input type="number" name="deviceID" value={newConfig.deviceID} onChange={handleNewChange} className="form-input inline-input-sm" placeholder="ID" disabled={!newConfig.deviceGPU} />
-                                                    </div>
+                                    <div className="session-compute-layout">
+                                        {/* Left side - 2x3 Grid of inputs */}
+                                        <div className="session-compute-left">
+                                            <div className="training-grid-2x3">
+                                                <div className="form-group">
+                                                    <label className="form-label">Episodes</label>
+                                                    <input type="number" name="episodes" value={newConfig.episodes} onChange={handleNewChange} className="form-input" min="1" />
                                                 </div>
-
-                                                <label className="checkbox-visual">
-                                                    <input type="checkbox" name="useMixedPrecision" checked={newConfig.useMixedPrecision} onChange={handleNewChange} />
-                                                    <span>Mixed Precision</span>
-                                                </label>
+                                                <div className="form-group">
+                                                    <label className="form-label">Max Steps</label>
+                                                    <input type="number" name="maxStepsEpisode" value={newConfig.maxStepsEpisode} onChange={handleNewChange} className="form-input" min="100" />
+                                                </div>
+                                                <div className="form-group">
+                                                    <label className="form-label">Batch Size</label>
+                                                    <input type="number" name="batchSize" value={newConfig.batchSize} onChange={handleNewChange} className="form-input" min="1" />
+                                                </div>
+                                                <div className="form-group">
+                                                    <label className="form-label">Learning Rate</label>
+                                                    <input type="number" name="learningRate" value={newConfig.learningRate} onChange={handleNewChange} className="form-input" step="0.0001" min="0" />
+                                                </div>
+                                                <div className="form-group">
+                                                    <label className="form-label">Training Seed</label>
+                                                    <input type="number" name="trainingSeed" value={newConfig.trainingSeed} onChange={handleNewChange} className="form-input" />
+                                                </div>
+                                                <div className="form-group">
+                                                    <label className="form-label">Workers</label>
+                                                    <input type="number" name="numWorkers" value={newConfig.numWorkers} onChange={handleNewChange} className="form-input" min="0" />
+                                                </div>
                                             </div>
                                         </div>
 
-                                        {/* Monitoring & Persistence Column */}
-                                        <div className="session-option-column" style={{
-                                            padding: '1rem',
-                                            backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                                            borderRadius: '6px',
-                                            border: '1px solid rgba(255, 255, 255, 0.05)'
-                                        }}>
-                                            <h4 style={{
-                                                fontSize: '0.9rem',
-                                                fontWeight: 600,
-                                                color: '#94a3b8',
-                                                marginBottom: '0.75rem',
-                                                textTransform: 'uppercase',
-                                                letterSpacing: '0.05em'
-                                            }}>Monitoring & Persistence</h4>
-
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                                <label className="checkbox-visual">
-                                                    <input type="checkbox" name="useTensorboard" checked={newConfig.useTensorboard} onChange={handleNewChange} />
-                                                    <span>Enable TensorBoard</span>
-                                                </label>
-
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                                                    <label className="checkbox-visual" style={{ marginBottom: 0 }}>
-                                                        <input type="checkbox" name="saveCheckpoints" checked={newConfig.saveCheckpoints} onChange={handleNewChange} />
-                                                        <span>Save Checkpoints</span>
+                                        {/* Right side - Checkbox sections stacked vertically */}
+                                        <div className="session-compute-right">
+                                            {/* Hardware Acceleration */}
+                                            <div style={{
+                                                padding: '0.75rem',
+                                                backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                                                borderRadius: '6px',
+                                                border: '1px solid rgba(255, 255, 255, 0.05)'
+                                            }}>
+                                                <h4 style={{
+                                                    fontSize: '0.8rem',
+                                                    fontWeight: 600,
+                                                    color: '#94a3b8',
+                                                    marginBottom: '0.5rem',
+                                                    textTransform: 'uppercase',
+                                                    letterSpacing: '0.05em'
+                                                }}>Hardware Acceleration</h4>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                                                        <label className="checkbox-visual" style={{ marginBottom: 0 }}>
+                                                            <input type="checkbox" name="deviceGPU" checked={newConfig.deviceGPU} onChange={handleNewChange} />
+                                                            <span>Use GPU</span>
+                                                        </label>
+                                                        <div className="inline-input-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: newConfig.deviceGPU ? 1 : 0.5 }}>
+                                                            <input type="number" name="deviceID" value={newConfig.deviceID} onChange={handleNewChange} className="form-input inline-input-sm" placeholder="ID" disabled={!newConfig.deviceGPU} />
+                                                        </div>
+                                                    </div>
+                                                    <label className="checkbox-visual">
+                                                        <input type="checkbox" name="useMixedPrecision" checked={newConfig.useMixedPrecision} onChange={handleNewChange} />
+                                                        <span>Mixed Precision</span>
                                                     </label>
-                                                    <div className="inline-input-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: newConfig.saveCheckpoints ? 1 : 0.5 }}>
-                                                        <span style={{ fontSize: '0.85rem', color: '#64748b' }}>every</span>
-                                                        <input type="number" name="checkpointsFreq" value={newConfig.checkpointsFreq} onChange={handleNewChange} className="form-input inline-input-sm" disabled={!newConfig.saveCheckpoints} />
-                                                        <span style={{ fontSize: '0.85rem', color: '#64748b' }}>episodes</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Monitoring & Persistence */}
+                                            <div style={{
+                                                padding: '0.75rem',
+                                                backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                                                borderRadius: '6px',
+                                                border: '1px solid rgba(255, 255, 255, 0.05)'
+                                            }}>
+                                                <h4 style={{
+                                                    fontSize: '0.8rem',
+                                                    fontWeight: 600,
+                                                    color: '#94a3b8',
+                                                    marginBottom: '0.5rem',
+                                                    textTransform: 'uppercase',
+                                                    letterSpacing: '0.05em'
+                                                }}>Monitoring & Persistence</h4>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                    <label className="checkbox-visual">
+                                                        <input type="checkbox" name="useTensorboard" checked={newConfig.useTensorboard} onChange={handleNewChange} />
+                                                        <span>Enable TensorBoard</span>
+                                                    </label>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                                                        <label className="checkbox-visual" style={{ marginBottom: 0 }}>
+                                                            <input type="checkbox" name="saveCheckpoints" checked={newConfig.saveCheckpoints} onChange={handleNewChange} />
+                                                            <span>Save Checkpoints</span>
+                                                        </label>
+                                                        <div className="inline-input-group" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', opacity: newConfig.saveCheckpoints ? 1 : 0.5 }}>
+                                                            <span style={{ fontSize: '0.8rem', color: '#64748b' }}>every</span>
+                                                            <input type="number" name="checkpointsFreq" value={newConfig.checkpointsFreq} onChange={handleNewChange} className="form-input inline-input-sm" disabled={!newConfig.saveCheckpoints} />
+                                                            <span style={{ fontSize: '0.8rem', color: '#64748b' }}>ep.</span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
