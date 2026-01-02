@@ -249,9 +249,9 @@
 
 .form-label {
   display: block;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.25rem;
   color: #64748b;
   /* Slate-500 */
   text-transform: uppercase;
@@ -261,12 +261,12 @@
 .form-select,
 .form-input {
   width: 100%;
-  padding: 0.5rem 0.75rem;
+  padding: 0.35rem 0.5rem;
   border: 1px solid #e2e8f0;
   /* Slate-200 */
   border-radius: 6px;
-  font-size: 0.9rem;
-  line-height: 1.25rem;
+  font-size: 0.85rem;
+  line-height: 1.1rem;
   color: #0f172a;
   /* Slate-900 */
   background-color: #f8fafc;
@@ -299,8 +299,8 @@
 /* Dense Grid System */
 .training-pro-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 1.25rem 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.75rem 1rem;
   align-items: start;
 }
 
@@ -392,8 +392,8 @@
 .control-fieldset {
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  padding: 1.5rem;
-  margin-bottom: 2rem;
+  padding: 1rem;
+  margin-bottom: 1.25rem;
   background-color: #fff;
   position: relative;
 }
@@ -671,7 +671,7 @@
 .dashboard-visuals {
   margin-top: 1.5rem;
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
 }
 
@@ -759,7 +759,9 @@
     grid-template-columns: repeat(2, 1fr);
   }
 
-  /* .dashboard-visuals.with-env removed - environment rendering hidden from UI */
+  .dashboard-visuals {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 480px) {

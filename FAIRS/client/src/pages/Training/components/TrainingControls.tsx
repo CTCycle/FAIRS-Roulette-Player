@@ -312,12 +312,18 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
                                                 className="form-select"
                                                 disabled={datasetLoading}
                                             >
-                                                <option value="">All datasets</option>
-                                                {datasetOptions.map((dataset) => (
-                                                    <option key={dataset} value={dataset}>
-                                                        {dataset}
-                                                    </option>
-                                                ))}
+                                                {datasetOptions.length === 0 ? (
+                                                    <option value="">No data available</option>
+                                                ) : (
+                                                    <>
+                                                        <option value="">All datasets</option>
+                                                        {datasetOptions.map((dataset) => (
+                                                            <option key={dataset} value={dataset}>
+                                                                {dataset}
+                                                            </option>
+                                                        ))}
+                                                    </>
+                                                )}
                                             </select>
                                             {datasetError && (
                                                 <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#dc2626' }}>
@@ -341,9 +347,9 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
 
                                     {/* Dataset Toggles */}
                                     <div className="dataset-options-grid" style={{
-                                        display: 'grid',
-                                        gridTemplateColumns: '1fr 1fr',
-                                        gap: '1rem',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '0.75rem',
                                         marginTop: '1rem',
                                         padding: '1rem',
                                         backgroundColor: 'rgba(255, 255, 255, 0.03)',
@@ -351,31 +357,27 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
                                         border: '1px solid rgba(255, 255, 255, 0.05)'
                                     }}>
                                         {/* Data Generator Toggle */}
-                                        <div className="dataset-option-group">
-                                            <label className="checkbox-visual" style={{ marginBottom: '0.5rem' }}>
+                                        <div className="dataset-option-group" style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                                            <label className="checkbox-visual" style={{ marginBottom: 0 }}>
                                                 <input type="checkbox" name="useDataGen" checked={newConfig.useDataGen} onChange={handleNewChange} />
                                                 <span style={{ fontWeight: 500 }}>Use synthetic data generator</span>
                                             </label>
-                                            {newConfig.useDataGen && (
-                                                <div className="inline-input-group" style={{ marginLeft: '1.8rem' }}>
-                                                    <input type="number" name="numGeneratedSamples" value={newConfig.numGeneratedSamples} onChange={handleNewChange} className="form-input inline-input-sm" />
-                                                    <span style={{ fontSize: '0.85rem', color: '#64748b' }}>samples</span>
-                                                </div>
-                                            )}
+                                            <div className="inline-input-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: newConfig.useDataGen ? 1 : 0.5 }}>
+                                                <input type="number" name="numGeneratedSamples" value={newConfig.numGeneratedSamples} onChange={handleNewChange} className="form-input inline-input-sm" disabled={!newConfig.useDataGen} />
+                                                <span style={{ fontSize: '0.85rem', color: '#64748b' }}>samples</span>
+                                            </div>
                                         </div>
 
                                         {/* Shuffle Toggle */}
-                                        <div className="dataset-option-group">
-                                            <label className="checkbox-visual" style={{ marginBottom: '0.5rem' }}>
+                                        <div className="dataset-option-group" style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                                            <label className="checkbox-visual" style={{ marginBottom: 0 }}>
                                                 <input type="checkbox" name="setShuffle" checked={newConfig.setShuffle} onChange={handleNewChange} />
                                                 <span style={{ fontWeight: 500 }}>Shuffle buffer</span>
                                             </label>
-                                            {newConfig.setShuffle && (
-                                                <div className="inline-input-group" style={{ marginLeft: '1.8rem' }}>
-                                                    <input type="number" name="shuffleSize" value={newConfig.shuffleSize} onChange={handleNewChange} className="form-input inline-input-sm" />
-                                                    <span style={{ fontSize: '0.85rem', color: '#64748b' }}>size</span>
-                                                </div>
-                                            )}
+                                            <div className="inline-input-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: newConfig.setShuffle ? 1 : 0.5 }}>
+                                                <input type="number" name="shuffleSize" value={newConfig.shuffleSize} onChange={handleNewChange} className="form-input inline-input-sm" disabled={!newConfig.setShuffle} />
+                                                <span style={{ fontSize: '0.85rem', color: '#64748b' }}>size</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </fieldset>
@@ -438,16 +440,14 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
                                             }}>Hardware Acceleration</h4>
 
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                                <div>
-                                                    <label className="checkbox-visual">
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                                                    <label className="checkbox-visual" style={{ marginBottom: 0 }}>
                                                         <input type="checkbox" name="deviceGPU" checked={newConfig.deviceGPU} onChange={handleNewChange} />
                                                         <span>Use GPU</span>
                                                     </label>
-                                                    {newConfig.deviceGPU && (
-                                                        <div className="inline-input-group" style={{ marginLeft: '1.8rem', marginTop: '0.5rem' }}>
-                                                            <input type="number" name="deviceID" value={newConfig.deviceID} onChange={handleNewChange} className="form-input inline-input-sm" placeholder="ID" />
-                                                        </div>
-                                                    )}
+                                                    <div className="inline-input-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: newConfig.deviceGPU ? 1 : 0.5 }}>
+                                                        <input type="number" name="deviceID" value={newConfig.deviceID} onChange={handleNewChange} className="form-input inline-input-sm" placeholder="ID" disabled={!newConfig.deviceGPU} />
+                                                    </div>
                                                 </div>
 
                                                 <label className="checkbox-visual">
@@ -479,18 +479,16 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
                                                     <span>Enable TensorBoard</span>
                                                 </label>
 
-                                                <div>
-                                                    <label className="checkbox-visual">
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                                                    <label className="checkbox-visual" style={{ marginBottom: 0 }}>
                                                         <input type="checkbox" name="saveCheckpoints" checked={newConfig.saveCheckpoints} onChange={handleNewChange} />
                                                         <span>Save Checkpoints</span>
                                                     </label>
-                                                    {newConfig.saveCheckpoints && (
-                                                        <div className="inline-input-group" style={{ marginLeft: '1.8rem', marginTop: '0.5rem' }}>
-                                                            <span style={{ fontSize: '0.85rem', color: '#64748b' }}>every</span>
-                                                            <input type="number" name="checkpointsFreq" value={newConfig.checkpointsFreq} onChange={handleNewChange} className="form-input inline-input-sm" />
-                                                            <span style={{ fontSize: '0.85rem', color: '#64748b' }}>episodes</span>
-                                                        </div>
-                                                    )}
+                                                    <div className="inline-input-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: newConfig.saveCheckpoints ? 1 : 0.5 }}>
+                                                        <span style={{ fontSize: '0.85rem', color: '#64748b' }}>every</span>
+                                                        <input type="number" name="checkpointsFreq" value={newConfig.checkpointsFreq} onChange={handleNewChange} className="form-input inline-input-sm" disabled={!newConfig.saveCheckpoints} />
+                                                        <span style={{ fontSize: '0.85rem', color: '#64748b' }}>episodes</span>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
