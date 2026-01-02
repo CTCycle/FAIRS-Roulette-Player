@@ -53,7 +53,7 @@ class DataSerializerExtension:
                     f"No roulette dataset available for '{dataset_name}'."
                 )
             raise ValueError("No roulette dataset available for training.")
-        dataset = self.encoder.encode(dataset)
+        # Encoding is done at upload time - no need to encode again
 
         return dataset, False
 

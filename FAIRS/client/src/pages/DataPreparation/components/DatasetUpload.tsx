@@ -208,7 +208,7 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
                     <div className="dataset-v2-actions">
                         <div className="dataset-instruction-text">
                             Upload a series of roulette extractions in CSV or XLSX format.<br /><br />
-                            The file must contain a <strong>single column</strong> with the extractions.
+                            The file must contain a <strong>single column</strong> with roulette numbers (0-36). Column name does not matter.
                         </div>
 
                         <div className="dataset-action-button-wrapper">
