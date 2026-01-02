@@ -13,7 +13,17 @@ interface TrainingLossChartProps {
     points: TrainingHistoryPoint[];
 }
 
-const buildPath = (points: TrainingHistoryPoint[], xMin: number, xMax: number, yMin: number, yMax: number, width: number, height: number, key: keyof TrainingHistoryPoint, offsetLeft: number = 0) => {
+const buildPath = (
+    points: TrainingHistoryPoint[],
+    xMin: number,
+    xMax: number,
+    yMin: number,
+    yMax: number,
+    width: number,
+    height: number,
+    key: keyof TrainingHistoryPoint,
+    offsetLeft: number = 0
+) => {
     if (points.length < 2) {
         return '';
     }
@@ -35,30 +45,39 @@ const buildPath = (points: TrainingHistoryPoint[], xMin: number, xMax: number, y
     }, '');
 };
 
+/**
+ * TrainingLossChart - Displays Loss metrics (training + validation)
+ * Shows loss (solid red) and val_loss (dashed red) lines
+ */
 export const TrainingLossChart: React.FC<TrainingLossChartProps> = ({ points }) => {
-    const viewWidth = 860;
-    const viewHeight = 260;
+    const viewWidth = 420;
+    const viewHeight = 220;
 
-    const { lossPath, rmsePath, valLossPath, valRmsePath, yMin, yMax, xMin, xMax } = useMemo(() => {
+    const { lossPath, valLossPath, yMin, yMax, xMin, xMax } = useMemo(() => {
         if (points.length === 0) {
-            return { lossPath: '', rmsePath: '', yMin: 0, yMax: 1, xMin: 0, xMax: 1 };
+            return { lossPath: '', valLossPath: '', yMin: 0, yMax: 1, xMin: 0, xMax: 1 };
         }
 
         const xMinValue = points[0].time_step;
         const xMaxValue = points[points.length - 1].time_step;
-        const numericValues = points.flatMap((point) => [point.loss, point.rmse]).filter((value) => Number.isFinite(value));
-        const rawMin = numericValues.length ? Math.min(...numericValues) : 0;
-        const rawMax = numericValues.length ? Math.max(...numericValues) : 1;
+        
+        // Only use loss values for Y-axis scaling
+        const lossValues = points.flatMap((point) => {
+            const vals = [point.loss];
+            if (point.val_loss !== undefined) vals.push(point.val_loss);
+            return vals;
+        }).filter((value) => Number.isFinite(value));
+        
+        const rawMin = lossValues.length ? Math.min(...lossValues) : 0;
+        const rawMax = lossValues.length ? Math.max(...lossValues) : 1;
         const padding = (rawMax - rawMin) * 0.1 || 1;
         const yMinValue = rawMin - padding;
         const yMaxValue = rawMax + padding;
-        const offsetLeft = 50; // Space for ticks
+        const offsetLeft = 50;
 
         return {
             lossPath: buildPath(points, xMinValue, xMaxValue, yMinValue, yMaxValue, viewWidth - offsetLeft, viewHeight, 'loss', offsetLeft),
             valLossPath: buildPath(points, xMinValue, xMaxValue, yMinValue, yMaxValue, viewWidth - offsetLeft, viewHeight, 'val_loss', offsetLeft),
-            rmsePath: buildPath(points, xMinValue, xMaxValue, yMinValue, yMaxValue, viewWidth - offsetLeft, viewHeight, 'rmse', offsetLeft),
-            valRmsePath: buildPath(points, xMinValue, xMaxValue, yMinValue, yMaxValue, viewWidth - offsetLeft, viewHeight, 'val_rmse', offsetLeft),
             yMin: yMinValue,
             yMax: yMaxValue,
             xMin: xMinValue,
@@ -94,19 +113,15 @@ export const TrainingLossChart: React.FC<TrainingLossChartProps> = ({ points }) 
             {grid.map((line) => (
                 <g key={line.y}>
                     <line x1={lossPath ? 50 : 0} y1={line.y} x2={viewWidth} y2={line.y} stroke="rgba(255, 255, 255, 0.08)" strokeWidth="1" />
-                    <text x="0" y={Math.max(12, line.y - 4)} fill="rgba(255, 255, 255, 0.55)" fontSize="11" textAnchor="start">
+                    <text x="0" y={Math.max(12, line.y - 4)} fill="rgba(255, 255, 255, 0.55)" fontSize="10" textAnchor="start">
                         {line.value.toFixed(3)}
                     </text>
                 </g>
             ))}
-            {/* Training Curves */}
+            {/* Training Loss Curve (solid) */}
             <path d={lossPath} fill="none" stroke="#f87171" strokeWidth="2.2" />
-            <path d={rmsePath} fill="none" stroke="#fbbf24" strokeWidth="2.2" />
-
-            {/* Validation Curves (Dashed) */}
+            {/* Validation Loss Curve (dashed) */}
             <path d={valLossPath} fill="none" stroke="#fca5a5" strokeWidth="2" strokeDasharray="4 4" strokeOpacity="0.8" />
-            <path d={valRmsePath} fill="none" stroke="#fcd34d" strokeWidth="2" strokeDasharray="4 4" strokeOpacity="0.8" />
         </svg>
     );
 };
-

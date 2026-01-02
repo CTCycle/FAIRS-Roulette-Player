@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Activity, Zap, TrendingUp, DollarSign, Target, Clock, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
 
 import { TrainingLossChart, type TrainingHistoryPoint } from './TrainingLossChart';
+import { TrainingRmseChart } from './TrainingRmseChart';
 
 interface TrainingStats {
     epoch: number;
@@ -337,15 +338,23 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
             <div className="dashboard-visuals">
                 <div className="visual-card">
                     <div className="visual-card-header">
-                        <span className="visual-card-title">Real-time Loss</span>
+                        <span className="visual-card-title">Loss</span>
                         <div className="visual-card-legend">
-                            <span className="legend-item"><span className="legend-dot loss"></span>Loss (train)</span>
-                            <span className="legend-item"><span className="legend-dot rmse"></span>RMSE (train)</span>
-                            <span className="legend-item" style={{ opacity: 0.7 }}><span className="legend-dot loss" style={{ opacity: 0.5 }}></span>Loss (validation, dashed)</span>
-                            <span className="legend-item" style={{ opacity: 0.7 }}><span className="legend-dot rmse" style={{ opacity: 0.5 }}></span>RMSE (validation, dashed)</span>
+                            <span className="legend-item"><span className="legend-dot loss"></span>Train</span>
+                            <span className="legend-item" style={{ opacity: 0.7 }}><span className="legend-dot loss" style={{ opacity: 0.5 }}></span>Validation</span>
                         </div>
                     </div>
                     <TrainingLossChart points={historyPoints} />
+                </div>
+                <div className="visual-card">
+                    <div className="visual-card-header">
+                        <span className="visual-card-title">RMSE</span>
+                        <div className="visual-card-legend">
+                            <span className="legend-item"><span className="legend-dot rmse"></span>Train</span>
+                            <span className="legend-item" style={{ opacity: 0.7 }}><span className="legend-dot rmse" style={{ opacity: 0.5 }}></span>Validation</span>
+                        </div>
+                    </div>
+                    <TrainingRmseChart points={historyPoints} />
                 </div>
             </div>
         </div>

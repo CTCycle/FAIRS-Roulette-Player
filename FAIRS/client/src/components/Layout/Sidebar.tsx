@@ -15,7 +15,7 @@ const Sidebar: React.FC = () => {
                     className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
                 >
                     <FolderInput size={20} />
-                    <span>Data Prep</span>
+                    <span>Datasets</span>
                 </NavLink>
                 <NavLink
                     to="/training"

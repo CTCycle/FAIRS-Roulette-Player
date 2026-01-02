@@ -6,7 +6,7 @@
 
 .content-area {
     flex: 1;
-    margin-left: 250px;
+    margin-left: 180px;
     /* Width of sidebar */
     /* Padding removed to allow pages to control their full layout */
     background-color: var(--bg-primary);
