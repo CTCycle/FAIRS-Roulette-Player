@@ -52,8 +52,12 @@ class DatasetImportService:
                 normalized["dataset_name"] = "default"
             else:
                 normalized["dataset_name"] = normalized["dataset_name"].fillna("default")
-            if "color" not in normalized.columns or "position" not in normalized.columns:
-                normalized = self.encoder.encode(normalized)
+            # Rename first column to "extraction" if not already present
+            if "extraction" not in normalized.columns and len(normalized.columns) > 0:
+                first_col = normalized.columns[0]
+                normalized = normalized.rename(columns={first_col: "extraction"})
+            # Always encode to add color, color_code, and position
+            normalized = self.encoder.encode(normalized)
             if "id" not in normalized.columns:
                 normalized.insert(0, "id", range(1, len(normalized) + 1))
             return normalized.reindex(columns=ROULETTE_SERIES_COLUMNS)
