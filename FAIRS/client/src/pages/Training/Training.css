@@ -754,6 +754,140 @@
 
 /* .env-frame and .env-image removed - environment rendering hidden from UI */
 
+/* ========================================
+   NEW LAYOUT UTILITIES (Training Refactor)
+   ======================================== */
+
+/* Side-by-side fieldsets (Agent Config + Environment) */
+.controls-row-side-by-side {
+  display: flex;
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.controls-row-side-by-side .control-fieldset-left {
+  flex: 7;
+  min-width: 0;
+}
+
+.controls-row-side-by-side .control-fieldset-right {
+  flex: 3;
+  min-width: 0;
+}
+
+/* Two-column layout inside fieldsets */
+.controls-two-column {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.controls-column-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.controls-column-right {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Horizontal separator between input groups */
+.fieldset-separator-horizontal {
+  border: none;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  margin: 0.75rem 0;
+}
+
+/* Vertical separator between columns */
+.fieldset-separator-vertical {
+  width: 1px;
+  background: rgba(0, 0, 0, 0.08);
+  align-self: stretch;
+  flex-shrink: 0;
+}
+
+/* Compact 2x2 grid for agent config */
+.training-grid-2x2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem 0.75rem;
+  align-items: start;
+}
+
+/* Compact 2x3 grid for session inputs */
+.training-grid-2x3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem 0.75rem;
+  align-items: start;
+}
+
+/* Vertical stack for Environment & Memory */
+.training-stack-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Session & Compute split layout */
+.session-compute-layout {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.session-compute-left {
+  flex: 6;
+  min-width: 0;
+}
+
+.session-compute-right {
+  flex: 4;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* More compact input boxes */
+.form-input-compact,
+.form-select-compact {
+  padding: 0.25rem 0.4rem;
+  font-size: 0.82rem;
+  line-height: 1rem;
+}
+
+/* Responsive adjustments for new layouts */
+@media (max-width: 900px) {
+  .controls-row-side-by-side {
+    flex-direction: column;
+  }
+
+  .controls-row-side-by-side .control-fieldset-left,
+  .controls-row-side-by-side .control-fieldset-right {
+    flex: 1;
+  }
+
+  .session-compute-layout {
+    flex-direction: column;
+  }
+
+  .session-compute-left,
+  .session-compute-right {
+    flex: 1;
+  }
+
+  .controls-two-column {
+    flex-direction: column;
+  }
+
+  .fieldset-separator-vertical {
+    width: 100%;
+    height: 1px;
+  }
+}
+
 @media (max-width: 768px) {
   .metrics-grid {
     grid-template-columns: repeat(2, 1fr);
