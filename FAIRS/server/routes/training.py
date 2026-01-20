@@ -108,7 +108,7 @@ class TrainingEndpoint:
         self.training_state = TrainingState()
 
     # -------------------------------------------------------------------------
-    async def start_training(
+    def start_training(
         self,
         config: TrainingConfig,
         background_tasks: BackgroundTasks,
@@ -121,7 +121,7 @@ class TrainingEndpoint:
 
         self.training_state.is_training = True
 
-        base_config = TrainingConfig().model_dump()
+        base_config = TrainingConfig.model_validate({}).model_dump()
         overrides = config.model_dump(exclude_unset=True)
         configuration = {**base_config, **overrides}
 
@@ -162,7 +162,7 @@ class TrainingEndpoint:
             # Build models
             logger.info("Building FAIRS reinforcement learning model")
             learner = FAIRSnet(configuration)
-            Q_model = learner.get_model(model_summary=True)
+            q_model = learner.get_model(model_summary=True)
             target_model = learner.get_model(model_summary=False)
 
             # Train
@@ -177,7 +177,7 @@ class TrainingEndpoint:
                 await self.training_state.broadcast_env(payload)
 
             model, history = await trainer.train_model(
-                Q_model,
+                q_model,
                 target_model,
                 dataset,
                 checkpoint_path,
@@ -212,7 +212,7 @@ class TrainingEndpoint:
             self.training_state.current_trainer = None
 
     # -------------------------------------------------------------------------
-    async def resume_training(
+    def resume_training(
         self,
         config: ResumeConfig,
         background_tasks: BackgroundTasks,
