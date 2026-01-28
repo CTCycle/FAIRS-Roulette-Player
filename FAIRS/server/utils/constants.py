@@ -15,7 +15,7 @@ ENV_FILE_PATH = join(SETTING_PATH, ".env")
 DATABASE_FILENAME = "sqlite.db"
 
 ###############################################################################
-SERVER_CONFIGURATION_FILE = join(SETTING_PATH, "server_configurations.json")
+CONFIGURATIONS_FILE = join(SETTING_PATH, "configurations.json")
 
 # [ENDPOINS]
 ###############################################################################

@@ -29,6 +29,7 @@ TABLE_REGISTRY: dict[str, tuple[str, Any]] = {
 
 ###############################################################################
 class DatabaseEndpoint:
+    
     def __init__(self, router: APIRouter) -> None:
         self.router = router
         self.fetch_limit = server_settings.database.fetch_row_limit

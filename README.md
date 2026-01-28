@@ -75,16 +75,16 @@ Typical workflow:
 - Review stored datasets, sessions, and checkpoints in the Database tab.
 
 **Data Prep**: Upload CSV/XLSX datasets and confirm the stored dataset name for training.
-![dataset_prep](FAIRS/assets/figures/dataset_prep.png)
+![dataset_prep](assets/figures/dataset_prep.png)
 
 **Training**: Configure a run, monitor loss/rewards, and resume from checkpoints.
-![training_page](FAIRS/assets/figures/training_page.png)
+![training_page](assets/figures/training_page.png)
 
 **Inference**: Load a checkpoint and step through predictions for a roulette session.
-![inference_page](FAIRS/assets/figures/inference_page.png)
+![inference_page](assets/figures/inference_page.png)
 
 **Database browser**: Browse stored tables and session metadata.
-![database_browser](FAIRS/assets/figures/database_browser.png)
+![database_browser](assets/figures/database_browser.png)
 
 ## 5. Setup and Maintenance
 - `FAIRS/setup_and_maintenance.bat`: Menu for removing logs, uninstalling local runtimes/frontend artifacts, and initializing the database.
@@ -99,7 +99,7 @@ Typical workflow:
 - templates: starter configuration files such as `.env`.
 
 ## 7. Configuration
-Backend configuration is loaded from `FAIRS/settings/server_configurations.json`, and runtime environment variables are read from `FAIRS/settings/.env` (use `FAIRS/resources/templates/.env` as a starting point). The frontend uses the default Vite preview configuration and does not require a separate config file in this repository.
+Backend configuration is loaded from `FAIRS/settings/configurations.json`, and runtime environment variables are read from `FAIRS/settings/.env` (use `FAIRS/resources/templates/.env` as a starting point). The frontend uses the default Vite preview configuration and does not require a separate config file in this repository.
 
 | Variable | Description |
 |----------|-------------|

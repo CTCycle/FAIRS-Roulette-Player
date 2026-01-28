@@ -10,7 +10,7 @@ from FAIRS.server.utils.configurations.base import (
 )
 
 from FAIRS.server.utils.constants import (
-    SERVER_CONFIGURATION_FILE,
+    CONFIGURATIONS_FILE,
 )
 
 from FAIRS.server.utils.types import (
@@ -169,7 +169,7 @@ def build_server_settings(data: dict[str, Any] | Any) -> ServerSettings:
 # [SERVER CONFIGURATION LOADER]
 ###############################################################################
 def get_server_settings(config_path: str | None = None) -> ServerSettings:
-    path = config_path or SERVER_CONFIGURATION_FILE
+    path = config_path or CONFIGURATIONS_FILE
     payload = load_configuration_data(path)
     
     return build_server_settings(payload)
