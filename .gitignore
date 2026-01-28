@@ -1,5 +1,5 @@
 # Project-specific generated/runtime artifacts
-docs/**
+assets/docs/**
 FAIRS/resources/database/**
 FAIRS/resources/runtimes/**
 FAIRS/resources/runtimes/uv_cache/**
@@ -10,13 +10,7 @@ FAIRS/client/dist/
 FAIRS/client/dist-ssr/
 FAIRS/client/package-lock.json
 FAIRS/client/logs/
-
-# Environment files (keep templates)
-FAIRS/settings/.env
-FAIRS/client/.env
 FAIRS/client/*.local
-!.env.example
-!.env.sample
 
 # Python
 __pycache__/
@@ -58,6 +52,6 @@ Thumbs.db
 *.gz
 
 !.gitkeep
-!FAIRS/settings/server_configurations.json
+
 
 
