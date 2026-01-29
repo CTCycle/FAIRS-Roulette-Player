@@ -73,6 +73,7 @@ class PostgresRepository:
             if not unique_cols:
                 raise ValueError(f"No unique constraint found for {table_cls.__name__}")
             records = df.to_dict(orient="records")
+            records = [{k: (None if pd.isna(v) else v) for k, v in record.items()} for record in records]
             for i in range(0, len(records), self.insert_batch_size):
                 batch = records[i : i + self.insert_batch_size]
                 if not batch:
