@@ -346,7 +346,7 @@ class TrainingEndpoint:
         )
 
         poll_interval = max(
-            0.25, server_settings.training.websocket_update_interval_ms / 1000.0
+            0.25, server_settings.training.polling_interval
         )
 
         return {
@@ -413,7 +413,7 @@ class TrainingEndpoint:
         )
 
         poll_interval = max(
-            0.25, server_settings.training.websocket_update_interval_ms / 1000.0
+            0.25, server_settings.training.polling_interval
         )
 
         return {
@@ -427,7 +427,7 @@ class TrainingEndpoint:
     # -------------------------------------------------------------------------
     def get_status(self) -> dict[str, Any]:
         poll_interval = max(
-            0.25, server_settings.training.websocket_update_interval_ms / 1000.0
+            0.25, server_settings.training.polling_interval
         )
         return {
             "job_id": self.training_state.current_job_id,

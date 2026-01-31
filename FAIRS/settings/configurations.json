@@ -19,7 +19,7 @@
     "fetch_row_limit": 100
   },
   "training": {
-    "websocket_update_interval_ms": 1000,
+    "polling_interval": 1,
     "default_episodes": 10,
     "default_max_steps_episode": 2000,
     "default_render_update_frequency": 20,
