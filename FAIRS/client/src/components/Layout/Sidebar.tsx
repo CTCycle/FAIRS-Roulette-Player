@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, BrainCircuit, Database, FolderInput } from 'lucide-react';
+import { LayoutDashboard, BrainCircuit, Database } from 'lucide-react';
 import './Sidebar.css';
 
 const Sidebar: React.FC = () => {
@@ -10,13 +10,6 @@ const Sidebar: React.FC = () => {
                 <h1 className="app-title">FAIRS</h1>
             </div>
             <nav className="sidebar-nav">
-                <NavLink
-                    to="/preparation"
-                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                >
-                    <FolderInput size={20} />
-                    <span>Datasets</span>
-                </NavLink>
                 <NavLink
                     to="/training"
                     className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}

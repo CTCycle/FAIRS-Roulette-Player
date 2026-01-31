@@ -14,6 +14,7 @@ from FAIRS.server.database.schema import (
 )
 from FAIRS.server.utils.constants import ROULETTE_SERIES_TABLE
 from FAIRS.server.utils.configurations import server_settings
+from FAIRS.server.utils.repository.serializer import DataSerializer
 
 
 router = APIRouter(prefix="/database", tags=["database"])
@@ -83,6 +84,12 @@ class DatabaseEndpoint:
         return {"datasets": datasets}
 
     # -------------------------------------------------------------------------
+    def delete_roulette_dataset(self, dataset_name: str) -> dict[str, str]:
+        serializer = DataSerializer()
+        serializer.delete_roulette_dataset(dataset_name)
+        return {"status": "deleted", "dataset_name": dataset_name}
+
+    # -------------------------------------------------------------------------
     def add_routes(self) -> None:
         self.router.add_api_route(
             "/tables",
@@ -106,6 +113,12 @@ class DatabaseEndpoint:
             "/roulette-series/datasets",
             self.list_roulette_datasets,
             methods=["GET"],
+            status_code=status.HTTP_200_OK,
+        )
+        self.router.add_api_route(
+            "/roulette-series/datasets/{dataset_name}",
+            self.delete_roulette_dataset,
+            methods=["DELETE"],
             status_code=status.HTTP_200_OK,
         )
 

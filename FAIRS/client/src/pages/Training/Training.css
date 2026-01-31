@@ -903,3 +903,123 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ========================================
+   PREVIEW ROW (Dataset + Checkpoint Previews)
+   ======================================== */
+
+.preview-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+  .preview-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.preview-panel {
+  background: var(--card-bg);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 12px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--roulette-black);
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.preview-header svg {
+  color: var(--roulette-red);
+}
+
+.preview-content {
+  flex: 1;
+  min-height: 0;
+}
+
+.preview-list {
+  max-height: 180px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.preview-row-item,
+.preview-row {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background: #f8fafc;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  transition: background 0.15s;
+}
+
+.preview-list .preview-row:hover {
+  background: #f1f5f9;
+}
+
+.preview-row-name {
+  font-weight: 500;
+  color: #334155;
+  flex-shrink: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preview-row-spacer {
+  flex: 1;
+}
+
+.preview-row-delete {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.preview-row-delete:hover {
+  background: rgba(220, 38, 38, 0.1);
+  color: #b91c1c;
+}
+
+.preview-loading,
+.preview-error,
+.preview-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  font-size: 0.85rem;
+  color: #9ca3af;
+  text-align: center;
+}
+
+.preview-error {
+  color: #dc2626;
+  background: #fef2f2;
+  border-radius: 6px;
+}

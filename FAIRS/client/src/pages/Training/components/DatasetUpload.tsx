@@ -12,6 +12,7 @@ interface DatasetUploadProps {
         uploadMessage?: string;
     }) => void;
     onReset: () => void;
+    onUploadSuccess?: () => void;
 }
 
 export const DatasetUpload: React.FC<DatasetUploadProps> = ({
@@ -20,6 +21,7 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
     uploadMessage,
     onStateChange,
     onReset,
+    onUploadSuccess,
 }) => {
     // Keep actual File object in local ref (not serializable for context)
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -128,6 +130,7 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
                 uploadStatus: 'success',
                 uploadMessage: `Imported ${rows} rows into the database.`,
             });
+            onUploadSuccess?.();
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Upload failed.';
             onStateChange({
