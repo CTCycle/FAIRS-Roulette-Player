@@ -47,7 +47,7 @@ def wait_for_training_running(
         status = api_context.get("/training/status").json()
         if status.get("is_training"):
             return True
-        if status.get("latest_stats", {}).get("status") in ("completed", "error"):
+        if status.get("latest_stats", {}).get("status") in ("completed", "error", "cancelled"):
             return False
         time.sleep(interval)
     return False
@@ -136,7 +136,11 @@ class TestTrainingEndpoints:
         
         if response.ok:
             data = response.json()
-            assert data.get("status") == "started"
+            assert data.get("status") in ("started", "running")
+            job_id = data.get("job_id")
+            assert job_id, "Job ID should be returned for polling"
+            job_response = api_context.get(f"/training/jobs/{job_id}")
+            assert job_response.ok, f"Expected 200, got {job_response.status}"
             
             # Wait briefly then stop training to clean up
             time.sleep(1)

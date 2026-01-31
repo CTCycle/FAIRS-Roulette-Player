@@ -20,7 +20,12 @@ from FAIRS.server.utils.services.training.environment import RouletteEnvironment
 
 ###############################################################################
 class DQNTraining:
-    def __init__(self, configuration: dict[str, Any], session: dict | None = None) -> None:
+    def __init__(
+        self,
+        configuration: dict[str, Any],
+        session: dict | None = None,
+        stop_event: Any | None = None,
+    ) -> None:
         set_random_seed(configuration.get("training_seed", 42))
         self.batch_size = configuration.get("batch_size", 32)
         self.update_frequency = configuration.get("model_update_frequency", 10)
@@ -63,10 +68,11 @@ class DQNTraining:
                 "capital": [],
             }
 
-        # WebSocket update related
+        # Progress update related
         self.ws_update_interval_ms = server_settings.training.websocket_update_interval_ms
         self.last_ws_update_time = 0.0
         self.is_cancelled = False
+        self.stop_event = stop_event
 
 
 
@@ -180,6 +186,14 @@ class DQNTraining:
         self.is_cancelled = True
 
     # -------------------------------------------------------------------------
+    def should_stop(self) -> bool:
+        if self.is_cancelled:
+            return True
+        if self.stop_event is not None and self.stop_event.is_set():
+            return True
+        return False
+
+    # -------------------------------------------------------------------------
     async def train_with_reinforcement_learning(
         self,
         model: Model,
@@ -236,7 +250,7 @@ class DQNTraining:
             return val_metrics
 
         for i, episode in enumerate(range(start_episode, episodes)):
-            if self.is_cancelled:
+            if self.should_stop():
                 logger.info("Training cancelled by user")
                 break
 
@@ -246,7 +260,7 @@ class DQNTraining:
             total_reward = 0
 
             for time_step in range(environment.max_steps):
-                if self.is_cancelled:
+                if self.should_stop():
                     break
 
                 gain = environment.capital / environment.initial_capital
@@ -314,7 +328,7 @@ class DQNTraining:
                 if time_step % self.update_frequency == 0:
                     target_model.set_weights(model.get_weights())
 
-                # Send WebSocket updates (stats + environment) based on time interval
+                # Send progress updates (stats + environment) based on time interval
                 if self.should_send_ws_update():
                     # Send stats update
                     if ws_callback:
