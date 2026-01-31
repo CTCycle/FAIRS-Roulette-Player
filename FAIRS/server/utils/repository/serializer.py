@@ -95,3 +95,9 @@ class DataSerializer:
         frame = frame.where(pd.notnull(frame), cast(Any, None))
         database.upsert_into_database(frame, CHECKPOINTS_SUMMARY_TABLE)
 
+    # -----------------------------------------------------------------------------
+    def delete_roulette_dataset(self, dataset_name: str) -> None:
+        database.delete_from_database(
+            ROULETTE_SERIES_TABLE, {"dataset_name": dataset_name}
+        )
+
