@@ -459,6 +459,31 @@ class TrainingEndpoint:
         return self.model_serializer.scan_checkpoints_folder()
 
     # -------------------------------------------------------------------------
+    def delete_checkpoint(self, checkpoint: str) -> dict[str, Any]:
+        if not checkpoint:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=self.CHECKPOINT_EMPTY_MESSAGE,
+            )
+
+        checkpoint_path = os.path.join(CHECKPOINT_PATH, checkpoint)
+        if not os.path.isdir(checkpoint_path):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Checkpoint not found: {checkpoint}",
+            )
+
+        try:
+            import shutil
+            shutil.rmtree(checkpoint_path)
+            return {"status": "success", "message": f"Checkpoint {checkpoint} deleted"}
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to delete checkpoint: {exc}",
+            ) from exc
+
+    # -------------------------------------------------------------------------
     def get_training_job_status(self, job_id: str) -> JobStatusResponse:
         job_status = self.job_manager.get_job_status(job_id)
         if job_status is None:
@@ -523,6 +548,12 @@ class TrainingEndpoint:
             "/checkpoints",
             self.get_checkpoints,
             methods=["GET"],
+            status_code=status.HTTP_200_OK,
+        )
+        self.router.add_api_route(
+            "/checkpoints/{checkpoint}",
+            self.delete_checkpoint,
+            methods=["DELETE"],
             status_code=status.HTTP_200_OK,
         )
         self.router.add_api_route(

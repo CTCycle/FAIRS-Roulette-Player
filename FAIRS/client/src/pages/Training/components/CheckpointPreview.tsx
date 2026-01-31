@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Save } from 'lucide-react';
+import { Save, X } from 'lucide-react';
 
 interface CheckpointPreviewProps {
     refreshKey?: number;
@@ -35,8 +35,31 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
         void loadCheckpoints();
     }, [refreshKey]);
 
+    const handleDelete = async (checkpointName: string) => {
+        if (!confirm(`Are you sure you want to delete checkpoint "${checkpointName}"?`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/training/checkpoints/${checkpointName}`, {
+                method: 'DELETE',
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || 'Failed to delete checkpoint');
+            }
+
+            // Remove the deleted checkpoint from the local state
+            setCheckpoints((prev) => prev.filter((name) => name !== checkpointName));
+        } catch (err) {
+            console.error('Error deleting checkpoint:', err);
+            alert(`Error deleting checkpoint: ${err instanceof Error ? err.message : String(err)}`);
+        }
+    };
+
     return (
-        <div className="preview-panel checkpoint-preview">
+        <div className="checkpoint-preview">
             <div className="preview-header">
                 <Save size={18} />
                 <span>Available Checkpoints</span>
@@ -52,6 +75,23 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
                         {checkpoints.map((name) => (
                             <div key={name} className="preview-row">
                                 <span className="preview-row-name">{name}</span>
+                                <button
+                                    className="preview-delete-btn"
+                                    onClick={() => handleDelete(name)}
+                                    title="Delete Checkpoint"
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        color: '#ef4444',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        padding: '4px',
+                                        marginLeft: 'auto',
+                                    }}
+                                >
+                                    <X size={16} />
+                                </button>
                             </div>
                         ))}
                     </div>

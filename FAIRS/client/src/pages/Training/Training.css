@@ -76,25 +76,130 @@
   color: var(--roulette-red);
 }
 
-/* Dataset Upload Section */
-.dataset-section {
+/* Layout Containers */
+.training-top-row {
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 2rem;
+  align-items: stretch;
+}
+
+.upload-column {
+  flex: 0 0 30%;
+  min-width: 300px;
+  /* Prevent it from getting too squished */
+}
+
+.preview-column {
+  flex: 1;
+  /* Takes remaining space (approx 70%) */
+}
+
+.section-separator {
+  height: 2px;
+  background-color: #cbd5e1;
+  margin: 2rem 0;
   width: 100%;
 }
 
-.dataset-layout-container {
+.checkpoints-row {
   display: flex;
-  gap: 1.5rem;
-  align-items: flex-start;
+  gap: 2rem;
+  margin-bottom: 2rem;
+  align-items: stretch;
+}
+
+.info-column {
+  flex: 0 0 30%;
+  min-width: 300px;
+}
+
+.checkpoints-column {
+  flex: 1;
+  /* Takes remaining space (approx 70%) */
+  overflow: hidden;
+  /* Prevent overflow */
+}
+
+/* Info Column Styling */
+.info-content {
+  padding: 1rem 0.5rem;
+  color: #475569;
+}
+
+.info-content h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--roulette-black);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.info-content p {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin-bottom: 0;
+  color: #475569;
+}
+
+/* Dataset Upload Section - Refactored */
+.dataset-section {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.dataset-header {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--roulette-black);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.dataset-header svg {
+  color: var(--roulette-red);
 }
 
 .dataset-upload-controls {
-  flex: 3;
-}
-
-.dataset-file-info {
-  flex: 2;
+  flex: 1;
   display: flex;
   flex-direction: column;
+}
+
+/* Updated Upload Action Buttons */
+.upload-actions-row {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.btn-clear {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  color: #64748b;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.btn-clear:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #334155;
 }
 
 .upload-area {
@@ -104,17 +209,22 @@
   text-align: center;
   cursor: pointer;
   transition: all 0.2s;
-  background-color: #F8FAFC;
+  background-color: transparent;
+  /* Transparent background */
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  flex: 1;
+  /* Fill remaining height */
+  min-height: 140px;
 }
 
 .upload-area:hover,
 .dataset-upload-controls .upload-area.active {
   border-color: var(--roulette-green);
-  background-color: #F0FDF4;
+  background-color: rgba(240, 253, 244, 0.5);
+  /* Subtle green tint */
 }
 
 .upload-icon {
@@ -908,15 +1018,22 @@
    PREVIEW ROW (Dataset + Checkpoint Previews)
    ======================================== */
 
-.preview-row {
+.previews-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
   margin-bottom: 1rem;
 }
 
+.dataset-preview,
+.checkpoint-preview {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
 @media (max-width: 768px) {
-  .preview-row {
+  .previews-grid {
     grid-template-columns: 1fr;
   }
 }
