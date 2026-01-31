@@ -15,6 +15,7 @@ from FAIRS.server.utils.constants import (
 
 from FAIRS.server.utils.types import (
     coerce_bool,
+    coerce_float,
     coerce_int,
     coerce_str,
     coerce_str_or_none,
@@ -50,7 +51,7 @@ class DatabaseSettings:
 # -----------------------------------------------------------------------------
 @dataclass(frozen=True)
 class TrainingSettings:
-    websocket_update_interval_ms: int
+    polling_interval: float
     default_episodes: int
     default_max_steps_episode: int
     default_render_update_frequency: int
@@ -125,8 +126,8 @@ def build_database_settings(payload: dict[str, Any] | Any) -> DatabaseSettings:
 def build_training_settings(payload: dict[str, Any] | Any) -> TrainingSettings:
     data = ensure_mapping(payload)
     return TrainingSettings(
-        websocket_update_interval_ms=coerce_int(
-            data.get("websocket_update_interval_ms"), 1000, minimum=100, maximum=10000
+        polling_interval=coerce_float(
+            data.get("polling_interval"), 1.0, minimum=0.1, maximum=10.0
         ),
         default_episodes=coerce_int(
             data.get("default_episodes"), 10, minimum=1

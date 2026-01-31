@@ -69,7 +69,7 @@ class DQNTraining:
             }
 
         # Progress update related
-        self.ws_update_interval_ms = server_settings.training.websocket_update_interval_ms
+        self.polling_interval_ms = int(server_settings.training.polling_interval * 1000)
         self.last_ws_update_time = 0.0
         self.is_cancelled = False
         self.stop_event = stop_event
@@ -176,7 +176,7 @@ class DQNTraining:
     # -------------------------------------------------------------------------
     def should_send_ws_update(self) -> bool:
         current_time = time.time() * 1000
-        if current_time - self.last_ws_update_time >= self.ws_update_interval_ms:
+        if current_time - self.last_ws_update_time >= self.polling_interval_ms:
             self.last_ws_update_time = current_time
             return True
         return False
