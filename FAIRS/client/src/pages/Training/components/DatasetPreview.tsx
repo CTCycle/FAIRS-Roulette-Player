@@ -55,7 +55,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
     };
 
     return (
-        <div className="preview-panel dataset-preview">
+        <div className="dataset-preview">
             <div className="preview-header">
                 <Database size={18} />
                 <span>Available Datasets</span>

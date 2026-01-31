@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Upload, Folder, File, X } from 'lucide-react';
+import { Upload, Folder, File as FileIcon, X } from 'lucide-react';
 import type { FileMetadata } from '../../../context/AppStateContext';
 
 interface DatasetUploadProps {
@@ -24,7 +24,7 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
     onUploadSuccess,
 }) => {
     // Keep actual File object in local ref (not serializable for context)
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [selectedFile, setSelectedFile] = useState<globalThis.File | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const formatSize = (bytes: number) => {
@@ -35,7 +35,7 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     };
 
-    const isSupportedFile = (file: File) => {
+    const isSupportedFile = (file: globalThis.File) => {
         const extension = file.name.split('.').pop()?.toLowerCase();
         return extension === 'csv' || extension === 'xlsx' || extension === 'xls';
     };
@@ -143,130 +143,97 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
 
 
     return (
-        <div className="card dataset-section">
-            <div className="card-header">
-                <h2 className="card-title">
-                    <Folder size={24} />
-                    Dataset Selection
-                </h2>
-            </div>
+        <div className="dataset-section">
+            <div className="dataset-upload-controls">
+                <div
+                    className={`upload-area ${selectedFile ? 'active' : ''}`}
+                    onClick={() => fileInputRef.current?.click()}
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                >
+                    {selectedFile ? (
+                        <>
+                            <FileIcon className="upload-icon" style={{ color: 'var(--roulette-green)' }} />
+                            <div className="upload-text" style={{ fontWeight: 600, color: '#333' }}>
+                                {selectedFile.name}
+                            </div>
+                            <div className="upload-hint">
+                                {formatSize(selectedFile.size)}
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <Upload className="upload-icon" />
+                            <div className="upload-text">
+                                <strong>Click to upload</strong> or drag and drop
+                            </div>
+                            <div className="upload-hint">
+                                Supports CSV/XLSX
+                            </div>
+                        </>
+                    )}
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        style={{ display: 'none' }}
+                        accept=".csv,.xlsx,.xls"
+                    />
+                </div>
 
-            {/* Horizontal Layout Container */}
-            <div className="dataset-layout-container">
-                {/* Left Side: Upload Controls */}
-                <div className="dataset-upload-controls">
-                    <div
-                        className="upload-area"
-                        onClick={() => fileInputRef.current?.click()}
-                        onDragOver={handleDragOver}
-                        onDrop={handleDrop}
-                    >
-                        <Upload className="upload-icon" />
-                        <div className="upload-text">
-                            <strong>Click to upload</strong> or drag and drop
-                        </div>
-                        <div className="upload-hint">
-                            Supports CSV/XLSX
-                        </div>
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            onChange={handleFileChange}
-                            style={{ display: 'none' }}
-                            accept=".csv,.xlsx,.xls"
-                        />
-                    </div>
-
+                <div className="upload-actions-row">
                     <button
                         type="button"
                         className="btn-primary"
                         onClick={uploadDataset}
                         disabled={!selectedFile || uploadStatus === 'uploading'}
-                        style={{ marginTop: '0.75rem', opacity: !selectedFile || uploadStatus === 'uploading' ? 0.7 : 1 }}
+                        style={{ flex: 1, padding: '0.5rem 1rem', opacity: !selectedFile || uploadStatus === 'uploading' ? 0.7 : 1 }}
                     >
-                        <Upload /> Upload Data
+                        <Upload size={16} style={{ marginRight: '0.5rem' }} /> Upload Data
                     </button>
 
-                    {uploadMessage && (
-                        <div
-                            style={{
-                                marginTop: '0.75rem',
-                                padding: '0.5rem',
-                                borderRadius: '6px',
-                                fontSize: '0.85rem',
-                                background:
-                                    uploadStatus === 'success'
-                                        ? '#ECFDF5'
-                                        : uploadStatus === 'error'
-                                            ? '#FEF2F2'
-                                            : '#EFF6FF',
-                                color:
-                                    uploadStatus === 'success'
-                                        ? '#065F46'
-                                        : uploadStatus === 'error'
-                                            ? '#991B1B'
-                                            : '#1E40AF',
-                                border:
-                                    uploadStatus === 'success'
-                                        ? '1px solid #A7F3D0'
-                                        : uploadStatus === 'error'
-                                            ? '1px solid #FECACA'
-                                            : '1px solid #BFDBFE',
-                            }}
-                        >
-                            {uploadMessage}
-                        </div>
-                    )}
-                </div>
-
-                {/* Right Side: File List */}
-                <div className="dataset-file-info">
-                    <div className="file-list">
-                        {files.length > 0 ? (
-                            files.map((file, index) => (
-                                <div key={index} className="file-item">
-                                    <File className="file-icon" />
-                                    <span className="file-name" title={file.name}>{file.name}</span>
-                                    <span className="file-size">{formatSize(file.size)}</span>
-                                </div>
-                            ))
-                        ) : (
-                            <div style={{ textAlign: 'center', color: '#9CA3AF', padding: '1rem' }}>
-                                No files selected
-                            </div>
-                        )}
-                    </div>
-
-                    {files.length > 0 && (
+                    {selectedFile && (
                         <button
+                            type="button"
+                            className="btn-clear"
                             onClick={(e) => { e.stopPropagation(); clearFiles(); }}
-                            style={{
-                                marginTop: '0.5rem',
-                                background: 'transparent',
-                                border: '1px solid #ddd',
-                                padding: '0.4rem',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '0.5rem',
-                                color: '#666',
-                                fontSize: '0.85rem',
-                                width: '100%'
-                            }}
                         >
-                            <X size={14} /> Clear Selection
+                            <X size={16} /> Clear
                         </button>
                     )}
                 </div>
+
+                {uploadMessage && (
+                    <div
+                        style={{
+                            marginTop: '0.75rem',
+                            padding: '0.5rem',
+                            borderRadius: '6px',
+                            fontSize: '0.85rem',
+                            background:
+                                uploadStatus === 'success'
+                                    ? '#ECFDF5'
+                                    : uploadStatus === 'error'
+                                        ? '#FEF2F2'
+                                        : '#EFF6FF',
+                            color:
+                                uploadStatus === 'success'
+                                    ? '#065F46'
+                                    : uploadStatus === 'error'
+                                        ? '#991B1B'
+                                        : '#1E40AF',
+                            border:
+                                uploadStatus === 'success'
+                                    ? '1px solid #A7F3D0'
+                                    : uploadStatus === 'error'
+                                        ? '1px solid #FECACA'
+                                        : '1px solid #BFDBFE',
+                        }}
+                    >
+                        {uploadMessage}
+                    </div>
+                )}
             </div>
-
-            {/* Separator mostly hidden or removed spacing */}
-            <div style={{ paddingBottom: '0.5rem' }}></div>
-
-            {/* Configuration moved to TrainingControls */}
-            <div style={{ paddingBottom: '1rem' }}></div>
         </div>
     );
 };

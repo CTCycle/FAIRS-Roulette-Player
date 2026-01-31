@@ -39,23 +39,41 @@ const TrainingPage: React.FC = () => {
             </div>
 
             <div className="training-content">
-                {/* Upload Widget */}
-                <DatasetUpload
-                    files={datasetUpload.files}
-                    uploadStatus={datasetUpload.uploadStatus}
-                    uploadMessage={datasetUpload.uploadMessage}
-                    onStateChange={handleDatasetUploadStateChange}
-                    onReset={() => dispatch({ type: 'RESET_DATASET_UPLOAD' })}
-                    onUploadSuccess={handleUploadSuccess}
-                />
+                {/* Top Row: Upload (30%) + Dataset Preview (70%) */}
+                <div className="training-top-row">
+                    <div className="upload-column">
+                        <DatasetUpload
+                            files={datasetUpload.files}
+                            uploadStatus={datasetUpload.uploadStatus}
+                            uploadMessage={datasetUpload.uploadMessage}
+                            onStateChange={handleDatasetUploadStateChange}
+                            onReset={() => dispatch({ type: 'RESET_DATASET_UPLOAD' })}
+                            onUploadSuccess={handleUploadSuccess}
+                        />
+                    </div>
+                    <div className="preview-column">
+                        <DatasetPreview
+                            refreshKey={datasetRefreshKey}
+                            onDelete={handleDatasetDelete}
+                        />
+                    </div>
+                </div>
 
-                {/* Preview Row: Datasets (Left) | Checkpoints (Right) */}
-                <div className="preview-row">
-                    <DatasetPreview
-                        refreshKey={datasetRefreshKey}
-                        onDelete={handleDatasetDelete}
-                    />
-                    <CheckpointPreview refreshKey={datasetRefreshKey} />
+                <div className="section-separator" />
+
+                {/* Second Row: Info (30%) + Checkpoints (70%) */}
+                <div className="checkpoints-row">
+                    <div className="info-column">
+                        <div className="info-content">
+                            <h3>Checkpoints</h3>
+                            <p>
+                                Your trained models are saved automatically as checkpoints (right). The system handles all data preprocessing, including normalization and validation splits, ensuring your models are ready for inference or continued training.
+                            </p>
+                        </div>
+                    </div>
+                    <div className="checkpoints-column">
+                        <CheckpointPreview refreshKey={datasetRefreshKey} />
+                    </div>
                 </div>
 
                 <TrainingControls
