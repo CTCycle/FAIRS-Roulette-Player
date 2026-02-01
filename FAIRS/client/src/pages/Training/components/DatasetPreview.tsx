@@ -213,9 +213,6 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
         { label: 'Batch Size', value: newConfig.batchSize },
         { label: 'Learning Rate', value: newConfig.learningRate },
         { label: 'Training Seed', value: newConfig.trainingSeed },
-        { label: 'Workers', value: newConfig.numWorkers },
-        { label: 'Save Checkpoints', value: newConfig.saveCheckpoints ? 'Yes' : 'No' },
-        { label: 'Checkpoints Frequency', value: newConfig.checkpointsFreq },
         { label: 'Use GPU', value: newConfig.deviceGPU ? 'Yes' : 'No' },
         { label: 'Mixed Precision', value: newConfig.useMixedPrecision ? 'Yes' : 'No' },
     ]), [
@@ -412,7 +409,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
 
                             {wizardStep === 3 && (
                                 <div className="wizard-session-compute">
-                                    <div className="wizard-grid wizard-grid-3x2">
+                                    <div className="wizard-grid wizard-grid-2x2">
                                         <div className="form-group">
                                             <label className="form-label">Episodes</label>
                                             <input type="number" name="episodes" value={newConfig.episodes} onChange={handleInputChange} className="form-input" min="1" />
@@ -429,29 +426,10 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                                             <label className="form-label">Learning Rate</label>
                                             <input type="number" name="learningRate" value={newConfig.learningRate} onChange={handleInputChange} className="form-input" step="0.0001" min="0" />
                                         </div>
-                                        <div className="form-group">
-                                            <label className="form-label">Training Seed</label>
-                                            <input type="number" name="trainingSeed" value={newConfig.trainingSeed} onChange={handleInputChange} className="form-input" />
-                                        </div>
-                                        <div className="form-group">
-                                            <label className="form-label">Workers</label>
-                                            <input type="number" name="numWorkers" value={newConfig.numWorkers} onChange={handleInputChange} className="form-input" min="0" />
-                                            <div className="wizard-inline">
-                                                <label className="checkbox-visual">
-                                                    <input type="checkbox" name="saveCheckpoints" checked={newConfig.saveCheckpoints} onChange={handleInputChange} />
-                                                    <span>Save checkpoints every</span>
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    name="checkpointsFreq"
-                                                    value={newConfig.checkpointsFreq}
-                                                    onChange={handleInputChange}
-                                                    className="form-input inline-input-sm"
-                                                    min="1"
-                                                    disabled={!newConfig.saveCheckpoints}
-                                                />
-                                            </div>
-                                        </div>
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Training Seed</label>
+                                        <input type="number" name="trainingSeed" value={newConfig.trainingSeed} onChange={handleInputChange} className="form-input" />
                                     </div>
                                     <div className="wizard-checkboxes">
                                         <label className="checkbox-visual">

@@ -54,25 +54,3 @@ class PredictedGames(Base):
 
 
 ###############################################################################
-class CheckpointSummary(Base):
-    __tablename__ = "CHECKPOINTS_SUMMARY"
-    checkpoint = Column(String, primary_key=True)
-    sample_size = Column(Float)
-    seed = Column(Integer)
-    precision = Column(Integer)
-    episodes = Column(Integer)
-    max_steps_episode = Column(Integer)
-    batch_size = Column(Integer)
-    jit_compile = Column(String)
-    has_tensorboard_logs = Column(String)
-    learning_rate = Column(Float)
-    neurons = Column(Integer)
-    embedding_dimensions = Column(Integer)
-    perceptive_field_size = Column(Integer)
-    exploration_rate = Column(Float)
-    exploration_rate_decay = Column(Float)
-    discount_rate = Column(Float)
-    model_update_frequency = Column(Integer)
-    loss = Column(Float)
-    accuracy = Column(Float)
-    __table_args__ = (UniqueConstraint("checkpoint"),)

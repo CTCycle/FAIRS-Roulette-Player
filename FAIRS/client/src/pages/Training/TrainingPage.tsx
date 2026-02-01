@@ -8,7 +8,7 @@ import { CheckpointPreview } from './components/CheckpointPreview';
 
 const TrainingPage: React.FC = () => {
     const { state, dispatch } = useAppState();
-    const { isTraining, newConfig, resumeConfig, datasetUpload } = state.training;
+    const { isTraining, datasetUpload } = state.training;
     const [datasetRefreshKey, setDatasetRefreshKey] = useState(0);
 
     const handleDatasetUploadStateChange = (updates: {
@@ -72,7 +72,10 @@ const TrainingPage: React.FC = () => {
                 </div>
             </div>
 
-            <TrainingDashboard isActive={isTraining} onTrainingEnd={() => setIsTraining(false)} />
+            <TrainingDashboard
+                isActive={isTraining}
+                onTrainingEnd={() => dispatch({ type: 'SET_TRAINING_IS_TRAINING', payload: false })}
+            />
         </div>
     );
 };

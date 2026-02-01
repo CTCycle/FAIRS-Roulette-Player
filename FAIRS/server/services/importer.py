@@ -7,8 +7,6 @@ from typing import Literal
 import pandas as pd
 
 from FAIRS.server.utils.constants import (
-    CHECKPOINTS_SUMMARY_COLUMNS,
-    CHECKPOINTS_SUMMARY_TABLE,
     INFERENCE_CONTEXT_COLUMNS,
     INFERENCE_CONTEXT_TABLE,
     PREDICTED_GAMES_COLUMNS,
@@ -23,7 +21,6 @@ DatasetTable = Literal[
     "ROULETTE_SERIES",
     "INFERENCE_CONTEXT",
     "PREDICTED_GAMES",
-    "CHECKPOINTS_SUMMARY",
 ]
 
 
@@ -81,9 +78,6 @@ class DatasetImportService:
                 normalized.insert(0, "id", range(1, len(normalized) + 1))
             return normalized.reindex(columns=PREDICTED_GAMES_COLUMNS)
 
-        if table == CHECKPOINTS_SUMMARY_TABLE:
-            return dataframe.reindex(columns=CHECKPOINTS_SUMMARY_COLUMNS)
-
         raise ValueError(f"Unsupported table: {table}")
 
     # -------------------------------------------------------------------------
@@ -96,9 +90,6 @@ class DatasetImportService:
             return
         if table == PREDICTED_GAMES_TABLE:
             self.serializer.save_predicted_games(dataframe)
-            return
-        if table == CHECKPOINTS_SUMMARY_TABLE:
-            self.serializer.upsert_checkpoints_summary(dataframe)
             return
         raise ValueError(f"Unsupported table: {table}")
 

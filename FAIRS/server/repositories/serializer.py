@@ -7,8 +7,6 @@ import pandas as pd
 
 from FAIRS.server.repositories.database import database
 from FAIRS.server.utils.constants import (
-    CHECKPOINTS_SUMMARY_COLUMNS,
-    CHECKPOINTS_SUMMARY_TABLE,
     INFERENCE_CONTEXT_COLUMNS,
     INFERENCE_CONTEXT_TABLE,
     PREDICTED_GAMES_COLUMNS,
@@ -38,9 +36,6 @@ class DataSerializer:
         return database.load_from_database(PREDICTED_GAMES_TABLE)
 
     # -----------------------------------------------------------------------------
-    def load_checkpoints_summary(self) -> pd.DataFrame:
-        return database.load_from_database(CHECKPOINTS_SUMMARY_TABLE)
-
     # -----------------------------------------------------------------------------
     def save_roulette_series(self, dataset: pd.DataFrame) -> None:
         if dataset.empty:
@@ -88,13 +83,6 @@ class DataSerializer:
         database.append_into_database(frame, PREDICTED_GAMES_TABLE)
 
     # -----------------------------------------------------------------------------
-    def upsert_checkpoints_summary(self, dataset: pd.DataFrame) -> None:
-        if dataset.empty:
-            return
-        frame = dataset.reindex(columns=CHECKPOINTS_SUMMARY_COLUMNS)
-        frame = frame.where(pd.notnull(frame), cast(Any, None))
-        database.upsert_into_database(frame, CHECKPOINTS_SUMMARY_TABLE)
-
     # -----------------------------------------------------------------------------
     def delete_roulette_dataset(self, dataset_name: str) -> None:
         database.delete_from_database(
