@@ -10,7 +10,7 @@ class TrainingConfig(BaseModel):
     
     # Agent parameters
     perceptive_field_size: int = Field(64, ge=1, le=1024)
-    QNet_neurons: int = Field(64, ge=1, le=10000)
+    qnet_neurons: int = Field(64, ge=1, le=10000)
     embedding_dimensions: int = Field(200, ge=8)
     exploration_rate: float = Field(0.75, ge=0.0, le=1.0)
     exploration_rate_decay: float = Field(0.995, ge=0.0, le=1.0)
@@ -42,8 +42,8 @@ class TrainingConfig(BaseModel):
     training_seed: int = 42
     
     # Device parameters
-    use_device_GPU: bool = False
-    device_ID: int = Field(0, ge=0)
+    use_device_gpu: bool = False
+    device_id: int = Field(0, ge=0)
     use_mixed_precision: bool = False
     jit_compile: bool = False
     jit_backend: str = Field("inductor", min_length=1)

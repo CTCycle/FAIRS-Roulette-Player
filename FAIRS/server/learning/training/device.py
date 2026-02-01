@@ -15,12 +15,12 @@ class DeviceConfig:
 
     # -------------------------------------------------------------------------
     def set_device(self) -> None:
-        use_gpu = self.configuration.get("use_device_GPU", False)
+        use_gpu = self.configuration.get("use_device_gpu", False)
         device_name = "cuda" if use_gpu else "cpu"
         mixed_precision = self.configuration.get("use_mixed_precision", False)
 
         if device_name == "cuda" and torch.cuda.is_available():
-            device_id = self.configuration.get("device_ID", 0)
+            device_id = self.configuration.get("device_id", 0)
             dev = torch.device(f"cuda:{device_id}")
             torch.cuda.set_device(dev)
             logger.info(f"GPU (cuda:{device_id}) is set as the active device.")
