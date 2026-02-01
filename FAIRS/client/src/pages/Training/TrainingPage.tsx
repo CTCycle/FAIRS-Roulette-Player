@@ -12,10 +12,6 @@ const TrainingPage: React.FC = () => {
     const { isTraining, newConfig, resumeConfig, datasetUpload } = state.training;
     const [datasetRefreshKey, setDatasetRefreshKey] = useState(0);
 
-    const setIsTraining = (value: boolean) => {
-        dispatch({ type: 'SET_TRAINING_IS_TRAINING', payload: value });
-    };
-
     const handleDatasetUploadStateChange = (updates: {
         files?: typeof datasetUpload.files;
         uploadStatus?: typeof datasetUpload.uploadStatus;
@@ -85,7 +81,6 @@ const TrainingPage: React.FC = () => {
                     onResumeConfigChange={(updates) =>
                         dispatch({ type: 'SET_TRAINING_RESUME_CONFIG', payload: updates })
                     }
-                    onTrainingStart={() => setIsTraining(true)}
                     datasetRefreshKey={datasetRefreshKey}
                 />
             </div>

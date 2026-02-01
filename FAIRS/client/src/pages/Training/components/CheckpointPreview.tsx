@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Activity, Info, RefreshCw, Save, X } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Activity, Check, ChevronLeft, ChevronRight, Info, RefreshCw, Save, X } from 'lucide-react';
 import { useAppState } from '../../../context/AppStateContext';
 
 interface CheckpointMetadataResponse {
@@ -10,6 +10,10 @@ interface CheckpointMetadataResponse {
 interface CheckpointPreviewProps {
     refreshKey?: number;
 }
+
+type ResumeWizardStep = 0 | 1;
+
+const RESUME_STEPS = ['Resume Configuration', 'Summary'] as const;
 
 export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
     refreshKey = 0,
@@ -23,6 +27,17 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
     const [metadataLoading, setMetadataLoading] = useState(false);
     const [metadataError, setMetadataError] = useState<string | null>(null);
     const [metadataPayload, setMetadataPayload] = useState<CheckpointMetadataResponse | null>(null);
+    const [datasets, setDatasets] = useState<string[]>([]);
+    const [datasetsLoading, setDatasetsLoading] = useState(false);
+    const [datasetsError, setDatasetsError] = useState<string | null>(null);
+    const [metadataCache, setMetadataCache] = useState<Record<string, CheckpointMetadataResponse>>({});
+    const [checkpointDatasetMap, setCheckpointDatasetMap] = useState<Record<string, string>>({});
+
+    const [resumeWizardOpen, setResumeWizardOpen] = useState(false);
+    const [resumeWizardStep, setResumeWizardStep] = useState<ResumeWizardStep>(0);
+    const [resumeWizardCheckpoint, setResumeWizardCheckpoint] = useState<string | null>(null);
+    const [resumeWizardError, setResumeWizardError] = useState<string | null>(null);
+    const [resumeSubmitting, setResumeSubmitting] = useState(false);
 
     const loadCheckpoints = async () => {
         setLoading(true);
@@ -43,8 +58,33 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
         }
     };
 
+    const loadDatasets = async () => {
+        setDatasetsLoading(true);
+        setDatasetsError(null);
+        try {
+            const response = await fetch('/api/database/roulette-series/datasets');
+            if (!response.ok) {
+                throw new Error('Failed to load datasets');
+            }
+            const data = await response.json();
+            const datasetList = Array.isArray(data?.datasets)
+                ? data.datasets.filter((name: unknown) => typeof name === 'string' && name.trim().length > 0)
+                : [];
+            setDatasets(datasetList);
+        } catch (err) {
+            setDatasets([]);
+            setDatasetsError('Unable to load dataset names.');
+        } finally {
+            setDatasetsLoading(false);
+        }
+    };
+
     useEffect(() => {
         void loadCheckpoints();
+    }, [refreshKey]);
+
+    useEffect(() => {
+        void loadDatasets();
     }, [refreshKey]);
 
     const handleDelete = async (checkpointName: string) => {
@@ -62,7 +102,6 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
                 throw new Error(errorData.detail || 'Failed to delete checkpoint');
             }
 
-            // Remove the deleted checkpoint from the local state
             setCheckpoints((prev) => prev.filter((name) => name !== checkpointName));
         } catch (err) {
             console.error('Error deleting checkpoint:', err);
@@ -80,12 +119,54 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
         return payload;
     };
 
+    const cacheCheckpointMetadata = (checkpointName: string, payload: CheckpointMetadataResponse) => {
+        setMetadataCache((prev) => ({ ...prev, [checkpointName]: payload }));
+        const summary = payload.summary || {};
+        const datasetName = typeof summary.dataset_name === 'string' ? summary.dataset_name : '';
+        setCheckpointDatasetMap((prev) => ({ ...prev, [checkpointName]: datasetName }));
+    };
+
+    const prefetchCheckpointMetadata = async (checkpointList: string[]) => {
+        const toFetch = checkpointList.filter((name) => !metadataCache[name]);
+        if (toFetch.length === 0) {
+            return;
+        }
+        const results = await Promise.all(
+            toFetch.map(async (name) => {
+                try {
+                    const payload = await loadCheckpointMetadata(name);
+                    return { name, payload };
+                } catch (err) {
+                    return { name, payload: null };
+                }
+            })
+        );
+        results.forEach((result) => {
+            if (result.payload) {
+                cacheCheckpointMetadata(result.name, result.payload);
+            }
+        });
+    };
+
+    useEffect(() => {
+        if (checkpoints.length === 0) {
+            return;
+        }
+        void prefetchCheckpointMetadata(checkpoints);
+    }, [checkpoints, metadataCache]);
+
     const openMetadataModal = async (checkpointName: string) => {
         setMetadataOpen(true);
         setMetadataLoading(true);
         setMetadataError(null);
         try {
+            const cached = metadataCache[checkpointName];
+            if (cached) {
+                setMetadataPayload(cached);
+                return;
+            }
             const payload = await loadCheckpointMetadata(checkpointName);
+            cacheCheckpointMetadata(checkpointName, payload);
             setMetadataPayload(payload);
         } catch (err) {
             setMetadataPayload(null);
@@ -101,37 +182,50 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
         setMetadataError(null);
     };
 
-    const handleResumeTraining = async (checkpointName: string) => {
+    const handleResumeTraining = async () => {
         if (isTraining) {
             alert('Training is already in progress.');
             return;
         }
+        if (!resumeWizardCheckpoint) {
+            setResumeWizardError('Select a checkpoint to resume.');
+            return;
+        }
+
+        setResumeSubmitting(true);
+        setResumeWizardError(null);
 
         try {
             const response = await fetch('/api/training/resume', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    checkpoint: checkpointName,
+                    checkpoint: resumeWizardCheckpoint,
                     additional_episodes: Number(resumeConfig.numAdditionalEpisodes),
                 }),
             });
 
             if (!response.ok) {
                 const errorPayload = await response.json();
-                alert(`Failed to resume training: ${errorPayload.detail || 'Unknown error'}`);
+                setResumeWizardError(`Failed to resume training: ${errorPayload.detail || 'Unknown error'}`);
                 return;
             }
 
             dispatch({ type: 'SET_TRAINING_IS_TRAINING', payload: true });
+            closeResumeWizard();
         } catch (err) {
-            alert('Failed to connect to training server');
+            setResumeWizardError('Failed to connect to training server');
+        } finally {
+            setResumeSubmitting(false);
         }
     };
 
     const handleEvaluateCheckpoint = async (checkpointName: string) => {
         try {
-            const payload = await loadCheckpointMetadata(checkpointName);
+            const payload = metadataCache[checkpointName] ?? await loadCheckpointMetadata(checkpointName);
+            if (!metadataCache[checkpointName]) {
+                cacheCheckpointMetadata(checkpointName, payload);
+            }
             const summary = payload.summary || {};
             const datasetName = typeof summary.dataset_name === 'string' ? summary.dataset_name : '';
             const betAmount = typeof summary.bet_amount === 'number' ? summary.bet_amount : 1;
@@ -205,6 +299,59 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
             .filter((row) => row.value !== null && row.value !== undefined && row.value !== '');
     };
 
+    const openResumeWizard = async (checkpointName: string) => {
+        if (isTraining) {
+            alert('Training is already in progress.');
+            return;
+        }
+        setResumeWizardOpen(true);
+        setResumeWizardStep(0);
+        setResumeWizardError(null);
+        setResumeWizardCheckpoint(checkpointName);
+        dispatch({ type: 'SET_TRAINING_RESUME_CONFIG', payload: { selectedCheckpoint: checkpointName } });
+
+        if (!metadataCache[checkpointName]) {
+            try {
+                const payload = await loadCheckpointMetadata(checkpointName);
+                cacheCheckpointMetadata(checkpointName, payload);
+            } catch (err) {
+                setResumeWizardError('Unable to load checkpoint metadata.');
+            }
+        }
+    };
+
+    const closeResumeWizard = () => {
+        if (resumeSubmitting) {
+            return;
+        }
+        setResumeWizardOpen(false);
+        setResumeWizardStep(0);
+        setResumeWizardCheckpoint(null);
+        setResumeWizardError(null);
+    };
+
+    const handleResumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        dispatch({
+            type: 'SET_TRAINING_RESUME_CONFIG',
+            payload: { [name]: Number(value) },
+        });
+    };
+
+    const availableDatasetSet = useMemo(() => new Set(datasets), [datasets]);
+
+    const resumeSummaryRows = useMemo(() => {
+        if (!resumeWizardCheckpoint) {
+            return [];
+        }
+        const summary = metadataCache[resumeWizardCheckpoint]?.summary || {};
+        return [
+            { label: 'Checkpoint', value: resumeWizardCheckpoint },
+            ...buildMetadataRows(summary),
+            { label: 'Additional Episodes', value: resumeConfig.numAdditionalEpisodes },
+        ];
+    }, [metadataCache, resumeConfig.numAdditionalEpisodes, resumeWizardCheckpoint]);
+
     return (
         <div className="checkpoint-preview">
             <div className="preview-header">
@@ -219,46 +366,53 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
                 )}
                 {!loading && !error && checkpoints.length > 0 && (
                     <div className="preview-list">
-                        {checkpoints.map((name) => (
-                            <div key={name} className="preview-row">
-                                <span className="preview-row-name">{name}</span>
-                                <span className="preview-row-spacer" />
-                                <div className="preview-row-actions">
-                                    <button
-                                        className="preview-row-icon preview-row-icon-metadata"
-                                        onClick={() => openMetadataModal(name)}
-                                        title="View checkpoint metadata"
-                                    >
-                                        <Info size={16} />
-                                    </button>
-                                    <button
-                                        className="preview-row-icon preview-row-icon-evaluate"
-                                        onClick={() => handleEvaluateCheckpoint(name)}
-                                        title="Evaluate checkpoint"
-                                    >
-                                        <Activity size={16} />
-                                    </button>
-                                    <button
-                                        className="preview-row-icon preview-row-icon-resume"
-                                        onClick={() => handleResumeTraining(name)}
-                                        title="Resume training from this checkpoint"
-                                        disabled={isTraining}
-                                    >
-                                        <RefreshCw size={16} />
-                                    </button>
-                                    <button
-                                        className="preview-row-delete"
-                                        onClick={() => handleDelete(name)}
-                                        title="Delete Checkpoint"
-                                    >
-                                        <X size={16} />
-                                    </button>
+                        {checkpoints.map((name) => {
+                            const datasetName = checkpointDatasetMap[name];
+                            const canResume = datasetName && availableDatasetSet.has(datasetName);
+                            return (
+                                <div key={name} className="preview-row">
+                                    <span className="preview-row-name">{name}</span>
+                                    <span className="preview-row-spacer" />
+                                    <div className="preview-row-actions">
+                                        <button
+                                            className="preview-row-icon preview-row-icon-metadata"
+                                            onClick={() => openMetadataModal(name)}
+                                            title="View checkpoint metadata"
+                                        >
+                                            <Info size={16} />
+                                        </button>
+                                        <button
+                                            className="preview-row-icon preview-row-icon-evaluate"
+                                            onClick={() => handleEvaluateCheckpoint(name)}
+                                            title="Evaluate checkpoint"
+                                        >
+                                            <Activity size={16} />
+                                        </button>
+                                        {canResume && (
+                                            <button
+                                                className="preview-row-icon preview-row-icon-resume"
+                                                onClick={() => openResumeWizard(name)}
+                                                title="Resume training from this checkpoint"
+                                                disabled={isTraining || datasetsLoading || Boolean(datasetsError)}
+                                            >
+                                                <RefreshCw size={16} />
+                                            </button>
+                                        )}
+                                        <button
+                                            className="preview-row-delete"
+                                            onClick={() => handleDelete(name)}
+                                            title="Delete Checkpoint"
+                                        >
+                                            <X size={16} />
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </div>
+
             {metadataOpen && (
                 <div className="preview-modal-overlay" onClick={closeMetadataModal}>
                     <div className="preview-modal" onClick={(event) => event.stopPropagation()}>
@@ -291,6 +445,103 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
                                 ))}
                             </div>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {resumeWizardOpen && (
+                <div className="wizard-modal-overlay">
+                    <div className="wizard-modal" role="dialog" aria-modal="true">
+                        <div className="wizard-modal-header">
+                            <div className="wizard-modal-title">
+                                <RefreshCw size={18} />
+                                Resume Training Wizard
+                            </div>
+                            <button className="wizard-modal-close" onClick={closeResumeWizard} title="Close">
+                                <X size={16} />
+                            </button>
+                        </div>
+                        <div className="wizard-modal-subtitle">
+                            <span>Checkpoint: {resumeWizardCheckpoint}</span>
+                            <span>{`Step ${resumeWizardStep + 1} of ${RESUME_STEPS.length}`}</span>
+                        </div>
+                        <div className="wizard-step-title">{RESUME_STEPS[resumeWizardStep]}</div>
+                        <div className="wizard-step-content">
+                            {resumeWizardStep === 0 && (
+                                <div className="wizard-stack">
+                                    <div className="form-group">
+                                        <label className="form-label">Additional number of epochs</label>
+                                        <input
+                                            type="number"
+                                            name="numAdditionalEpisodes"
+                                            value={resumeConfig.numAdditionalEpisodes}
+                                            onChange={handleResumeChange}
+                                            className="form-input"
+                                            min="1"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                            {resumeWizardStep === 1 && (
+                                <div className="wizard-summary">
+                                    {resumeSummaryRows.map((row) => (
+                                        <div key={row.label} className="wizard-summary-row">
+                                            <span className="wizard-summary-label">{row.label}</span>
+                                            <span className="wizard-summary-value">
+                                                {typeof row.value === 'number'
+                                                    ? row.value.toLocaleString()
+                                                    : String(row.value)}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        {resumeWizardError && (
+                            <div className="wizard-error">{resumeWizardError}</div>
+                        )}
+                        <div className="wizard-actions">
+                            <button
+                                type="button"
+                                className="wizard-btn wizard-btn-secondary"
+                                onClick={closeResumeWizard}
+                                disabled={resumeSubmitting}
+                            >
+                                Cancel
+                            </button>
+                            <div className="wizard-actions-right">
+                                <button
+                                    type="button"
+                                    className="wizard-btn wizard-btn-secondary"
+                                    onClick={() => setResumeWizardStep((prev) => Math.max(0, prev - 1) as ResumeWizardStep)}
+                                    disabled={resumeWizardStep === 0 || resumeSubmitting}
+                                >
+                                    <ChevronLeft size={16} />
+                                    Previous
+                                </button>
+                                {resumeWizardStep < RESUME_STEPS.length - 1 ? (
+                                    <button
+                                        type="button"
+                                        className="wizard-btn wizard-btn-primary"
+                                        onClick={() => setResumeWizardStep((prev) => Math.min(RESUME_STEPS.length - 1, prev + 1) as ResumeWizardStep)}
+                                        disabled={resumeSubmitting}
+                                    >
+                                        Next
+                                        <ChevronRight size={16} />
+                                    </button>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        className="wizard-btn wizard-btn-primary"
+                                        onClick={handleResumeTraining}
+                                        disabled={resumeSubmitting}
+                                    >
+                                        <Check size={16} />
+                                        Confirm
+                                    </button>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

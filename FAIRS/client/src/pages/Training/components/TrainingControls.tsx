@@ -1,14 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Settings, Play, RefreshCw, Cpu, Layers, Activity, Database, ChevronsDown, ChevronsRight } from 'lucide-react';
 import type { TrainingNewConfig, TrainingResumeConfig } from '../../../context/AppStateContext';
-import { buildTrainingPayload } from './trainingPayload';
 
 interface TrainingControlsProps {
     newConfig: TrainingNewConfig;
     resumeConfig: TrainingResumeConfig;
     onNewConfigChange: (updates: Partial<TrainingNewConfig>) => void;
     onResumeConfigChange: (updates: Partial<TrainingResumeConfig>) => void;
-    onTrainingStart?: () => void;
     datasetRefreshKey: number;
 }
 
@@ -17,7 +15,6 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
     resumeConfig,
     onNewConfigChange,
     onResumeConfigChange,
-    onTrainingStart,
     datasetRefreshKey,
 }) => {
     const [activeSection, setActiveSection] = useState<'new' | 'resume' | null>('new');
@@ -108,63 +105,6 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
         }
     }, [activeSection]);
 
-    const handleNewSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-
-        const config = buildTrainingPayload(newConfig);
-
-        try {
-            const response = await fetch('/api/training/start', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(config),
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                console.error('Training start failed:', error);
-                alert(`Failed to start training: ${error.detail || 'Unknown error'}`);
-                return;
-            }
-
-            console.log('Training started successfully');
-            onTrainingStart?.();
-        } catch (err) {
-            console.error('Error starting training:', err);
-            alert('Failed to connect to training server');
-        }
-    };
-
-    const handleResume = async () => {
-        if (!resumeConfig.selectedCheckpoint) {
-            alert('Please select a checkpoint to resume from.');
-            return;
-        }
-        try {
-            const response = await fetch('/api/training/resume', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    checkpoint: resumeConfig.selectedCheckpoint,
-                    additional_episodes: Number(resumeConfig.numAdditionalEpisodes),
-                }),
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                console.error('Resume training failed:', error);
-                alert(`Failed to resume training: ${error.detail || 'Unknown error'}`);
-                return;
-            }
-
-            console.log('Resume training started successfully');
-            onTrainingStart?.();
-        } catch (err) {
-            console.error('Error resuming training:', err);
-            alert('Failed to connect to training server');
-        }
-    };
-
     const toggleSection = (section: 'new' | 'resume') => {
         setActiveSection(activeSection === section ? null : section);
     };
@@ -192,7 +132,7 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
                     </div>
                     {activeSection === 'new' && (
                         <div className="training-accordion-content">
-                            <form onSubmit={handleNewSubmit}>
+                            <form onSubmit={(event) => event.preventDefault()}>
                                 {/* === AGENT CONFIGURATION + ENVIRONMENT/MEMORY (Side-by-Side) === */}
                                 <div className="controls-row-side-by-side">
                                     {/* Agent Configuration (Left, 70%) */}
@@ -468,8 +408,8 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
                                 </fieldset>
 
                                 <div className="form-actions">
-                                    <button type="submit" className="btn-primary btn-narrow">
-                                        <Play size={18} /> Start Training Session
+                                    <button type="button" className="btn-primary btn-narrow" disabled title="Use the dataset preview to start training">
+                                        <Play size={18} /> Use dataset preview to start
                                     </button>
                                 </div>
                             </form>
@@ -523,8 +463,8 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
                             </fieldset>
 
                             <div className="form-actions">
-                                <button type="button" className="btn-primary btn-narrow" style={{ backgroundColor: '#D4AF37' }} onClick={handleResume} disabled={!resumeConfig.selectedCheckpoint}>
-                                    <RefreshCw /> Resume
+                                <button type="button" className="btn-primary btn-narrow" style={{ backgroundColor: '#D4AF37' }} disabled title="Use the checkpoint preview to resume training">
+                                    <RefreshCw /> Use checkpoint preview to resume
                                 </button>
                             </div>
                         </div>
