@@ -30,7 +30,8 @@ class DQNTraining:
         self.batch_size = configuration.get("batch_size", 32)
         self.update_frequency = configuration.get("model_update_frequency", 10)
         self.replay_size = configuration.get("replay_buffer_size", 1000)
-        self.selected_device = configuration.get("device", "cpu")
+        use_gpu = configuration.get("use_device_gpu", False)
+        self.selected_device = "cuda" if use_gpu else "cpu"
         self.device_id = configuration.get("device_id", 0)
         self.mixed_precision = configuration.get("use_mixed_precision", False)
         # Load render settings from server config
