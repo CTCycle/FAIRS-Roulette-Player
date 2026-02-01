@@ -16,7 +16,7 @@ class FAIRSnet:
     def __init__(self, configuration: dict[str, Any]) -> None:
         self.perceptive_size = configuration.get("perceptive_field_size", 64)
         self.embedding_dims = configuration.get("embedding_dimensions", 200)
-        self.neurons = configuration.get("QNet_neurons", 64)
+        self.neurons = configuration.get("qnet_neurons", 64)
         # JIT settings come from server config, not the request
         self.jit_compile = server_settings.device.jit_compile
         self.jit_backend = server_settings.device.jit_backend

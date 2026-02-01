@@ -213,7 +213,7 @@ def process_target(
 
 
 ###############################################################################
-async def queue_training_update(
+def queue_training_update(
     stats: dict[str, Any],
     reporter: QueueProgressReporter,
 ) -> None:
