@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useAppState } from '../../context/AppStateContext';
 import './Training.css';
-import { TrainingControls } from './components/TrainingControls';
 import { TrainingDashboard } from './components/TrainingDashboard';
 import { DatasetUpload } from './components/DatasetUpload';
 import { DatasetPreview } from './components/DatasetPreview';
@@ -71,18 +70,6 @@ const TrainingPage: React.FC = () => {
                         <CheckpointPreview refreshKey={datasetRefreshKey} />
                     </div>
                 </div>
-
-                <TrainingControls
-                    newConfig={newConfig}
-                    resumeConfig={resumeConfig}
-                    onNewConfigChange={(updates) =>
-                        dispatch({ type: 'SET_TRAINING_NEW_CONFIG', payload: updates })
-                    }
-                    onResumeConfigChange={(updates) =>
-                        dispatch({ type: 'SET_TRAINING_RESUME_CONFIG', payload: updates })
-                    }
-                    datasetRefreshKey={datasetRefreshKey}
-                />
             </div>
 
             <TrainingDashboard isActive={isTraining} onTrainingEnd={() => setIsTraining(false)} />

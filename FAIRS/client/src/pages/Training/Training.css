@@ -287,258 +287,6 @@
   margin-left: 1rem;
 }
 
-/* Training Controls Section */
-.controls-section {
-  width: 100%;
-  padding: 0;
-  background: transparent;
-  box-shadow: none;
-  border: none;
-}
-
-.training-accordions {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  height: 100%;
-  /* Ensure container takes full height */
-}
-
-.training-accordion {
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 12px;
-  overflow: hidden;
-  background: var(--card-bg);
-  transition: flex-grow 0.3s ease;
-  display: flex;
-  flex-direction: column;
-}
-
-.training-accordion.expanded {
-  flex: 1;
-}
-
-.training-accordion-summary {
-  list-style: none;
-  cursor: pointer;
-  user-select: none;
-  padding: 0.9rem 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-weight: 700;
-  color: var(--roulette-black);
-  background: #fafafa;
-}
-
-.training-accordion-summary::-webkit-details-marker {
-  display: none;
-}
-
-.training-accordion-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.training-accordion-content {
-  padding: 1rem;
-  border-top: 2px solid var(--bg-light);
-  overflow-y: auto;
-  flex: 1;
-  /* max-height removed to allow flex-grow */
-}
-
-/* Professional Form Styles */
-.form-group {
-  margin-bottom: 0;
-  /* Spacing handled by grid gap */
-  display: flex;
-  flex-direction: column;
-}
-
-.form-label {
-  display: block;
-  font-size: 0.75rem;
-  font-weight: 600;
-  margin-bottom: 0.25rem;
-  color: #64748b;
-  /* Slate-500 */
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
-}
-
-.form-select,
-.form-input {
-  width: 100%;
-  padding: 0.35rem 0.5rem;
-  border: 1px solid #e2e8f0;
-  /* Slate-200 */
-  border-radius: 6px;
-  font-size: 0.85rem;
-  line-height: 1.1rem;
-  color: #0f172a;
-  /* Slate-900 */
-  background-color: #f8fafc;
-  /* Slate-50 */
-  transition: all 0.2s ease-in-out;
-}
-
-.form-select:hover,
-.form-input:hover {
-  border-color: #cbd5e1;
-  /* Slate-300 */
-  background-color: #fff;
-}
-
-.form-select:focus,
-.form-input:focus {
-  outline: none;
-  border-color: #3b82f6;
-  /* Blue-500 */
-  background-color: #fff;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.form-input:disabled {
-  background-color: #f1f5f9;
-  color: #94a3b8;
-  cursor: not-allowed;
-}
-
-/* Dense Grid System */
-.training-pro-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 0.75rem 1rem;
-  align-items: start;
-}
-
-/* Checkbox & Toggle Styles */
-.options-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.5rem;
-  padding-top: 1rem;
-  margin-top: 0.5rem;
-  border-top: 1px dashed #e2e8f0;
-}
-
-.checkbox-visual {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  cursor: pointer;
-  user-select: none;
-  font-size: 0.9rem;
-  color: #334155;
-  /* Slate-700 */
-  font-weight: 500;
-}
-
-.checkbox-visual input[type="checkbox"] {
-  appearance: none;
-  width: 1.15em;
-  height: 1.15em;
-  border: 1.5px solid #cbd5e1;
-  border-radius: 4px;
-  background-color: #fff;
-  cursor: pointer;
-  position: relative;
-  transition: all 0.15s ease;
-}
-
-.checkbox-visual input[type="checkbox"]:checked {
-  background-color: #3b82f6;
-  border-color: #3b82f6;
-  background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2.5-2.5a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e");
-}
-
-/* Inline Inputs (e.g., Save every N episodes) */
-.inline-input-group {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.inline-input-sm {
-  width: 80px !important;
-  padding: 0.3rem 0.5rem !important;
-  font-size: 0.85rem !important;
-  height: 32px;
-}
-
-/* Primary Button Update */
-.btn-primary {
-  width: 100%;
-  padding: 0.75rem 1.5rem;
-  background-color: #3b82f6;
-  /* Blue-500 */
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-}
-
-.btn-primary:hover {
-  background-color: #2563eb;
-  /* Blue-600 */
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-}
-
-.btn-primary:active {
-  transform: translateY(0);
-}
-
-/* Fieldset styling */
-.control-fieldset {
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 1rem;
-  margin-bottom: 1.25rem;
-  background-color: #fff;
-  position: relative;
-}
-
-.control-legend {
-  font-size: 0.95rem;
-  font-weight: 600;
-  padding: 0 0.5rem;
-  color: #475569;
-  /* Slate-600 */
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: var(--card-bg);
-}
-
-.form-actions {
-  margin-top: 2rem;
-  display: flex;
-  justify-content: flex-end;
-  /* Align right */
-  width: 100%;
-  border-top: 1px solid #f1f5f9;
-  padding-top: 1.5rem;
-}
-
-.btn-primary.btn-narrow {
-  width: auto;
-  min-width: 200px;
-  padding: 0.8rem 2rem;
-}
-
-/* Clean up old classes if necessary, or just override above */
-
-
 /* Training Dashboard */
 .training-dashboard {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
@@ -1523,6 +1271,7 @@
 }
 
 @media (max-width: 720px) {
+
   .wizard-grid-2x4,
   .wizard-grid-2x2,
   .wizard-grid-3x2 {
@@ -1532,4 +1281,45 @@
   .wizard-modal {
     padding: 1rem;
   }
+}
+
+.preview-header-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.use-generator-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.8rem;
+  background-color: var(--roulette-green);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.use-generator-btn:hover {
+  background-color: #007a32;
+  transform: translateY(-1px);
+}
+
+.use-generator-btn:active {
+  transform: translateY(0);
+}
+
+.use-generator-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.preview-header {
+  gap: 0.75rem !important;
 }
