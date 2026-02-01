@@ -1292,3 +1292,244 @@
   text-overflow: ellipsis;
   max-width: 60%;
 }
+
+/* ========================================
+   TRAINING WIZARD MODALS
+   ======================================== */
+
+.wizard-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 60;
+}
+
+.wizard-modal {
+  background: #fff;
+  border-radius: 14px;
+  padding: 1.25rem 1.5rem;
+  width: min(760px, 100%);
+  max-height: 92vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.wizard-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.wizard-modal-title {
+  font-weight: 600;
+  color: var(--roulette-black);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.wizard-modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #64748b;
+  padding: 0.25rem;
+  border-radius: 4px;
+}
+
+.wizard-modal-close:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.wizard-modal-subtitle {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: #64748b;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 0.5rem;
+}
+
+.wizard-step-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.wizard-step-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.wizard-grid {
+  display: grid;
+  gap: 0.75rem 1rem;
+}
+
+.wizard-grid-2x4 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.wizard-grid-2x2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.wizard-grid-3x2 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.wizard-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.wizard-slider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.wizard-slider input[type="range"] {
+  flex: 1;
+}
+
+.wizard-slider span {
+  min-width: 48px;
+  text-align: right;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.wizard-session-compute {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.wizard-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+}
+
+.wizard-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px dashed #e2e8f0;
+  background: #f8fafc;
+}
+
+.wizard-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.wizard-summary-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.6rem;
+  background: #f8fafc;
+  border-radius: 6px;
+}
+
+.wizard-summary-label {
+  font-weight: 600;
+  color: #475569;
+}
+
+.wizard-summary-value {
+  color: #0f172a;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60%;
+}
+
+.wizard-error {
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.wizard-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.wizard-actions-right {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.wizard-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: background 0.2s, color 0.2s, transform 0.1s;
+}
+
+.wizard-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.wizard-btn-primary {
+  background: #2563eb;
+  color: #fff;
+}
+
+.wizard-btn-primary:hover {
+  background: #1d4ed8;
+}
+
+.wizard-btn-secondary {
+  background: #e2e8f0;
+  color: #1f2937;
+}
+
+.wizard-btn-secondary:hover {
+  background: #cbd5e1;
+}
+
+@media (max-width: 720px) {
+  .wizard-grid-2x4,
+  .wizard-grid-2x2,
+  .wizard-grid-3x2 {
+    grid-template-columns: 1fr;
+  }
+
+  .wizard-modal {
+    padding: 1rem;
+  }
+}
