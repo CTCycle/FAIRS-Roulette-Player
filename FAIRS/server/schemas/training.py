@@ -29,8 +29,6 @@ class TrainingConfig(BaseModel):
     sample_size: float = Field(1.0, gt=0.0, le=1.0)
     validation_size: float = Field(0.2, ge=0.0, lt=1.0)
     seed: int = 42
-    shuffle_dataset: bool = True
-    shuffle_size: int = Field(256, ge=1)
     
     # Session parameters
     episodes: int = Field(10, ge=1)
@@ -47,11 +45,6 @@ class TrainingConfig(BaseModel):
     use_mixed_precision: bool = False
     jit_compile: bool = False
     jit_backend: str = Field("inductor", min_length=1)
-    
-    # Checkpointing
-    save_checkpoints: bool = False
-    checkpoints_frequency: int = Field(1, ge=1)
-    use_tensorboard: bool = False
 
 
 ###############################################################################

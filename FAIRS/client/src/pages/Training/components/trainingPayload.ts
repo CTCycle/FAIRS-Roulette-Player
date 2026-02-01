@@ -23,23 +23,16 @@ export const buildTrainingPayload = (
     sample_size: Number(config.trainSampleSize),
     validation_size: Number(config.validationSize),
     seed: Number(config.splitSeed),
-    shuffle_dataset: config.setShuffle,
-    shuffle_size: Number(config.shuffleSize),
     // Session
     episodes: Number(config.episodes),
     max_steps_episode: Number(config.maxStepsEpisode),
     batch_size: Number(config.batchSize),
     learning_rate: Number(config.learningRate),
     training_seed: Number(config.trainingSeed),
-    use_device_GPU: config.deviceGPU,
-    device_ID: Number(config.deviceID),
+    use_device_gpu: config.deviceGPU,
+    device_id: Number(config.deviceID),
     use_mixed_precision: config.useMixedPrecision,
-    num_workers: Number(config.numWorkers),
     // Memory
     max_memory_size: Number(config.maxMemorySize),
     replay_buffer_size: Number(config.replayBufferSize),
-    // Checkpointing
-    save_checkpoints: config.saveCheckpoints,
-    checkpoints_frequency: Number(config.checkpointsFreq),
-    use_tensorboard: config.useTensorboard,
 });

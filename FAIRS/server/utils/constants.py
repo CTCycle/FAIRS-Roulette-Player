@@ -30,7 +30,6 @@ CONSTANT = 1.0
 ROULETTE_SERIES_TABLE = "ROULETTE_SERIES"
 INFERENCE_CONTEXT_TABLE = "INFERENCE_CONTEXT"
 PREDICTED_GAMES_TABLE = "PREDICTED_GAMES"
-CHECKPOINTS_SUMMARY_TABLE = "CHECKPOINTS_SUMMARY"
 
 # [DATABASE COLUMNS]
 ###############################################################################
@@ -51,27 +50,6 @@ PREDICTED_GAMES_COLUMNS = [
     "extraction",
     "predicted_action",
     "timestamp",
-]
-CHECKPOINTS_SUMMARY_COLUMNS = [
-    "checkpoint",
-    "sample_size",
-    "seed",
-    "precision",
-    "episodes",
-    "max_steps_episode",
-    "batch_size",
-    "jit_compile",
-    "has_tensorboard_logs",
-    "learning_rate",
-    "neurons",
-    "embedding_dimensions",
-    "perceptive_field_size",
-    "exploration_rate",
-    "exploration_rate_decay",
-    "discount_rate",
-    "model_update_frequency",
-    "loss",
-    "accuracy",
 ]
 
 # [TRAINING CONSTANTS]

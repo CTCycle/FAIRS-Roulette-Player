@@ -62,7 +62,6 @@ class TrainingSettings:
 class DeviceSettings:
     jit_compile: bool
     jit_backend: str
-    num_workers: int
     use_mixed_precision: bool
 
 # -----------------------------------------------------------------------------
@@ -147,7 +146,6 @@ def build_device_settings(payload: dict[str, Any] | Any) -> DeviceSettings:
     return DeviceSettings(
         jit_compile=coerce_bool(data.get("jit_compile"), False),
         jit_backend=coerce_str(data.get("jit_backend"), "inductor"),
-        num_workers=coerce_int(data.get("num_workers"), 0, minimum=0),
         use_mixed_precision=coerce_bool(data.get("use_mixed_precision"), False),
     )
 

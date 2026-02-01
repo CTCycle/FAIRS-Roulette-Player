@@ -28,7 +28,6 @@
   "device": {
     "jit_compile": false,
     "jit_backend": "inductor",
-    "num_workers": 0,
     "use_mixed_precision": false
   }
 }

@@ -50,8 +50,6 @@ export interface TrainingNewConfig {
     trainSampleSize: number;
     validationSize: number;
     splitSeed: number;
-    setShuffle: boolean;
-    shuffleSize: number;
     episodes: number;
     maxStepsEpisode: number;
     batchSize: number;
@@ -62,10 +60,6 @@ export interface TrainingNewConfig {
     useMixedPrecision: boolean;
     maxMemorySize: number;
     replayBufferSize: number;
-    saveCheckpoints: boolean;
-    checkpointsFreq: number;
-    useTensorboard: boolean;
-    numWorkers: number;
 }
 
 export interface TrainingResumeConfig {
@@ -133,8 +127,6 @@ const initialNewConfig: TrainingNewConfig = {
     trainSampleSize: 1.0,
     validationSize: 0.20,
     splitSeed: 42,
-    setShuffle: true,
-    shuffleSize: 256,
     episodes: 10,
     maxStepsEpisode: 2000,
     batchSize: 32,
@@ -145,10 +137,6 @@ const initialNewConfig: TrainingNewConfig = {
     useMixedPrecision: false,
     maxMemorySize: 10000,
     replayBufferSize: 1000,
-    saveCheckpoints: false,
-    checkpointsFreq: 1,
-    useTensorboard: false,
-    numWorkers: 4,
 };
 
 const initialResumeConfig: TrainingResumeConfig = {
