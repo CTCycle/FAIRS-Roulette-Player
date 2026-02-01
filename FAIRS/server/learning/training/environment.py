@@ -166,13 +166,13 @@ class RouletteWheelRenderer:
     def __init__(self, red_numbers: list[int], black_numbers: list[int]) -> None:
         self.red_numbers = set(red_numbers)
         self.black_numbers = set(black_numbers)
-        self.odd_numbers = {n for n in range(1, NUMBERS) if n % 2 == 1}
-        self.even_numbers = {n for n in range(1, NUMBERS) if n % 2 == 0}
-        self.low_numbers = {n for n in range(1, 19)}
-        self.high_numbers = {n for n in range(19, NUMBERS)}
-        self.first_dozen_numbers = {n for n in range(1, 13)}
-        self.second_dozen_numbers = {n for n in range(13, 25)}
-        self.third_dozen_numbers = {n for n in range(25, NUMBERS)}
+        self.odd_numbers = set(range(1, NUMBERS, 2))
+        self.even_numbers = set(range(2, NUMBERS, 2))
+        self.low_numbers = set(range(1, 19))
+        self.high_numbers = set(range(19, NUMBERS))
+        self.first_dozen_numbers = set(range(1, 13))
+        self.second_dozen_numbers = set(range(13, 25))
+        self.third_dozen_numbers = set(range(25, NUMBERS))
 
         self.size = 720
         self.background_color = (15, 23, 42, 255)

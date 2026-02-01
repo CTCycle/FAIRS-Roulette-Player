@@ -84,6 +84,18 @@ class DatabaseEndpoint:
         return {"datasets": datasets}
 
     # -------------------------------------------------------------------------
+    def list_roulette_datasets_summary(self) -> dict[str, Any]:
+        grouped = database.load_grouped_counts(ROULETTE_SERIES_TABLE, "dataset_name")
+        datasets = []
+        for row in grouped:
+            value = row.get("value")
+            count = row.get("count", 0)
+            if value is None:
+                continue
+            datasets.append({"dataset_name": str(value), "row_count": int(count or 0)})
+        return {"datasets": datasets}
+
+    # -------------------------------------------------------------------------
     def delete_roulette_dataset(self, dataset_name: str) -> dict[str, str]:
         serializer = DataSerializer()
         serializer.delete_roulette_dataset(dataset_name)
@@ -112,6 +124,12 @@ class DatabaseEndpoint:
         self.router.add_api_route(
             "/roulette-series/datasets",
             self.list_roulette_datasets,
+            methods=["GET"],
+            status_code=status.HTTP_200_OK,
+        )
+        self.router.add_api_route(
+            "/roulette-series/datasets/summary",
+            self.list_roulette_datasets_summary,
             methods=["GET"],
             status_code=status.HTTP_200_OK,
         )

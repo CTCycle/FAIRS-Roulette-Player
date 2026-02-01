@@ -52,6 +52,11 @@ class DatabaseBackend(Protocol):
     ) -> pd.DataFrame: ...
 
     # -------------------------------------------------------------------------
+    def load_grouped_counts(
+        self, table_name: str, column_name: str
+    ) -> list[dict[str, Any]]: ...
+
+    # -------------------------------------------------------------------------
     def clear_table(self, table_name: str) -> None: ...
    
 
@@ -135,6 +140,12 @@ class FAIRSDatabase:
         self, table_name: str, conditions: dict[str, Any]
     ) -> pd.DataFrame:
         return self.backend.load_filtered(table_name, conditions)
+
+    # -------------------------------------------------------------------------
+    def load_grouped_counts(
+        self, table_name: str, column_name: str
+    ) -> list[dict[str, Any]]:
+        return self.backend.load_grouped_counts(table_name, column_name)
 
     # -------------------------------------------------------------------------
     def clear_table(self, table_name: str) -> None:
