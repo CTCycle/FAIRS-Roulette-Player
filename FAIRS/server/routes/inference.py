@@ -17,8 +17,8 @@ from FAIRS.server.schemas.inference import (
     PredictionResponse,
 )
 from FAIRS.server.utils.logger import logger
-from FAIRS.server.utils.services.inference.player import RoulettePlayer
-from FAIRS.server.utils.services.training.device import DeviceConfig
+from FAIRS.server.learning.inference.player import RoulettePlayer
+from FAIRS.server.learning.training.device import DeviceConfig
 from FAIRS.server.utils.services.training.serializer import ModelSerializer
 
 

@@ -10,8 +10,8 @@ from keras import Model
 from keras.utils import set_random_seed
 
 from FAIRS.server.utils.constants import PAD_VALUE
-from FAIRS.server.utils.repository.serializer import DataSerializer
-from FAIRS.server.utils.services.training.environment import BetsAndRewards
+from FAIRS.server.repositories.serializer import DataSerializer
+from FAIRS.server.learning.training.environment import BetsAndRewards
 
 
 ###############################################################################
@@ -81,6 +81,7 @@ class RoulettePlayer:
     def predict_next(self) -> dict[str, Any]:
         if self.last_state is None:
             self.initialize_states()
+        assert self.last_state is not None
 
         current_state = self.last_state.reshape(1, self.perceptive_size)
         gain_value = (
@@ -92,7 +93,7 @@ class RoulettePlayer:
 
         action_logits = self.model.predict(
             {"timeseries": current_state, "gain": gain_input},
-            verbose=0,
+            verbose=0,  # type: ignore
         )
         logits = np.asarray(action_logits).reshape(-1)
         if logits.size == 0:
@@ -121,6 +122,7 @@ class RoulettePlayer:
             raise ValueError("Real extraction must be in between 0 and 36")
         if self.last_state is None:
             self.initialize_states()
+        assert self.last_state is not None
 
         self.true_extraction = int(real_number)
         self.last_state = np.append(self.last_state[1:], np.int32(real_number))

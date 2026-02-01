@@ -12,10 +12,10 @@ from keras.models import load_model
 
 from FAIRS.server.utils.constants import CHECKPOINT_PATH
 from FAIRS.server.utils.logger import logger
-from FAIRS.server.database.database import database
+from FAIRS.server.repositories.database import database
 from FAIRS.server.utils.constants import ROULETTE_SERIES_TABLE
-from FAIRS.server.utils.services.process import RouletteSeriesEncoder
-from FAIRS.server.utils.services.training.generator import RouletteSyntheticGenerator
+from FAIRS.server.services.process import RouletteSeriesEncoder
+from FAIRS.server.learning.training.generator import RouletteSyntheticGenerator
 
 
 ###############################################################################

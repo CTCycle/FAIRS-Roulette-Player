@@ -3,7 +3,7 @@ import os
 import shutil
 
 # Configuration
-BASE_URL = "http://localhost:8000/training"
+BASE_URL = "http://localhost:7861/api/training"
 CHECKPOINT_NAME = "TEST_CHECKPOINT_DELETE_ME"
 CHECKPOINT_PATH = f"FAIRS/resources/checkpoints/{CHECKPOINT_NAME}"
 
