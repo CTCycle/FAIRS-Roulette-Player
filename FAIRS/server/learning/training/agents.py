@@ -10,7 +10,7 @@ import numpy as np
 from keras import Model
 
 from FAIRS.server.utils.constants import PAD_VALUE, STATES
-from FAIRS.server.utils.services.training.environment import RouletteEnvironment
+from FAIRS.server.learning.training.environment import RouletteEnvironment
 
 
 ###############################################################################
@@ -18,6 +18,7 @@ class DQNAgent:
     def __init__(
         self, configuration: dict[str, Any], memory: Any | None = None
     ) -> None:
+        self.rng = np.random.default_rng(seed=configuration.get("seed", 42))
         self.action_size = STATES
         self.state_size = configuration.get("perceptive_field_size", 64)
         self.gamma = configuration.get("discount_rate", 0.5)
@@ -42,9 +43,9 @@ class DQNAgent:
 
     # -------------------------------------------------------------------------
     def act(self, model: Model, state: Any, gain: float | Any) -> np.int32:
-        random_threshold = np.random.rand()
+        random_threshold = self.rng.random()
         if np.all(state == PAD_VALUE) or random_threshold <= self.epsilon:
-            random_action = np.int32(random.randrange(self.action_size))
+            random_action = np.int32(self.rng.integers(0, self.action_size))
             return random_action
         q_values = model.predict({"timeseries": state, "gain": gain}, verbose=0)
         best_q = np.int32(np.argmax(q_values))

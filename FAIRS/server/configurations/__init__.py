@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from FAIRS.server.utils.configurations.base import (
+from FAIRS.server.configurations.base import (
     ensure_mapping,
     load_configuration_data,
 )
 
-from FAIRS.server.utils.configurations.server import (
+from FAIRS.server.configurations.server import (
     DatabaseSettings,
     FastAPISettings,
     TrainingSettings,

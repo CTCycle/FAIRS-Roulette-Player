@@ -5,10 +5,10 @@ from typing import Any
 from keras import Model, layers, losses, metrics, optimizers
 from torch import compile as torch_compile
 
-from FAIRS.server.utils.configurations import server_settings
+from FAIRS.server.configurations import server_settings
 from FAIRS.server.utils.constants import NUMBERS, STATES
-from FAIRS.server.utils.services.training.models.embeddings import RouletteEmbedding
-from FAIRS.server.utils.services.training.models.logits import AddNorm, BatchNormDense, QScoreNet
+from FAIRS.server.learning.models.embeddings import RouletteEmbedding
+from FAIRS.server.learning.training.models.logits import AddNorm, BatchNormDense, QScoreNet
 
 
 ###############################################################################
@@ -33,7 +33,7 @@ class FAIRSnet:
         self.embedding = RouletteEmbedding(
             self.embedding_dims, self.numbers, mask_padding=True
         )
-        self.QNet = QScoreNet(self.q_neurons, self.action_size, self.seed)
+        self.q_net = QScoreNet(self.q_neurons, self.action_size, self.seed)
 
     # -------------------------------------------------------------------------
     def compile_model(self, model: Model, model_summary: bool = True) -> Model | Any:
@@ -61,7 +61,7 @@ class FAIRSnet:
         ctx = BatchNormDense(self.neurons)(ctx)
 
         merged = self.add_norm([layer, ctx])
-        output = self.QNet(merged)
+        output = self.q_net(merged)
 
         model = Model(inputs=[self.timeseries, self.gain_input], outputs=output)
         model = self.compile_model(model, model_summary=model_summary)

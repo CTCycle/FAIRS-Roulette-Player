@@ -11,7 +11,7 @@ from PIL import Image, ImageDraw, ImageFont
 from gymnasium import spaces
 
 from FAIRS.server.utils.constants import NUMBERS, PAD_VALUE, STATES
-from FAIRS.server.utils.services.process import RouletteSeriesEncoder
+from FAIRS.server.services.process import RouletteSeriesEncoder
 
 
 ###############################################################################

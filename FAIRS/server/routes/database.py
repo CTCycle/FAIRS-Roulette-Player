@@ -5,16 +5,16 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, status
 
-from FAIRS.server.database.database import database
-from FAIRS.server.database.schema import (
+from FAIRS.server.repositories.database import database
+from FAIRS.server.repositories.schema import (
     CheckpointSummary,
     InferenceContext,
     PredictedGames,
     RouletteSeries,
 )
 from FAIRS.server.utils.constants import ROULETTE_SERIES_TABLE
-from FAIRS.server.utils.configurations import server_settings
-from FAIRS.server.utils.repository.serializer import DataSerializer
+from FAIRS.server.configurations import server_settings
+from FAIRS.server.repositories.serializer import DataSerializer
 
 
 router = APIRouter(prefix="/database", tags=["database"])

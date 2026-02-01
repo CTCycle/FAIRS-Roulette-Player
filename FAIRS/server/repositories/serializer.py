@@ -5,7 +5,7 @@ from typing import Any, cast
 
 import pandas as pd
 
-from FAIRS.server.database.database import database
+from FAIRS.server.repositories.database import database
 from FAIRS.server.utils.constants import (
     CHECKPOINTS_SUMMARY_COLUMNS,
     CHECKPOINTS_SUMMARY_TABLE,

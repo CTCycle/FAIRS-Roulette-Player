@@ -7,9 +7,9 @@ from io import BytesIO
 # Add project root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 
-from FAIRS.server.utils.services.loader import TabularFileLoader
-from FAIRS.server.utils.services.importer import DatasetImportService, ROULETTE_SERIES_TABLE
-from FAIRS.server.database.database import database
+from FAIRS.server.services.loader import TabularFileLoader
+from FAIRS.server.services.importer import DatasetImportService, ROULETTE_SERIES_TABLE
+from FAIRS.server.repositories.database import database
 
 def test_migration_flow():
     print(f"Pandas version: {pd.__version__}")

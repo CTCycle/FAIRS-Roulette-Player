@@ -8,12 +8,12 @@ from fastapi import APIRouter, HTTPException, status
 
 from FAIRS.server.schemas.training import ResumeConfig, TrainingConfig
 from FAIRS.server.schemas.jobs import JobCancelResponse, JobStartResponse, JobStatusResponse
-from FAIRS.server.utils.configurations import server_settings
+from FAIRS.server.configurations import server_settings
 from FAIRS.server.utils.constants import CHECKPOINT_PATH
-from FAIRS.server.utils.jobs import JobManager, job_manager
+from FAIRS.server.services.jobs import JobManager, job_manager
 from FAIRS.server.utils.logger import logger
-from FAIRS.server.utils.services.training.serializer import ModelSerializer
-from FAIRS.server.utils.services.training.worker import (
+from FAIRS.server.learning.training.serializer import ModelSerializer
+from FAIRS.server.learning.training.worker import (
     ProcessWorker,
     run_resume_training_process,
     run_training_process,

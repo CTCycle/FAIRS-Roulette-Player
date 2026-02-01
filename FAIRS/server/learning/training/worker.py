@@ -13,10 +13,10 @@ from typing import Any
 from collections.abc import Callable
 
 from FAIRS.server.utils.logger import logger
-from FAIRS.server.utils.services.training.device import DeviceConfig
-from FAIRS.server.utils.services.training.fitting import DQNTraining
-from FAIRS.server.utils.services.training.models.qnet import FAIRSnet
-from FAIRS.server.utils.services.training.serializer import DataSerializerExtension, ModelSerializer
+from FAIRS.server.learning.training.device import DeviceConfig
+from FAIRS.server.learning.training.fitting import DQNTraining
+from FAIRS.server.learning.models.qnet import FAIRSnet
+from FAIRS.server.learning.training.serializer import DataSerializerExtension, ModelSerializer
 
 
 ###############################################################################

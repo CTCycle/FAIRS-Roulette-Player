@@ -12,10 +12,10 @@ import pandas as pd
 from keras import Model
 from keras.utils import set_random_seed
 
-from FAIRS.server.utils.configurations import server_settings
+from FAIRS.server.configurations import server_settings
 from FAIRS.server.utils.logger import logger
-from FAIRS.server.utils.services.training.agents import DQNAgent
-from FAIRS.server.utils.services.training.environment import RouletteEnvironment
+from FAIRS.server.learning.training.agents import DQNAgent
+from FAIRS.server.learning.training.environment import RouletteEnvironment
 
 
 ###############################################################################

@@ -4,7 +4,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from FAIRS.server.utils.configurations.base import (
+from FAIRS.server.configurations.base import (
     ensure_mapping, 
     load_configuration_data    
 )
