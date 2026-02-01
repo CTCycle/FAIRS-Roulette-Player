@@ -18,7 +18,7 @@ type WizardStep = 0 | 1 | 2 | 3 | 4;
 const WIZARD_STEPS = [
     'Agent Configuration',
     'Environment & Memory',
-    'Dataset Configuration',
+    'Dataset Configuration', // This will be dynamic
     'Session & Compute',
     'Summary',
 ] as const;
@@ -119,7 +119,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
         }
     };
 
-    const openWizard = (datasetName: string) => {
+    const openWizard = (datasetName: string, isGenerator = false) => {
         if (isTraining) {
             alert('Training is already in progress.');
             return;
@@ -128,6 +128,11 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
         setWizardStep(0);
         setWizardError(null);
         setWizardOpen(true);
+        if (isGenerator) {
+            updateNewConfig({ useDataGen: true });
+        } else {
+            updateNewConfig({ useDataGen: false });
+        }
     };
 
     const closeWizard = () => {
@@ -225,6 +230,17 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
             <div className="preview-header">
                 <Database size={18} />
                 <span>Available Datasets</span>
+                <div className="preview-header-actions">
+                    <button
+                        className="use-generator-btn"
+                        onClick={() => openWizard('Synthetic Data', true)}
+                        title="Start training with synthetic data generator"
+                        disabled={isTraining}
+                    >
+                        <Play size={16} />
+                        Use generator
+                    </button>
+                </div>
             </div>
             <div className="preview-content">
                 {loading && <div className="preview-loading">Loading...</div>}
@@ -273,10 +289,12 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                             </button>
                         </div>
                         <div className="wizard-modal-subtitle">
-                            <span>Dataset: {wizardDataset}</span>
+                            <span>{newConfig.useDataGen ? 'Mode: Synthetic Generator' : `Dataset: ${wizardDataset}`}</span>
                             <span>{`Step ${wizardStep + 1} of ${WIZARD_STEPS.length}`}</span>
                         </div>
-                        <div className="wizard-step-title">{WIZARD_STEPS[wizardStep]}</div>
+                        <div className="wizard-step-title">
+                            {wizardStep === 2 && newConfig.useDataGen ? 'Generator Parameters' : WIZARD_STEPS[wizardStep]}
+                        </div>
                         <div className="wizard-step-content">
                             {wizardStep === 0 && (
                                 <div className="wizard-grid wizard-grid-2x4">
@@ -338,38 +356,57 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
 
                             {wizardStep === 2 && (
                                 <div className="wizard-stack">
-                                    <div className="form-group">
-                                        <label className="form-label">Sample Size</label>
-                                        <div className="wizard-slider">
+                                    {!newConfig.useDataGen ? (
+                                        <>
+                                            <div className="form-group">
+                                                <label className="form-label">Sample Size</label>
+                                                <div className="wizard-slider">
+                                                    <input
+                                                        type="range"
+                                                        min="0.01"
+                                                        max="1"
+                                                        step="0.01"
+                                                        value={sampleSizeValue}
+                                                        onChange={(event) => handleNumberChange('trainSampleSize', Number(event.target.value))}
+                                                    />
+                                                    <span>{sampleSizeValue.toFixed(2)}</span>
+                                                </div>
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">Validation Split</label>
+                                                <div className="wizard-slider">
+                                                    <input
+                                                        type="range"
+                                                        min="0"
+                                                        max="0.99"
+                                                        step="0.01"
+                                                        value={validationValue}
+                                                        onChange={(event) => handleNumberChange('validationSize', Number(event.target.value))}
+                                                    />
+                                                    <span>{validationValue.toFixed(2)}</span>
+                                                </div>
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">Split Seed</label>
+                                                <input type="number" name="splitSeed" value={newConfig.splitSeed} onChange={handleInputChange} className="form-input" />
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="form-group">
+                                            <label className="form-label">Number of elements to be generated</label>
                                             <input
-                                                type="range"
-                                                min="0.01"
-                                                max="1"
-                                                step="0.01"
-                                                value={sampleSizeValue}
-                                                onChange={(event) => handleNumberChange('trainSampleSize', Number(event.target.value))}
+                                                type="number"
+                                                name="numGeneratedSamples"
+                                                value={newConfig.numGeneratedSamples}
+                                                onChange={handleInputChange}
+                                                className="form-input"
+                                                min="100"
                                             />
-                                            <span>{sampleSizeValue.toFixed(2)}</span>
+                                            <p className="form-hint" style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#64748b' }}>
+                                                The synthetic generator will produce this many roulette extraction samples for training.
+                                            </p>
                                         </div>
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label">Validation Split</label>
-                                        <div className="wizard-slider">
-                                            <input
-                                                type="range"
-                                                min="0"
-                                                max="0.99"
-                                                step="0.01"
-                                                value={validationValue}
-                                                onChange={(event) => handleNumberChange('validationSize', Number(event.target.value))}
-                                            />
-                                            <span>{validationValue.toFixed(2)}</span>
-                                        </div>
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label">Split Seed</label>
-                                        <input type="number" name="splitSeed" value={newConfig.splitSeed} onChange={handleInputChange} className="form-input" />
-                                    </div>
+                                    )}
                                 </div>
                             )}
 
