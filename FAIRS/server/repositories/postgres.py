@@ -214,3 +214,28 @@ class PostgresRepository:
             rows = conn.execute(query).fetchall()
         values = [row[0] for row in rows if row[0] is not None]
         return [str(value) for value in values]
+
+    # -------------------------------------------------------------------------
+    def load_grouped_counts(
+        self, table_name: str, column_name: str
+    ) -> list[dict[str, Any]]:
+        with self.engine.connect() as conn:
+            inspector = inspect(conn)
+            if not inspector.has_table(table_name):
+                return []
+            columns = {column["name"] for column in inspector.get_columns(table_name)}
+            if column_name not in columns:
+                return []
+            query = sqlalchemy.text(
+                f'SELECT "{column_name}" as value, COUNT(*) as row_count '
+                f'FROM "{table_name}" '
+                f'WHERE "{column_name}" IS NOT NULL '
+                f'GROUP BY "{column_name}" '
+                f'ORDER BY "{column_name}"'
+            )
+            rows = conn.execute(query).fetchall()
+        return [
+            {"value": row[0], "count": int(row[1] or 0)}
+            for row in rows
+            if row[0] is not None
+        ]

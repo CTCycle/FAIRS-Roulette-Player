@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Settings, Play, RefreshCw, Cpu, Layers, Activity, Database, ChevronsDown, ChevronsRight } from 'lucide-react';
 import type { TrainingNewConfig, TrainingResumeConfig } from '../../../context/AppStateContext';
+import { buildTrainingPayload } from './trainingPayload';
 
 interface TrainingControlsProps {
     newConfig: TrainingNewConfig;
@@ -110,46 +111,7 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
     const handleNewSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        const config = {
-            // Agent
-            perceptive_field_size: Number(newConfig.perceptiveField),
-            QNet_neurons: Number(newConfig.numNeurons),
-            embedding_dimensions: Number(newConfig.embeddingDims),
-            exploration_rate: Number(newConfig.explorationRate),
-            exploration_rate_decay: Number(newConfig.explorationRateDecay),
-            minimum_exploration_rate: Number(newConfig.minExplorationRate),
-            discount_rate: Number(newConfig.discountRate),
-            model_update_frequency: Number(newConfig.modelUpdateFreq),
-            // Environment
-            bet_amount: Number(newConfig.betAmount),
-            initial_capital: Number(newConfig.initialCapital),
-            // Dataset
-            dataset_name: newConfig.datasetName,
-            use_data_generator: newConfig.useDataGen,
-            num_generated_samples: Number(newConfig.numGeneratedSamples),
-            sample_size: Number(newConfig.trainSampleSize),
-            validation_size: Number(newConfig.validationSize),
-            seed: Number(newConfig.splitSeed),
-            shuffle_dataset: newConfig.setShuffle,
-            shuffle_size: Number(newConfig.shuffleSize),
-            // Session
-            episodes: Number(newConfig.episodes),
-            max_steps_episode: Number(newConfig.maxStepsEpisode),
-            batch_size: Number(newConfig.batchSize),
-            learning_rate: Number(newConfig.learningRate),
-            training_seed: Number(newConfig.trainingSeed),
-            use_device_GPU: newConfig.deviceGPU,
-            device_ID: Number(newConfig.deviceID),
-            use_mixed_precision: newConfig.useMixedPrecision,
-            num_workers: Number(newConfig.numWorkers),
-            // Memory
-            max_memory_size: Number(newConfig.maxMemorySize),
-            replay_buffer_size: Number(newConfig.replayBufferSize),
-            // Checkpointing
-            save_checkpoints: newConfig.saveCheckpoints,
-            checkpoints_frequency: Number(newConfig.checkpointsFreq),
-            use_tensorboard: newConfig.useTensorboard,
-        };
+        const config = buildTrainingPayload(newConfig);
 
         try {
             const response = await fetch('/api/training/start', {

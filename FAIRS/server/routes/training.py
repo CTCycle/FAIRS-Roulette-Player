@@ -459,6 +459,64 @@ class TrainingEndpoint:
         return self.model_serializer.scan_checkpoints_folder()
 
     # -------------------------------------------------------------------------
+    def get_checkpoint_metadata(self, checkpoint: str) -> dict[str, Any]:
+        if not checkpoint:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=self.CHECKPOINT_EMPTY_MESSAGE,
+            )
+
+        checkpoint_path = os.path.join(CHECKPOINT_PATH, checkpoint)
+        if not os.path.isdir(checkpoint_path):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Checkpoint not found: {checkpoint}",
+            )
+
+        try:
+            configuration, session = self.model_serializer.load_training_configuration(
+                checkpoint_path
+            )
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to load checkpoint metadata: {exc}",
+            ) from exc
+
+        history = session.get("history", {}) if isinstance(session, dict) else {}
+
+        def get_last_value(values: Any) -> float | None:
+            if isinstance(values, list) and values:
+                last_value = values[-1]
+                if isinstance(last_value, (int, float)):
+                    return float(last_value)
+            return None
+
+        summary = {
+            "dataset_name": configuration.get("dataset_name") or "",
+            "sample_size": configuration.get("sample_size"),
+            "seed": configuration.get("seed"),
+            "episodes": configuration.get("episodes") or session.get("total_episodes"),
+            "batch_size": configuration.get("batch_size"),
+            "learning_rate": configuration.get("learning_rate"),
+            "perceptive_field_size": configuration.get("perceptive_field_size"),
+            "neurons": configuration.get("QNet_neurons"),
+            "embedding_dimensions": configuration.get("embedding_dimensions"),
+            "exploration_rate": configuration.get("exploration_rate"),
+            "exploration_rate_decay": configuration.get("exploration_rate_decay"),
+            "discount_rate": configuration.get("discount_rate"),
+            "model_update_frequency": configuration.get("model_update_frequency"),
+            "bet_amount": configuration.get("bet_amount"),
+            "initial_capital": configuration.get("initial_capital"),
+            "final_loss": get_last_value(history.get("loss")),
+            "final_rmse": get_last_value(history.get("metrics")),
+            "final_val_loss": get_last_value(history.get("val_loss")),
+            "final_val_rmse": get_last_value(history.get("val_rmse")),
+        }
+
+        return {"checkpoint": checkpoint, "summary": summary}
+
+    # -------------------------------------------------------------------------
     def delete_checkpoint(self, checkpoint: str) -> dict[str, Any]:
         if not checkpoint:
             raise HTTPException(
@@ -547,6 +605,12 @@ class TrainingEndpoint:
         self.router.add_api_route(
             "/checkpoints",
             self.get_checkpoints,
+            methods=["GET"],
+            status_code=status.HTTP_200_OK,
+        )
+        self.router.add_api_route(
+            "/checkpoints/{checkpoint}/metadata",
+            self.get_checkpoint_metadata,
             methods=["GET"],
             status_code=status.HTTP_200_OK,
         )

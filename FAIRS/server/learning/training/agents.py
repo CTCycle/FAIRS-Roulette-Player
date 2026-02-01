@@ -47,7 +47,7 @@ class DQNAgent:
         if np.all(state == PAD_VALUE) or random_threshold <= self.epsilon:
             random_action = np.int32(self.rng.integers(0, self.action_size))
             return random_action
-        q_values = model.predict({"timeseries": state, "gain": gain}, verbose=0)
+        q_values = model.predict({"timeseries": state, "gain": gain}, verbose=0)  # type: ignore
         best_q = np.int32(np.argmax(q_values))
         return best_q
 
@@ -91,20 +91,20 @@ class DQNAgent:
         )
         dones = np.array([d for s, a, r, c, nc, ns, d in minibatch], dtype=np.int32)
 
-        targets = model.predict({"timeseries": states, "gain": gains}, verbose=0)
+        targets = model.predict({"timeseries": states, "gain": gains}, verbose=0)  # type: ignore
 
         next_action_selection = model.predict(
-            {"timeseries": next_states, "gain": next_gains}, verbose=0
+            {"timeseries": next_states, "gain": next_gains}, verbose=0  # type: ignore
         )
         best_next_actions = np.argmax(next_action_selection, axis=1)
 
-        Q_futures_target = target_model.predict(
-            {"timeseries": next_states, "gain": next_gains}, verbose=0
+        q_futures_target = target_model.predict(
+            {"timeseries": next_states, "gain": next_gains}, verbose=0  # type: ignore
         )
-        Q_future_selected = Q_futures_target[np.arange(batch_size), best_next_actions]
+        q_future_selected = q_futures_target[np.arange(batch_size), best_next_actions]
 
         scaled_rewards = environment.scale_rewards(rewards)
-        updated_targets = scaled_rewards + (1 - dones) * self.gamma * Q_future_selected
+        updated_targets = scaled_rewards + (1 - dones) * self.gamma * q_future_selected
 
         batch_indices = np.arange(batch_size, dtype=np.int32)
         targets[batch_indices, actions] = updated_targets
@@ -152,20 +152,20 @@ class DQNAgent:
         )
         dones = np.array([d for s, a, r, c, nc, ns, d in minibatch], dtype=np.int32)
 
-        targets = model.predict({"timeseries": states, "gain": gains}, verbose=0)
+        targets = model.predict({"timeseries": states, "gain": gains}, verbose=0)  # type: ignore
 
         next_action_selection = model.predict(
-            {"timeseries": next_states, "gain": next_gains}, verbose=0
+            {"timeseries": next_states, "gain": next_gains}, verbose=0  # type: ignore
         )
         best_next_actions = np.argmax(next_action_selection, axis=1)
 
-        Q_futures_target = target_model.predict(
-            {"timeseries": next_states, "gain": next_gains}, verbose=0
+        q_futures_target = target_model.predict(
+            {"timeseries": next_states, "gain": next_gains}, verbose=0  # type: ignore
         )
-        Q_future_selected = Q_futures_target[np.arange(batch_size), best_next_actions]
+        q_future_selected = q_futures_target[np.arange(batch_size), best_next_actions]
 
         scaled_rewards = environment.scale_rewards(rewards)
-        updated_targets = scaled_rewards + (1 - dones) * self.gamma * Q_future_selected
+        updated_targets = scaled_rewards + (1 - dones) * self.gamma * q_future_selected
 
         batch_indices = np.arange(batch_size, dtype=np.int32)
         targets[batch_indices, actions] = updated_targets
@@ -173,7 +173,7 @@ class DQNAgent:
         # Evaluate manually using model.evaluate or by running a single forward pass and calculating loss
         # Here we use evaluate()
         results = model.evaluate(
-            {"timeseries": states, "gain": gains}, targets, verbose=0, return_dict=True
+            {"timeseries": states, "gain": gains}, targets, verbose=0, return_dict=True  # type: ignore
         )
         
         return results

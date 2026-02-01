@@ -30,5 +30,4 @@ class DeviceConfig:
         else:
             if device_name == "cuda":
                 logger.info("No GPU found. Falling back to CPU.")
-            dev = torch.device("cpu")
             logger.info("CPU is set as the active device.")
