@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Upload, Folder, File as FileIcon, X } from 'lucide-react';
+import { Upload, File as FileIcon, X } from 'lucide-react';
 import type { FileMetadata } from '../../../context/AppStateContext';
 
 interface DatasetUploadProps {
@@ -16,7 +16,7 @@ interface DatasetUploadProps {
 }
 
 export const DatasetUpload: React.FC<DatasetUploadProps> = ({
-    files,
+    files: _files,
     uploadStatus,
     uploadMessage,
     onStateChange,
