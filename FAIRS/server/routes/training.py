@@ -41,6 +41,7 @@ class TrainingState:
             "val_reward": 0.0,
             "total_reward": 0,
             "capital": 0,
+            "capital_gain": 0.0,
             "status": "idle",
         }
         self.history_points: list[dict[str, Any]] = []
@@ -63,6 +64,7 @@ class TrainingState:
             "val_reward": 0.0,
             "total_reward": 0,
             "capital": 0,
+            "capital_gain": 0.0,
             "status": "training",
         }
         self.history_points = []
@@ -87,7 +89,7 @@ class TrainingState:
             return
         if not isinstance(epoch, int):
             return
-        if time_step <= 0:
+        if epoch <= 0:
             return
 
         point = {
@@ -97,8 +99,12 @@ class TrainingState:
             "val_loss": float(stats.get("val_loss", 0.0)),
             "val_rmse": float(stats.get("val_rmse", 0.0)),
             "epoch": epoch,
+            "reward": float(stats.get("reward", 0.0)),
+            "total_reward": float(stats.get("total_reward", 0.0)),
+            "capital": float(stats.get("capital", 0.0)),
+            "capital_gain": float(stats.get("capital_gain", 0.0)),
         }
-        if self.history_points and self.history_points[-1].get("time_step") == time_step:
+        if self.history_points and self.history_points[-1].get("epoch") == epoch:
             self.history_points[-1] = point
         else:
             self.history_points.append(point)
@@ -129,7 +135,10 @@ def calculate_progress(stats: dict[str, Any]) -> float:
 
 
 ###############################################################################
-def build_history_points(session: dict[str, Any]) -> list[dict[str, Any]]:
+def build_history_points(
+    session: dict[str, Any],
+    initial_capital: float | None = None,
+) -> list[dict[str, Any]]:
     history = session.get("history", {}) if isinstance(session, dict) else {}
     episodes = history.get("episode", [])
     time_steps = history.get("time_step", [])
@@ -137,20 +146,37 @@ def build_history_points(session: dict[str, Any]) -> list[dict[str, Any]]:
     metrics = history.get("metrics", [])
     val_losses = history.get("val_loss", [])
     val_rmses = history.get("val_rmse", [])
+    rewards = history.get("reward", [])
+    total_rewards = history.get("total_reward", [])
+    capitals = history.get("capital", [])
 
-    results: list[dict[str, Any]] = []
+    results_map: dict[int, dict[str, Any]] = {}
     for index in range(len(time_steps)):
+        capital_value = (
+            float(capitals[index]) if index < len(capitals) else 0.0
+        )
+        capital_gain = (
+            capital_value - float(initial_capital)
+            if initial_capital is not None
+            else 0.0
+        )
+        epoch = episodes[index] if index < len(episodes) else 0
         point = {
             "time_step": time_steps[index] if index < len(time_steps) else 0,
             "loss": float(losses[index]) if index < len(losses) else 0.0,
             "rmse": float(metrics[index]) if index < len(metrics) else 0.0,
             "val_loss": float(val_losses[index]) if index < len(val_losses) else 0.0,
             "val_rmse": float(val_rmses[index]) if index < len(val_rmses) else 0.0,
-            "epoch": episodes[index] if index < len(episodes) else 0,
+            "epoch": epoch,
+            "reward": float(rewards[index]) if index < len(rewards) else 0.0,
+            "total_reward": float(total_rewards[index]) if index < len(total_rewards) else 0.0,
+            "capital": capital_value,
+            "capital_gain": capital_gain,
         }
-        results.append(point)
+        if isinstance(epoch, int) and epoch > 0:
+            results_map[epoch] = point
 
-    return results
+    return [results_map[key] for key in sorted(results_map)]
 
 
 ###############################################################################
@@ -380,7 +406,7 @@ class TrainingEndpoint:
             )
 
         try:
-            _, session = self.model_serializer.load_training_configuration(checkpoint_path)
+            configuration, session = self.model_serializer.load_training_configuration(checkpoint_path)
         except Exception as exc:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -388,7 +414,11 @@ class TrainingEndpoint:
             ) from exc
 
         from_epoch = int(session.get("total_episodes", 0))
-        restored_points = build_history_points(session)
+        initial_capital = configuration.get("initial_capital")
+        initial_capital_value = (
+            float(initial_capital) if isinstance(initial_capital, (int, float)) else None
+        )
+        restored_points = build_history_points(session, initial_capital_value)
 
         job_id = self.job_manager.start_job(
             job_type=self.JOB_TYPE,

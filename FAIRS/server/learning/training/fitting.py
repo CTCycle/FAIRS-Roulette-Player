@@ -147,6 +147,10 @@ class DQNTraining:
 
     # -------------------------------------------------------------------------
     def get_latest_stats(self, episode: int, total_episodes: int) -> dict[str, Any]:
+        initial_capital = self.configuration.get("initial_capital", 0.0)
+        initial_capital_value = (
+            float(initial_capital) if isinstance(initial_capital, (int, float)) else 0.0
+        )
         if not self.session_stats["loss"]:
             return {
                 "epoch": episode + 1,
@@ -157,8 +161,10 @@ class DQNTraining:
                 "reward": 0,
                 "total_reward": 0,
                 "capital": 0,
+                "capital_gain": 0.0,
                 "status": "training",
             }
+        capital_value = self.session_stats["capital"][-1]
         return {
             "epoch": episode + 1,
             "total_epochs": total_episodes,
@@ -170,7 +176,8 @@ class DQNTraining:
             "reward": self.session_stats["reward"][-1],
             "val_reward": self.session_stats["img_reward"][-1] if self.session_stats["img_reward"] else 0.0,
             "total_reward": self.session_stats["total_reward"][-1],
-            "capital": self.session_stats["capital"][-1],
+            "capital": capital_value,
+            "capital_gain": float(capital_value) - initial_capital_value,
             "status": "training",
         }
 

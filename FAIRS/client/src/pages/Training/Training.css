@@ -102,6 +102,13 @@
   width: 100%;
 }
 
+.training-dashboard-separator {
+  margin-top: 0;
+  height: 3px;
+  background: linear-gradient(90deg, rgba(148, 163, 184, 0.15), rgba(148, 163, 184, 0.7), rgba(148, 163, 184, 0.15));
+  border-radius: 999px;
+}
+
 .checkpoints-row {
   display: flex;
   gap: 2rem;
@@ -289,12 +296,29 @@
 
 /* Training Dashboard */
 .training-dashboard {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  border-radius: 16px;
-  padding: 1.5rem;
-  margin-top: 2rem;
-  color: #fff;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  --chart-bg: #f8fafc;
+  --chart-grid: rgba(148, 163, 184, 0.35);
+  --chart-text: rgba(71, 85, 105, 0.75);
+  --chart-loss: #ef4444;
+  --chart-loss-val: #fca5a5;
+  --chart-rmse: #f59e0b;
+  --chart-rmse-val: #fcd34d;
+  --chart-reward: #16a34a;
+  --chart-capital: #d97706;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  margin-top: 0.5rem;
+  color: var(--text-dark);
+  box-shadow: none;
+}
+
+.training-dashboard-divider {
+  height: 3px;
+  width: 100%;
+  background: linear-gradient(90deg, rgba(148, 163, 184, 0.15), rgba(148, 163, 184, 0.8), rgba(148, 163, 184, 0.15));
+  border-radius: 999px;
+  margin-bottom: 1rem;
 }
 
 .dashboard-header {
@@ -303,7 +327,7 @@
   align-items: center;
   margin-bottom: 1.5rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .dashboard-settings {
@@ -328,7 +352,7 @@
   font-size: 1.25rem;
   font-weight: 600;
   margin: 0;
-  color: #fff;
+  color: var(--roulette-black);
 }
 
 .connection-status {
@@ -338,7 +362,7 @@
   font-size: 0.85rem;
   padding: 0.4rem 0.8rem;
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.1);
+  background: #f1f5f9;
 }
 
 .connection-status.connected {
@@ -374,10 +398,10 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
-  background: rgba(239, 68, 68, 0.2);
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: #fef2f2;
+  border: 1px solid #fecaca;
   border-radius: 8px;
-  color: #fca5a5;
+  color: #b91c1c;
   margin-bottom: 1rem;
   font-size: 0.9rem;
 }
@@ -387,10 +411,11 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
-  background: rgba(255, 255, 255, 0.05);
+  background: #f8fafc;
   border-radius: 8px;
   margin-bottom: 1.5rem;
   font-size: 0.95rem;
+  border: 1px solid #e2e8f0;
 }
 
 .status-icon.training {
@@ -424,17 +449,49 @@
   margin-bottom: 1.5rem;
 }
 
+.progress-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.stop-training-btn {
+  border: 1px solid #fca5a5;
+  background: #fef2f2;
+  color: #b91c1c;
+  border-radius: 8px;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, transform 0.1s;
+  min-width: 72px;
+}
+
+.stop-training-btn:hover {
+  background: #fee2e2;
+  border-color: #f87171;
+}
+
+.stop-training-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+
 .progress-header {
   display: flex;
   justify-content: space-between;
   font-size: 0.9rem;
   margin-bottom: 0.5rem;
-  color: rgba(255, 255, 255, 0.8);
+  color: #475569;
 }
 
 .progress-bar {
+  flex: 1;
   height: 8px;
-  background: rgba(255, 255, 255, 0.1);
+  background: #e2e8f0;
   border-radius: 4px;
   overflow: hidden;
 }
@@ -448,24 +505,27 @@
 
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, 220px);
+  justify-content: center;
   gap: 1rem;
+  width: 100%;
 }
 
 .metric-card {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #fff;
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
   padding: 1rem;
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  transition: transform 0.2s, background 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s;
+  width: 220px;
 }
 
 .metric-card:hover {
   transform: translateY(-2px);
-  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
 }
 
 .metric-icon {
@@ -479,33 +539,38 @@
 }
 
 .metric-card.loss .metric-icon {
-  background: rgba(239, 68, 68, 0.2);
-  color: #f87171;
+  background: #fee2e2;
+  color: #ef4444;
 }
 
 .metric-card.rmse .metric-icon {
-  background: rgba(251, 191, 36, 0.2);
-  color: #fbbf24;
+  background: #fef3c7;
+  color: #f59e0b;
 }
 
 .metric-card.reward .metric-icon {
-  background: rgba(34, 197, 94, 0.2);
-  color: #4ade80;
+  background: #dcfce7;
+  color: #16a34a;
 }
 
 .metric-card.total-reward .metric-icon {
-  background: rgba(96, 165, 250, 0.2);
-  color: #60a5fa;
+  background: #dbeafe;
+  color: #3b82f6;
+}
+
+.metric-card.capital-gain .metric-icon {
+  background: #ffedd5;
+  color: #d97706;
 }
 
 .metric-card.capital .metric-icon {
-  background: rgba(212, 175, 55, 0.2);
-  color: var(--roulette-gold);
+  background: #fef3c7;
+  color: #b45309;
 }
 
 .metric-card.timestep .metric-icon {
-  background: rgba(156, 163, 175, 0.2);
-  color: #9ca3af;
+  background: #e2e8f0;
+  color: #64748b;
 }
 
 .metric-content {
@@ -515,7 +580,7 @@
 
 .metric-label {
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: #64748b;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -523,7 +588,7 @@
 .metric-value {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #fff;
+  color: #0f172a;
 }
 
 .dashboard-visuals {
@@ -536,14 +601,15 @@
 /* Environment rendering CSS removed - feature hidden from UI */
 
 .visual-card {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #fff;
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
   padding: 1rem;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
   min-height: 320px;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
 }
 
 .visual-card-header {
@@ -557,6 +623,7 @@
   font-size: 0.95rem;
   font-weight: 700;
   letter-spacing: 0.2px;
+  color: #0f172a;
 }
 
 /* .visual-card-subtitle removed - environment rendering hidden from UI */
@@ -565,7 +632,7 @@
   display: inline-flex;
   gap: 0.75rem;
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: #64748b;
 }
 
 .legend-item {
@@ -589,6 +656,14 @@
   background: #fbbf24;
 }
 
+.legend-dot.total-reward {
+  background: #22c55e;
+}
+
+.legend-dot.capital {
+  background: #f59e0b;
+}
+
 .training-chart {
   width: 100%;
   height: 100%;
@@ -605,9 +680,9 @@
   text-align: center;
   padding: 1.25rem;
   border-radius: 10px;
-  border: 1px dashed rgba(255, 255, 255, 0.18);
-  color: rgba(255, 255, 255, 0.6);
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed #e2e8f0;
+  color: #94a3b8;
+  background: #f8fafc;
 }
 
 /* .env-frame and .env-image removed - environment rendering hidden from UI */
@@ -748,11 +823,26 @@
 
 @media (max-width: 768px) {
   .metrics-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, 220px);
   }
 
   .dashboard-visuals {
     grid-template-columns: 1fr;
+  }
+
+  .progress-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 520px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .metric-card {
+    width: 100%;
   }
 }
 

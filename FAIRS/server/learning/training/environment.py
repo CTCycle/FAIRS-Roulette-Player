@@ -311,6 +311,7 @@ class RouletteEnvironment(gym.Env):
         self.positions = data["position"].values
         self.colors = data["color_code"].values
         self.checkpoint_path = checkpoint_path
+        self._rng = np.random.default_rng(configuration.get("train_seed", 42))
 
         self.perceptive_size = configuration.get("perceptive_field_size", 64)
         self.initial_capital = configuration.get("initial_capital", 1000)
@@ -348,6 +349,8 @@ class RouletteEnvironment(gym.Env):
 
     # -------------------------------------------------------------------------
     def reset(self, start_over: bool = False, seed: int | None = None) -> np.ndarray:
+        if seed is not None:
+            self._rng = np.random.default_rng(seed)
         self.extraction_index = 0 if start_over else self.select_random_index()
         self.state = np.full(
             shape=self.perceptive_size, fill_value=PAD_VALUE, dtype=np.int32
@@ -369,7 +372,7 @@ class RouletteEnvironment(gym.Env):
     # -------------------------------------------------------------------------
     def select_random_index(self) -> int:
         end_cutoff = len(self.extractions) - self.perceptive_size
-        random_index = np.random.randint(0, end_cutoff)
+        random_index = self._rng.integers(0, end_cutoff)
         return random_index
 
     # -------------------------------------------------------------------------

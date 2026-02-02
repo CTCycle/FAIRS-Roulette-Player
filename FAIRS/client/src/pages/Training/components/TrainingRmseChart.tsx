@@ -102,19 +102,19 @@ export const TrainingRmseChart: React.FC<TrainingRmseChartProps> = ({ points }) 
             role="img"
             aria-label={`Training RMSE chart from step ${xMin} to ${xMax}`}
         >
-            <rect x="0" y="0" width={viewWidth} height={viewHeight} fill="rgba(255, 255, 255, 0.02)" />
+            <rect x="0" y="0" width={viewWidth} height={viewHeight} fill="var(--chart-bg)" />
             {grid.map((line) => (
                 <g key={line.y}>
-                    <line x1={rmsePath ? 50 : 0} y1={line.y} x2={viewWidth} y2={line.y} stroke="rgba(255, 255, 255, 0.08)" strokeWidth="1" />
-                    <text x="0" y={Math.max(12, line.y - 4)} fill="rgba(255, 255, 255, 0.55)" fontSize="10" textAnchor="start">
+                    <line x1={rmsePath ? 50 : 0} y1={line.y} x2={viewWidth} y2={line.y} stroke="var(--chart-grid)" strokeWidth="1" />
+                    <text x="0" y={Math.max(12, line.y - 4)} fill="var(--chart-text)" fontSize="10" textAnchor="start">
                         {line.value.toFixed(3)}
                     </text>
                 </g>
             ))}
             {/* Training RMSE Curve (solid) */}
-            <path d={rmsePath} fill="none" stroke="#fbbf24" strokeWidth="2.2" />
+            <path d={rmsePath} fill="none" stroke="var(--chart-rmse)" strokeWidth="2.2" />
             {/* Validation RMSE Curve (dashed) */}
-            <path d={valRmsePath} fill="none" stroke="#fcd34d" strokeWidth="2" strokeDasharray="4 4" strokeOpacity="0.8" />
+            <path d={valRmsePath} fill="none" stroke="var(--chart-rmse-val)" strokeWidth="2" strokeDasharray="4 4" strokeOpacity="0.8" />
         </svg>
     );
 };

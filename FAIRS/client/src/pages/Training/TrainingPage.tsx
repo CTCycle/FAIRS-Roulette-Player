@@ -72,8 +72,11 @@ const TrainingPage: React.FC = () => {
                 </div>
             </div>
 
+            <div className="section-separator training-dashboard-separator" />
+
             <TrainingDashboard
                 isActive={isTraining}
+                onTrainingStart={() => dispatch({ type: 'SET_TRAINING_IS_TRAINING', payload: true })}
                 onTrainingEnd={() => dispatch({ type: 'SET_TRAINING_IS_TRAINING', payload: false })}
             />
         </div>

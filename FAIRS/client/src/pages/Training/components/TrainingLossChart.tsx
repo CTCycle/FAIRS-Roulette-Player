@@ -7,6 +7,10 @@ export interface TrainingHistoryPoint {
     epoch: number;
     val_loss?: number;
     val_rmse?: number;
+    reward?: number;
+    total_reward?: number;
+    capital?: number;
+    capital_gain?: number;
 }
 
 interface TrainingLossChartProps {
@@ -109,19 +113,19 @@ export const TrainingLossChart: React.FC<TrainingLossChartProps> = ({ points }) 
             role="img"
             aria-label={`Training loss chart from step ${xMin} to ${xMax}`}
         >
-            <rect x="0" y="0" width={viewWidth} height={viewHeight} fill="rgba(255, 255, 255, 0.02)" />
+            <rect x="0" y="0" width={viewWidth} height={viewHeight} fill="var(--chart-bg)" />
             {grid.map((line) => (
                 <g key={line.y}>
-                    <line x1={lossPath ? 50 : 0} y1={line.y} x2={viewWidth} y2={line.y} stroke="rgba(255, 255, 255, 0.08)" strokeWidth="1" />
-                    <text x="0" y={Math.max(12, line.y - 4)} fill="rgba(255, 255, 255, 0.55)" fontSize="10" textAnchor="start">
+                    <line x1={lossPath ? 50 : 0} y1={line.y} x2={viewWidth} y2={line.y} stroke="var(--chart-grid)" strokeWidth="1" />
+                    <text x="0" y={Math.max(12, line.y - 4)} fill="var(--chart-text)" fontSize="10" textAnchor="start">
                         {line.value.toFixed(3)}
                     </text>
                 </g>
             ))}
             {/* Training Loss Curve (solid) */}
-            <path d={lossPath} fill="none" stroke="#f87171" strokeWidth="2.2" />
+            <path d={lossPath} fill="none" stroke="var(--chart-loss)" strokeWidth="2.2" />
             {/* Validation Loss Curve (dashed) */}
-            <path d={valLossPath} fill="none" stroke="#fca5a5" strokeWidth="2" strokeDasharray="4 4" strokeOpacity="0.8" />
+            <path d={valLossPath} fill="none" stroke="var(--chart-loss-val)" strokeWidth="2" strokeDasharray="4 4" strokeOpacity="0.8" />
         </svg>
     );
 };
