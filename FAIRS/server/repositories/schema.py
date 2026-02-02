@@ -41,16 +41,23 @@ class InferenceContext(Base):
 
 
 ###############################################################################
-class PredictedGames(Base):
-    __tablename__ = "PREDICTED_GAMES"
+class GameSessions(Base):
+    __tablename__ = "GAME_SESSIONS"
     id = Column(Integer, primary_key=True, autoincrement=True)
     session_id = Column(String)
+    step_index = Column(Integer)
     dataset_name = Column(String)
     checkpoint = Column(String)
-    extraction = Column(Integer)
-    predicted_action = Column(String)
+    initial_capital = Column(Integer)
+    bet_amount = Column(Integer)
+    predicted_action = Column(Integer)
+    predicted_action_desc = Column(String)
+    predicted_confidence = Column(Float)
+    observed_extraction = Column(Integer)
+    reward = Column(Float)
+    capital_after = Column(Float)
     timestamp = Column(DateTime, default=func.now())
-    __table_args__ = (UniqueConstraint("id"),)
+    __table_args__ = (UniqueConstraint("session_id", "step_index"),)
 
 
 ###############################################################################

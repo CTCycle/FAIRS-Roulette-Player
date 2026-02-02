@@ -78,6 +78,9 @@ export interface InferenceSetupState {
     initialCapital: number;
     betAmount: number;
     checkpoint: string;
+    selectedDataset: string;
+    datasetSource: 'source' | 'uploaded' | null;
+    uploadedDatasetName: string | null;
     datasetFileMetadata: FileMetadata | null;
 }
 
@@ -155,14 +158,16 @@ const initialInferenceSetupState: InferenceSetupState = {
     initialCapital: 100,
     betAmount: 1,
     checkpoint: '',
+    selectedDataset: '',
+    datasetSource: null,
+    uploadedDatasetName: null,
     datasetFileMetadata: null,
 };
 
 const initialSessionState: SessionState = {
     isActive: false,
-    currentCapital: 0,
-    currentBet: 0,
-    history: [],
+    currentCapital: initialInferenceSetupState.initialCapital,
+    currentBet: initialInferenceSetupState.betAmount,
     lastPrediction: null,
     totalSteps: 0,
 };
@@ -200,6 +205,7 @@ type AppAction =
     | { type: 'SET_INFERENCE_SETUP'; payload: Partial<InferenceSetupState> }
     | { type: 'SET_INFERENCE_SESSION_STATE'; payload: Partial<SessionState> }
     | { type: 'ADD_INFERENCE_HISTORY_STEP'; payload: GameStep }
+    | { type: 'SET_INFERENCE_HISTORY'; payload: GameStep[] }
     | { type: 'RESET_INFERENCE_SESSION' };
 
 // ============================================================================
@@ -292,6 +298,14 @@ function appReducer(state: AppState, action: AppAction): AppState {
                 inference: {
                     ...state.inference,
                     history: [...state.inference.history, action.payload],
+                },
+            };
+        case 'SET_INFERENCE_HISTORY':
+            return {
+                ...state,
+                inference: {
+                    ...state.inference,
+                    history: action.payload,
                 },
             };
         case 'RESET_INFERENCE_SESSION':

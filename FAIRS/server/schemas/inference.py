@@ -7,6 +7,8 @@ from pydantic import BaseModel, Field
 class InferenceStartRequest(BaseModel):
     checkpoint: str = Field(..., min_length=1)
     dataset_name: str = Field(..., min_length=1)
+    dataset_source: str | None = None
+    session_id: str | None = None
     game_capital: int = Field(100, ge=1)
     game_bet: int = Field(1, ge=1)
 
@@ -48,7 +50,11 @@ class InferenceStepResponse(BaseModel):
     predicted_action_desc: str
     reward: int
     capital_after: int
-    next_prediction: PredictionResponse
+
+
+###############################################################################
+class InferenceBetUpdateRequest(BaseModel):
+    bet_amount: int = Field(..., ge=1)
 
 
 ###############################################################################
