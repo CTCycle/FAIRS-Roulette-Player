@@ -75,8 +75,6 @@ class DQNTraining:
         self.is_cancelled = False
         self.stop_event = stop_event
 
-
-
     # -------------------------------------------------------------------------
     def maybe_send_environment_update(
         self,
@@ -225,7 +223,7 @@ class DQNTraining:
             action = self.agent.act(model, val_state, gain)
             self.agent.epsilon = old_eps
 
-            next_state, reward, done, extraction = val_env.step(action)
+            next_state, reward, done, _ = val_env.step(action)
             val_total_reward += reward
             next_state = np.reshape(next_state, [1, state_size])
 
@@ -249,6 +247,94 @@ class DQNTraining:
         return val_metrics
 
     # -------------------------------------------------------------------------
+    def _log_training_progress(
+        self, scores: dict, val_scores: dict | None, time_step: int
+    ) -> None:
+        loss_value = float(scores.get("loss", 0.0))
+        rmse_value = float(scores.get("root_mean_squared_error", 0.0))
+
+        val_summary = ""
+        if val_scores:
+            val_loss = float(val_scores.get("loss", 0.0))
+            val_rmse = float(val_scores.get("root_mean_squared_error", 0.0))
+            val_summary = f" | Val Loss: {val_loss:.6f} | Val RMSE: {val_rmse:.6f}"
+
+        logger.info(
+            "Step %s | Loss: %.6f | RMSE: %.6f%s",
+            time_step,
+            loss_value,
+            rmse_value,
+            val_summary,
+        )
+
+    # -------------------------------------------------------------------------
+    def _handle_replay_and_logging(
+        self,
+        model: Model,
+        target_model: Model,
+        environment: RouletteEnvironment,
+        val_environment: RouletteEnvironment | None,
+        episode: int,
+        time_step: int,
+        reward: int | float,
+        total_reward: int | float,
+        state_size: int,
+    ) -> None:
+        if len(self.agent.memory) <= self.replay_size:
+            return
+
+        scores = self.agent.replay(model, target_model, environment, self.batch_size)
+
+        val_scores = None
+        if val_environment and time_step % 100 == 0:
+            val_scores = self._run_validation(
+                model, target_model, val_environment, state_size, steps=50
+            )
+
+        self.update_session_stats(
+            scores, val_scores, episode, time_step, reward, total_reward, environment.capital
+        )
+
+        if time_step % 50 == 0:
+            self._log_training_progress(scores, val_scores, time_step)
+
+    # -------------------------------------------------------------------------
+    def _handle_ws_updates(
+        self,
+        ws_callback: Callable[[dict[str, Any]], Any] | None,
+        ws_env_callback: Callable[[dict[str, Any]], Any] | None,
+        environment: RouletteEnvironment,
+        episode: int,
+        episodes: int,
+        time_step: int,
+        action: int,
+        extraction: int,
+        reward: int | float,
+        total_reward: int | float,
+    ) -> None:
+        if not self.should_send_ws_update():
+            return
+
+        if ws_callback:
+            stats = self.get_latest_stats(episode, episodes)
+            try:
+                ws_callback(stats)
+            except Exception:
+                pass
+
+        self.maybe_send_environment_update(
+            ws_env_callback,
+            environment,
+            episode,
+            time_step,
+            int(action),
+            int(extraction),
+            reward,
+            total_reward,
+            environment.capital,
+        )
+
+    # -------------------------------------------------------------------------
     async def train_with_reinforcement_learning(
         self,
         model: Model,
@@ -261,7 +347,6 @@ class DQNTraining:
         ws_env_callback: Callable[[dict[str, Any]], Any] | None = None,
         val_environment: RouletteEnvironment | None = None,
     ) -> Model:
-        scores = None
         total_steps = 0
 
         for i, episode in enumerate(range(start_episode, episodes)):
@@ -269,8 +354,7 @@ class DQNTraining:
                 logger.info("Training cancelled by user")
                 break
 
-            start_over = True if i == 0 else False
-            state = environment.reset(start_over=start_over)
+            state = environment.reset(start_over=(i == 0))
             state = np.reshape(state, shape=(1, state_size))
             total_reward = 0
 
@@ -278,95 +362,34 @@ class DQNTraining:
                 if self.should_stop():
                     break
 
-                gain = environment.capital / environment.initial_capital
-                gain = np.reshape(gain, shape=(1, 1))
-
+                gain = np.reshape(environment.capital / environment.initial_capital, (1, 1))
                 action = self.agent.act(model, state, gain)
                 next_state, reward, done, extraction = environment.step(action)
+
                 total_reward += reward
                 next_state = np.reshape(next_state, [1, state_size])
+                next_gain = np.reshape(environment.capital / environment.initial_capital, (1, 1))
 
-                next_gain = environment.capital / environment.initial_capital
-                next_gain = np.reshape(next_gain, shape=(1, 1))
-
-                self.agent.remember(
-                    state, action, reward, gain, next_gain, next_state, done
-                )
+                self.agent.remember(state, action, reward, gain, next_gain, next_state, done)
                 state = next_state
 
-                if len(self.agent.memory) > self.replay_size:
-                    scores = self.agent.replay(
-                        model, target_model, environment, self.batch_size
-                    )
-                    
-                    # Run Validation periodically (e.g., every 100 steps)
-                    val_scores = None
-                    if val_environment and time_step % 100 == 0:
-                        val_scores = self._run_validation(
-                            model, target_model, val_environment, state_size, steps=50
-                        )
-
-                    self.update_session_stats(
-                        scores,
-                        val_scores,
-                        episode,
-                        time_step,
-                        reward,
-                        total_reward,
-                        environment.capital,
-                    )
-
-                    if time_step % 50 == 0:
-                        loss_value = float(scores.get("loss", 0.0))
-                        rmse_value = float(scores.get("root_mean_squared_error", 0.0))
-
-                        val_summary = ""
-                        if val_scores:
-                            val_loss = float(val_scores.get("loss", 0.0))
-                            val_rmse = float(val_scores.get("root_mean_squared_error", 0.0))
-                            val_summary = (
-                                f" | Val Loss: {val_loss:.6f} | Val RMSE: {val_rmse:.6f}"
-                            )
-
-                        logger.info(
-                            "Step %s | Loss: %.6f | RMSE: %.6f%s",
-                            time_step,
-                            loss_value,
-                            rmse_value,
-                            val_summary,
-                        )
+                self._handle_replay_and_logging(
+                    model, target_model, environment, val_environment,
+                    episode, time_step, reward, total_reward, state_size
+                )
 
                 if time_step % self.update_frequency == 0:
                     target_model.set_weights(model.get_weights())
 
-                # Send progress updates (stats + environment) based on time interval
-                if self.should_send_ws_update():
-                    # Send stats update
-                    if ws_callback:
-                        stats = self.get_latest_stats(episode, episodes)
-                        try:
-                            ws_callback(stats)
-                        except Exception:
-                            pass
-                    
-                    # Send environment render if enabled
-                    self.maybe_send_environment_update(
-                        ws_env_callback,
-                        environment,
-                        episode,
-                        time_step,
-                        int(action),
-                        int(extraction),
-                        reward,
-                        total_reward,
-                        environment.capital,
-                    )
+                self._handle_ws_updates(
+                    ws_callback, ws_env_callback, environment, episode,
+                    episodes, time_step, action, extraction, reward, total_reward
+                )
 
                 total_steps += 1
                 if done:
                     break
 
-                # Yield control to event loop periodically
                 if total_steps % 100 == 0:
                     await asyncio.sleep(0)
 
