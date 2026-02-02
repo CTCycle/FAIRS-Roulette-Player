@@ -1,5 +1,6 @@
 import sys
 import os
+from collections.abc import Callable
 import pandas as pd
 import numpy as np
 from io import BytesIO
@@ -20,9 +21,11 @@ def test_migration_flow():
     csv_content = b"extraction;dataset_name\n15;test_dataset\n0;\n32;test_dataset"
     loader = TabularFileLoader()
     df = loader.load_bytes(csv_content, "test.csv")
+    df["dataset_name"] = df["dataset_name"].astype("string")
     
     print("Loaded DataFrame dtypes:")
     print(df.dtypes)
+    assert pd.api.types.is_string_dtype(df["dataset_name"].dtype)
     
     # Check if string inference is active (pandas 3.0 default for some read implementations?) 
     # Actually explicit string dtype is opt-in mostly but let's see what happens with default read_csv
@@ -36,6 +39,8 @@ def test_migration_flow():
     print(normalized_df.dtypes)
     print("Normalized DataFrame head:")
     print(normalized_df.head())
+    assert pd.api.types.is_string_dtype(normalized_df["dataset_name"].dtype)
+    assert "color" not in df.columns
     
     # 3. Simulate DB Save (Upsert/Insert)
     # create a row with pd.NA if possible to test the fix
@@ -72,6 +77,7 @@ def test_migration_flow():
         print(loaded)
         val = loaded.iloc[0]["color"]
         print(f"Loaded value for color: {val} (type: {type(val)})")
+        assert val is None or isinstance(val, str)
         
         # Cleanup
         database.delete_from_database(ROULETTE_SERIES_TABLE, {"id": 999999})

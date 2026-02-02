@@ -63,7 +63,7 @@ class RoulettePlayer:
         if extractions.empty:
             raise ValueError("Inference context contains no extractions.")
 
-        perceptive_candidates = extractions.to_numpy(dtype=np.int32, copy=False)
+        perceptive_candidates = extractions.to_numpy(dtype=np.int32)
         state = np.full(
             shape=(self.perceptive_size,),
             fill_value=PAD_VALUE,
