@@ -78,9 +78,15 @@
     border: 1px solid var(--db-border);
     border-radius: 6px;
     background-color: var(--db-surface);
+    color: #fff;
     font-size: 0.9rem;
     cursor: pointer;
     transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.table-selector option {
+    background-color: var(--db-surface);
+    color: #fff;
 }
 
 .table-selector:focus {

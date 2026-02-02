@@ -7,7 +7,7 @@
     --bg-light: var(--bg-primary);
     --card-bg: var(--bg-secondary);
     --text-dark: var(--text-primary);
-    --text-light: var(--text-primary);
+    --text-light: #ffffff;
 }
 
 .data-preparation-page {

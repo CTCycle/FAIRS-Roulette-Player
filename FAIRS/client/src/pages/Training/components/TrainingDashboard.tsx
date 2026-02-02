@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef, useId } from 'react';
 import { Activity, ArrowUpRight, TrendingUp, DollarSign, Target, Clock, AlertCircle } from 'lucide-react';
 
 import { TrainingLossChart, type TrainingHistoryPoint } from './TrainingLossChart';
@@ -152,6 +152,7 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
     const progressRadius = 52;
     const progressCircumference = 2 * Math.PI * progressRadius;
     const progressOffset = progressCircumference * (1 - progress / 100);
+    const progressGradientId = useId();
 
     const statusLabel = (() => {
         if (!isConnected) {
@@ -161,7 +162,13 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
             return 'Error';
         }
         if (stats.status === 'training') {
+            if (stopRequested || isStopping) {
+                return 'Stopping';
+            }
             return 'Training';
+        }
+        if (stats.status === 'completed') {
+            return 'Completed';
         }
         if (stats.status === 'cancelled' || stopRequested) {
             return 'Stopped';
@@ -178,6 +185,9 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
         }
         if (stats.status === 'training') {
             return 'training';
+        }
+        if (stats.status === 'completed') {
+            return 'completed';
         }
         if (stats.status === 'cancelled' || stopRequested) {
             return 'stopped';
@@ -241,9 +251,6 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
             )}
 
             <div className="progress-section">
-                <div className="progress-header">
-                    <span>Episode {stats.epoch} / {stats.total_epochs}</span>
-                </div>
                 <div className="metrics-progress-row">
                     <div className="metrics-grid">
                         <div className="metric-card loss">
@@ -308,6 +315,9 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                     </div>
 
                     <div className="progress-side">
+                        <div className="progress-episode-label">
+                            Episode {stats.epoch} / {stats.total_epochs}
+                        </div>
                         <div
                             className="progress-wheel"
                             role="img"
@@ -315,7 +325,7 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                         >
                             <svg className="progress-wheel-svg" viewBox="0 0 120 120" aria-hidden="true">
                                 <defs>
-                                    <linearGradient id="progressWheelGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <linearGradient id={progressGradientId} x1="0%" y1="0%" x2="100%" y2="100%">
                                         <stop offset="0%" stopColor="var(--roulette-green)" />
                                         <stop offset="100%" stopColor="#4ade80" />
                                     </linearGradient>
@@ -329,6 +339,7 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                                     style={{
                                         strokeDasharray: progressCircumference,
                                         strokeDashoffset: progressOffset,
+                                        stroke: `url(#${progressGradientId})`,
                                     }}
                                 />
                             </svg>
