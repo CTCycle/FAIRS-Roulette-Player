@@ -77,3 +77,16 @@ class TestDatabaseEndpoints:
         data = response.json()
         assert "datasets" in data
         assert isinstance(data["datasets"], list)
+
+    def test_list_roulette_datasets_summary(self, api_context: APIRequestContext):
+        """GET /database/roulette-series/datasets/summary should return dataset stats."""
+        response = api_context.get("/database/roulette-series/datasets/summary")
+        assert response.ok
+
+        data = response.json()
+        assert "datasets" in data
+        assert isinstance(data["datasets"], list)
+        if data["datasets"]:
+            sample = data["datasets"][0]
+            assert "dataset_name" in sample
+            assert "row_count" in sample
