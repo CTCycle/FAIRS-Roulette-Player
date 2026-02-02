@@ -1,19 +1,8 @@
 import React, { useMemo } from 'react';
 
-export interface TrainingHistoryPoint {
-    time_step: number;
-    loss: number;
-    rmse: number;
-    epoch: number;
-    val_loss?: number;
-    val_rmse?: number;
-    reward?: number;
-    total_reward?: number;
-    capital?: number;
-    capital_gain?: number;
-}
+import type { TrainingHistoryPoint } from './TrainingLossChart';
 
-interface TrainingLossChartProps {
+interface TrainingMetricsChartProps {
     points: TrainingHistoryPoint[];
 }
 
@@ -49,39 +38,35 @@ const buildPath = (
     }, '');
 };
 
-/**
- * TrainingLossChart - Displays Loss metrics (training + validation)
- * Shows loss (solid red) and val_loss (dashed red) lines
- */
-export const TrainingLossChart: React.FC<TrainingLossChartProps> = ({ points }) => {
+export const TrainingMetricsChart: React.FC<TrainingMetricsChartProps> = ({ points }) => {
     const viewWidth = 420;
     const viewHeight = 220;
 
-    const { lossPath, valLossPath, yMin, yMax, xMin, xMax } = useMemo(() => {
+    const { rewardPath, capitalGainPath, yMin, yMax, xMin, xMax } = useMemo(() => {
         if (points.length === 0) {
-            return { lossPath: '', valLossPath: '', yMin: 0, yMax: 1, xMin: 0, xMax: 1 };
+            return { rewardPath: '', capitalGainPath: '', yMin: 0, yMax: 1, xMin: 0, xMax: 1 };
         }
 
         const xMinValue = points[0].time_step;
         const xMaxValue = points[points.length - 1].time_step;
-        
-        // Only use loss values for Y-axis scaling
-        const lossValues = points.flatMap((point) => {
-            const vals = [point.loss];
-            if (point.val_loss !== undefined) vals.push(point.val_loss);
+
+        const values = points.flatMap((point) => {
+            const vals: number[] = [];
+            if (typeof point.total_reward === 'number') vals.push(point.total_reward);
+            if (typeof point.capital_gain === 'number') vals.push(point.capital_gain);
             return vals;
         }).filter((value) => Number.isFinite(value));
-        
-        const rawMin = lossValues.length ? Math.min(...lossValues) : 0;
-        const rawMax = lossValues.length ? Math.max(...lossValues) : 1;
+
+        const rawMin = values.length ? Math.min(...values) : 0;
+        const rawMax = values.length ? Math.max(...values) : 1;
         const padding = (rawMax - rawMin) * 0.1 || 1;
         const yMinValue = rawMin - padding;
         const yMaxValue = rawMax + padding;
         const offsetLeft = 50;
 
         return {
-            lossPath: buildPath(points, xMinValue, xMaxValue, yMinValue, yMaxValue, viewWidth - offsetLeft, viewHeight, 'loss', offsetLeft),
-            valLossPath: buildPath(points, xMinValue, xMaxValue, yMinValue, yMaxValue, viewWidth - offsetLeft, viewHeight, 'val_loss', offsetLeft),
+            rewardPath: buildPath(points, xMinValue, xMaxValue, yMinValue, yMaxValue, viewWidth - offsetLeft, viewHeight, 'total_reward', offsetLeft),
+            capitalGainPath: buildPath(points, xMinValue, xMaxValue, yMinValue, yMaxValue, viewWidth - offsetLeft, viewHeight, 'capital_gain', offsetLeft),
             yMin: yMinValue,
             yMax: yMaxValue,
             xMin: xMinValue,
@@ -111,21 +96,19 @@ export const TrainingLossChart: React.FC<TrainingLossChartProps> = ({ points }) 
             viewBox={`0 0 ${viewWidth} ${viewHeight}`}
             preserveAspectRatio="none"
             role="img"
-            aria-label={`Training loss chart from step ${xMin} to ${xMax}`}
+            aria-label={`Training metrics chart from step ${xMin} to ${xMax}`}
         >
             <rect x="0" y="0" width={viewWidth} height={viewHeight} fill="var(--chart-bg)" />
             {grid.map((line) => (
                 <g key={line.y}>
-                    <line x1={lossPath ? 50 : 0} y1={line.y} x2={viewWidth} y2={line.y} stroke="var(--chart-grid)" strokeWidth="1" />
+                    <line x1={rewardPath ? 50 : 0} y1={line.y} x2={viewWidth} y2={line.y} stroke="var(--chart-grid)" strokeWidth="1" />
                     <text x="0" y={Math.max(12, line.y - 4)} fill="var(--chart-text)" fontSize="10" textAnchor="start">
                         {line.value.toFixed(3)}
                     </text>
                 </g>
             ))}
-            {/* Training Loss Curve (solid) */}
-            <path d={lossPath} fill="none" stroke="var(--chart-loss)" strokeWidth="2.2" />
-            {/* Validation Loss Curve (dashed) */}
-            <path d={valLossPath} fill="none" stroke="var(--chart-loss-val)" strokeWidth="2" strokeDasharray="4 4" strokeOpacity="0.8" />
+            <path d={rewardPath} fill="none" stroke="var(--chart-reward)" strokeWidth="2.2" />
+            <path d={capitalGainPath} fill="none" stroke="var(--chart-capital)" strokeWidth="2" strokeDasharray="4 4" strokeOpacity="0.8" />
         </svg>
     );
 };

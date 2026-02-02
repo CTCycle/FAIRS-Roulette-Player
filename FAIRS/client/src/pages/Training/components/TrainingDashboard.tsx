@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Activity, Zap, TrendingUp, DollarSign, Target, Clock, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
+import { Activity, ArrowUpRight, TrendingUp, DollarSign, Target, Clock, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
 
 import { TrainingLossChart, type TrainingHistoryPoint } from './TrainingLossChart';
-import { TrainingRmseChart } from './TrainingRmseChart';
+import { TrainingMetricsChart } from './TrainingMetricsChart';
 
 interface TrainingStats {
     epoch: number;
@@ -16,6 +16,7 @@ interface TrainingStats {
     val_reward?: number;
     total_reward: number;
     capital: number;
+    capital_gain: number;
     status: 'idle' | 'training' | 'completed' | 'error' | 'cancelled';
     message?: string;
 }
@@ -30,10 +31,11 @@ interface TrainingStatusResponse {
 
 interface TrainingDashboardProps {
     isActive: boolean;
+    onTrainingStart?: () => void;
     onTrainingEnd?: () => void;
 }
 
-export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, onTrainingEnd }) => {
+export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, onTrainingStart, onTrainingEnd }) => {
     const [stats, setStats] = useState<TrainingStats>({
         epoch: 0,
         total_epochs: 0,
@@ -43,14 +45,19 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
         reward: 0,
         total_reward: 0,
         capital: 0,
+        capital_gain: 0,
         status: 'idle',
     });
     const [isConnected, setIsConnected] = useState(false);
     const [connectionError, setConnectionError] = useState<string | null>(null);
     const [historyPoints, setHistoryPoints] = useState<TrainingHistoryPoint[]>([]);
+    const [isStopping, setIsStopping] = useState(false);
+    const [stopRequested, setStopRequested] = useState(false);
+    const [stopError, setStopError] = useState<string | null>(null);
     const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const pollIntervalRef = useRef(1000);
     const isActiveRef = useRef(isActive);
+    const backendActiveRef = useRef(false);
 
     const maxHistoryPoints = 2000;
 
@@ -59,16 +66,13 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
     }, [isActive]);
 
     useEffect(() => {
-        if (!isActive) {
-            if (pollTimeoutRef.current) {
-                clearTimeout(pollTimeoutRef.current);
-                pollTimeoutRef.current = null;
-            }
-            setIsConnected(false);
-            setConnectionError(null);
-            return;
+        if (isActive) {
+            setStopRequested(false);
+            setStopError(null);
         }
+    }, [isActive]);
 
+    useEffect(() => {
         setHistoryPoints([]);
         setConnectionError(null);
 
@@ -81,6 +85,15 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                 const payload = (await response.json()) as TrainingStatusResponse;
                 setIsConnected(true);
                 setConnectionError(null);
+
+                const backendActive = Boolean(payload.is_training);
+                if (backendActive && !backendActiveRef.current) {
+                    backendActiveRef.current = true;
+                    onTrainingStart?.();
+                } else if (!backendActive && backendActiveRef.current) {
+                    backendActiveRef.current = false;
+                    onTrainingEnd?.();
+                }
 
                 if (payload.latest_stats) {
                     setStats(payload.latest_stats);
@@ -100,7 +113,7 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                 setIsConnected(false);
                 setConnectionError('Failed to connect to training server');
             } finally {
-                if (isActiveRef.current) {
+                if (isActiveRef.current || backendActiveRef.current) {
                     pollTimeoutRef.current = setTimeout(pollStatus, pollIntervalRef.current);
                 }
             }
@@ -114,7 +127,21 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                 pollTimeoutRef.current = null;
             }
         };
-    }, [isActive, onTrainingEnd]);
+    }, [onTrainingEnd, onTrainingStart]);
+
+    const episodePoints = useMemo(() => {
+        if (historyPoints.length === 0) {
+            return [];
+        }
+        const byEpisode = new Map<number, TrainingHistoryPoint>();
+        historyPoints.forEach((point) => {
+            if (typeof point.epoch !== 'number' || point.epoch <= 0) {
+                return;
+            }
+            byEpisode.set(point.epoch, { ...point, time_step: point.epoch });
+        });
+        return Array.from(byEpisode.values()).sort((a, b) => a.epoch - b.epoch);
+    }, [historyPoints]);
 
     const progress = stats.total_epochs > 0
         ? Math.round((stats.epoch / stats.total_epochs) * 100)
@@ -137,6 +164,9 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
     const getStatusText = () => {
         switch (stats.status) {
             case 'training':
+                if (stopRequested || isStopping) {
+                    return 'Stopping training...';
+                }
                 return 'Training in progress...';
             case 'completed':
                 return 'Training completed';
@@ -149,8 +179,36 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
         }
     };
 
+    const handleStopTraining = async () => {
+        if (isStopping) {
+            return;
+        }
+        setIsStopping(true);
+        setStopError(null);
+        try {
+            const response = await fetch('/api/training/stop', { method: 'POST' });
+            if (!response.ok) {
+                const errorPayload = await response.json();
+                throw new Error(errorPayload.detail || 'Failed to stop training');
+            }
+            setStopRequested(true);
+        } catch (err) {
+            setStopError(err instanceof Error ? err.message : 'Failed to stop training');
+        } finally {
+            setIsStopping(false);
+        }
+    };
+
+    const formatMetric = (value: number) => {
+        if (!Number.isFinite(value)) {
+            return '0';
+        }
+        return value.toLocaleString(undefined, { maximumFractionDigits: 6 });
+    };
+
     return (
         <div className="training-dashboard">
+            <div className="training-dashboard-divider" />
             <div className="dashboard-header">
                 <h3 className="dashboard-title">
                     <Activity size={20} />
@@ -169,25 +227,40 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                 </div>
             )}
 
+            {stopError && (
+                <div className="dashboard-error">
+                    <AlertCircle size={16} />
+                    {stopError}
+                </div>
+            )}
+
             <div className="dashboard-status">
                 {getStatusIcon()}
                 <span>{getStatusText()}</span>
             </div>
 
-            {stats.total_epochs > 0 && (
-                <div className="progress-section">
-                    <div className="progress-header">
-                        <span>Epoch {stats.epoch} / {stats.total_epochs}</span>
-                        <span>{progress}%</span>
-                    </div>
+            <div className="progress-section">
+                <div className="progress-header">
+                    <span>Episode {stats.epoch} / {stats.total_epochs}</span>
+                    <span>{progress}%</span>
+                </div>
+                <div className="progress-row">
                     <div className="progress-bar">
                         <div
                             className="progress-fill"
                             style={{ width: `${progress}%` }}
                         ></div>
                     </div>
+                    <button
+                        type="button"
+                        className="stop-training-btn"
+                        onClick={handleStopTraining}
+                        disabled={isStopping || stats.status !== 'training'}
+                    >
+                        Stop
+                    </button>
                 </div>
-            )}
+            </div>
 
             <div className="metrics-grid">
                 <div className="metric-card loss">
@@ -196,7 +269,7 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                     </div>
                     <div className="metric-content">
                         <span className="metric-label">Loss</span>
-                        <span className="metric-value">{stats.loss.toFixed(6)}</span>
+                        <span className="metric-value">{formatMetric(stats.loss)}</span>
                     </div>
                 </div>
 
@@ -206,17 +279,7 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                     </div>
                     <div className="metric-content">
                         <span className="metric-label">RMSE</span>
-                        <span className="metric-value">{stats.rmse.toFixed(6)}</span>
-                    </div>
-                </div>
-
-                <div className="metric-card reward">
-                    <div className="metric-icon">
-                        <Zap size={20} />
-                    </div>
-                    <div className="metric-content">
-                        <span className="metric-label">Reward</span>
-                        <span className="metric-value">{stats.reward}</span>
+                        <span className="metric-value">{formatMetric(stats.rmse)}</span>
                     </div>
                 </div>
 
@@ -226,7 +289,17 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                     </div>
                     <div className="metric-content">
                         <span className="metric-label">Total Reward</span>
-                        <span className="metric-value">{stats.total_reward}</span>
+                        <span className="metric-value">{formatMetric(stats.total_reward)}</span>
+                    </div>
+                </div>
+
+                <div className="metric-card capital-gain">
+                    <div className="metric-icon">
+                        <ArrowUpRight size={20} />
+                    </div>
+                    <div className="metric-content">
+                        <span className="metric-label">Capital Gain</span>
+                        <span className="metric-value">{formatMetric(stats.capital_gain)}</span>
                     </div>
                 </div>
 
@@ -236,7 +309,7 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                     </div>
                     <div className="metric-content">
                         <span className="metric-label">Capital</span>
-                        <span className="metric-value">{stats.capital}</span>
+                        <span className="metric-value">{formatMetric(stats.capital)}</span>
                     </div>
                 </div>
 
@@ -246,7 +319,7 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                     </div>
                     <div className="metric-content">
                         <span className="metric-label">Time Step</span>
-                        <span className="metric-value">{stats.time_step}</span>
+                        <span className="metric-value">{formatMetric(stats.time_step)}</span>
                     </div>
                 </div>
             </div>
@@ -260,17 +333,17 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                             <span className="legend-item" style={{ opacity: 0.7 }}><span className="legend-dot loss" style={{ opacity: 0.5 }}></span>Validation</span>
                         </div>
                     </div>
-                    <TrainingLossChart points={historyPoints} />
+                    <TrainingLossChart points={episodePoints} />
                 </div>
                 <div className="visual-card">
                     <div className="visual-card-header">
-                        <span className="visual-card-title">RMSE</span>
+                        <span className="visual-card-title">Metrics</span>
                         <div className="visual-card-legend">
-                            <span className="legend-item"><span className="legend-dot rmse"></span>Train</span>
-                            <span className="legend-item" style={{ opacity: 0.7 }}><span className="legend-dot rmse" style={{ opacity: 0.5 }}></span>Validation</span>
+                            <span className="legend-item"><span className="legend-dot total-reward"></span>Total Reward</span>
+                            <span className="legend-item" style={{ opacity: 0.7 }}><span className="legend-dot capital"></span>Capital Gain</span>
                         </div>
                     </div>
-                    <TrainingRmseChart points={historyPoints} />
+                    <TrainingMetricsChart points={episodePoints} />
                 </div>
             </div>
         </div>
