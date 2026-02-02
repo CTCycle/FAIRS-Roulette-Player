@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { Activity, ArrowUpRight, TrendingUp, DollarSign, Target, Clock, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
+import { Activity, ArrowUpRight, TrendingUp, DollarSign, Target, Clock, AlertCircle } from 'lucide-react';
 
 import { TrainingLossChart, type TrainingHistoryPoint } from './TrainingLossChart';
 import { TrainingMetricsChart } from './TrainingMetricsChart';
@@ -143,41 +143,47 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
         return Array.from(byEpisode.values()).sort((a, b) => a.epoch - b.epoch);
     }, [historyPoints]);
 
-    const progress = stats.total_epochs > 0
-        ? Math.round((stats.epoch / stats.total_epochs) * 100)
+    const progressRaw = stats.total_epochs > 0
+        ? (stats.epoch / stats.total_epochs) * 100
         : 0;
+    const progress = Number.isFinite(progressRaw)
+        ? Math.min(100, Math.max(0, Math.round(progressRaw)))
+        : 0;
+    const progressRadius = 52;
+    const progressCircumference = 2 * Math.PI * progressRadius;
+    const progressOffset = progressCircumference * (1 - progress / 100);
 
-    const getStatusIcon = () => {
-        switch (stats.status) {
-            case 'training':
-                return <Activity size={18} className="status-icon training" />;
-            case 'completed':
-                return <CheckCircle2 size={18} className="status-icon completed" />;
-            case 'error':
-            case 'cancelled':
-                return <XCircle size={18} className="status-icon error" />;
-            default:
-                return <Clock size={18} className="status-icon idle" />;
+    const statusLabel = (() => {
+        if (!isConnected) {
+            return 'Disconnected';
         }
-    };
+        if (stats.status === 'error') {
+            return 'Error';
+        }
+        if (stats.status === 'training') {
+            return 'Training';
+        }
+        if (stats.status === 'cancelled' || stopRequested) {
+            return 'Stopped';
+        }
+        return 'Connected';
+    })();
 
-    const getStatusText = () => {
-        switch (stats.status) {
-            case 'training':
-                if (stopRequested || isStopping) {
-                    return 'Stopping training...';
-                }
-                return 'Training in progress...';
-            case 'completed':
-                return 'Training completed';
-            case 'cancelled':
-                return 'Training cancelled';
-            case 'error':
-                return stats.message || 'Training error';
-            default:
-                return 'Waiting to start';
+    const statusClass = (() => {
+        if (!isConnected) {
+            return 'disconnected';
         }
-    };
+        if (stats.status === 'error') {
+            return 'error';
+        }
+        if (stats.status === 'training') {
+            return 'training';
+        }
+        if (stats.status === 'cancelled' || stopRequested) {
+            return 'stopped';
+        }
+        return 'connected';
+    })();
 
     const handleStopTraining = async () => {
         if (isStopping) {
@@ -214,9 +220,9 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                     <Activity size={20} />
                     Training Monitor
                 </h3>
-                <div className={`connection-status ${isConnected ? 'connected' : 'disconnected'}`}>
+                <div className={`connection-status ${statusClass}`}>
                     <span className="connection-dot"></span>
-                    {isConnected ? 'Connected' : 'Disconnected'}
+                    {statusLabel}
                 </div>
             </div>
 
@@ -234,92 +240,108 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                 </div>
             )}
 
-            <div className="dashboard-status">
-                {getStatusIcon()}
-                <span>{getStatusText()}</span>
-            </div>
-
             <div className="progress-section">
                 <div className="progress-header">
                     <span>Episode {stats.epoch} / {stats.total_epochs}</span>
-                    <span>{progress}%</span>
                 </div>
-                <div className="progress-row">
-                    <div className="progress-bar">
+                <div className="metrics-progress-row">
+                    <div className="metrics-grid">
+                        <div className="metric-card loss">
+                            <div className="metric-icon">
+                                <TrendingUp size={20} />
+                            </div>
+                            <div className="metric-content">
+                                <span className="metric-label">Loss</span>
+                                <span className="metric-value">{formatMetric(stats.loss)}</span>
+                            </div>
+                        </div>
+
+                        <div className="metric-card rmse">
+                            <div className="metric-icon">
+                                <Target size={20} />
+                            </div>
+                            <div className="metric-content">
+                                <span className="metric-label">RMSE</span>
+                                <span className="metric-value">{formatMetric(stats.rmse)}</span>
+                            </div>
+                        </div>
+
+                        <div className="metric-card total-reward">
+                            <div className="metric-icon">
+                                <TrendingUp size={20} />
+                            </div>
+                            <div className="metric-content">
+                                <span className="metric-label">Total Reward</span>
+                                <span className="metric-value">{formatMetric(stats.total_reward)}</span>
+                            </div>
+                        </div>
+
+                        <div className="metric-card capital-gain">
+                            <div className="metric-icon">
+                                <ArrowUpRight size={20} />
+                            </div>
+                            <div className="metric-content">
+                                <span className="metric-label">Capital Gain</span>
+                                <span className="metric-value">{formatMetric(stats.capital_gain)}</span>
+                            </div>
+                        </div>
+
+                        <div className="metric-card capital">
+                            <div className="metric-icon">
+                                <DollarSign size={20} />
+                            </div>
+                            <div className="metric-content">
+                                <span className="metric-label">Capital</span>
+                                <span className="metric-value">{formatMetric(stats.capital)}</span>
+                            </div>
+                        </div>
+
+                        <div className="metric-card timestep">
+                            <div className="metric-icon">
+                                <Clock size={20} />
+                            </div>
+                            <div className="metric-content">
+                                <span className="metric-label">Time Step</span>
+                                <span className="metric-value">{formatMetric(stats.time_step)}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="progress-side">
                         <div
-                            className="progress-fill"
-                            style={{ width: `${progress}%` }}
-                        ></div>
-                    </div>
-                    <button
-                        type="button"
-                        className="stop-training-btn"
-                        onClick={handleStopTraining}
-                        disabled={isStopping || stats.status !== 'training'}
-                    >
-                        Stop
-                    </button>
-                </div>
-            </div>
-
-            <div className="metrics-grid">
-                <div className="metric-card loss">
-                    <div className="metric-icon">
-                        <TrendingUp size={20} />
-                    </div>
-                    <div className="metric-content">
-                        <span className="metric-label">Loss</span>
-                        <span className="metric-value">{formatMetric(stats.loss)}</span>
-                    </div>
-                </div>
-
-                <div className="metric-card rmse">
-                    <div className="metric-icon">
-                        <Target size={20} />
-                    </div>
-                    <div className="metric-content">
-                        <span className="metric-label">RMSE</span>
-                        <span className="metric-value">{formatMetric(stats.rmse)}</span>
-                    </div>
-                </div>
-
-                <div className="metric-card total-reward">
-                    <div className="metric-icon">
-                        <TrendingUp size={20} />
-                    </div>
-                    <div className="metric-content">
-                        <span className="metric-label">Total Reward</span>
-                        <span className="metric-value">{formatMetric(stats.total_reward)}</span>
-                    </div>
-                </div>
-
-                <div className="metric-card capital-gain">
-                    <div className="metric-icon">
-                        <ArrowUpRight size={20} />
-                    </div>
-                    <div className="metric-content">
-                        <span className="metric-label">Capital Gain</span>
-                        <span className="metric-value">{formatMetric(stats.capital_gain)}</span>
-                    </div>
-                </div>
-
-                <div className="metric-card capital">
-                    <div className="metric-icon">
-                        <DollarSign size={20} />
-                    </div>
-                    <div className="metric-content">
-                        <span className="metric-label">Capital</span>
-                        <span className="metric-value">{formatMetric(stats.capital)}</span>
-                    </div>
-                </div>
-
-                <div className="metric-card timestep">
-                    <div className="metric-icon">
-                        <Clock size={20} />
-                    </div>
-                    <div className="metric-content">
-                        <span className="metric-label">Time Step</span>
-                        <span className="metric-value">{formatMetric(stats.time_step)}</span>
+                            className="progress-wheel"
+                            role="img"
+                            aria-label={`Training progress: ${progress}%`}
+                        >
+                            <svg className="progress-wheel-svg" viewBox="0 0 120 120" aria-hidden="true">
+                                <defs>
+                                    <linearGradient id="progressWheelGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stopColor="var(--roulette-green)" />
+                                        <stop offset="100%" stopColor="#4ade80" />
+                                    </linearGradient>
+                                </defs>
+                                <circle className="progress-wheel-track" cx="60" cy="60" r={progressRadius} />
+                                <circle
+                                    className="progress-wheel-fill"
+                                    cx="60"
+                                    cy="60"
+                                    r={progressRadius}
+                                    style={{
+                                        strokeDasharray: progressCircumference,
+                                        strokeDashoffset: progressOffset,
+                                    }}
+                                />
+                            </svg>
+                            <span className="progress-wheel-text">{progress}%</span>
+                        </div>
+                        <button
+                            type="button"
+                            className="stop-training-btn"
+                            onClick={handleStopTraining}
+                            disabled={isStopping || stats.status !== 'training'}
+                        >
+                            Stop
+                        </button>
                     </div>
                 </div>
             </div>

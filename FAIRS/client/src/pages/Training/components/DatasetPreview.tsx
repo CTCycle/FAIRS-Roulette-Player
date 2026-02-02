@@ -399,7 +399,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                                                 className="form-input"
                                                 min="100"
                                             />
-                                            <p className="form-hint" style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#64748b' }}>
+                                            <p className="form-hint" style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                                                 The synthetic generator will produce this many roulette extraction samples for training.
                                             </p>
                                         </div>
