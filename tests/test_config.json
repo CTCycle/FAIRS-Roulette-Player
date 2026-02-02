@@ -1,0 +1,9 @@
+{
+  "E2E_HEADLESS": "true",
+  "E2E_BROWSER": "chromium",
+  "E2E_SLOWMO": "0",
+  "E2E_PWDEBUG": "0",
+  "E2E_TRAINING_TIMEOUT": "90",
+  "E2E_TRAINING_POLL_INTERVAL": "0.5",
+  "E2E_TRAINING_STATUS_TIMEOUT": "3.0"
+}

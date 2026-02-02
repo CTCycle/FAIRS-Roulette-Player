@@ -21,6 +21,7 @@ set "node_exe=%nodejs_dir%\node.exe"
 set "npm_cmd=%nodejs_dir%\npm.cmd"
 
 set "DOTENV=%settings_dir%\.env"
+set "TEST_CONFIG=%tests_folder%test_config.json"
 set "FRONTEND_DIR=%project_folder%client"
 set "FRONTEND_DIST=%FRONTEND_DIR%\dist"
 set "UVICORN_MODULE=FAIRS.server.app:app"
@@ -72,6 +73,15 @@ if exist "%DOTENV%" (
                 set "!k!=!v!"
             )
         )
+    )
+)
+
+REM ============================================================================
+REM == Load test configuration (JSON)
+REM ============================================================================
+if exist "%TEST_CONFIG%" (
+    for /f "usebackq delims=" %%L in (`"%python_exe%" -c "import json,sys; p=r'%TEST_CONFIG%'; data=json.load(open(p, encoding='utf-8')); [print(f'set {k}={v}') for k,v in data.items()]"`) do (
+        %%L
     )
 )
 

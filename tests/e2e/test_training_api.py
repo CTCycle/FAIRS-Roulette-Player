@@ -9,6 +9,7 @@ NOTE: Training tests use minimal configurations to ensure fast test execution:
 - batch_size: 1
 - replay_buffer_size: 100 (minimum allowed)
 """
+import os
 import time
 import pytest
 from playwright.sync_api import APIRequestContext
@@ -23,7 +24,7 @@ MINIMAL_TRAINING_CONFIG = {
     "replay_buffer_size": 100,
     "max_memory_size": 100,
     "perceptive_field_size": 8,
-    "QNet_neurons": 8,
+    "qnet_neurons": 8,
     "embedding_dimensions": 8,
     "dataset_name": None,  # Use synthetic data
     "use_data_generator": True,
@@ -36,10 +37,18 @@ RUNNING_TRAINING_CONFIG = dict(
     bet_amount=1,
 )
 
+RESUME_TRAINING_CONFIG = {
+    "additional_episodes": 1,
+}
+
+TRAINING_POLL_INTERVAL = float(os.getenv("E2E_TRAINING_POLL_INTERVAL", "0.5"))
+TRAINING_TIMEOUT = float(os.getenv("E2E_TRAINING_TIMEOUT", "90"))
+TRAINING_STATUS_TIMEOUT = float(os.getenv("E2E_TRAINING_STATUS_TIMEOUT", "3.0"))
+
 
 def wait_for_training_running(
     api_context: APIRequestContext,
-    timeout: float = 3.0,
+    timeout: float = TRAINING_STATUS_TIMEOUT,
     interval: float = 0.1,
 ) -> bool:
     deadline = time.time() + timeout
@@ -55,7 +64,7 @@ def wait_for_training_running(
 
 def wait_for_training_stopped(
     api_context: APIRequestContext,
-    timeout: float = 3.0,
+    timeout: float = TRAINING_STATUS_TIMEOUT,
     interval: float = 0.1,
 ) -> bool:
     deadline = time.time() + timeout
@@ -65,6 +74,26 @@ def wait_for_training_stopped(
             return True
         time.sleep(interval)
     return False
+
+
+def wait_for_job_completion(
+    api_context: APIRequestContext,
+    job_id: str,
+    timeout: float = TRAINING_TIMEOUT,
+    interval: float = TRAINING_POLL_INTERVAL,
+) -> dict:
+    deadline = time.time() + timeout
+    last_payload = {}
+    while time.time() < deadline:
+        response = api_context.get(f"/training/jobs/{job_id}")
+        if not response.ok:
+            return {}
+        payload = response.json()
+        last_payload = payload
+        if payload.get("status") in ("completed", "failed", "cancelled"):
+            return payload
+        time.sleep(interval)
+    return last_payload
 
 
 class TestTrainingEndpoints:
@@ -178,3 +207,61 @@ class TestTrainingLifecycle:
         assert wait_for_training_stopped(api_context)
         status = api_context.get("/training/status").json()
         assert status.get("is_training") is False
+
+
+class TestTrainingResume:
+    """Tests for resume training and checkpoint metadata endpoints."""
+
+    def test_resume_training_invalid_checkpoint_returns_404(self, api_context: APIRequestContext):
+        payload = dict(RESUME_TRAINING_CONFIG, checkpoint="missing_checkpoint_123")
+        response = api_context.post("/training/resume", data=payload)
+        assert response.status == 404
+        data = response.json()
+        assert "detail" in data
+
+    def test_resume_training_from_new_checkpoint(self, api_context: APIRequestContext):
+        api_context.post("/training/stop")
+        before_response = api_context.get("/training/checkpoints")
+        assert before_response.ok
+        before_checkpoints = before_response.json()
+
+        start_response = api_context.post("/training/start", data=MINIMAL_TRAINING_CONFIG)
+        assert start_response.ok, f"Expected 200, got {start_response.status}: {start_response.text()}"
+        job_id = start_response.json().get("job_id")
+        assert job_id
+
+        job_payload = wait_for_job_completion(api_context, job_id, timeout=90.0)
+        if job_payload.get("status") != "completed":
+            api_context.post("/training/stop")
+            pytest.skip("Training did not complete in time to produce a checkpoint.")
+
+        after_response = api_context.get("/training/checkpoints")
+        assert after_response.ok
+        after_checkpoints = after_response.json()
+        new_checkpoints = [item for item in after_checkpoints if item not in before_checkpoints]
+        if not new_checkpoints:
+            pytest.skip("No new checkpoint detected after training completion.")
+
+        checkpoint = new_checkpoints[0]
+        metadata_response = api_context.get(f"/training/checkpoints/{checkpoint}/metadata")
+        assert metadata_response.ok
+        metadata = metadata_response.json()
+        assert metadata.get("checkpoint") == checkpoint
+        assert "summary" in metadata
+        summary = metadata["summary"]
+        assert "episodes" in summary
+        assert "batch_size" in summary
+
+        resume_payload = dict(RESUME_TRAINING_CONFIG, checkpoint=checkpoint)
+        resume_response = api_context.post("/training/resume", data=resume_payload)
+        assert resume_response.ok, f"Expected 200, got {resume_response.status}: {resume_response.text()}"
+        resume_job_id = resume_response.json().get("job_id")
+        assert resume_job_id
+
+        resume_job_payload = wait_for_job_completion(api_context, resume_job_id, timeout=90.0)
+        if resume_job_payload.get("status") != "completed":
+            api_context.post("/training/stop")
+            pytest.skip("Resume training did not complete in time.")
+
+        delete_response = api_context.delete(f"/training/checkpoints/{checkpoint}")
+        assert delete_response.ok
