@@ -188,7 +188,7 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
                                         <span className="file-size">{formatSize(files[0].size)}</span>
                                     </>
                                 ) : (
-                                    <span style={{ color: '#9CA3AF', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                         <File size={18} /> No dataset selected
                                     </span>
                                 )}
@@ -236,22 +236,22 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
                                         lineHeight: '1.25',
                                         background:
                                             uploadStatus === 'success'
-                                                ? '#ECFDF5'
+                                                ? 'rgba(34, 197, 94, 0.16)'
                                                 : uploadStatus === 'error'
-                                                    ? '#FEF2F2'
-                                                    : '#EFF6FF',
+                                                    ? 'rgba(239, 68, 68, 0.16)'
+                                                    : 'rgba(56, 189, 248, 0.16)',
                                         color:
                                             uploadStatus === 'success'
-                                                ? '#065F46'
+                                                ? '#86efac'
                                                 : uploadStatus === 'error'
-                                                    ? '#991B1B'
-                                                    : '#1E40AF',
+                                                    ? '#fecaca'
+                                                    : '#bae6fd',
                                         border:
                                             uploadStatus === 'success'
-                                                ? '1px solid #A7F3D0'
+                                                ? '1px solid rgba(34, 197, 94, 0.45)'
                                                 : uploadStatus === 'error'
-                                                    ? '1px solid #FECACA'
-                                                    : '1px solid #BFDBFE',
+                                                    ? '1px solid rgba(239, 68, 68, 0.45)'
+                                                    : '1px solid rgba(56, 189, 248, 0.45)',
                                     }}
                                 >
                                     {uploadMessage}

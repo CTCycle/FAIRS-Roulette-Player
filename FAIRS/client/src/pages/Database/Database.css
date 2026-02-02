@@ -1,16 +1,16 @@
 /* Database Browser Page Styles */
 :root {
-    --db-page-bg: #f5f7fb;
-    --db-surface: #ffffff;
-    --db-surface-muted: #f8fafc;
-    --db-table-header: #0f172a;
-    --db-row-even: #ffffff;
-    --db-row-odd: #f8fafc;
-    --db-border: rgba(15, 23, 42, 0.12);
-    --db-text-dark: #0f172a;
-    --db-text-muted: #64748b;
-    --db-accent: #0ea5e9;
-    --db-accent-soft: rgba(14, 165, 233, 0.14);
+    --db-page-bg: var(--bg-primary);
+    --db-surface: var(--bg-secondary);
+    --db-surface-muted: var(--bg-tertiary);
+    --db-table-header: var(--bg-tertiary);
+    --db-row-even: var(--bg-secondary);
+    --db-row-odd: var(--bg-primary);
+    --db-border: var(--border-color);
+    --db-text-dark: var(--text-primary);
+    --db-text-muted: var(--text-secondary);
+    --db-accent: var(--primary-accent);
+    --db-accent-soft: rgba(14, 165, 233, 0.16);
 }
 
 .database-page {
@@ -348,9 +348,9 @@
 }
 
 .db-scroll-error {
-    color: #b91c1c;
-    background: rgba(185, 28, 28, 0.08);
-    border: 1px solid rgba(185, 28, 28, 0.22);
+    color: #fecaca;
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.45);
     padding: 0.4rem 0.6rem;
     border-radius: 8px;
 }

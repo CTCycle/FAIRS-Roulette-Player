@@ -154,7 +154,7 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
                     {selectedFile ? (
                         <>
                             <FileIcon className="upload-icon" style={{ color: 'var(--roulette-green)' }} />
-                            <div className="upload-text" style={{ fontWeight: 600, color: '#333' }}>
+                            <div className="upload-text" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                                 {selectedFile.name}
                             </div>
                             <div className="upload-hint">
@@ -212,22 +212,22 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
                             fontSize: '0.85rem',
                             background:
                                 uploadStatus === 'success'
-                                    ? '#ECFDF5'
+                                    ? 'rgba(34, 197, 94, 0.16)'
                                     : uploadStatus === 'error'
-                                        ? '#FEF2F2'
-                                        : '#EFF6FF',
+                                        ? 'rgba(239, 68, 68, 0.16)'
+                                        : 'rgba(56, 189, 248, 0.16)',
                             color:
                                 uploadStatus === 'success'
-                                    ? '#065F46'
+                                    ? '#86efac'
                                     : uploadStatus === 'error'
-                                        ? '#991B1B'
-                                        : '#1E40AF',
+                                        ? '#fecaca'
+                                        : '#bae6fd',
                             border:
                                 uploadStatus === 'success'
-                                    ? '1px solid #A7F3D0'
+                                    ? '1px solid rgba(34, 197, 94, 0.45)'
                                     : uploadStatus === 'error'
-                                        ? '1px solid #FECACA'
-                                        : '1px solid #BFDBFE',
+                                        ? '1px solid rgba(239, 68, 68, 0.45)'
+                                        : '1px solid rgba(56, 189, 248, 0.45)',
                         }}
                     >
                         {uploadMessage}

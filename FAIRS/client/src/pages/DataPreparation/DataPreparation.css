@@ -1,13 +1,13 @@
 /* Data Preparation Page Styles - Copied and Adapted from Training.css */
 :root {
-    --roulette-red: #E31D2B;
-    --roulette-black: #1A1A1A;
-    --roulette-green: #00933C;
-    --roulette-gold: #D4AF37;
-    --bg-light: #F4F4F9;
-    --card-bg: #FFFFFF;
-    --text-dark: #333333;
-    --text-light: #FFFFFF;
+    --roulette-red: var(--danger);
+    --roulette-black: var(--text-primary);
+    --roulette-green: var(--success);
+    --roulette-gold: var(--warning);
+    --bg-light: var(--bg-primary);
+    --card-bg: var(--bg-secondary);
+    --text-dark: var(--text-primary);
+    --text-light: var(--text-primary);
 }
 
 .data-preparation-page {
@@ -38,7 +38,7 @@
 .page-subtitle {
     margin-top: 0.5rem;
     padding-left: 1.2rem;
-    color: #555;
+    color: var(--text-secondary);
     font-size: 1rem;
 }
 
@@ -57,7 +57,7 @@
     display: flex;
     flex-direction: column;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
-    border: 1px solid rgba(0, 0, 0, 0.03);
+    border: 1px solid var(--border-color);
 }
 
 .card:hover {
@@ -105,13 +105,13 @@
 }
 
 .upload-area {
-    border: 2px dashed #E2E8F0;
+    border: 2px dashed var(--border-color);
     border-radius: 12px;
     padding: 1.5rem 1rem;
     text-align: center;
     cursor: pointer;
     transition: all 0.2s;
-    background-color: #F8FAFC;
+    background-color: var(--bg-primary);
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -121,31 +121,31 @@
 .upload-area:hover,
 .dataset-upload-controls .upload-area.active {
     border-color: var(--roulette-green);
-    background-color: #F0FDF4;
+    background-color: rgba(34, 197, 94, 0.12);
 }
 
 .upload-icon {
     width: 32px;
     height: 32px;
-    color: #9CA3AF;
+    color: var(--text-secondary);
     margin-bottom: 0.5rem;
 }
 
 .upload-text {
     font-size: 0.95rem;
-    color: #6B7280;
+    color: var(--text-secondary);
 }
 
 .upload-hint {
     font-size: 0.875rem;
-    color: #9CA3AF;
+    color: var(--text-secondary);
     margin-top: 0.5rem;
 }
 
 .file-list {
-    background: #fafafa;
+    background: var(--bg-primary);
     border-radius: 8px;
-    border: 1px solid #eee;
+    border: 1px solid var(--border-color);
     flex-grow: 1;
     overflow-y: auto;
     max-height: 200px;
@@ -156,7 +156,7 @@
     display: flex;
     align-items: center;
     padding: 0.75rem;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--border-color);
     font-size: 0.9rem;
 }
 
@@ -179,7 +179,7 @@
 }
 
 .file-size {
-    color: #9CA3AF;
+    color: var(--text-secondary);
     font-size: 0.8rem;
     margin-left: 1rem;
 }
@@ -203,7 +203,7 @@
 }
 
 .btn-primary:hover {
-    background-color: #007A32;
+    background-color: #16a34a;
 }
 
 .btn-primary:active {
@@ -244,13 +244,13 @@ border-radius: 8px;
     flex-shrink: 0;
     gap: 1rem;
     padding-left: 1.5rem;
-    border-left: 1px solid #E5E7EB;
+    border-left: 1px solid var(--border-color);
     /* Subtle vertical separator */
 }
 
 .dataset-instruction-text {
     font-size: 0.9rem;
-    color: #6B7280;
+    color: var(--text-secondary);
     line-height: 1.5;
 }
 
@@ -265,8 +265,8 @@ border-radius: 8px;
     align-items: center;
     justify-content: space-between;
     padding: 0.75rem 1rem;
-    background: #FAFAFA;
-    border: 1px solid #E5E7EB;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
     border-radius: 12px;
 }
 
@@ -279,20 +279,20 @@ border-radius: 8px;
 
 .dataset-v2-clear-btn {
     background: transparent;
-    border: 1px solid #E5E7EB;
+    border: 1px solid var(--border-color);
     padding: 0.5rem 1rem;
     border-radius: 8px;
     cursor: pointer;
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: #6B7280;
+    color: var(--text-secondary);
     font-size: 0.875rem;
     transition: all 0.2s;
 }
 
 .dataset-v2-clear-btn:hover {
-    background: #FEF2F2;
-    border-color: #FECACA;
-    color: #EF4444;
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.45);
+    color: #fecaca;
 }

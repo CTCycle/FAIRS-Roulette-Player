@@ -42,7 +42,6 @@ export const GameSession: React.FC<GameSessionProps> = ({
 }) => {
     const [checkpoints, setCheckpoints] = useState<string[]>([]);
     const [datasets, setDatasets] = useState<string[]>([]);
-    const [datasetFile, setDatasetFile] = useState<File | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [isStarting, setIsStarting] = useState(false);
     const [isStopping, setIsStopping] = useState(false);
@@ -147,7 +146,6 @@ export const GameSession: React.FC<GameSessionProps> = ({
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
             const file = e.target.files[0];
-            setDatasetFile(file);
             onSetupChange({
                 datasetFileMetadata: {
                     name: file.name,
@@ -179,7 +177,6 @@ export const GameSession: React.FC<GameSessionProps> = ({
     };
 
     const handleClearUpload = async () => {
-        setDatasetFile(null);
         onSetupChange({
             datasetSource: 'source',
             uploadedDatasetName: null,
