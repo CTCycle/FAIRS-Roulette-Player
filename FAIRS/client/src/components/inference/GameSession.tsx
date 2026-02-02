@@ -598,6 +598,16 @@ export const GameSession: React.FC<GameSessionProps> = ({
     const canPlay = !sessionActive && !isStarting;
     const canStop = sessionActive && !isStopping;
     const canClear = !sessionActive && history.length > 0;
+    const uniformButtonStyle: React.CSSProperties = {
+        height: 36,
+        minHeight: 36,
+        paddingTop: 0,
+        paddingBottom: 0,
+        lineHeight: '36px',
+        boxSizing: 'border-box',
+        borderWidth: 1,
+        borderStyle: 'solid',
+    };
 
     return (
         <div className={styles.sessionContainer}>
@@ -655,9 +665,10 @@ export const GameSession: React.FC<GameSessionProps> = ({
                         />
                         <button
                             type="button"
-                            className={styles.secondaryButton}
+                            className={`${styles.secondaryButton} ${styles.uploadButton}`}
                             onClick={handleUploadClick}
                             disabled={setupLocked || isUploading}
+                            style={uniformButtonStyle}
                         >
                             {isUploading ? 'Uploading...' : 'Upload'}
                         </button>
@@ -666,6 +677,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
                             className={styles.ghostButton}
                             onClick={handleClearUpload}
                             disabled={setupLocked || setup.datasetSource !== 'uploaded'}
+                            style={uniformButtonStyle}
                         >
                             Clear
                         </button>
@@ -758,6 +770,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
                                 className={styles.primaryButton}
                                 onClick={handlePlay}
                                 disabled={!canPlay || isRecomputing}
+                                style={uniformButtonStyle}
                             >
                                 <Play size={16} /> Play
                             </button>
@@ -766,6 +779,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
                                 className={styles.secondaryButton}
                                 onClick={handleStop}
                                 disabled={!canStop || isRecomputing}
+                                style={uniformButtonStyle}
                             >
                                 <Square size={16} /> Stop
                             </button>
@@ -787,7 +801,6 @@ export const GameSession: React.FC<GameSessionProps> = ({
                             <thead>
                                 <tr>
                                     <th>Step</th>
-                                    <th>Ext</th>
                                     <th>Prediction</th>
                                     <th>Observed</th>
                                     <th>Outcome</th>
@@ -809,9 +822,6 @@ export const GameSession: React.FC<GameSessionProps> = ({
                                     return (
                                         <tr key={`${step.step}-${index}`}>
                                             <td>#{step.step}</td>
-                                            <td style={{ fontWeight: 'bold' }}>
-                                                {step.observed !== null ? step.observed : '--'}
-                                            </td>
                                             <td>{step.predictedActionDesc}</td>
                                             <td>
                                                 <input
@@ -865,7 +875,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
                                 })}
                                 {history.length === 0 && (
                                     <tr>
-                                        <td colSpan={7} className={styles.emptyState}>
+                                        <td colSpan={6} className={styles.emptyState}>
                                             No history yet. Start playing!
                                         </td>
                                     </tr>

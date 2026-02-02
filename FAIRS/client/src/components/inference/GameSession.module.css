@@ -8,10 +8,11 @@
 }
 
 .leftPanel {
-    display: grid;
-    grid-template-rows: auto auto 1fr;
+    display: flex;
+    flex-direction: column;
     gap: var(--spacing-md);
     min-width: 0;
+    height: 100%;
 }
 
 .rightPanel {
@@ -84,7 +85,7 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto auto;
     gap: var(--spacing-sm);
-    align-items: center;
+    align-items: stretch;
 }
 .uploadedFile {
     display: block;
@@ -116,6 +117,7 @@
     gap: var(--spacing-xs);
     border: none;
     cursor: pointer;
+    height: 36px;
 }
 
 .primaryButton:disabled {
@@ -135,6 +137,21 @@
     align-items: center;
     gap: var(--spacing-xs);
     cursor: pointer;
+    height: 36px;
+}
+
+.uploadButton {
+    background-color: var(--text-accent);
+    border-color: transparent;
+    color: #fff;
+}
+
+.uploadButton:hover {
+    background-color: var(--primary-accent);
+}
+
+.uploadButton:disabled {
+    opacity: 0.6;
 }
 
 .secondaryButton:disabled {
@@ -151,6 +168,20 @@
     font-size: 0.85rem;
     border: 1px solid var(--border-color);
     cursor: pointer;
+    height: 36px;
+}
+
+.primaryButton,
+.secondaryButton,
+.ghostButton {
+    height: 36px;
+    padding: 0 var(--spacing-md);
+    line-height: 1;
+    box-sizing: border-box;
+}
+
+.primaryButton {
+    border: 1px solid transparent;
 }
 
 .ghostButton:disabled {
@@ -192,6 +223,7 @@
     justify-content: center;
     gap: var(--spacing-sm);
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    flex: 1;
 }
 
 .predictionTitle {
@@ -246,9 +278,10 @@
 .headerActions {
     display: flex;
     gap: var(--spacing-sm);
-    align-items: center;
+    align-items: stretch;
     flex-wrap: wrap;
 }
+
 
 .historyTable {
     width: 100%;
@@ -328,6 +361,6 @@
     }
 
     .leftPanel {
-        grid-template-rows: auto auto auto;
+        height: auto;
     }
 }
