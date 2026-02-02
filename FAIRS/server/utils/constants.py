@@ -29,7 +29,7 @@ CONSTANT = 1.0
 ###############################################################################
 ROULETTE_SERIES_TABLE = "ROULETTE_SERIES"
 INFERENCE_CONTEXT_TABLE = "INFERENCE_CONTEXT"
-PREDICTED_GAMES_TABLE = "PREDICTED_GAMES"
+GAME_SESSIONS_TABLE = "GAME_SESSIONS"
 
 # [DATABASE COLUMNS]
 ###############################################################################
@@ -42,13 +42,20 @@ ROULETTE_SERIES_COLUMNS = [
     "position",
 ]
 INFERENCE_CONTEXT_COLUMNS = ["id", "dataset_name", "extraction", "uploaded_at"]
-PREDICTED_GAMES_COLUMNS = [
+GAME_SESSIONS_COLUMNS = [
     "id",
     "session_id",
+    "step_index",
     "dataset_name",
     "checkpoint",
-    "extraction",
+    "initial_capital",
+    "bet_amount",
     "predicted_action",
+    "predicted_action_desc",
+    "predicted_confidence",
+    "observed_extraction",
+    "reward",
+    "capital_after",
     "timestamp",
 ]
 

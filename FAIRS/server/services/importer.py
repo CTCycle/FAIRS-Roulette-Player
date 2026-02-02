@@ -7,10 +7,10 @@ from typing import Literal
 import pandas as pd
 
 from FAIRS.server.utils.constants import (
+    GAME_SESSIONS_COLUMNS,
+    GAME_SESSIONS_TABLE,
     INFERENCE_CONTEXT_COLUMNS,
     INFERENCE_CONTEXT_TABLE,
-    PREDICTED_GAMES_COLUMNS,
-    PREDICTED_GAMES_TABLE,
     ROULETTE_SERIES_COLUMNS,
     ROULETTE_SERIES_TABLE,
 )
@@ -20,7 +20,7 @@ from FAIRS.server.services.process import RouletteSeriesEncoder
 DatasetTable = Literal[
     "ROULETTE_SERIES",
     "INFERENCE_CONTEXT",
-    "PREDICTED_GAMES",
+    "GAME_SESSIONS",
 ]
 
 
@@ -72,11 +72,11 @@ class DatasetImportService:
                 normalized["uploaded_at"] = datetime.now()
             return normalized.reindex(columns=INFERENCE_CONTEXT_COLUMNS)
 
-        if table == PREDICTED_GAMES_TABLE:
+        if table == GAME_SESSIONS_TABLE:
             normalized = dataframe.copy()
             if "id" not in normalized.columns:
                 normalized.insert(0, "id", range(1, len(normalized) + 1))
-            return normalized.reindex(columns=PREDICTED_GAMES_COLUMNS)
+            return normalized.reindex(columns=GAME_SESSIONS_COLUMNS)
 
         raise ValueError(f"Unsupported table: {table}")
 
@@ -88,8 +88,8 @@ class DatasetImportService:
         if table == INFERENCE_CONTEXT_TABLE:
             self.serializer.save_inference_context(dataframe)
             return
-        if table == PREDICTED_GAMES_TABLE:
-            self.serializer.save_predicted_games(dataframe)
+        if table == GAME_SESSIONS_TABLE:
+            self.serializer.save_game_sessions(dataframe)
             return
         raise ValueError(f"Unsupported table: {table}")
 

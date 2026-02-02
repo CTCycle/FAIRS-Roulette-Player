@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import datetime
 from typing import Any
 
 import numpy as np
@@ -22,6 +21,7 @@ class RoulettePlayer:
         configuration: dict[str, Any],
         session_id: str,
         dataset_name: str,
+        dataset_source: str | None = None,
     ) -> None:
         set_random_seed(configuration.get("seed", 42))
 
@@ -46,7 +46,14 @@ class RoulettePlayer:
         self.configuration = configuration
 
         self.serializer = DataSerializer()
-        self.context = self.serializer.load_inference_context(dataset_name)
+        if dataset_source == "uploaded":
+            self.context = self.serializer.load_inference_context(dataset_name)
+        elif dataset_source == "source":
+            self.context = self.serializer.load_roulette_dataset(dataset_name)
+        else:
+            self.context = self.serializer.load_inference_context(dataset_name)
+            if self.context.empty:
+                self.context = self.serializer.load_roulette_dataset(dataset_name)
 
     # -----------------------------------------------------------------------------
     def initialize_states(self) -> None:
@@ -62,10 +69,11 @@ class RoulettePlayer:
             fill_value=PAD_VALUE,
             dtype=np.int32,
         )
-        if perceptive_candidates.size >= self.perceptive_size:
-            state = perceptive_candidates[-self.perceptive_size :]
-        else:
-            state[-perceptive_candidates.size :] = perceptive_candidates
+        if perceptive_candidates.size < self.perceptive_size:
+            raise ValueError(
+                "Inference context must contain at least the perceptive field size."
+            )
+        state = perceptive_candidates[-self.perceptive_size :]
         self.last_state = state
 
     # -----------------------------------------------------------------------------
@@ -137,19 +145,10 @@ class RoulettePlayer:
         return int(reward), int(self.current_capital)
 
     # -----------------------------------------------------------------------------
-    def save_prediction(self, checkpoint_name: str) -> None:
-        if self.next_action_desc is None:
-            return
-        true_extraction = int(self.true_extraction) if self.true_extraction is not None else None
-        row = {
-            "session_id": self.session_id,
-            "dataset_name": self.dataset_name,
-            "checkpoint": checkpoint_name,
-            "extraction": true_extraction,
-            "predicted_action": self.next_action_desc,
-            "timestamp": datetime.now(),
-        }
-
-        self.serializer.append_predicted_games(pd.DataFrame([row]))
+    def update_bet_amount(self, bet_amount: int) -> None:
+        self.bet_amount = int(bet_amount)
+        actions = BetsAndRewards({**self.configuration, "bet_amount": self.bet_amount})
+        self.action_descriptions = actions.action_descriptions
+        self.player = actions
 
 

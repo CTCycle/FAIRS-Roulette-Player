@@ -1,10 +1,9 @@
 export interface GameConfig {
-    initialCapital: number;
-    betAmount: number;
     checkpoint: string;
     datasetName: string;
     sessionId: string;
-    initialPrediction: PredictionResult;
+    initialCapital: number;
+    betAmount: number;
 }
 
 export interface PredictionResult {
@@ -15,20 +14,21 @@ export interface PredictionResult {
 
 export interface GameStep {
     step: number;
-    realExtraction: number;
     predictedAction: number;
     predictedActionDesc: string;
+    predictedConfidence?: number;
+    observed: number | null;
+    observedInput: string;
     betAmount: number;
-    outcome: number; // profit/loss
-    capitalAfter: number;
-    timestamp: string;
+    outcome: number | null; // profit/loss
+    capitalAfter: number | null;
+    isEditing: boolean;
 }
 
 export interface SessionState {
     isActive: boolean;
     currentCapital: number;
     currentBet: number;
-    history: GameStep[];
     lastPrediction: PredictionResult | null;
     totalSteps: number;
 }

@@ -122,7 +122,6 @@ export const InferenceSetup: React.FC<InferenceSetupProps> = ({
                 checkpoint,
                 datasetName: datasetFile.name,
                 sessionId: String(session.session_id),
-                initialPrediction: session.prediction,
             });
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Unable to start session.';
