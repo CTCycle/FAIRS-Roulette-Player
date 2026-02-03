@@ -7,6 +7,7 @@ import { TrainingMetricsChart } from './TrainingMetricsChart';
 interface TrainingStats {
     epoch: number;
     total_epochs: number;
+    max_steps?: number;
     time_step: number;
     loss: number;
     rmse: number;
@@ -56,14 +57,20 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
     const [stopError, setStopError] = useState<string | null>(null);
     const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const pollIntervalRef = useRef(1000);
-    const isActiveRef = useRef(isActive);
     const backendActiveRef = useRef(false);
+    const onTrainingStartRef = useRef(onTrainingStart);
+    const onTrainingEndRef = useRef(onTrainingEnd);
+    const pollAbortRef = useRef<AbortController | null>(null);
 
     const maxHistoryPoints = 2000;
 
     useEffect(() => {
-        isActiveRef.current = isActive;
-    }, [isActive]);
+        onTrainingStartRef.current = onTrainingStart;
+    }, [onTrainingStart]);
+
+    useEffect(() => {
+        onTrainingEndRef.current = onTrainingEnd;
+    }, [onTrainingEnd]);
 
     useEffect(() => {
         if (isActive) {
@@ -76,9 +83,17 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
         setHistoryPoints([]);
         setConnectionError(null);
 
+        let cancelled = false;
+
         const pollStatus = async () => {
             try {
-                const response = await fetch('/api/training/status');
+                pollAbortRef.current?.abort();
+                const controller = new AbortController();
+                pollAbortRef.current = controller;
+
+                const response = await fetch('/api/training/status', {
+                    signal: controller.signal,
+                });
                 if (!response.ok) {
                     throw new Error(`Failed to fetch training status (${response.status})`);
                 }
@@ -89,16 +104,16 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                 const backendActive = Boolean(payload.is_training);
                 if (backendActive && !backendActiveRef.current) {
                     backendActiveRef.current = true;
-                    onTrainingStart?.();
+                    onTrainingStartRef.current?.();
                 } else if (!backendActive && backendActiveRef.current) {
                     backendActiveRef.current = false;
-                    onTrainingEnd?.();
+                    onTrainingEndRef.current?.();
                 }
 
                 if (payload.latest_stats) {
                     setStats(payload.latest_stats);
                     if (payload.latest_stats.status === 'completed' || payload.latest_stats.status === 'error' || payload.latest_stats.status === 'cancelled') {
-                        onTrainingEnd?.();
+                        onTrainingEndRef.current?.();
                     }
                 }
 
@@ -110,10 +125,13 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                     pollIntervalRef.current = Math.max(250, payload.poll_interval * 1000);
                 }
             } catch (err) {
+                if (err instanceof DOMException && err.name === 'AbortError') {
+                    return;
+                }
                 setIsConnected(false);
                 setConnectionError('Failed to connect to training server');
             } finally {
-                if (isActiveRef.current || backendActiveRef.current) {
+                if (!cancelled) {
                     pollTimeoutRef.current = setTimeout(pollStatus, pollIntervalRef.current);
                 }
             }
@@ -122,12 +140,14 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
         void pollStatus();
 
         return () => {
+            cancelled = true;
+            pollAbortRef.current?.abort();
             if (pollTimeoutRef.current) {
                 clearTimeout(pollTimeoutRef.current);
                 pollTimeoutRef.current = null;
             }
         };
-    }, [onTrainingEnd, onTrainingStart]);
+    }, []);
 
     const episodePoints = useMemo(() => {
         if (historyPoints.length === 0) {
@@ -219,7 +239,7 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
         if (!Number.isFinite(value)) {
             return '0';
         }
-        return value.toLocaleString(undefined, { maximumFractionDigits: 6 });
+        return value.toLocaleString(undefined, { maximumFractionDigits: 3 });
     };
 
     return (

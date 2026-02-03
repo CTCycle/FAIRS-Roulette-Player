@@ -149,10 +149,12 @@ class DQNTraining:
         initial_capital_value = (
             float(initial_capital) if isinstance(initial_capital, (int, float)) else 0.0
         )
+        max_steps = int(self.configuration.get("max_steps_episode", 2000))
         if not self.session_stats["loss"]:
             return {
                 "epoch": episode + 1,
                 "total_epochs": total_episodes,
+                "max_steps": max_steps,
                 "time_step": 0,
                 "loss": 0.0,
                 "rmse": 0.0,
@@ -166,6 +168,7 @@ class DQNTraining:
         return {
             "epoch": episode + 1,
             "total_epochs": total_episodes,
+            "max_steps": max_steps,
             "time_step": self.session_stats["time_step"][-1],
             "loss": self.session_stats["loss"][-1],
             "rmse": self.session_stats["metrics"][-1],

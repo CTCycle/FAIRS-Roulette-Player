@@ -32,6 +32,7 @@ class TrainingState:
         self.latest_stats: dict[str, Any] = {
             "epoch": 0,
             "total_epochs": 0,
+            "max_steps": 0,
             "time_step": 0,
             "loss": 0.0,
             "rmse": 0.0,
@@ -49,12 +50,18 @@ class TrainingState:
         self.latest_env: dict[str, Any] = {}
 
     # -------------------------------------------------------------------------
-    def reset_for_new_session(self, total_epochs: int, job_id: str) -> None:
+    def reset_for_new_session(
+        self,
+        total_epochs: int,
+        max_steps: int,
+        job_id: str,
+    ) -> None:
         self.is_training = True
         self.current_job_id = job_id
         self.latest_stats = {
             "epoch": 0,
             "total_epochs": total_epochs,
+            "max_steps": max_steps,
             "time_step": 0,
             "loss": 0.0,
             "rmse": 0.0,
@@ -269,8 +276,13 @@ def run_training_job(
                 {"status": "cancelled", "message": "Training cancelled"}
             )
         else:
+            final_epoch = training_state.latest_stats.get("total_epochs", 0)
             training_state.update_stats(
-                {"status": "completed", "message": "Training completed"}
+                {
+                    "status": "completed",
+                    "message": "Training completed",
+                    "epoch": final_epoch,
+                }
             )
         return result
     except Exception as exc:
@@ -311,8 +323,13 @@ def run_resume_training_job(
                 {"status": "cancelled", "message": "Training cancelled"}
             )
         else:
+            final_epoch = training_state.latest_stats.get("total_epochs", 0)
             training_state.update_stats(
-                {"status": "completed", "message": "Resume training completed"}
+                {
+                    "status": "completed",
+                    "message": "Resume training completed",
+                    "epoch": final_epoch,
+                }
             )
         return result
     except Exception as exc:
@@ -361,7 +378,8 @@ class TrainingEndpoint:
         )
 
         total_epochs = int(configuration.get("episodes", 10))
-        self.training_state.reset_for_new_session(total_epochs, job_id)
+        max_steps = int(configuration.get("max_steps_episode", 2000))
+        self.training_state.reset_for_new_session(total_epochs, max_steps, job_id)
 
         self.job_manager.update_result(
             job_id,
@@ -430,7 +448,8 @@ class TrainingEndpoint:
         )
 
         total_epochs = from_epoch + int(config.additional_episodes)
-        self.training_state.reset_for_new_session(total_epochs, job_id)
+        max_steps = int(configuration.get("max_steps_episode", 2000))
+        self.training_state.reset_for_new_session(total_epochs, max_steps, job_id)
         self.training_state.history_points = restored_points
         self.training_state.latest_stats["epoch"] = from_epoch
 

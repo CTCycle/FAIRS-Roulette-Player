@@ -101,6 +101,19 @@
   font-size: 0.9rem;
 }
 
+.form-input[type="number"],
+.form-input-compact[type="number"] {
+  color-scheme: dark;
+}
+
+.form-input[type="number"]::-webkit-inner-spin-button,
+.form-input[type="number"]::-webkit-outer-spin-button,
+.form-input-compact[type="number"]::-webkit-inner-spin-button,
+.form-input-compact[type="number"]::-webkit-outer-spin-button {
+  filter: invert(0.65);
+  opacity: 0.7;
+}
+
 .form-input:focus,
 .form-select:focus,
 .form-input-compact:focus,
