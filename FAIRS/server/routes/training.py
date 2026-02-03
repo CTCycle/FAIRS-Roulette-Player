@@ -29,6 +29,7 @@ class TrainingState:
         self.is_training = False
         self.current_job_id: str | None = None
         self.worker: ProcessWorker | None = None
+        self.max_steps = 0
         self.latest_stats: dict[str, Any] = {
             "epoch": 0,
             "total_epochs": 0,
@@ -47,6 +48,9 @@ class TrainingState:
         }
         self.history_points: list[dict[str, Any]] = []
         self.max_history_points = 2000
+        self.history_bucket_size = 1.0
+        self.last_history_episode: int | None = None
+        self.last_history_bucket: int | None = None
         self.latest_env: dict[str, Any] = {}
 
     # -------------------------------------------------------------------------
@@ -58,6 +62,7 @@ class TrainingState:
     ) -> None:
         self.is_training = True
         self.current_job_id = job_id
+        self.max_steps = max_steps
         self.latest_stats = {
             "epoch": 0,
             "total_epochs": total_epochs,
@@ -75,6 +80,9 @@ class TrainingState:
             "status": "training",
         }
         self.history_points = []
+        self.history_bucket_size = max_steps / 10.0 if max_steps > 0 else 1.0
+        self.last_history_episode = None
+        self.last_history_bucket = None
         self.latest_env = {}
 
     # -------------------------------------------------------------------------
@@ -98,6 +106,13 @@ class TrainingState:
             return
         if epoch <= 0:
             return
+        bucket_size = self.history_bucket_size if self.history_bucket_size > 0 else 1.0
+        bucket = int(time_step / bucket_size)
+        if self.max_steps >= 10:
+            bucket = min(9, bucket)
+        if self.last_history_episode != epoch:
+            self.last_history_episode = epoch
+            self.last_history_bucket = None
 
         point = {
             "time_step": time_step,
@@ -111,10 +126,11 @@ class TrainingState:
             "capital": float(stats.get("capital", 0.0)),
             "capital_gain": float(stats.get("capital_gain", 0.0)),
         }
-        if self.history_points and self.history_points[-1].get("epoch") == epoch:
+        if self.last_history_bucket == bucket and self.history_points:
             self.history_points[-1] = point
         else:
             self.history_points.append(point)
+            self.last_history_bucket = bucket
 
         if len(self.history_points) > self.max_history_points:
             self.history_points = self.history_points[-self.max_history_points :]
@@ -157,7 +173,10 @@ def build_history_points(
     total_rewards = history.get("total_reward", [])
     capitals = history.get("capital", [])
 
-    results_map: dict[int, dict[str, Any]] = {}
+    episode_offset = 1 if any(
+        isinstance(value, int) and value <= 0 for value in episodes
+    ) else 0
+    results: list[dict[str, Any]] = []
     for index in range(len(time_steps)):
         capital_value = (
             float(capitals[index]) if index < len(capitals) else 0.0
@@ -168,6 +187,10 @@ def build_history_points(
             else 0.0
         )
         epoch = episodes[index] if index < len(episodes) else 0
+        if isinstance(epoch, int):
+            epoch += episode_offset
+        else:
+            epoch = 0
         point = {
             "time_step": time_steps[index] if index < len(time_steps) else 0,
             "loss": float(losses[index]) if index < len(losses) else 0.0,
@@ -181,9 +204,9 @@ def build_history_points(
             "capital_gain": capital_gain,
         }
         if isinstance(epoch, int) and epoch > 0:
-            results_map[epoch] = point
+            results.append(point)
 
-    return [results_map[key] for key in sorted(results_map)]
+    return results
 
 
 ###############################################################################

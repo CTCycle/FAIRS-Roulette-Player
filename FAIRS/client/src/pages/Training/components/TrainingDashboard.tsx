@@ -83,9 +83,15 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
         setHistoryPoints([]);
         setConnectionError(null);
 
+        if (!isActive) {
+            backendActiveRef.current = false;
+            return;
+        }
+
         let cancelled = false;
 
         const pollStatus = async () => {
+            let trainingEnded = false;
             try {
                 pollAbortRef.current?.abort();
                 const controller = new AbortController();
@@ -108,11 +114,13 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                 } else if (!backendActive && backendActiveRef.current) {
                     backendActiveRef.current = false;
                     onTrainingEndRef.current?.();
+                    trainingEnded = true;
                 }
 
                 if (payload.latest_stats) {
                     setStats(payload.latest_stats);
-                    if (payload.latest_stats.status === 'completed' || payload.latest_stats.status === 'error' || payload.latest_stats.status === 'cancelled') {
+                    trainingEnded = trainingEnded || payload.latest_stats.status === 'completed' || payload.latest_stats.status === 'error' || payload.latest_stats.status === 'cancelled';
+                    if (trainingEnded) {
                         onTrainingEndRef.current?.();
                     }
                 }
@@ -131,7 +139,11 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                 setIsConnected(false);
                 setConnectionError('Failed to connect to training server');
             } finally {
-                if (!cancelled) {
+                if (cancelled) {
+                    return;
+                }
+                const shouldContinue = isActive;
+                if (shouldContinue && !trainingEnded) {
                     pollTimeoutRef.current = setTimeout(pollStatus, pollIntervalRef.current);
                 }
             }
@@ -147,21 +159,21 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                 pollTimeoutRef.current = null;
             }
         };
-    }, []);
+    }, [isActive]);
 
-    const episodePoints = useMemo(() => {
+    const chartPoints = useMemo(() => {
         if (historyPoints.length === 0) {
             return [];
         }
-        const byEpisode = new Map<number, TrainingHistoryPoint>();
-        historyPoints.forEach((point) => {
-            if (typeof point.epoch !== 'number' || point.epoch <= 0) {
-                return;
-            }
-            byEpisode.set(point.epoch, { ...point, time_step: point.epoch });
-        });
-        return Array.from(byEpisode.values()).sort((a, b) => a.epoch - b.epoch);
-    }, [historyPoints]);
+        const maxSteps = Number.isFinite(stats.max_steps) ? Math.max(1, stats.max_steps) : 1;
+        return historyPoints.map((point) => {
+            const epochIndex = typeof point.epoch === 'number' ? Math.max(1, point.epoch) : 1;
+            return {
+                ...point,
+                time_step: (epochIndex - 1) * maxSteps + point.time_step,
+            };
+        }).sort((a, b) => a.time_step - b.time_step);
+    }, [historyPoints, stats.max_steps]);
 
     const progressRaw = stats.total_epochs > 0
         ? (stats.epoch / stats.total_epochs) * 100
@@ -386,7 +398,7 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                             <span className="legend-item" style={{ opacity: 0.7 }}><span className="legend-dot loss" style={{ opacity: 0.5 }}></span>Validation</span>
                         </div>
                     </div>
-                    <TrainingLossChart points={episodePoints} />
+                    <TrainingLossChart points={chartPoints} maxSteps={stats.max_steps} />
                 </div>
                 <div className="visual-card">
                     <div className="visual-card-header">
@@ -396,7 +408,7 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                             <span className="legend-item" style={{ opacity: 0.7 }}><span className="legend-dot capital"></span>Capital Gain</span>
                         </div>
                     </div>
-                    <TrainingMetricsChart points={episodePoints} />
+                    <TrainingMetricsChart points={chartPoints} maxSteps={stats.max_steps} />
                 </div>
             </div>
         </div>

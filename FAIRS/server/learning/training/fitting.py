@@ -37,6 +37,14 @@ class DQNTraining:
         # Load render settings from server config
         self.render_environment = server_settings.training.render_environment
         self.configuration = configuration
+        self.max_steps = int(configuration.get("max_steps_episode", 2000))
+        self.history_bucket_size = (
+            self.max_steps / 10.0 if self.max_steps > 0 else 1.0
+        )
+        self.last_history_episode: int | None = None
+        self.last_history_bucket: int | None = None
+        self.last_progress_episode: int | None = None
+        self.last_progress_bucket: int | None = None
 
         self.agent = DQNAgent(configuration)
 
@@ -118,9 +126,20 @@ class DQNTraining:
         total_reward: int | float,
         capital: int | float,
     ) -> None:
+        bucket_size = self.history_bucket_size if self.history_bucket_size > 0 else 1.0
+        bucket = int(time_step / bucket_size)
+        if self.max_steps >= 10:
+            bucket = min(9, bucket)
+        if self.last_history_episode != episode:
+            self.last_history_episode = episode
+            self.last_history_bucket = None
+        if self.last_history_bucket == bucket:
+            return
+        self.last_history_bucket = bucket
+
         loss = scores.get("loss", None)
         metric = scores.get("root_mean_squared_error", None)
-        self.session_stats["episode"].append(episode)
+        self.session_stats["episode"].append(episode + 1)
         self.session_stats["time_step"].append(time_step)
         self.session_stats["loss"].append(float(loss) if loss is not None else 0.0)
         self.session_stats["metrics"].append(
@@ -315,27 +334,34 @@ class DQNTraining:
         reward: int | float,
         total_reward: int | float,
     ) -> None:
-        if not self.should_send_ws_update():
-            return
+        bucket_size = self.history_bucket_size if self.history_bucket_size > 0 else 1.0
+        bucket = int(time_step / bucket_size)
+        if self.max_steps >= 10:
+            bucket = min(9, bucket)
+        if self.last_progress_episode != episode:
+            self.last_progress_episode = episode
+            self.last_progress_bucket = None
+        if self.last_progress_bucket != bucket:
+            self.last_progress_bucket = bucket
+            if ws_callback:
+                stats = self.get_latest_stats(episode, episodes)
+                try:
+                    ws_callback(stats)
+                except Exception:
+                    pass
 
-        if ws_callback:
-            stats = self.get_latest_stats(episode, episodes)
-            try:
-                ws_callback(stats)
-            except Exception:
-                pass
-
-        self.maybe_send_environment_update(
-            ws_env_callback,
-            environment,
-            episode,
-            time_step,
-            int(action),
-            int(extraction),
-            reward,
-            total_reward,
-            environment.capital,
-        )
+        if self.should_send_ws_update():
+            self.maybe_send_environment_update(
+                ws_env_callback,
+                environment,
+                episode,
+                time_step,
+                int(action),
+                int(extraction),
+                reward,
+                total_reward,
+                environment.capital,
+            )
 
     # -------------------------------------------------------------------------
     async def train_with_reinforcement_learning(
