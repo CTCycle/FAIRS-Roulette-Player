@@ -79,9 +79,9 @@ export const TrainingLossChart: React.FC<TrainingLossChartProps> = ({ points, ma
         
         const rawMin = lossValues.length ? Math.min(...lossValues) : 0;
         const rawMax = lossValues.length ? Math.max(...lossValues) : 1;
-        const padding = (rawMax - rawMin) * 0.1 || 1;
-        const yMinValue = rawMin - padding;
-        const yMaxValue = rawMax + padding;
+        const yPadding = (rawMax - rawMin) * 0.1 || 1;
+        const yMinValue = rawMin - yPadding;
+        const yMaxValue = rawMax + yPadding;
 
         return {
             lossPath: buildPath(points, xMinValue, xMaxValue, yMinValue, yMaxValue, plotWidth, plotHeight, 'loss', padding.left, padding.top),
@@ -108,7 +108,7 @@ export const TrainingLossChart: React.FC<TrainingLossChartProps> = ({ points, ma
         return { y, value };
     });
 
-    const tickCount = 5;
+    const tickCount: number = 5;
     const xTicks = Array.from({ length: tickCount }, (_, index) => {
         const ratio = tickCount === 1 ? 0 : index / (tickCount - 1);
         const value = xMin + ratio * (xMax - xMin);

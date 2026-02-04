@@ -64,9 +64,9 @@ export const TrainingMetricsChart: React.FC<TrainingMetricsChartProps> = ({ poin
 
         const rawMin = values.length ? Math.min(...values) : 0;
         const rawMax = values.length ? Math.max(...values) : 1;
-        const padding = (rawMax - rawMin) * 0.1 || 1;
-        const yMinValue = rawMin - padding;
-        const yMaxValue = rawMax + padding;
+        const yPadding = (rawMax - rawMin) * 0.1 || 1;
+        const yMinValue = rawMin - yPadding;
+        const yMaxValue = rawMax + yPadding;
 
         return {
             rewardPath: buildPath(points, xMinValue, xMaxValue, yMinValue, yMaxValue, plotWidth, plotHeight, 'total_reward', padding.left, padding.top),
@@ -93,7 +93,7 @@ export const TrainingMetricsChart: React.FC<TrainingMetricsChartProps> = ({ poin
         return { y, value };
     });
 
-    const tickCount = 5;
+    const tickCount: number = 5;
     const xTicks = Array.from({ length: tickCount }, (_, index) => {
         const ratio = tickCount === 1 ? 0 : index / (tickCount - 1);
         const value = xMin + ratio * (xMax - xMin);

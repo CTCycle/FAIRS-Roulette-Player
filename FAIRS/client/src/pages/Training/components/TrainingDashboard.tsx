@@ -165,7 +165,9 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
         if (historyPoints.length === 0) {
             return [];
         }
-        const maxSteps = Number.isFinite(stats.max_steps) ? Math.max(1, stats.max_steps) : 1;
+        const maxSteps = typeof stats.max_steps === 'number' && Number.isFinite(stats.max_steps)
+            ? Math.max(1, stats.max_steps)
+            : 1;
         return historyPoints.map((point) => {
             const epochIndex = typeof point.epoch === 'number' ? Math.max(1, point.epoch) : 1;
             return {
