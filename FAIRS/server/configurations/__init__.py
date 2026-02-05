@@ -8,7 +8,6 @@ from FAIRS.server.configurations.base import (
 
 from FAIRS.server.configurations.server import (
     DatabaseSettings,
-    FastAPISettings,
     TrainingSettings,
     ServerSettings,
     server_settings,
@@ -19,7 +18,6 @@ __all__ = [
     "ensure_mapping",
     "load_configuration_data",   
     "DatabaseSettings",
-    "FastAPISettings",
     "TrainingSettings",
     "ServerSettings",
     "server_settings",
