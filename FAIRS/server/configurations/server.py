@@ -27,13 +27,6 @@ from FAIRS.server.utils.types import (
 # [SERVER SETTINGS]
 ###############################################################################
 @dataclass(frozen=True)
-class FastAPISettings:
-    title: str
-    description: str
-    version: str   
-
-# -----------------------------------------------------------------------------
-@dataclass(frozen=True)
 class DatabaseSettings:
     embedded_database: bool
     engine: str | None          
@@ -46,7 +39,7 @@ class DatabaseSettings:
     ssl_ca: str | None         
     connect_timeout: int
     insert_batch_size: int
-    fetch_row_limit: int
+    browse_batch_size: int
 
 # -----------------------------------------------------------------------------
 @dataclass(frozen=True)
@@ -67,7 +60,6 @@ class DeviceSettings:
 # -----------------------------------------------------------------------------
 @dataclass(frozen=True)
 class ServerSettings:
-    fastapi: FastAPISettings
     database: DatabaseSettings
     training: TrainingSettings
     device: DeviceSettings     
@@ -75,15 +67,6 @@ class ServerSettings:
 
 # [BUILDER FUNCTIONS]
 ###############################################################################
-def build_fastapi_settings(data: dict[str, Any]) -> FastAPISettings:
-    payload = ensure_mapping(data)
-    return FastAPISettings(
-        title=coerce_str(payload.get("title"), "FAIRS Roulette Backend"),
-        version=coerce_str(payload.get("version"), "0.1.0"),
-        description=coerce_str(payload.get("description"), "FastAPI backend"),        
-    )
-
-# -----------------------------------------------------------------------------
 def build_database_settings(payload: dict[str, Any] | Any) -> DatabaseSettings:
     embedded = bool(payload.get("embedded_database", True))
     if embedded:
@@ -100,7 +83,7 @@ def build_database_settings(payload: dict[str, Any] | Any) -> DatabaseSettings:
             ssl_ca=None,
             connect_timeout=10,
             insert_batch_size=coerce_int(payload.get("insert_batch_size"), 1000, minimum=1),
-            fetch_row_limit=coerce_int(payload.get("fetch_row_limit"), 100, minimum=10),
+            browse_batch_size=coerce_int(payload.get("browse_batch_size"), 200, minimum=10),
         )
 
     # External DB mode
@@ -118,7 +101,7 @@ def build_database_settings(payload: dict[str, Any] | Any) -> DatabaseSettings:
         ssl_ca=coerce_str_or_none(payload.get("ssl_ca")),
         connect_timeout=coerce_int(payload.get("connect_timeout"), 10, minimum=1),
         insert_batch_size=coerce_int(payload.get("insert_batch_size"), 1000, minimum=1),
-        fetch_row_limit=coerce_int(payload.get("fetch_row_limit"), 100, minimum=10),
+        browse_batch_size=coerce_int(payload.get("browse_batch_size"), 200, minimum=10),
     )
 
 # -----------------------------------------------------------------------------
@@ -152,13 +135,11 @@ def build_device_settings(payload: dict[str, Any] | Any) -> DeviceSettings:
 # -----------------------------------------------------------------------------
 def build_server_settings(data: dict[str, Any] | Any) -> ServerSettings:
     payload = ensure_mapping(data)
-    fastapi_payload = ensure_mapping(payload.get("fastapi"))
     database_payload = ensure_mapping(payload.get("database"))
     training_payload = ensure_mapping(payload.get("training"))
     device_payload = ensure_mapping(payload.get("device"))
   
     return ServerSettings(
-        fastapi=build_fastapi_settings(fastapi_payload),
         database=build_database_settings(database_payload),
         training=build_training_settings(training_payload),
         device=build_device_settings(device_payload),

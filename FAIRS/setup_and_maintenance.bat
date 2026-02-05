@@ -163,7 +163,7 @@ pause
 goto :setup_menu
 
 :run_init_db
-call :run_server_script "%init_db_module%" "Database initialization" "%init_db_script%"
+call :run_server_script "" "Database initialization" "%init_db_script%"
 goto :setup_menu
 
 :run_server_script
@@ -190,7 +190,11 @@ if not exist "%script_path%" (
 )
 echo [RUN] !script_label!
 pushd "%root_folder%" >nul
-"%uv_exe%" run --python "%python_exe%" python -m %script_module%
+if "%script_module%"=="" (
+  "%uv_exe%" run --python "%python_exe%" python "%script_path%"
+) else (
+  "%uv_exe%" run --python "%python_exe%" python -m %script_module%
+)
 set "run_script_ec=!ERRORLEVEL!"
 popd >nul
 if "!run_script_ec!"=="0" (

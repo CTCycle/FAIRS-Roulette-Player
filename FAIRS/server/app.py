@@ -12,13 +12,17 @@ from FAIRS.server.routes.upload import router as upload_router
 from FAIRS.server.routes.training import router as training_router
 from FAIRS.server.routes.database import router as database_router
 from FAIRS.server.routes.inference import router as inference_router
-from FAIRS.server.configurations import server_settings
+from FAIRS.server.utils.constants import (
+    FASTAPI_DESCRIPTION,
+    FASTAPI_TITLE,
+    FASTAPI_VERSION,
+)
 
 ###############################################################################
 app = FastAPI(
-    title=server_settings.fastapi.title,
-    version=server_settings.fastapi.version,
-    description=server_settings.fastapi.description,
+    title=FASTAPI_TITLE,
+    version=FASTAPI_VERSION,
+    description=FASTAPI_DESCRIPTION,
 )
 
 app.include_router(upload_router)
