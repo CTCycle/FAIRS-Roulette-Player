@@ -13,12 +13,8 @@
     "insert_batch_size": 1000,
     "browse_batch_size": 200
   },
-  "training": {
-    "polling_interval": 1,
-    "default_episodes": 10,
-    "default_max_steps_episode": 2000,
-    "default_render_update_frequency": 20,
-    "render_environment": false
+  "jobs": {
+    "polling_interval": 1
   },
   "device": {
     "jit_compile": false,
