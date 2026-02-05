@@ -134,6 +134,17 @@ def build_server_settings(data: dict[str, Any] | Any) -> ServerSettings:
     )
 
 
+# [POLLING HELPERS]
+###############################################################################
+def get_poll_interval_seconds(
+    settings: ServerSettings | None = None,
+    minimum: float = 0.25,
+) -> float:
+    resolved = settings or server_settings
+    value = float(resolved.jobs.polling_interval)
+    return max(minimum, value)
+
+
 # [SERVER CONFIGURATION LOADER]
 ###############################################################################
 def get_server_settings(config_path: str | None = None) -> ServerSettings:
