@@ -13,6 +13,7 @@ from keras import Model
 from keras.utils import set_random_seed
 
 from FAIRS.server.configurations import server_settings
+from FAIRS.server.configurations.server import get_poll_interval_seconds
 from FAIRS.server.utils.logger import logger
 from FAIRS.server.learning.training.agents import DQNAgent
 from FAIRS.server.learning.training.environment import RouletteEnvironment
@@ -77,7 +78,7 @@ class DQNTraining:
             }
 
         # Progress update related
-        self.polling_interval_ms = int(server_settings.jobs.polling_interval * 1000)
+        self.polling_interval_ms = int(get_poll_interval_seconds(server_settings) * 1000)
         self.last_ws_update_time = 0.0
         self.is_cancelled = False
         self.stop_event = stop_event

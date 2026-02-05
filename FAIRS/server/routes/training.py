@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException, status
 from FAIRS.server.schemas.training import ResumeConfig, TrainingConfig
 from FAIRS.server.schemas.jobs import JobCancelResponse, JobStartResponse, JobStatusResponse
 from FAIRS.server.configurations import server_settings
+from FAIRS.server.configurations.server import get_poll_interval_seconds
 from FAIRS.server.utils.constants import CHECKPOINT_PATH
 from FAIRS.server.services.jobs import JobManager, job_manager
 from FAIRS.server.utils.logger import logger
@@ -412,9 +413,7 @@ class TrainingEndpoint:
             },
         )
 
-        poll_interval = max(
-            0.25, server_settings.jobs.polling_interval
-        )
+        poll_interval = get_poll_interval_seconds(server_settings)
 
         return {
             "status": "started",
@@ -484,9 +483,7 @@ class TrainingEndpoint:
             },
         )
 
-        poll_interval = max(
-            0.25, server_settings.jobs.polling_interval
-        )
+        poll_interval = get_poll_interval_seconds(server_settings)
 
         return {
             "status": "started",
@@ -498,9 +495,7 @@ class TrainingEndpoint:
 
     # -------------------------------------------------------------------------
     def get_status(self) -> dict[str, Any]:
-        poll_interval = max(
-            0.25, server_settings.jobs.polling_interval
-        )
+        poll_interval = get_poll_interval_seconds(server_settings)
         return {
             "job_id": self.training_state.current_job_id,
             "is_training": self.training_state.is_training,
@@ -621,7 +616,8 @@ class TrainingEndpoint:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Job not found: {job_id}",
             )
-        return JobStatusResponse(**job_status)
+        poll_interval = get_poll_interval_seconds(server_settings)
+        return JobStatusResponse(**job_status, poll_interval=poll_interval)
 
     # -------------------------------------------------------------------------
     def cancel_training_job(self, job_id: str) -> JobCancelResponse:
