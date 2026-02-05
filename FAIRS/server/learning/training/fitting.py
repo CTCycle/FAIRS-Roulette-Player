@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import asyncio
+import math
 import time
 from collections import deque
 from collections.abc import Callable
@@ -15,8 +16,42 @@ from keras.utils import set_random_seed
 from FAIRS.server.configurations import server_settings
 from FAIRS.server.configurations.server import get_poll_interval_seconds
 from FAIRS.server.utils.logger import logger
+from FAIRS.server.utils.types import coerce_finite_float, coerce_finite_int
 from FAIRS.server.learning.training.agents import DQNAgent
 from FAIRS.server.learning.training.environment import RouletteEnvironment
+
+
+###############################################################################
+def sanitize_training_stats(stats: dict[str, Any]) -> dict[str, Any]:
+    return {
+        **stats,
+        "epoch": coerce_finite_int(stats.get("epoch"), 0, minimum=0),
+        "total_epochs": coerce_finite_int(stats.get("total_epochs"), 0, minimum=0),
+        "max_steps": coerce_finite_int(stats.get("max_steps"), 0, minimum=0),
+        "time_step": coerce_finite_int(stats.get("time_step"), 0, minimum=0),
+        "loss": coerce_finite_float(stats.get("loss"), 0.0),
+        "rmse": coerce_finite_float(stats.get("rmse"), 0.0),
+        "val_loss": coerce_finite_float(stats.get("val_loss"), 0.0),
+        "val_rmse": coerce_finite_float(stats.get("val_rmse"), 0.0),
+        "reward": coerce_finite_float(stats.get("reward"), 0.0),
+        "val_reward": coerce_finite_float(stats.get("val_reward"), 0.0),
+        "total_reward": coerce_finite_float(stats.get("total_reward"), 0.0),
+        "capital": coerce_finite_float(stats.get("capital"), 0.0),
+        "capital_gain": coerce_finite_float(stats.get("capital_gain"), 0.0),
+    }
+
+
+###############################################################################
+def has_non_finite_numbers(stats: dict[str, Any], keys: list[str]) -> bool:
+    for key in keys:
+        value = stats.get(key)
+        if isinstance(value, bool):
+            continue
+        if not isinstance(value, (int, float)):
+            return True
+        if not math.isfinite(float(value)):
+            return True
+    return False
 
 
 ###############################################################################
@@ -140,19 +175,17 @@ class DQNTraining:
         loss = scores.get("loss", None)
         metric = scores.get("root_mean_squared_error", None)
         self.session_stats["episode"].append(episode + 1)
-        self.session_stats["time_step"].append(time_step)
-        self.session_stats["loss"].append(float(loss) if loss is not None else 0.0)
-        self.session_stats["metrics"].append(
-            float(metric) if metric is not None else 0.0
-        )
-        self.session_stats["reward"].append(reward)
-        self.session_stats["total_reward"].append(total_reward)
-        self.session_stats["capital"].append(capital)
+        self.session_stats["time_step"].append(coerce_finite_int(time_step))
+        self.session_stats["loss"].append(coerce_finite_float(loss))
+        self.session_stats["metrics"].append(coerce_finite_float(metric))
+        self.session_stats["reward"].append(coerce_finite_float(reward))
+        self.session_stats["total_reward"].append(coerce_finite_float(total_reward))
+        self.session_stats["capital"].append(coerce_finite_float(capital))
 
         if val_scores:
-            self.session_stats["val_loss"].append(val_scores.get("loss", 0.0))
-            self.session_stats["val_rmse"].append(val_scores.get("root_mean_squared_error", 0.0))
-            self.session_stats["img_reward"].append(val_scores.get("reward", 0.0))
+            self.session_stats["val_loss"].append(coerce_finite_float(val_scores.get("loss", 0.0)))
+            self.session_stats["val_rmse"].append(coerce_finite_float(val_scores.get("root_mean_squared_error", 0.0)))
+            self.session_stats["img_reward"].append(coerce_finite_float(val_scores.get("reward", 0.0)))
         else:
             # Carry forward last value or 0.0
             last_val_loss = self.session_stats["val_loss"][-1] if self.session_stats["val_loss"] else 0.0
@@ -170,7 +203,7 @@ class DQNTraining:
         )
         max_steps = int(self.configuration.get("max_steps_episode", 2000))
         if not self.session_stats["loss"]:
-            return {
+            raw_stats = {
                 "epoch": episode + 1,
                 "total_epochs": total_episodes,
                 "max_steps": max_steps,
@@ -183,8 +216,9 @@ class DQNTraining:
                 "capital_gain": 0.0,
                 "status": "training",
             }
+            return sanitize_training_stats(raw_stats)
         capital_value = self.session_stats["capital"][-1]
-        return {
+        raw_stats = {
             "epoch": episode + 1,
             "total_epochs": total_episodes,
             "max_steps": max_steps,
@@ -200,6 +234,19 @@ class DQNTraining:
             "capital_gain": float(capital_value) - initial_capital_value,
             "status": "training",
         }
+        if has_non_finite_numbers(raw_stats, [
+            "time_step",
+            "loss",
+            "rmse",
+            "val_loss",
+            "val_rmse",
+            "reward",
+            "total_reward",
+            "capital",
+            "capital_gain",
+        ]):
+            logger.warning("Invalid training metrics detected; sanitizing update payload.")
+        return sanitize_training_stats(raw_stats)
 
     # -------------------------------------------------------------------------
     def should_send_ws_update(self) -> bool:
