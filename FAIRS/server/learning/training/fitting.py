@@ -34,8 +34,7 @@ class DQNTraining:
         self.selected_device = "cuda" if use_gpu else "cpu"
         self.device_id = configuration.get("device_id", 0)
         self.mixed_precision = configuration.get("use_mixed_precision", False)
-        # Load render settings from server config
-        self.render_environment = server_settings.training.render_environment
+        self.render_environment = False
         self.configuration = configuration
         self.max_steps = int(configuration.get("max_steps_episode", 2000))
         self.history_bucket_size = (
@@ -78,7 +77,7 @@ class DQNTraining:
             }
 
         # Progress update related
-        self.polling_interval_ms = int(server_settings.training.polling_interval * 1000)
+        self.polling_interval_ms = int(server_settings.jobs.polling_interval * 1000)
         self.last_ws_update_time = 0.0
         self.is_cancelled = False
         self.stop_event = stop_event

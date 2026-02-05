@@ -42,13 +42,10 @@ class DatabaseSettings:
     browse_batch_size: int
 
 # -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 @dataclass(frozen=True)
-class TrainingSettings:
+class JobsSettings:
     polling_interval: float
-    default_episodes: int
-    default_max_steps_episode: int
-    default_render_update_frequency: int
-    render_environment: bool
 
 # -----------------------------------------------------------------------------
 @dataclass(frozen=True)
@@ -61,7 +58,7 @@ class DeviceSettings:
 @dataclass(frozen=True)
 class ServerSettings:
     database: DatabaseSettings
-    training: TrainingSettings
+    jobs: JobsSettings
     device: DeviceSettings     
 
 
@@ -105,22 +102,13 @@ def build_database_settings(payload: dict[str, Any] | Any) -> DatabaseSettings:
     )
 
 # -----------------------------------------------------------------------------
-def build_training_settings(payload: dict[str, Any] | Any) -> TrainingSettings:
+# -----------------------------------------------------------------------------
+def build_jobs_settings(payload: dict[str, Any] | Any) -> JobsSettings:
     data = ensure_mapping(payload)
-    return TrainingSettings(
+    return JobsSettings(
         polling_interval=coerce_float(
             data.get("polling_interval"), 1.0, minimum=0.1, maximum=10.0
         ),
-        default_episodes=coerce_int(
-            data.get("default_episodes"), 10, minimum=1
-        ),
-        default_max_steps_episode=coerce_int(
-            data.get("default_max_steps_episode"), 2000, minimum=100
-        ),
-        default_render_update_frequency=coerce_int(
-            data.get("default_render_update_frequency"), 20, minimum=1
-        ),
-        render_environment=coerce_bool(data.get("render_environment"), False),
     )
 
 # -----------------------------------------------------------------------------
@@ -136,12 +124,12 @@ def build_device_settings(payload: dict[str, Any] | Any) -> DeviceSettings:
 def build_server_settings(data: dict[str, Any] | Any) -> ServerSettings:
     payload = ensure_mapping(data)
     database_payload = ensure_mapping(payload.get("database"))
-    training_payload = ensure_mapping(payload.get("training"))
+    jobs_payload = ensure_mapping(payload.get("jobs"))
     device_payload = ensure_mapping(payload.get("device"))
   
     return ServerSettings(
         database=build_database_settings(database_payload),
-        training=build_training_settings(training_payload),
+        jobs=build_jobs_settings(jobs_payload),
         device=build_device_settings(device_payload),
     )
 
