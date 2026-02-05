@@ -63,6 +63,16 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
     const pollAbortRef = useRef<AbortController | null>(null);
 
     const maxHistoryPoints = 2000;
+    const isHistoryPoint = (point: unknown): point is TrainingHistoryPoint => {
+        if (!point || typeof point !== 'object') {
+            return false;
+        }
+        const candidate = point as TrainingHistoryPoint;
+        return Number.isFinite(candidate.time_step)
+            && Number.isFinite(candidate.epoch)
+            && Number.isFinite(candidate.loss)
+            && Number.isFinite(candidate.rmse);
+    };
 
     useEffect(() => {
         onTrainingStartRef.current = onTrainingStart;
@@ -126,7 +136,10 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                 }
 
                 if (Array.isArray(payload.history)) {
-                    setHistoryPoints(payload.history.slice(-maxHistoryPoints));
+                    const filteredHistory = payload.history
+                        .filter(isHistoryPoint)
+                        .slice(-maxHistoryPoints);
+                    setHistoryPoints(filteredHistory);
                 }
 
                 if (typeof payload.poll_interval === 'number' && payload.poll_interval > 0) {

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import os
 import time
 from typing import Any
@@ -13,6 +14,7 @@ from FAIRS.server.configurations.server import get_poll_interval_seconds
 from FAIRS.server.utils.constants import CHECKPOINT_PATH
 from FAIRS.server.services.jobs import JobManager, job_manager
 from FAIRS.server.utils.logger import logger
+from FAIRS.server.utils.types import coerce_finite_float, coerce_finite_int
 from FAIRS.server.learning.training.serializer import ModelSerializer
 from FAIRS.server.learning.training.worker import (
     ProcessWorker,
@@ -22,6 +24,27 @@ from FAIRS.server.learning.training.worker import (
 
 
 router = APIRouter(prefix="/training", tags=["training"])
+
+
+def sanitize_training_stats(stats: dict[str, Any]) -> dict[str, Any]:
+    if not stats:
+        return {}
+    return {
+        **stats,
+        "epoch": coerce_finite_int(stats.get("epoch"), 0, minimum=0),
+        "total_epochs": coerce_finite_int(stats.get("total_epochs"), 0, minimum=0),
+        "max_steps": coerce_finite_int(stats.get("max_steps"), 0, minimum=0),
+        "time_step": coerce_finite_int(stats.get("time_step"), 0, minimum=0),
+        "loss": coerce_finite_float(stats.get("loss"), 0.0),
+        "rmse": coerce_finite_float(stats.get("rmse"), 0.0),
+        "val_loss": coerce_finite_float(stats.get("val_loss"), 0.0),
+        "val_rmse": coerce_finite_float(stats.get("val_rmse"), 0.0),
+        "reward": coerce_finite_float(stats.get("reward"), 0.0),
+        "val_reward": coerce_finite_float(stats.get("val_reward"), 0.0),
+        "total_reward": coerce_finite_float(stats.get("total_reward"), 0.0),
+        "capital": coerce_finite_float(stats.get("capital"), 0.0),
+        "capital_gain": coerce_finite_float(stats.get("capital_gain"), 0.0),
+    }
 
 
 ###############################################################################
@@ -88,7 +111,8 @@ class TrainingState:
 
     # -------------------------------------------------------------------------
     def update_stats(self, stats: dict[str, Any]) -> None:
-        self.latest_stats = {**self.latest_stats, **stats}
+        sanitized = sanitize_training_stats(stats)
+        self.latest_stats = {**self.latest_stats, **sanitized}
         self.add_history_point(self.latest_stats)
 
     # -------------------------------------------------------------------------
@@ -102,6 +126,8 @@ class TrainingState:
         if not isinstance(time_step, int):
             return
         if not isinstance(loss, (int, float)) or not isinstance(rmse, (int, float)):
+            return
+        if not math.isfinite(float(loss)) or not math.isfinite(float(rmse)):
             return
         if not isinstance(epoch, int):
             return
@@ -179,8 +205,9 @@ def build_history_points(
     ) else 0
     results: list[dict[str, Any]] = []
     for index in range(len(time_steps)):
-        capital_value = (
-            float(capitals[index]) if index < len(capitals) else 0.0
+        capital_value = coerce_finite_float(
+            capitals[index] if index < len(capitals) else 0.0,
+            default=0.0,
         )
         capital_gain = (
             capital_value - float(initial_capital)
@@ -188,19 +215,38 @@ def build_history_points(
             else 0.0
         )
         epoch = episodes[index] if index < len(episodes) else 0
-        if isinstance(epoch, int):
-            epoch += episode_offset
-        else:
-            epoch = 0
+        epoch = coerce_finite_int(epoch, default=0, minimum=0) + episode_offset
         point = {
-            "time_step": time_steps[index] if index < len(time_steps) else 0,
-            "loss": float(losses[index]) if index < len(losses) else 0.0,
-            "rmse": float(metrics[index]) if index < len(metrics) else 0.0,
-            "val_loss": float(val_losses[index]) if index < len(val_losses) else 0.0,
-            "val_rmse": float(val_rmses[index]) if index < len(val_rmses) else 0.0,
+            "time_step": coerce_finite_int(
+                time_steps[index] if index < len(time_steps) else 0,
+                default=0,
+                minimum=0,
+            ),
+            "loss": coerce_finite_float(
+                losses[index] if index < len(losses) else 0.0,
+                default=0.0,
+            ),
+            "rmse": coerce_finite_float(
+                metrics[index] if index < len(metrics) else 0.0,
+                default=0.0,
+            ),
+            "val_loss": coerce_finite_float(
+                val_losses[index] if index < len(val_losses) else 0.0,
+                default=0.0,
+            ),
+            "val_rmse": coerce_finite_float(
+                val_rmses[index] if index < len(val_rmses) else 0.0,
+                default=0.0,
+            ),
             "epoch": epoch,
-            "reward": float(rewards[index]) if index < len(rewards) else 0.0,
-            "total_reward": float(total_rewards[index]) if index < len(total_rewards) else 0.0,
+            "reward": coerce_finite_float(
+                rewards[index] if index < len(rewards) else 0.0,
+                default=0.0,
+            ),
+            "total_reward": coerce_finite_float(
+                total_rewards[index] if index < len(total_rewards) else 0.0,
+                default=0.0,
+            ),
             "capital": capital_value,
             "capital_gain": capital_gain,
         }

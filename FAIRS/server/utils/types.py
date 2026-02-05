@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import re
 from collections.abc import Iterable
 from typing import Any
@@ -92,6 +93,35 @@ def coerce_float(
 
 
 # -----------------------------------------------------------------------------
+def coerce_finite_float(value: Any, default: float = 0.0) -> float:
+    if isinstance(value, bool):
+        return float(value)
+    if isinstance(value, (int, float)):
+        if math.isfinite(float(value)):
+            return float(value)
+        return default
+    return default
+
+
+# -----------------------------------------------------------------------------
+def coerce_finite_int(
+    value: Any,
+    default: int = 0,
+    minimum: int | None = None,
+) -> int:
+    if isinstance(value, bool):
+        value = int(value)
+    if isinstance(value, (int, float)):
+        if not math.isfinite(float(value)):
+            return default
+        candidate = int(value)
+        if minimum is not None and candidate < minimum:
+            return minimum
+        return candidate
+    return default
+
+
+# -----------------------------------------------------------------------------
 def coerce_str(value: Any, default: str) -> str:
     if isinstance(value, str):
         stripped = value.strip()
@@ -156,6 +186,8 @@ def coerce_string_tuple(value: Any) -> tuple[str, ...]:
 
 __all__ = [
     "coerce_bool",
+    "coerce_finite_float",
+    "coerce_finite_int",
     "coerce_float",
     "coerce_int",
     "coerce_positive_int",
