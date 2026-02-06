@@ -87,6 +87,12 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
         void loadDatasets();
     }, [refreshKey]);
 
+    const handleRefreshOverview = async () => {
+        setMetadataCache({});
+        setCheckpointDatasetMap({});
+        await Promise.all([loadCheckpoints(), loadDatasets()]);
+    };
+
     const handleDelete = async (checkpointName: string) => {
         if (!confirm(`Are you sure you want to delete checkpoint "${checkpointName}"?`)) {
             return;
@@ -357,6 +363,16 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
             <div className="preview-header">
                 <Save size={18} />
                 <span>Available Checkpoints</span>
+                <div className="preview-header-actions">
+                    <button
+                        className="preview-row-icon preview-header-refresh"
+                        onClick={handleRefreshOverview}
+                        title="Refresh checkpoints overview"
+                        disabled={loading || datasetsLoading}
+                    >
+                        <RefreshCw size={16} />
+                    </button>
+                </div>
             </div>
             <div className="preview-content">
                 {loading && <div className="preview-loading">Loading...</div>}

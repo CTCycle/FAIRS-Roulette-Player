@@ -20,6 +20,8 @@ from FAIRS.server.utils.types import coerce_finite_float, coerce_finite_int
 from FAIRS.server.learning.training.agents import DQNAgent
 from FAIRS.server.learning.training.environment import RouletteEnvironment
 
+HISTORY_POINTS_PER_EPISODE = 20
+
 
 ###############################################################################
 def sanitize_training_stats(stats: dict[str, Any]) -> dict[str, Any]:
@@ -74,7 +76,9 @@ class DQNTraining:
         self.configuration = configuration
         self.max_steps = int(configuration.get("max_steps_episode", 2000))
         self.history_bucket_size = (
-            self.max_steps / 10.0 if self.max_steps > 0 else 1.0
+            self.max_steps / float(HISTORY_POINTS_PER_EPISODE)
+            if self.max_steps > 0
+            else 1.0
         )
         self.last_history_episode: int | None = None
         self.last_history_bucket: int | None = None
@@ -163,8 +167,8 @@ class DQNTraining:
     ) -> None:
         bucket_size = self.history_bucket_size if self.history_bucket_size > 0 else 1.0
         bucket = int(time_step / bucket_size)
-        if self.max_steps >= 10:
-            bucket = min(9, bucket)
+        if self.max_steps >= HISTORY_POINTS_PER_EPISODE:
+            bucket = min(HISTORY_POINTS_PER_EPISODE - 1, bucket)
         if self.last_history_episode != episode:
             self.last_history_episode = episode
             self.last_history_bucket = None
@@ -196,7 +200,12 @@ class DQNTraining:
             self.session_stats["img_reward"].append(last_val_reward)
 
     # -------------------------------------------------------------------------
-    def get_latest_stats(self, episode: int, total_episodes: int) -> dict[str, Any]:
+    def get_latest_stats(
+        self,
+        episode: int,
+        total_episodes: int,
+        training_ready: bool,
+    ) -> dict[str, Any]:
         initial_capital = self.configuration.get("initial_capital", 0.0)
         initial_capital_value = (
             float(initial_capital) if isinstance(initial_capital, (int, float)) else 0.0
@@ -214,7 +223,7 @@ class DQNTraining:
                 "total_reward": 0,
                 "capital": 0,
                 "capital_gain": 0.0,
-                "status": "training",
+                "status": "training" if training_ready else "exploration",
             }
             return sanitize_training_stats(raw_stats)
         capital_value = self.session_stats["capital"][-1]
@@ -232,7 +241,7 @@ class DQNTraining:
             "total_reward": self.session_stats["total_reward"][-1],
             "capital": capital_value,
             "capital_gain": float(capital_value) - initial_capital_value,
-            "status": "training",
+            "status": "training" if training_ready else "exploration",
         }
         if has_non_finite_numbers(raw_stats, [
             "time_step",
@@ -349,7 +358,7 @@ class DQNTraining:
         total_reward: int | float,
         state_size: int,
     ) -> None:
-        if len(self.agent.memory) <= self.replay_size:
+        if not self.agent.is_training_ready():
             return
 
         scores = self.agent.replay(model, target_model, environment, self.batch_size)
@@ -383,15 +392,19 @@ class DQNTraining:
     ) -> None:
         bucket_size = self.history_bucket_size if self.history_bucket_size > 0 else 1.0
         bucket = int(time_step / bucket_size)
-        if self.max_steps >= 10:
-            bucket = min(9, bucket)
+        if self.max_steps >= HISTORY_POINTS_PER_EPISODE:
+            bucket = min(HISTORY_POINTS_PER_EPISODE - 1, bucket)
         if self.last_progress_episode != episode:
             self.last_progress_episode = episode
             self.last_progress_bucket = None
         if self.last_progress_bucket != bucket:
             self.last_progress_bucket = bucket
             if ws_callback:
-                stats = self.get_latest_stats(episode, episodes)
+                stats = self.get_latest_stats(
+                    episode,
+                    episodes,
+                    training_ready=self.agent.is_training_ready(),
+                )
                 try:
                     ws_callback(stats)
                 except Exception:

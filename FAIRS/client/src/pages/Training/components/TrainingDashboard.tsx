@@ -18,7 +18,7 @@ interface TrainingStats {
     total_reward: number;
     capital: number;
     capital_gain: number;
-    status: 'idle' | 'training' | 'completed' | 'error' | 'cancelled';
+    status: 'idle' | 'exploration' | 'training' | 'completed' | 'error' | 'cancelled';
     message?: string;
 }
 
@@ -68,7 +68,13 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
     const maxHistoryPoints = 2000;
     const trainingEndStatuses: TrainingStats['status'][] = ['completed', 'error', 'cancelled'];
     const validStatus = (value: unknown): value is TrainingStats['status'] => (
-        typeof value === 'string' && (trainingEndStatuses.includes(value as TrainingStats['status']) || value === 'idle' || value === 'training')
+        typeof value === 'string'
+        && (
+            trainingEndStatuses.includes(value as TrainingStats['status'])
+            || value === 'idle'
+            || value === 'exploration'
+            || value === 'training'
+        )
     );
     const toFiniteNumber = (value: unknown, fallback: number) => {
         const numeric = typeof value === 'number' ? value : Number(value);
@@ -222,10 +228,36 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
         if (historyPoints.length === 0) {
             return [];
         }
+        const maxPointsPerEpisode = 20;
+        const byEpisode = new Map<number, TrainingHistoryPoint[]>();
+        historyPoints.forEach((point) => {
+            const episode = Number.isFinite(point.epoch) ? Math.max(0, Math.trunc(point.epoch)) : 0;
+            if (!byEpisode.has(episode)) {
+                byEpisode.set(episode, []);
+            }
+            byEpisode.get(episode)?.push(point);
+        });
+        const sampledPoints: TrainingHistoryPoint[] = [];
+        Array.from(byEpisode.keys()).sort((a, b) => a - b).forEach((episode) => {
+            const points = (byEpisode.get(episode) ?? []).slice().sort((a, b) => a.time_step - b.time_step);
+            if (points.length <= maxPointsPerEpisode) {
+                sampledPoints.push(...points);
+                return;
+            }
+            const sampledIndices = new Set<number>();
+            for (let index = 0; index < maxPointsPerEpisode; index += 1) {
+                const ratio = index / (maxPointsPerEpisode - 1);
+                const pointIndex = Math.round(ratio * (points.length - 1));
+                sampledIndices.add(pointIndex);
+            }
+            Array.from(sampledIndices).sort((a, b) => a - b).forEach((index) => {
+                sampledPoints.push(points[index]);
+            });
+        });
         const maxSteps = typeof stats.max_steps === 'number' && Number.isFinite(stats.max_steps)
             ? Math.max(1, stats.max_steps)
             : 1;
-        return historyPoints.map((point) => {
+        return sampledPoints.map((point) => {
             const epochIndex = typeof point.epoch === 'number' ? Math.max(1, point.epoch) : 1;
             return {
                 ...point,
@@ -252,6 +284,9 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
         if (stats.status === 'error') {
             return 'Error';
         }
+        if (stats.status === 'exploration') {
+            return 'Exploration';
+        }
         if (stats.status === 'training') {
             if (stopRequested || isStopping) {
                 return 'Stopping';
@@ -273,6 +308,9 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
         }
         if (stats.status === 'error') {
             return 'error';
+        }
+        if (stats.status === 'exploration') {
+            return 'exploration';
         }
         if (stats.status === 'training') {
             return 'training';
@@ -457,17 +495,16 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                             <span className="legend-item" style={{ opacity: 0.7 }}><span className="legend-dot loss" style={{ opacity: 0.5 }}></span>Validation</span>
                         </div>
                     </div>
-                    <TrainingLossChart points={chartPoints} maxSteps={stats.max_steps} />
+                    <TrainingLossChart points={chartPoints} />
                 </div>
                 <div className="visual-card">
                     <div className="visual-card-header">
-                        <span className="visual-card-title">Metrics</span>
+                        <span className="visual-card-title">Total Reward</span>
                         <div className="visual-card-legend">
                             <span className="legend-item"><span className="legend-dot total-reward"></span>Total Reward</span>
-                            <span className="legend-item" style={{ opacity: 0.7 }}><span className="legend-dot capital"></span>Capital Gain</span>
                         </div>
                     </div>
-                    <TrainingMetricsChart points={chartPoints} maxSteps={stats.max_steps} />
+                    <TrainingMetricsChart points={chartPoints} />
                 </div>
             </div>
         </div>
