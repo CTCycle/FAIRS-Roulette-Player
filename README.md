@@ -77,12 +77,15 @@ Typical workflow:
 - Inspect stored datasets, checkpoints, and session records in the Database Browser.
 
 **Training page**: Open the Training tab, select your dataset and run parameters, then start a new training run or resume from a saved checkpoint. Use the dashboard and charts to follow progress and validate that metrics are updating as expected.
+
 ![training_page](assets/figures/training_page.png)
 
 **Inference page**: Open the Inference tab, choose the checkpoint to use, and run predictions step by step for the active roulette sequence. Review each predicted action and outcome before moving to the next step.
+
 ![inference_page](assets/figures/inference_page.png)
 
 **Database Browser**: Open the Database tab to navigate persisted tables and records, including dataset entries, training sessions, and checkpoint metadata. Use it to verify what has been saved before training or inference.
+
 ![database_browser](assets/figures/database_browser.png)
 
 ## 5. Setup and Maintenance
@@ -101,18 +104,6 @@ Typical workflow:
 
 ## 7. Configuration
 Backend runtime settings are loaded from `FAIRS/settings/.env`, and backend application settings are read from `FAIRS/settings/configurations.json`. Frontend serving parameters are passed through launcher or command-line flags at startup.
-
-| Variable | Description |
-|----------|-------------|
-| FASTAPI_HOST | Backend bind host, read from `FAIRS/settings/.env` by launcher/test scripts, default `127.0.0.1`. |
-| FASTAPI_PORT | Backend bind port, read from `FAIRS/settings/.env` by launcher/test scripts, default `8000`. |
-| UI_HOST | Frontend preview host, read from `FAIRS/settings/.env` by launcher/test scripts, default `127.0.0.1`. |
-| UI_PORT | Frontend preview port, read from `FAIRS/settings/.env` by launcher/test scripts, default `5173` in launcher and `7861` in test runner unless overridden. |
-| RELOAD | Enables backend auto-reload in Windows launcher, read from `FAIRS/settings/.env`, default `false`. |
-| VITE_API_BASE_URL | Frontend API base path consumed by the launcher environment, default `/api`. |
-| OPTIONAL_DEPENDENCIES | Controls optional dependency installation in the Windows launcher, default `false`. |
-| MPLBACKEND | Matplotlib backend setting read from `FAIRS/settings/.env`, default `"Agg"`. |
-| KERAS_BACKEND | Keras backend selection read from `FAIRS/settings/.env`, default `torch`. |
 
 ## 8. License
 This project is licensed under the MIT License. See `LICENSE` for the full terms.
