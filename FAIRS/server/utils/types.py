@@ -96,10 +96,12 @@ def coerce_float(
 def coerce_finite_float(value: Any, default: float = 0.0) -> float:
     if isinstance(value, bool):
         return float(value)
-    if isinstance(value, (int, float)):
-        if math.isfinite(float(value)):
-            return float(value)
+    try:
+        candidate = float(value)
+    except (TypeError, ValueError):
         return default
+    if math.isfinite(candidate):
+        return candidate
     return default
 
 

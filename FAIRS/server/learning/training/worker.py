@@ -239,7 +239,9 @@ async def run_training_async(
     device.set_device()
 
     model_serializer = ModelSerializer()
-    checkpoint_path = model_serializer.create_checkpoint_folder()
+    checkpoint_path = model_serializer.create_checkpoint_folder(
+        configuration.get("checkpoint_name")
+    )
 
     logger.info("Building FAIRS reinforcement learning model")
     learner = FAIRSnet(configuration)

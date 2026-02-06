@@ -35,25 +35,51 @@ TRAINING_STATUSES = {
 HISTORY_POINTS_PER_EPISODE = 20
 
 
+def coerce_optional_finite_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return float(value)
+    try:
+        candidate = float(value)
+    except (TypeError, ValueError):
+        return None
+    if math.isfinite(candidate):
+        return candidate
+    return None
+
+
 def sanitize_training_stats(stats: dict[str, Any]) -> dict[str, Any]:
     if not stats:
         return {}
-    sanitized = {
-        **stats,
-        "epoch": coerce_finite_int(stats.get("epoch"), 0, minimum=0),
-        "total_epochs": coerce_finite_int(stats.get("total_epochs"), 0, minimum=0),
-        "max_steps": coerce_finite_int(stats.get("max_steps"), 0, minimum=0),
-        "time_step": coerce_finite_int(stats.get("time_step"), 0, minimum=0),
-        "loss": coerce_finite_float(stats.get("loss"), 0.0),
-        "rmse": coerce_finite_float(stats.get("rmse"), 0.0),
-        "val_loss": coerce_finite_float(stats.get("val_loss"), 0.0),
-        "val_rmse": coerce_finite_float(stats.get("val_rmse"), 0.0),
-        "reward": coerce_finite_float(stats.get("reward"), 0.0),
-        "val_reward": coerce_finite_float(stats.get("val_reward"), 0.0),
-        "total_reward": coerce_finite_float(stats.get("total_reward"), 0.0),
-        "capital": coerce_finite_float(stats.get("capital"), 0.0),
-        "capital_gain": coerce_finite_float(stats.get("capital_gain"), 0.0),
-    }
+    sanitized = {**stats}
+
+    if "epoch" in stats:
+        sanitized["epoch"] = coerce_finite_int(stats.get("epoch"), 0, minimum=0)
+    if "total_epochs" in stats:
+        sanitized["total_epochs"] = coerce_finite_int(
+            stats.get("total_epochs"), 0, minimum=0
+        )
+    if "max_steps" in stats:
+        sanitized["max_steps"] = coerce_finite_int(stats.get("max_steps"), 0, minimum=0)
+    if "time_step" in stats:
+        sanitized["time_step"] = coerce_finite_int(stats.get("time_step"), 0, minimum=0)
+
+    for metric_key in (
+        "loss",
+        "rmse",
+        "val_loss",
+        "val_rmse",
+        "reward",
+        "val_reward",
+        "total_reward",
+        "capital",
+        "capital_gain",
+    ):
+        if metric_key not in stats:
+            continue
+        sanitized[metric_key] = coerce_optional_finite_float(stats.get(metric_key))
+
     status_value = stats.get("status")
     if isinstance(status_value, str) and status_value in TRAINING_STATUSES:
         sanitized["status"] = status_value
@@ -74,12 +100,12 @@ class TrainingState:
             "total_epochs": 0,
             "max_steps": 0,
             "time_step": 0,
-            "loss": 0.0,
-            "rmse": 0.0,
-            "val_loss": 0.0,
-            "val_rmse": 0.0,
+            "loss": None,
+            "rmse": None,
+            "val_loss": None,
+            "val_rmse": None,
             "reward": 0,
-            "val_reward": 0.0,
+            "val_reward": None,
             "total_reward": 0,
             "capital": 0,
             "capital_gain": 0.0,
@@ -107,12 +133,12 @@ class TrainingState:
             "total_epochs": total_epochs,
             "max_steps": max_steps,
             "time_step": 0,
-            "loss": 0.0,
-            "rmse": 0.0,
-            "val_loss": 0.0,
-            "val_rmse": 0.0,
+            "loss": None,
+            "rmse": None,
+            "val_loss": None,
+            "val_rmse": None,
             "reward": 0,
-            "val_reward": 0.0,
+            "val_reward": None,
             "total_reward": 0,
             "capital": 0,
             "capital_gain": 0.0,
@@ -152,31 +178,44 @@ class TrainingState:
             return
         if epoch <= 0:
             return
-        bucket_size = self.history_bucket_size if self.history_bucket_size > 0 else 1.0
-        bucket = int(time_step / bucket_size)
-        if self.max_steps >= HISTORY_POINTS_PER_EPISODE:
-            bucket = min(HISTORY_POINTS_PER_EPISODE - 1, bucket)
-        if self.last_history_episode != epoch:
-            self.last_history_episode = epoch
-            self.last_history_bucket = None
-
         point = {
             "time_step": time_step,
             "loss": float(loss),
             "rmse": float(rmse),
-            "val_loss": float(stats.get("val_loss", 0.0)),
-            "val_rmse": float(stats.get("val_rmse", 0.0)),
+            "val_loss": (
+                coerce_optional_finite_float(stats.get("val_loss"))
+            ),
+            "val_rmse": (
+                coerce_optional_finite_float(stats.get("val_rmse"))
+            ),
             "epoch": epoch,
-            "reward": float(stats.get("reward", 0.0)),
-            "total_reward": float(stats.get("total_reward", 0.0)),
-            "capital": float(stats.get("capital", 0.0)),
-            "capital_gain": float(stats.get("capital_gain", 0.0)),
+            "reward": coerce_finite_float(stats.get("reward"), 0.0),
+            "total_reward": coerce_finite_float(stats.get("total_reward"), 0.0),
+            "capital": coerce_finite_float(stats.get("capital"), 0.0),
+            "capital_gain": coerce_finite_float(stats.get("capital_gain"), 0.0),
         }
-        if self.last_history_bucket == bucket and self.history_points:
-            self.history_points[-1] = point
-        else:
-            self.history_points.append(point)
-            self.last_history_bucket = bucket
+        if self.history_points:
+            previous = self.history_points[-1]
+            previous_epoch = previous.get("epoch")
+            previous_step = previous.get("time_step")
+            if previous_epoch == point["epoch"] and previous_step == point["time_step"]:
+                self.history_points[-1] = point
+                return
+            if (
+                isinstance(previous_epoch, int)
+                and isinstance(previous_step, int)
+                and point["epoch"] < previous_epoch
+            ):
+                return
+            if (
+                isinstance(previous_epoch, int)
+                and isinstance(previous_step, int)
+                and point["epoch"] == previous_epoch
+                and point["time_step"] < previous_step
+            ):
+                return
+
+        self.history_points.append(point)
 
         if len(self.history_points) > self.max_history_points:
             self.history_points = self.history_points[-self.max_history_points :]
@@ -249,13 +288,11 @@ def build_history_points(
                 metrics[index] if index < len(metrics) else 0.0,
                 default=0.0,
             ),
-            "val_loss": coerce_finite_float(
-                val_losses[index] if index < len(val_losses) else 0.0,
-                default=0.0,
+            "val_loss": coerce_optional_finite_float(
+                val_losses[index] if index < len(val_losses) else None,
             ),
-            "val_rmse": coerce_finite_float(
-                val_rmses[index] if index < len(val_rmses) else 0.0,
-                default=0.0,
+            "val_rmse": coerce_optional_finite_float(
+                val_rmses[index] if index < len(val_rmses) else None,
             ),
             "epoch": epoch,
             "reward": coerce_finite_float(
@@ -459,6 +496,20 @@ class TrainingEndpoint:
         base_config = TrainingConfig.model_validate({}).model_dump()
         overrides = config.model_dump(exclude_unset=True)
         configuration = {**base_config, **overrides}
+        checkpoint_name = configuration.get("checkpoint_name")
+        if isinstance(checkpoint_name, str):
+            trimmed_checkpoint_name = checkpoint_name.strip()
+            configuration["checkpoint_name"] = trimmed_checkpoint_name or None
+        else:
+            configuration["checkpoint_name"] = None
+
+        if configuration["checkpoint_name"]:
+            checkpoint_path = os.path.join(CHECKPOINT_PATH, configuration["checkpoint_name"])
+            if os.path.exists(checkpoint_path):
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Checkpoint already exists: {configuration['checkpoint_name']}",
+                )
 
         job_id = self.job_manager.start_job(
             job_type=self.JOB_TYPE,

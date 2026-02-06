@@ -60,6 +60,7 @@ export interface TrainingNewConfig {
     useMixedPrecision: boolean;
     maxMemorySize: number;
     replayBufferSize: number;
+    checkpointName: string;
 }
 
 export interface TrainingResumeConfig {
@@ -140,6 +141,7 @@ const initialNewConfig: TrainingNewConfig = {
     useMixedPrecision: false,
     maxMemorySize: 10000,
     replayBufferSize: 1000,
+    checkpointName: '',
 };
 
 const initialResumeConfig: TrainingResumeConfig = {

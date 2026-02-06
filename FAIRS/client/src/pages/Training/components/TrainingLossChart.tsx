@@ -5,8 +5,8 @@ export interface TrainingHistoryPoint {
     loss: number;
     rmse: number;
     epoch: number;
-    val_loss?: number;
-    val_rmse?: number;
+    val_loss?: number | null;
+    val_rmse?: number | null;
     reward?: number;
     total_reward?: number;
     capital?: number;
@@ -16,6 +16,17 @@ export interface TrainingHistoryPoint {
 interface TrainingLossChartProps {
     points: TrainingHistoryPoint[];
 }
+
+const formatAxisValue = (value: number): string => {
+    const absoluteValue = Math.abs(value);
+    if (absoluteValue > 0 && absoluteValue < 0.0001) {
+        return value.toExponential(2);
+    }
+    if (absoluteValue < 0.01) {
+        return value.toFixed(5);
+    }
+    return value.toFixed(3);
+};
 
 const buildPath = (
     points: TrainingHistoryPoint[],
@@ -72,13 +83,15 @@ export const TrainingLossChart: React.FC<TrainingLossChartProps> = ({ points }) 
         // Only use loss values for Y-axis scaling
         const lossValues = points.flatMap((point) => {
             const vals = [point.loss];
-            if (point.val_loss !== undefined) vals.push(point.val_loss);
+            if (typeof point.val_loss === 'number') vals.push(point.val_loss);
             return vals;
         }).filter((value) => Number.isFinite(value));
         
         const rawMin = lossValues.length ? Math.min(...lossValues) : 0;
         const rawMax = lossValues.length ? Math.max(...lossValues) : 1;
-        const yPadding = (rawMax - rawMin) * 0.1 || 1;
+        const range = rawMax - rawMin;
+        const baseline = Math.max(Math.abs(rawMax), Math.abs(rawMin), 1e-6);
+        const yPadding = range > 0 ? range * 0.1 : baseline * 0.1;
         const yMinValue = rawMin - yPadding;
         const yMaxValue = rawMax + yPadding;
 
@@ -143,7 +156,7 @@ export const TrainingLossChart: React.FC<TrainingLossChartProps> = ({ points }) 
                 <g key={line.y}>
                     <line x1={lossPath ? padding.left : 0} y1={line.y} x2={viewWidth} y2={line.y} stroke="var(--chart-grid)" strokeWidth="1" />
                     <text x="0" y={Math.max(12, line.y - 4)} fill="var(--chart-text)" fontSize="10" textAnchor="start">
-                        {line.value.toFixed(3)}
+                        {formatAxisValue(line.value)}
                     </text>
                 </g>
             ))}

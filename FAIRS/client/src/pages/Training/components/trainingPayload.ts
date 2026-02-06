@@ -3,7 +3,9 @@ import type { TrainingNewConfig } from '../../../context/AppStateContext';
 export const buildTrainingPayload = (
     config: TrainingNewConfig,
     datasetOverride?: string,
-): Record<string, unknown> => ({
+): Record<string, unknown> => {
+    const checkpointName = config.checkpointName.trim();
+    return ({
     // Agent
     perceptive_field_size: Number(config.perceptiveField),
     QNet_neurons: Number(config.numNeurons),
@@ -35,4 +37,6 @@ export const buildTrainingPayload = (
     // Memory
     max_memory_size: Number(config.maxMemorySize),
     replay_buffer_size: Number(config.replayBufferSize),
-});
+    checkpoint_name: checkpointName.length > 0 ? checkpointName : undefined,
+    });
+};

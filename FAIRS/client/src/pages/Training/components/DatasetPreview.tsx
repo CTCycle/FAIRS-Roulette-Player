@@ -197,6 +197,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
 
     const summaryRows = useMemo(() => ([
         { label: 'Dataset', value: wizardDataset ?? '-' },
+        { label: 'Checkpoint Name', value: newConfig.checkpointName.trim() || 'Auto-generated' },
         { label: 'Perceptive Field', value: newConfig.perceptiveField },
         { label: 'QNet Neurons', value: newConfig.numNeurons },
         { label: 'Embedding Dims', value: newConfig.embeddingDims },
@@ -457,15 +458,28 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                             )}
 
                             {wizardStep === 4 && (
-                                <div className="wizard-summary">
-                                    {summaryRows.map((row) => (
-                                        <div key={row.label} className="wizard-summary-row">
-                                            <span className="wizard-summary-label">{row.label}</span>
-                                            <span className="wizard-summary-value">
-                                                {typeof row.value === 'number' ? row.value.toLocaleString() : String(row.value)}
-                                            </span>
-                                        </div>
-                                    ))}
+                                <div className="wizard-stack">
+                                    <div className="form-group">
+                                        <label className="form-label">Checkpoint name</label>
+                                        <input
+                                            type="text"
+                                            name="checkpointName"
+                                            value={newConfig.checkpointName}
+                                            onChange={handleInputChange}
+                                            className="form-input"
+                                            placeholder="Optional (auto-generated if empty)"
+                                        />
+                                    </div>
+                                    <div className="wizard-summary">
+                                        {summaryRows.map((row) => (
+                                            <div key={row.label} className="wizard-summary-row">
+                                                <span className="wizard-summary-label">{row.label}</span>
+                                                <span className="wizard-summary-value">
+                                                    {typeof row.value === 'number' ? row.value.toLocaleString() : String(row.value)}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
                         </div>
