@@ -93,14 +93,6 @@ export const TrainingLossChart: React.FC<TrainingLossChartProps> = ({ points, ma
         };
     }, [points, plotHeight, plotWidth, padding.left, padding.top]);
 
-    if (points.length < 2) {
-        return (
-            <div className="training-chart-empty">
-                Waiting for training data...
-            </div>
-        );
-    }
-
     const gridLines = 4;
     const grid = Array.from({ length: gridLines + 1 }, (_, index) => {
         const y = padding.top + (plotHeight / gridLines) * index;
@@ -117,7 +109,7 @@ export const TrainingLossChart: React.FC<TrainingLossChartProps> = ({ points, ma
     });
 
     const episodeBoundaries = useMemo(() => {
-        if (!maxSteps || maxSteps <= 0) {
+        if (points.length < 2 || !maxSteps || maxSteps <= 0) {
             return [];
         }
         const episodes = Array.from(new Set(points.map((point) => point.epoch)))
@@ -126,6 +118,14 @@ export const TrainingLossChart: React.FC<TrainingLossChartProps> = ({ points, ma
         return episodes.map((episode) => (episode - 1) * maxSteps)
             .filter((step) => step >= xMin && step <= xMax);
     }, [maxSteps, points, xMax, xMin]);
+
+    if (points.length < 2) {
+        return (
+            <div className="training-chart-empty">
+                Waiting for training data...
+            </div>
+        );
+    }
 
     return (
         <svg

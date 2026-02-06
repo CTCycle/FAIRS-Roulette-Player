@@ -37,9 +37,10 @@ interface TrainingDashboardProps {
 }
 
 export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, onTrainingStart, onTrainingEnd }) => {
-    const [stats, setStats] = useState<TrainingStats>({
+    const defaultStats: TrainingStats = {
         epoch: 0,
         total_epochs: 0,
+        max_steps: 0,
         time_step: 0,
         loss: 0,
         rmse: 0,
@@ -48,7 +49,8 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
         capital: 0,
         capital_gain: 0,
         status: 'idle',
-    });
+    };
+    const [stats, setStats] = useState<TrainingStats>(defaultStats);
     const [isConnected, setIsConnected] = useState(false);
     const [connectionError, setConnectionError] = useState<string | null>(null);
     const [historyPoints, setHistoryPoints] = useState<TrainingHistoryPoint[]>([]);
@@ -61,8 +63,42 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
     const onTrainingStartRef = useRef(onTrainingStart);
     const onTrainingEndRef = useRef(onTrainingEnd);
     const pollAbortRef = useRef<AbortController | null>(null);
+    const statsRef = useRef(defaultStats);
 
     const maxHistoryPoints = 2000;
+    const trainingEndStatuses: TrainingStats['status'][] = ['completed', 'error', 'cancelled'];
+    const validStatus = (value: unknown): value is TrainingStats['status'] => (
+        typeof value === 'string' && (trainingEndStatuses.includes(value as TrainingStats['status']) || value === 'idle' || value === 'training')
+    );
+    const toFiniteNumber = (value: unknown, fallback: number) => {
+        const numeric = typeof value === 'number' ? value : Number(value);
+        return Number.isFinite(numeric) ? numeric : fallback;
+    };
+    const normalizeStats = (value: unknown, fallback: TrainingStats): TrainingStats | null => {
+        if (!value || typeof value !== 'object') {
+            return null;
+        }
+        const candidate = value as Partial<TrainingStats>;
+        return {
+            ...fallback,
+            ...candidate,
+            epoch: toFiniteNumber(candidate.epoch, fallback.epoch),
+            total_epochs: toFiniteNumber(candidate.total_epochs, fallback.total_epochs),
+            max_steps: candidate.max_steps === undefined ? fallback.max_steps : toFiniteNumber(candidate.max_steps, fallback.max_steps ?? 0),
+            time_step: toFiniteNumber(candidate.time_step, fallback.time_step),
+            loss: toFiniteNumber(candidate.loss, fallback.loss),
+            rmse: toFiniteNumber(candidate.rmse, fallback.rmse),
+            val_loss: candidate.val_loss === undefined ? fallback.val_loss : toFiniteNumber(candidate.val_loss, fallback.val_loss ?? 0),
+            val_rmse: candidate.val_rmse === undefined ? fallback.val_rmse : toFiniteNumber(candidate.val_rmse, fallback.val_rmse ?? 0),
+            reward: toFiniteNumber(candidate.reward, fallback.reward),
+            val_reward: candidate.val_reward === undefined ? fallback.val_reward : toFiniteNumber(candidate.val_reward, fallback.val_reward ?? 0),
+            total_reward: toFiniteNumber(candidate.total_reward, fallback.total_reward),
+            capital: toFiniteNumber(candidate.capital, fallback.capital),
+            capital_gain: toFiniteNumber(candidate.capital_gain, fallback.capital_gain),
+            status: validStatus(candidate.status) ? candidate.status : fallback.status,
+            message: typeof candidate.message === 'string' ? candidate.message : fallback.message,
+        };
+    };
     const isHistoryPoint = (point: unknown): point is TrainingHistoryPoint => {
         if (!point || typeof point !== 'object') {
             return false;
@@ -83,6 +119,10 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
     }, [onTrainingEnd]);
 
     useEffect(() => {
+        statsRef.current = stats;
+    }, [stats]);
+
+    useEffect(() => {
         if (isActive) {
             setStopRequested(false);
             setStopError(null);
@@ -90,12 +130,9 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
     }, [isActive]);
 
     useEffect(() => {
-        setHistoryPoints([]);
-        setConnectionError(null);
-
-        if (!isActive) {
-            backendActiveRef.current = false;
-            return;
+        if (!isActive && !backendActiveRef.current) {
+            setHistoryPoints([]);
+            setConnectionError(null);
         }
 
         let cancelled = false;
@@ -118,27 +155,34 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                 setConnectionError(null);
 
                 const backendActive = Boolean(payload.is_training);
+                let endedFromBackend = false;
                 if (backendActive && !backendActiveRef.current) {
                     backendActiveRef.current = true;
                     onTrainingStartRef.current?.();
                 } else if (!backendActive && backendActiveRef.current) {
                     backendActiveRef.current = false;
-                    onTrainingEndRef.current?.();
-                    trainingEnded = true;
+                    endedFromBackend = true;
                 }
 
-                if (payload.latest_stats) {
-                    setStats(payload.latest_stats);
-                    trainingEnded = trainingEnded || payload.latest_stats.status === 'completed' || payload.latest_stats.status === 'error' || payload.latest_stats.status === 'cancelled';
-                    if (trainingEnded) {
-                        onTrainingEndRef.current?.();
+                const normalizedStats = normalizeStats(payload.latest_stats, statsRef.current);
+                if (normalizedStats) {
+                    setStats(normalizedStats);
+                    const endedFromStatus = trainingEndStatuses.includes(normalizedStats.status);
+                    if (endedFromStatus) {
+                        backendActiveRef.current = false;
                     }
+                    trainingEnded = endedFromBackend || endedFromStatus;
+                } else {
+                    trainingEnded = endedFromBackend;
+                }
+
+                if (trainingEnded) {
+                    onTrainingEndRef.current?.();
                 }
 
                 if (Array.isArray(payload.history)) {
-                    const filteredHistory = payload.history
-                        .filter(isHistoryPoint)
-                        .slice(-maxHistoryPoints);
+                    const trimmedHistory = payload.history.slice(-maxHistoryPoints);
+                    const filteredHistory = trimmedHistory.filter(isHistoryPoint);
                     setHistoryPoints(filteredHistory);
                 }
 
@@ -155,7 +199,7 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                 if (cancelled) {
                     return;
                 }
-                const shouldContinue = isActive;
+                const shouldContinue = isActive || backendActiveRef.current;
                 if (shouldContinue && !trainingEnded) {
                     pollTimeoutRef.current = setTimeout(pollStatus, pollIntervalRef.current);
                 }
