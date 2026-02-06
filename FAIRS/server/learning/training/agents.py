@@ -119,6 +119,10 @@ class DQNAgent:
         return logs
 
     # -------------------------------------------------------------------------
+    def is_training_ready(self) -> bool:
+        return len(self.memory) > self.replay_size
+
+    # -------------------------------------------------------------------------
     def evaluate_batch(
         self,
         model: Model,

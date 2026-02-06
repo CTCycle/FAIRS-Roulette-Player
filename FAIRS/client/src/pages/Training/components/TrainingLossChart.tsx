@@ -15,7 +15,6 @@ export interface TrainingHistoryPoint {
 
 interface TrainingLossChartProps {
     points: TrainingHistoryPoint[];
-    maxSteps?: number;
 }
 
 const buildPath = (
@@ -55,7 +54,7 @@ const buildPath = (
  * TrainingLossChart - Displays Loss metrics (training + validation)
  * Shows loss (solid red) and val_loss (dashed red) lines
  */
-export const TrainingLossChart: React.FC<TrainingLossChartProps> = ({ points, maxSteps }) => {
+export const TrainingLossChart: React.FC<TrainingLossChartProps> = ({ points }) => {
     const viewWidth = 420;
     const viewHeight = 220;
     const padding = { left: 50, right: 12, top: 12, bottom: 26 };
@@ -109,15 +108,19 @@ export const TrainingLossChart: React.FC<TrainingLossChartProps> = ({ points, ma
     });
 
     const episodeBoundaries = useMemo(() => {
-        if (points.length < 2 || !maxSteps || maxSteps <= 0) {
+        if (points.length < 2) {
             return [];
         }
-        const episodes = Array.from(new Set(points.map((point) => point.epoch)))
-            .filter((epoch) => typeof epoch === 'number' && epoch > 1)
-            .sort((a, b) => a - b);
-        return episodes.map((episode) => (episode - 1) * maxSteps)
-            .filter((step) => step >= xMin && step <= xMax);
-    }, [maxSteps, points, xMax, xMin]);
+        const boundaries: number[] = [];
+        for (let index = 1; index < points.length; index += 1) {
+            const previousEpoch = points[index - 1].epoch;
+            const currentEpoch = points[index].epoch;
+            if (currentEpoch !== previousEpoch) {
+                boundaries.push(points[index].time_step);
+            }
+        }
+        return boundaries.filter((step) => step >= xMin && step <= xMax);
+    }, [points, xMax, xMin]);
 
     if (points.length < 2) {
         return (

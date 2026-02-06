@@ -4,7 +4,6 @@ import type { TrainingHistoryPoint } from './TrainingLossChart';
 
 interface TrainingMetricsChartProps {
     points: TrainingHistoryPoint[];
-    maxSteps?: number;
 }
 
 const buildPath = (
@@ -40,16 +39,16 @@ const buildPath = (
     }, '');
 };
 
-export const TrainingMetricsChart: React.FC<TrainingMetricsChartProps> = ({ points, maxSteps }) => {
+export const TrainingMetricsChart: React.FC<TrainingMetricsChartProps> = ({ points }) => {
     const viewWidth = 420;
     const viewHeight = 220;
     const padding = { left: 50, right: 12, top: 12, bottom: 26 };
     const plotWidth = viewWidth - padding.left - padding.right;
     const plotHeight = viewHeight - padding.top - padding.bottom;
 
-    const { rewardPath, capitalGainPath, yMin, yMax, xMin, xMax } = useMemo(() => {
+    const { rewardPath, yMin, yMax, xMin, xMax } = useMemo(() => {
         if (points.length === 0) {
-            return { rewardPath: '', capitalGainPath: '', yMin: 0, yMax: 1, xMin: 0, xMax: 1 };
+            return { rewardPath: '', yMin: 0, yMax: 1, xMin: 0, xMax: 1 };
         }
 
         const xMinValue = points[0].time_step;
@@ -58,7 +57,6 @@ export const TrainingMetricsChart: React.FC<TrainingMetricsChartProps> = ({ poin
         const values = points.flatMap((point) => {
             const vals: number[] = [];
             if (typeof point.total_reward === 'number') vals.push(point.total_reward);
-            if (typeof point.capital_gain === 'number') vals.push(point.capital_gain);
             return vals;
         }).filter((value) => Number.isFinite(value));
 
@@ -70,7 +68,6 @@ export const TrainingMetricsChart: React.FC<TrainingMetricsChartProps> = ({ poin
 
         return {
             rewardPath: buildPath(points, xMinValue, xMaxValue, yMinValue, yMaxValue, plotWidth, plotHeight, 'total_reward', padding.left, padding.top),
-            capitalGainPath: buildPath(points, xMinValue, xMaxValue, yMinValue, yMaxValue, plotWidth, plotHeight, 'capital_gain', padding.left, padding.top),
             yMin: yMinValue,
             yMax: yMaxValue,
             xMin: xMinValue,
@@ -94,15 +91,19 @@ export const TrainingMetricsChart: React.FC<TrainingMetricsChartProps> = ({ poin
     });
 
     const episodeBoundaries = useMemo(() => {
-        if (points.length < 2 || !maxSteps || maxSteps <= 0) {
+        if (points.length < 2) {
             return [];
         }
-        const episodes = Array.from(new Set(points.map((point) => point.epoch)))
-            .filter((epoch) => typeof epoch === 'number' && epoch > 1)
-            .sort((a, b) => a - b);
-        return episodes.map((episode) => (episode - 1) * maxSteps)
-            .filter((step) => step >= xMin && step <= xMax);
-    }, [maxSteps, points, xMax, xMin]);
+        const boundaries: number[] = [];
+        for (let index = 1; index < points.length; index += 1) {
+            const previousEpoch = points[index - 1].epoch;
+            const currentEpoch = points[index].epoch;
+            if (currentEpoch !== previousEpoch) {
+                boundaries.push(points[index].time_step);
+            }
+        }
+        return boundaries.filter((step) => step >= xMin && step <= xMax);
+    }, [points, xMax, xMin]);
 
     if (points.length < 2) {
         return (
@@ -118,7 +119,7 @@ export const TrainingMetricsChart: React.FC<TrainingMetricsChartProps> = ({ poin
             viewBox={`0 0 ${viewWidth} ${viewHeight}`}
             preserveAspectRatio="none"
             role="img"
-            aria-label={`Training metrics chart from step ${Math.round(xMin)} to ${Math.round(xMax)}`}
+            aria-label={`Training total reward chart from step ${Math.round(xMin)} to ${Math.round(xMax)}`}
         >
             <rect x="0" y="0" width={viewWidth} height={viewHeight} fill="var(--chart-bg)" />
             {grid.map((line) => (
@@ -175,7 +176,6 @@ export const TrainingMetricsChart: React.FC<TrainingMetricsChartProps> = ({ poin
                 </g>
             ))}
             <path d={rewardPath} fill="none" stroke="var(--chart-reward)" strokeWidth="2.2" />
-            <path d={capitalGainPath} fill="none" stroke="var(--chart-capital)" strokeWidth="2" strokeDasharray="4 4" strokeOpacity="0.8" />
         </svg>
     );
 };

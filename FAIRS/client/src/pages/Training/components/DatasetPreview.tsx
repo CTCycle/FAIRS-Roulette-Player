@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Check, ChevronLeft, ChevronRight, Database, Play, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Database, Play, RefreshCw, X } from 'lucide-react';
 import { useAppState } from '../../../context/AppStateContext';
 import { buildTrainingPayload } from './trainingPayload';
 
@@ -119,6 +119,10 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
         }
     };
 
+    const handleRefreshDatasets = async () => {
+        await loadDatasets();
+    };
+
     const openWizard = (datasetName: string, isGenerator = false) => {
         if (isTraining) {
             alert('Training is already in progress.');
@@ -228,6 +232,14 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                 <Database size={18} />
                 <span>Available Datasets</span>
                 <div className="preview-header-actions">
+                    <button
+                        className="preview-row-icon preview-header-refresh"
+                        onClick={handleRefreshDatasets}
+                        title="Refresh datasets"
+                        disabled={loading}
+                    >
+                        <RefreshCw size={16} />
+                    </button>
                     <button
                         className="use-generator-btn"
                         onClick={() => openWizard('Synthetic Data', true)}

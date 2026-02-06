@@ -24,12 +24,21 @@ from FAIRS.server.learning.training.worker import (
 
 
 router = APIRouter(prefix="/training", tags=["training"])
+TRAINING_STATUSES = {
+    "idle",
+    "exploration",
+    "training",
+    "completed",
+    "error",
+    "cancelled",
+}
+HISTORY_POINTS_PER_EPISODE = 20
 
 
 def sanitize_training_stats(stats: dict[str, Any]) -> dict[str, Any]:
     if not stats:
         return {}
-    return {
+    sanitized = {
         **stats,
         "epoch": coerce_finite_int(stats.get("epoch"), 0, minimum=0),
         "total_epochs": coerce_finite_int(stats.get("total_epochs"), 0, minimum=0),
@@ -45,6 +54,12 @@ def sanitize_training_stats(stats: dict[str, Any]) -> dict[str, Any]:
         "capital": coerce_finite_float(stats.get("capital"), 0.0),
         "capital_gain": coerce_finite_float(stats.get("capital_gain"), 0.0),
     }
+    status_value = stats.get("status")
+    if isinstance(status_value, str) and status_value in TRAINING_STATUSES:
+        sanitized["status"] = status_value
+    elif "status" in sanitized:
+        sanitized.pop("status")
+    return sanitized
 
 
 ###############################################################################
@@ -101,10 +116,14 @@ class TrainingState:
             "total_reward": 0,
             "capital": 0,
             "capital_gain": 0.0,
-            "status": "training",
+            "status": "exploration",
         }
         self.history_points = []
-        self.history_bucket_size = max_steps / 10.0 if max_steps > 0 else 1.0
+        self.history_bucket_size = (
+            max_steps / float(HISTORY_POINTS_PER_EPISODE)
+            if max_steps > 0
+            else 1.0
+        )
         self.last_history_episode = None
         self.last_history_bucket = None
         self.latest_env = {}
@@ -117,7 +136,7 @@ class TrainingState:
 
     # -------------------------------------------------------------------------
     def add_history_point(self, stats: dict[str, Any]) -> None:
-        if stats.get("status") != "training":
+        if stats.get("status") not in {"training", "exploration"}:
             return
         time_step = stats.get("time_step")
         loss = stats.get("loss")
@@ -135,8 +154,8 @@ class TrainingState:
             return
         bucket_size = self.history_bucket_size if self.history_bucket_size > 0 else 1.0
         bucket = int(time_step / bucket_size)
-        if self.max_steps >= 10:
-            bucket = min(9, bucket)
+        if self.max_steps >= HISTORY_POINTS_PER_EPISODE:
+            bucket = min(HISTORY_POINTS_PER_EPISODE - 1, bucket)
         if self.last_history_episode != epoch:
             self.last_history_episode = epoch
             self.last_history_bucket = None

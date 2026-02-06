@@ -467,6 +467,10 @@
   color: #60a5fa;
 }
 
+.connection-status.exploration {
+  color: #f59e0b;
+}
+
 .connection-status.completed {
   color: #4ade80;
 }
@@ -1528,4 +1532,13 @@
 
 .preview-header {
   gap: 0.75rem !important;
+}
+
+.preview-header-refresh {
+  color: var(--text-secondary);
+}
+
+.preview-header-refresh:hover {
+  background: rgba(148, 163, 184, 0.16);
+  color: var(--text-primary);
 }
