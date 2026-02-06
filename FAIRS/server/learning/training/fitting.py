@@ -23,30 +23,58 @@ from FAIRS.server.learning.training.environment import RouletteEnvironment
 HISTORY_POINTS_PER_EPISODE = 20
 
 
+def coerce_optional_finite_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return float(value)
+    try:
+        candidate = float(value)
+    except (TypeError, ValueError):
+        return None
+    if math.isfinite(candidate):
+        return candidate
+    return None
+
+
 ###############################################################################
 def sanitize_training_stats(stats: dict[str, Any]) -> dict[str, Any]:
-    return {
-        **stats,
-        "epoch": coerce_finite_int(stats.get("epoch"), 0, minimum=0),
-        "total_epochs": coerce_finite_int(stats.get("total_epochs"), 0, minimum=0),
-        "max_steps": coerce_finite_int(stats.get("max_steps"), 0, minimum=0),
-        "time_step": coerce_finite_int(stats.get("time_step"), 0, minimum=0),
-        "loss": coerce_finite_float(stats.get("loss"), 0.0),
-        "rmse": coerce_finite_float(stats.get("rmse"), 0.0),
-        "val_loss": coerce_finite_float(stats.get("val_loss"), 0.0),
-        "val_rmse": coerce_finite_float(stats.get("val_rmse"), 0.0),
-        "reward": coerce_finite_float(stats.get("reward"), 0.0),
-        "val_reward": coerce_finite_float(stats.get("val_reward"), 0.0),
-        "total_reward": coerce_finite_float(stats.get("total_reward"), 0.0),
-        "capital": coerce_finite_float(stats.get("capital"), 0.0),
-        "capital_gain": coerce_finite_float(stats.get("capital_gain"), 0.0),
-    }
+    sanitized: dict[str, Any] = {**stats}
+    if "epoch" in stats:
+        sanitized["epoch"] = coerce_finite_int(stats.get("epoch"), 0, minimum=0)
+    if "total_epochs" in stats:
+        sanitized["total_epochs"] = coerce_finite_int(
+            stats.get("total_epochs"), 0, minimum=0
+        )
+    if "max_steps" in stats:
+        sanitized["max_steps"] = coerce_finite_int(stats.get("max_steps"), 0, minimum=0)
+    if "time_step" in stats:
+        sanitized["time_step"] = coerce_finite_int(stats.get("time_step"), 0, minimum=0)
+
+    for metric_key in (
+        "loss",
+        "rmse",
+        "val_loss",
+        "val_rmse",
+        "reward",
+        "val_reward",
+        "total_reward",
+        "capital",
+        "capital_gain",
+    ):
+        if metric_key not in stats:
+            continue
+        sanitized[metric_key] = coerce_optional_finite_float(stats.get(metric_key))
+
+    return sanitized
 
 
 ###############################################################################
 def has_non_finite_numbers(stats: dict[str, Any], keys: list[str]) -> bool:
     for key in keys:
         value = stats.get(key)
+        if value is None:
+            continue
         if isinstance(value, bool):
             continue
         if not isinstance(value, (int, float)):
@@ -82,8 +110,19 @@ class DQNTraining:
         )
         self.last_history_episode: int | None = None
         self.last_history_bucket: int | None = None
-        self.last_progress_episode: int | None = None
-        self.last_progress_bucket: int | None = None
+        self.latest_runtime_state: dict[str, float | int] = {
+            "time_step": 0,
+            "reward": 0.0,
+            "total_reward": 0.0,
+            "capital": 0.0,
+        }
+        self.latest_metric_state: dict[str, float | None] = {
+            "loss": None,
+            "rmse": None,
+            "val_loss": None,
+            "val_rmse": None,
+            "val_reward": None,
+        }
 
         self.agent = DQNAgent(configuration)
 
@@ -191,10 +230,10 @@ class DQNTraining:
             self.session_stats["val_rmse"].append(coerce_finite_float(val_scores.get("root_mean_squared_error", 0.0)))
             self.session_stats["img_reward"].append(coerce_finite_float(val_scores.get("reward", 0.0)))
         else:
-            # Carry forward last value or 0.0
-            last_val_loss = self.session_stats["val_loss"][-1] if self.session_stats["val_loss"] else 0.0
-            last_val_rmse = self.session_stats["val_rmse"][-1] if self.session_stats["val_rmse"] else 0.0
-            last_val_reward = self.session_stats["img_reward"][-1] if self.session_stats["img_reward"] else 0.0
+            # Carry forward last known validation metrics if available.
+            last_val_loss = self.session_stats["val_loss"][-1] if self.session_stats["val_loss"] else None
+            last_val_rmse = self.session_stats["val_rmse"][-1] if self.session_stats["val_rmse"] else None
+            last_val_reward = self.session_stats["img_reward"][-1] if self.session_stats["img_reward"] else None
             self.session_stats["val_loss"].append(last_val_loss)
             self.session_stats["val_rmse"].append(last_val_rmse)
             self.session_stats["img_reward"].append(last_val_reward)
@@ -211,34 +250,71 @@ class DQNTraining:
             float(initial_capital) if isinstance(initial_capital, (int, float)) else 0.0
         )
         max_steps = int(self.configuration.get("max_steps_episode", 2000))
-        if not self.session_stats["loss"]:
+        if not self.session_stats["loss"] and not training_ready:
             raw_stats = {
                 "epoch": episode + 1,
                 "total_epochs": total_episodes,
                 "max_steps": max_steps,
-                "time_step": 0,
-                "loss": 0.0,
-                "rmse": 0.0,
-                "reward": 0,
-                "total_reward": 0,
-                "capital": 0,
+                "time_step": coerce_finite_int(self.latest_runtime_state.get("time_step"), 0, minimum=0),
+                "loss": self.latest_metric_state.get("loss"),
+                "rmse": self.latest_metric_state.get("rmse"),
+                "reward": coerce_finite_float(self.latest_runtime_state.get("reward"), 0.0),
+                "total_reward": coerce_finite_float(self.latest_runtime_state.get("total_reward"), 0.0),
+                "capital": coerce_finite_float(self.latest_runtime_state.get("capital"), 0.0),
                 "capital_gain": 0.0,
                 "status": "training" if training_ready else "exploration",
             }
             return sanitize_training_stats(raw_stats)
-        capital_value = self.session_stats["capital"][-1]
+
+        latest_time_step = coerce_finite_int(
+            self.latest_runtime_state.get("time_step"),
+            self.session_stats["time_step"][-1] if self.session_stats["time_step"] else 0,
+            minimum=0,
+        )
+        latest_reward = coerce_finite_float(
+            self.latest_runtime_state.get("reward"),
+            self.session_stats["reward"][-1] if self.session_stats["reward"] else 0.0,
+        )
+        latest_total_reward = coerce_finite_float(
+            self.latest_runtime_state.get("total_reward"),
+            self.session_stats["total_reward"][-1] if self.session_stats["total_reward"] else 0.0,
+        )
+        capital_value = coerce_finite_float(
+            self.latest_runtime_state.get("capital"),
+            self.session_stats["capital"][-1] if self.session_stats["capital"] else 0.0,
+        )
+        loss_value = coerce_optional_finite_float(self.latest_metric_state.get("loss"))
+        if loss_value is None and self.session_stats["loss"]:
+            loss_value = coerce_optional_finite_float(self.session_stats["loss"][-1])
+
+        rmse_value = coerce_optional_finite_float(self.latest_metric_state.get("rmse"))
+        if rmse_value is None and self.session_stats["metrics"]:
+            rmse_value = coerce_optional_finite_float(self.session_stats["metrics"][-1])
+
+        val_loss_value = coerce_optional_finite_float(self.latest_metric_state.get("val_loss"))
+        if val_loss_value is None and self.session_stats["val_loss"]:
+            val_loss_value = coerce_optional_finite_float(self.session_stats["val_loss"][-1])
+
+        val_rmse_value = coerce_optional_finite_float(self.latest_metric_state.get("val_rmse"))
+        if val_rmse_value is None and self.session_stats["val_rmse"]:
+            val_rmse_value = coerce_optional_finite_float(self.session_stats["val_rmse"][-1])
+
+        val_reward_value = coerce_optional_finite_float(self.latest_metric_state.get("val_reward"))
+        if val_reward_value is None and self.session_stats["img_reward"]:
+            val_reward_value = coerce_optional_finite_float(self.session_stats["img_reward"][-1])
+
         raw_stats = {
             "epoch": episode + 1,
             "total_epochs": total_episodes,
             "max_steps": max_steps,
-            "time_step": self.session_stats["time_step"][-1],
-            "loss": self.session_stats["loss"][-1],
-            "rmse": self.session_stats["metrics"][-1],
-            "val_loss": self.session_stats["val_loss"][-1] if self.session_stats["val_loss"] else 0.0,
-            "val_rmse": self.session_stats["val_rmse"][-1] if self.session_stats["val_rmse"] else 0.0,
-            "reward": self.session_stats["reward"][-1],
-            "val_reward": self.session_stats["img_reward"][-1] if self.session_stats["img_reward"] else 0.0,
-            "total_reward": self.session_stats["total_reward"][-1],
+            "time_step": latest_time_step,
+            "loss": loss_value,
+            "rmse": rmse_value,
+            "val_loss": val_loss_value,
+            "val_rmse": val_rmse_value,
+            "reward": latest_reward,
+            "val_reward": val_reward_value,
+            "total_reward": latest_total_reward,
             "capital": capital_value,
             "capital_gain": float(capital_value) - initial_capital_value,
             "status": "training" if training_ready else "exploration",
@@ -372,6 +448,22 @@ class DQNTraining:
         self.update_session_stats(
             scores, val_scores, episode, time_step, reward, total_reward, environment.capital
         )
+        self.latest_metric_state["loss"] = coerce_optional_finite_float(
+            scores.get("loss")
+        )
+        self.latest_metric_state["rmse"] = coerce_optional_finite_float(
+            scores.get("root_mean_squared_error")
+        )
+        if val_scores:
+            self.latest_metric_state["val_loss"] = coerce_optional_finite_float(
+                val_scores.get("loss")
+            )
+            self.latest_metric_state["val_rmse"] = coerce_optional_finite_float(
+                val_scores.get("root_mean_squared_error")
+            )
+            self.latest_metric_state["val_reward"] = coerce_optional_finite_float(
+                val_scores.get("reward")
+            )
 
         if time_step % 50 == 0:
             self._log_training_progress(scores, val_scores, time_step)
@@ -390,27 +482,24 @@ class DQNTraining:
         reward: int | float,
         total_reward: int | float,
     ) -> None:
-        bucket_size = self.history_bucket_size if self.history_bucket_size > 0 else 1.0
-        bucket = int(time_step / bucket_size)
-        if self.max_steps >= HISTORY_POINTS_PER_EPISODE:
-            bucket = min(HISTORY_POINTS_PER_EPISODE - 1, bucket)
-        if self.last_progress_episode != episode:
-            self.last_progress_episode = episode
-            self.last_progress_bucket = None
-        if self.last_progress_bucket != bucket:
-            self.last_progress_bucket = bucket
-            if ws_callback:
-                stats = self.get_latest_stats(
-                    episode,
-                    episodes,
-                    training_ready=self.agent.is_training_ready(),
-                )
-                try:
-                    ws_callback(stats)
-                except Exception:
-                    pass
+        self.latest_runtime_state["time_step"] = coerce_finite_int(time_step, 0, minimum=0)
+        self.latest_runtime_state["reward"] = coerce_finite_float(reward, 0.0)
+        self.latest_runtime_state["total_reward"] = coerce_finite_float(total_reward, 0.0)
+        self.latest_runtime_state["capital"] = coerce_finite_float(environment.capital, 0.0)
 
-        if self.should_send_ws_update():
+        should_send_update = self.should_send_ws_update()
+        if should_send_update and ws_callback:
+            stats = self.get_latest_stats(
+                episode,
+                episodes,
+                training_ready=self.agent.is_training_ready(),
+            )
+            try:
+                ws_callback(stats)
+            except Exception:
+                pass
+
+        if should_send_update:
             self.maybe_send_environment_update(
                 ws_env_callback,
                 environment,

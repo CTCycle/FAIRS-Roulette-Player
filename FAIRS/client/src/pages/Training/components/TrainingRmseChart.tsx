@@ -57,7 +57,7 @@ export const TrainingRmseChart: React.FC<TrainingRmseChartProps> = ({ points }) 
         // Only use RMSE values for Y-axis scaling
         const rmseValues = points.flatMap((point) => {
             const vals = [point.rmse];
-            if (point.val_rmse !== undefined) vals.push(point.val_rmse);
+            if (typeof point.val_rmse === 'number') vals.push(point.val_rmse);
             return vals;
         }).filter((value) => Number.isFinite(value));
 

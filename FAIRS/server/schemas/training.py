@@ -38,6 +38,7 @@ class TrainingConfig(BaseModel):
     max_memory_size: int = Field(10000, ge=100)
     replay_buffer_size: int = Field(1000, ge=100)
     training_seed: int = 42
+    checkpoint_name: str | None = None
     
     # Device parameters
     use_device_gpu: bool = False

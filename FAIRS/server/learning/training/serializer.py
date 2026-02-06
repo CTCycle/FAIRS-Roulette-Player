@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 import json
 import os
+import re
 from datetime import datetime
 from typing import Any
 
@@ -82,12 +83,20 @@ class ModelSerializer:
         self.model_name = "FAIRS"
 
     # -------------------------------------------------------------------------
-    def create_checkpoint_folder(self) -> str:
-        today_datetime = datetime.now().strftime("%Y%m%dT%H%M%S")
-        checkpoint_path = os.path.join(
-            CHECKPOINT_PATH, f"{self.model_name}_{today_datetime}"
-        )
-        os.makedirs(checkpoint_path, exist_ok=True)
+    def create_checkpoint_folder(self, checkpoint_name: str | None = None) -> str:
+        selected_name = checkpoint_name.strip() if isinstance(checkpoint_name, str) else ""
+        selected_name = re.sub(r"[\\/]+", "_", selected_name)
+        if selected_name:
+            checkpoint_path = os.path.join(CHECKPOINT_PATH, selected_name)
+            if os.path.exists(checkpoint_path):
+                raise ValueError(f"Checkpoint already exists: {selected_name}")
+        else:
+            today_datetime = datetime.now().strftime("%Y%m%dT%H%M%S")
+            checkpoint_path = os.path.join(
+                CHECKPOINT_PATH, f"{self.model_name}_{today_datetime}"
+            )
+
+        os.makedirs(checkpoint_path, exist_ok=False)
         os.makedirs(os.path.join(checkpoint_path, "configuration"), exist_ok=True)
         logger.debug(f"Created checkpoint folder at {checkpoint_path}")
         return checkpoint_path

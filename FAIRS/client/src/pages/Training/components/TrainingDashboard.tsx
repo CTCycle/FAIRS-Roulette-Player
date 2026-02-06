@@ -9,12 +9,12 @@ interface TrainingStats {
     total_epochs: number;
     max_steps?: number;
     time_step: number;
-    loss: number;
-    rmse: number;
-    val_loss?: number;
-    val_rmse?: number;
+    loss: number | null;
+    rmse: number | null;
+    val_loss: number | null;
+    val_rmse: number | null;
     reward: number;
-    val_reward?: number;
+    val_reward: number | null;
     total_reward: number;
     capital: number;
     capital_gain: number;
@@ -42,9 +42,12 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
         total_epochs: 0,
         max_steps: 0,
         time_step: 0,
-        loss: 0,
-        rmse: 0,
+        loss: null,
+        rmse: null,
+        val_loss: null,
+        val_rmse: null,
         reward: 0,
+        val_reward: null,
         total_reward: 0,
         capital: 0,
         capital_gain: 0,
@@ -64,6 +67,7 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
     const onTrainingEndRef = useRef(onTrainingEnd);
     const pollAbortRef = useRef<AbortController | null>(null);
     const statsRef = useRef(defaultStats);
+    const jobIdRef = useRef<string | null>(null);
 
     const maxHistoryPoints = 2000;
     const trainingEndStatuses: TrainingStats['status'][] = ['completed', 'error', 'cancelled'];
@@ -80,6 +84,20 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
         const numeric = typeof value === 'number' ? value : Number(value);
         return Number.isFinite(numeric) ? numeric : fallback;
     };
+    const toFiniteNumberOrNull = (value: unknown): number | null => {
+        const numeric = typeof value === 'number' ? value : Number(value);
+        return Number.isFinite(numeric) ? numeric : null;
+    };
+    const normalizeOptionalMetric = (
+        candidate: Partial<TrainingStats>,
+        key: 'loss' | 'rmse' | 'val_loss' | 'val_rmse' | 'val_reward',
+        fallback: number | null,
+    ): number | null => {
+        if (!Object.prototype.hasOwnProperty.call(candidate, key)) {
+            return fallback;
+        }
+        return toFiniteNumberOrNull(candidate[key]);
+    };
     const normalizeStats = (value: unknown, fallback: TrainingStats): TrainingStats | null => {
         if (!value || typeof value !== 'object') {
             return null;
@@ -92,12 +110,12 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
             total_epochs: toFiniteNumber(candidate.total_epochs, fallback.total_epochs),
             max_steps: candidate.max_steps === undefined ? fallback.max_steps : toFiniteNumber(candidate.max_steps, fallback.max_steps ?? 0),
             time_step: toFiniteNumber(candidate.time_step, fallback.time_step),
-            loss: toFiniteNumber(candidate.loss, fallback.loss),
-            rmse: toFiniteNumber(candidate.rmse, fallback.rmse),
-            val_loss: candidate.val_loss === undefined ? fallback.val_loss : toFiniteNumber(candidate.val_loss, fallback.val_loss ?? 0),
-            val_rmse: candidate.val_rmse === undefined ? fallback.val_rmse : toFiniteNumber(candidate.val_rmse, fallback.val_rmse ?? 0),
+            loss: normalizeOptionalMetric(candidate, 'loss', fallback.loss),
+            rmse: normalizeOptionalMetric(candidate, 'rmse', fallback.rmse),
+            val_loss: normalizeOptionalMetric(candidate, 'val_loss', fallback.val_loss),
+            val_rmse: normalizeOptionalMetric(candidate, 'val_rmse', fallback.val_rmse),
             reward: toFiniteNumber(candidate.reward, fallback.reward),
-            val_reward: candidate.val_reward === undefined ? fallback.val_reward : toFiniteNumber(candidate.val_reward, fallback.val_reward ?? 0),
+            val_reward: normalizeOptionalMetric(candidate, 'val_reward', fallback.val_reward),
             total_reward: toFiniteNumber(candidate.total_reward, fallback.total_reward),
             capital: toFiniteNumber(candidate.capital, fallback.capital),
             capital_gain: toFiniteNumber(candidate.capital_gain, fallback.capital_gain),
@@ -136,14 +154,10 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
     }, [isActive]);
 
     useEffect(() => {
-        if (!isActive && !backendActiveRef.current) {
-            setHistoryPoints([]);
-            setConnectionError(null);
-        }
-
         let cancelled = false;
 
         const pollStatus = async () => {
+            const pollStartTime = Date.now();
             let trainingEnded = false;
             try {
                 pollAbortRef.current?.abort();
@@ -159,6 +173,16 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                 const payload = (await response.json()) as TrainingStatusResponse;
                 setIsConnected(true);
                 setConnectionError(null);
+
+                const responseJobId = typeof payload.job_id === 'string' && payload.job_id.length > 0
+                    ? payload.job_id
+                    : null;
+                if (responseJobId && responseJobId !== jobIdRef.current) {
+                    jobIdRef.current = responseJobId;
+                    setStopRequested(false);
+                    setStopError(null);
+                    setHistoryPoints([]);
+                }
 
                 const backendActive = Boolean(payload.is_training);
                 let endedFromBackend = false;
@@ -207,7 +231,9 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                 }
                 const shouldContinue = isActive || backendActiveRef.current;
                 if (shouldContinue && !trainingEnded) {
-                    pollTimeoutRef.current = setTimeout(pollStatus, pollIntervalRef.current);
+                    const elapsedMs = Date.now() - pollStartTime;
+                    const delayMs = Math.max(0, pollIntervalRef.current - elapsedMs);
+                    pollTimeoutRef.current = setTimeout(pollStatus, delayMs);
                 }
             }
         };
@@ -228,36 +254,16 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
         if (historyPoints.length === 0) {
             return [];
         }
-        const maxPointsPerEpisode = 20;
-        const byEpisode = new Map<number, TrainingHistoryPoint[]>();
-        historyPoints.forEach((point) => {
-            const episode = Number.isFinite(point.epoch) ? Math.max(0, Math.trunc(point.epoch)) : 0;
-            if (!byEpisode.has(episode)) {
-                byEpisode.set(episode, []);
+        const sortedPoints = historyPoints.slice().sort((a, b) => {
+            if (a.epoch !== b.epoch) {
+                return a.epoch - b.epoch;
             }
-            byEpisode.get(episode)?.push(point);
-        });
-        const sampledPoints: TrainingHistoryPoint[] = [];
-        Array.from(byEpisode.keys()).sort((a, b) => a - b).forEach((episode) => {
-            const points = (byEpisode.get(episode) ?? []).slice().sort((a, b) => a.time_step - b.time_step);
-            if (points.length <= maxPointsPerEpisode) {
-                sampledPoints.push(...points);
-                return;
-            }
-            const sampledIndices = new Set<number>();
-            for (let index = 0; index < maxPointsPerEpisode; index += 1) {
-                const ratio = index / (maxPointsPerEpisode - 1);
-                const pointIndex = Math.round(ratio * (points.length - 1));
-                sampledIndices.add(pointIndex);
-            }
-            Array.from(sampledIndices).sort((a, b) => a - b).forEach((index) => {
-                sampledPoints.push(points[index]);
-            });
+            return a.time_step - b.time_step;
         });
         const maxSteps = typeof stats.max_steps === 'number' && Number.isFinite(stats.max_steps)
             ? Math.max(1, stats.max_steps)
             : 1;
-        return sampledPoints.map((point) => {
+        return sortedPoints.map((point) => {
             const epochIndex = typeof point.epoch === 'number' ? Math.max(1, point.epoch) : 1;
             return {
                 ...point,
@@ -344,11 +350,23 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
         }
     };
 
-    const formatMetric = (value: number) => {
-        if (!Number.isFinite(value)) {
+    const formatMetric = (value: number | null | undefined) => {
+        if (value === null || value === undefined || !Number.isFinite(value)) {
+            return 'N/A';
+        }
+        if (value === 0) {
             return '0';
         }
-        return value.toLocaleString(undefined, { maximumFractionDigits: 3 });
+        const absoluteValue = Math.abs(value);
+        if (absoluteValue < 0.0001) {
+            return value.toExponential(3);
+        }
+        const maximumFractionDigits = absoluteValue < 0.01
+            ? 6
+            : absoluteValue < 1
+                ? 4
+                : 3;
+        return value.toLocaleString(undefined, { maximumFractionDigits });
     };
 
     return (
@@ -399,6 +417,26 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                             <div className="metric-content">
                                 <span className="metric-label">RMSE</span>
                                 <span className="metric-value">{formatMetric(stats.rmse)}</span>
+                            </div>
+                        </div>
+
+                        <div className="metric-card loss">
+                            <div className="metric-icon">
+                                <TrendingUp size={20} />
+                            </div>
+                            <div className="metric-content">
+                                <span className="metric-label">Val Loss</span>
+                                <span className="metric-value">{formatMetric(stats.val_loss)}</span>
+                            </div>
+                        </div>
+
+                        <div className="metric-card rmse">
+                            <div className="metric-icon">
+                                <Target size={20} />
+                            </div>
+                            <div className="metric-content">
+                                <span className="metric-label">Val RMSE</span>
+                                <span className="metric-value">{formatMetric(stats.val_rmse)}</span>
                             </div>
                         </div>
 
