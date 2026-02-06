@@ -557,6 +557,7 @@
 .metrics-progress-row {
   display: flex;
   align-items: flex-start;
+  justify-content: space-between;
   gap: 1.25rem;
 }
 
@@ -616,10 +617,10 @@
 
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 231px));
-  justify-content: flex-start;
+  grid-template-columns: repeat(4, minmax(170px, 1fr));
   gap: 1.05rem;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
 }
 
 .metric-card {
@@ -631,7 +632,8 @@
   align-items: center;
   gap: 0.75rem;
   transition: transform 0.2s, box-shadow 0.2s;
-  width: 231px;
+  width: 100%;
+  min-width: 0;
 }
 
 .metric-card:hover {
@@ -938,7 +940,7 @@
   }
 
   .metrics-grid {
-    grid-template-columns: repeat(2, 231px);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .dashboard-visuals {
@@ -963,6 +965,12 @@
 @media (max-width: 480px) {
   .metrics-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1320px) {
+  .metrics-grid {
+    grid-template-columns: repeat(3, minmax(170px, 1fr));
   }
 }
 
