@@ -23,6 +23,11 @@ export const InferenceSetup: React.FC<InferenceSetupProps> = ({
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const latestCheckpointRef = useRef(checkpoint);
+
+    useEffect(() => {
+        latestCheckpointRef.current = checkpoint;
+    }, [checkpoint]);
 
     useEffect(() => {
         const loadCheckpoints = async () => {
@@ -34,7 +39,7 @@ export const InferenceSetup: React.FC<InferenceSetupProps> = ({
                 const data = await response.json();
                 if (Array.isArray(data)) {
                     setCheckpoints(data);
-                    if (data.length > 0 && !checkpoint) {
+                    if (data.length > 0 && !latestCheckpointRef.current) {
                         onSetupChange({ checkpoint: String(data[0]) });
                     }
                 }
@@ -44,7 +49,7 @@ export const InferenceSetup: React.FC<InferenceSetupProps> = ({
         };
 
         loadCheckpoints();
-    }, [checkpoint, onSetupChange]);
+    }, [onSetupChange]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
@@ -78,15 +83,18 @@ export const InferenceSetup: React.FC<InferenceSetupProps> = ({
     };
 
     const startSession = async (datasetName: string) => {
+        const startPayload = {
+            checkpoint,
+            dataset_name: datasetName,
+            game_capital: initialCapital,
+            game_bet: betAmount,
+        };
+        console.info('[Inference] Starting session request', startPayload);
+
         const response = await fetch('/api/inference/sessions/start', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                checkpoint,
-                dataset_name: datasetName,
-                game_capital: initialCapital,
-                game_bet: betAmount,
-            }),
+            body: JSON.stringify(startPayload),
         });
 
         if (!response.ok) {

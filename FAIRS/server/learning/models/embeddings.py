@@ -34,6 +34,11 @@ class RouletteEmbedding(keras.layers.Layer):
         self.embedding_scale: Any = keras.ops.sqrt(self.embedding_dims)
 
     # -------------------------------------------------------------------------
+    def build(self, input_shape: Any) -> None:
+        self.numbers_embedding.build(input_shape)
+        super(RouletteEmbedding, self).build(input_shape)
+
+    # -------------------------------------------------------------------------
     def call(self, inputs: Any) -> Any:
         embedded_numbers = self.numbers_embedding(inputs)
         embedded_numbers *= self.embedding_scale

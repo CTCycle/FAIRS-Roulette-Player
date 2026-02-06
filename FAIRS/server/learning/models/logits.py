@@ -19,6 +19,9 @@ class AddNorm(keras.layers.Layer):
 
     # -------------------------------------------------------------------------
     def build(self, input_shape) -> None:
+        self.add.build(input_shape)
+        output_shape = self.add.compute_output_shape(input_shape)
+        self.layernorm.build(output_shape)
         super(AddNorm, self).build(input_shape)
 
     # -------------------------------------------------------------------------
@@ -53,6 +56,7 @@ class QScoreNet(keras.layers.Layer):
         self.dense_units = dense_units
         self.output_size = output_size
         self.seed = seed
+        self.flatten = layers.Flatten()
         self.Q1 = layers.Dense(self.dense_units, kernel_initializer="he_uniform")
         self.Q2 = layers.Dense(
             self.output_size,
@@ -63,11 +67,17 @@ class QScoreNet(keras.layers.Layer):
 
     # -------------------------------------------------------------------------
     def build(self, input_shape) -> None:
+        self.flatten.build(input_shape)
+        flattened_shape = self.flatten.compute_output_shape(input_shape)
+        self.Q1.build(flattened_shape)
+        q1_shape = self.Q1.compute_output_shape(flattened_shape)
+        self.batch_norm.build(q1_shape)
+        self.Q2.build(q1_shape)
         super(QScoreNet, self).build(input_shape)
 
     # -------------------------------------------------------------------------
     def call(self, inputs, training: bool | None = None) -> Any:
-        x = layers.Flatten()(inputs)
+        x = self.flatten(inputs)
         x = self.Q1(x)
         x = self.batch_norm(x, training=training)
         x = activations.relu(x)
@@ -105,6 +115,13 @@ class BatchNormDense(layers.Layer):
         self.units = units
         self.dense = layers.Dense(units, kernel_initializer="he_uniform")
         self.batch_norm = layers.BatchNormalization()
+
+    # -------------------------------------------------------------------------
+    def build(self, input_shape) -> None:
+        self.dense.build(input_shape)
+        dense_shape = self.dense.compute_output_shape(input_shape)
+        self.batch_norm.build(dense_shape)
+        super(BatchNormDense, self).build(input_shape)
 
     # -------------------------------------------------------------------------
     def call(self, inputs, training: bool | None = None) -> Any:

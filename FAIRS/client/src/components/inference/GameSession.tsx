@@ -48,6 +48,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
     const [isRecomputing, setIsRecomputing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const latestSetupRef = useRef(setup);
 
     const sessionActive = sessionState.isActive;
     const datasetLocked = sessionActive || setup.datasetSource === 'uploaded';
@@ -61,6 +62,10 @@ export const GameSession: React.FC<GameSessionProps> = ({
     }, [setup.datasetSource, setup.selectedDataset, setup.uploadedDatasetName]);
 
     useEffect(() => {
+        latestSetupRef.current = setup;
+    }, [setup]);
+
+    useEffect(() => {
         const loadCheckpoints = async () => {
             try {
                 const response = await fetch('/api/training/checkpoints');
@@ -70,7 +75,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
                 const data = await response.json();
                 if (Array.isArray(data)) {
                     setCheckpoints(data);
-                    if (data.length > 0 && !setup.checkpoint) {
+                    if (data.length > 0 && !latestSetupRef.current.checkpoint) {
                         onSetupChange({ checkpoint: String(data[0]) });
                     }
                 }
@@ -88,7 +93,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
                 const payload = await response.json();
                 const names = Array.isArray(payload?.datasets) ? payload.datasets : [];
                 setDatasets(names);
-                if (names.length > 0 && !setup.selectedDataset) {
+                if (names.length > 0 && !latestSetupRef.current.selectedDataset) {
                     onSetupChange({ selectedDataset: String(names[0]), datasetSource: 'source' });
                 }
             } catch (err) {
@@ -98,7 +103,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
 
         loadCheckpoints();
         loadDatasets();
-    }, [onSetupChange, setup.checkpoint, setup.selectedDataset]);
+    }, [onSetupChange]);
 
     const updateBetAmount = async (value: number, forceSessionUpdate = false) => {
         onSetupChange({ betAmount: value });
@@ -200,18 +205,20 @@ export const GameSession: React.FC<GameSessionProps> = ({
         }
         const gameCapital = overrides?.initialCapital ?? setup.initialCapital;
         const gameBet = overrides?.betAmount ?? setup.betAmount;
+        const startPayload = {
+            session_id: sessionId,
+            checkpoint: setup.checkpoint,
+            dataset_name: datasetName,
+            dataset_source: setup.datasetSource,
+            game_capital: gameCapital,
+            game_bet: gameBet,
+        };
+        console.info('[Inference] Starting session request', startPayload);
 
         const response = await fetch('/api/inference/sessions/start', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                session_id: sessionId,
-                checkpoint: setup.checkpoint,
-                dataset_name: datasetName,
-                dataset_source: setup.datasetSource,
-                game_capital: gameCapital,
-                game_bet: gameBet,
-            }),
+            body: JSON.stringify(startPayload),
         });
 
         if (!response.ok) {

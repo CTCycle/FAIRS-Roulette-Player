@@ -167,11 +167,44 @@ class InferenceEndpoint:
 
     # -----------------------------------------------------------------------------
     def start_session(self, payload: InferenceStartRequest) -> InferenceStartResponse:
-        checkpoint = payload.checkpoint
+        checkpoint_raw = payload.checkpoint
+        checkpoint = checkpoint_raw.strip()
         dataset_name = payload.dataset_name
-        session_id = payload.session_id or uuid.uuid4().hex
+        session_id = uuid.uuid4().hex
         if payload.session_id:
             inference_state.delete_session(payload.session_id)
+
+        if not checkpoint:
+            logger.warning("Rejected inference start: empty checkpoint from payload.checkpoint")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Checkpoint identifier is required.",
+            )
+        if checkpoint != checkpoint_raw:
+            logger.info(
+                "Normalized checkpoint from payload.checkpoint: '%s' -> '%s'",
+                checkpoint_raw,
+                checkpoint,
+            )
+
+        available_checkpoints = self.model_serializer.scan_checkpoints_folder()
+        if checkpoint not in available_checkpoints:
+            logger.warning(
+                "Rejected inference start: unknown checkpoint from payload.checkpoint (%s). Available=%d",
+                checkpoint,
+                len(available_checkpoints),
+            )
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Checkpoint '{checkpoint}' was not found.",
+            )
+
+        logger.info(
+            "Resolved inference checkpoint from payload.checkpoint: %s (dataset=%s, session_id=%s)",
+            checkpoint,
+            dataset_name,
+            session_id,
+        )
 
         try:
             logger.info("Loading %s checkpoint for inference", checkpoint)
