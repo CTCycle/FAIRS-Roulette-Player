@@ -11,6 +11,7 @@ import pandas as pd
 from keras import Model
 from keras.models import load_model
 
+from FAIRS.server.learning import models as custom_layers_registry  # noqa: F401
 from FAIRS.server.utils.constants import CHECKPOINT_PATH
 from FAIRS.server.utils.logger import logger
 from FAIRS.server.repositories.database import database

@@ -6,7 +6,7 @@ from typing import Any
 
 import pandas as pd
 import sqlalchemy
-from sqlalchemy import UniqueConstraint, inspect
+from sqlalchemy import UniqueConstraint, and_, inspect
 from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
@@ -50,21 +50,60 @@ class SQLiteRepository:
                     break
             if not unique_cols:
                 raise ValueError(f"No unique constraint found for {table_cls.__name__}")
-            records = df.to_dict(orient="records")
-            records = [{k: (None if pd.isna(v) else v) for k, v in record.items()} for record in records]
+            records = []
+            for record in df.to_dict(orient="records"):
+                sanitized: dict[str, Any] = {}
+                for key, value in record.items():
+                    normalized = None if pd.isna(value) else value
+                    if key == "id" and normalized is None:
+                        continue
+                    sanitized[key] = normalized
+                records.append(sanitized)
             for i in range(0, len(records), self.insert_batch_size):
                 batch = records[i : i + self.insert_batch_size]
                 if not batch:
                     continue
+                has_generated_pk = "id" in table.c and all(
+                    item.get("id") is None for item in batch
+                )
+                if has_generated_pk:
+                    for item in batch:
+                        match_values = {col: item.get(col) for col in unique_cols}
+                        update_values = {
+                            col: value
+                            for col, value in item.items()
+                            if col not in unique_cols and col != "id"
+                        }
+                        where_clause = and_(
+                            *[table.c[col] == match_values[col] for col in unique_cols]
+                        )
+                        if update_values:
+                            result = session.execute(
+                                sqlalchemy.update(table)
+                                .where(where_clause)
+                                .values(**update_values)
+                            )
+                            if result.rowcount and result.rowcount > 0:
+                                continue
+                        session.execute(insert(table).values(item))
+                    session.commit()
+                    continue
+
                 stmt = insert(table).values(batch)
+                batch_columns = {
+                    key for item in batch for key in item.keys()
+                }
                 update_cols = {
                     col: getattr(stmt.excluded, col)  # type: ignore[attr-defined]
-                    for col in batch[0]
-                    if col not in unique_cols
+                    for col in batch_columns
+                    if col not in unique_cols and col != "id"
                 }
-                stmt = stmt.on_conflict_do_update(
-                    index_elements=unique_cols, set_=update_cols
-                )
+                if update_cols:
+                    stmt = stmt.on_conflict_do_update(
+                        index_elements=unique_cols, set_=update_cols
+                    )
+                else:
+                    stmt = stmt.on_conflict_do_nothing(index_elements=unique_cols)
                 session.execute(stmt)
                 session.commit()
         finally:
