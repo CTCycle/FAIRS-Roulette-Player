@@ -77,7 +77,6 @@ Typical workflow:
 - Inspect stored datasets, checkpoints, and session records in the Database Browser.
 
 **Training page**: Open the Training tab, select your dataset and run parameters, then start a new training run or resume from a saved checkpoint. Use the dashboard and charts to follow progress and validate that metrics are updating as expected.
-Image: [training_page.png](assets/figures/training_page.png)
 ![training_page](assets/figures/training_page.png)
 
 **Inference page**: Open the Inference tab, choose the checkpoint to use, and run predictions step by step for the active roulette sequence. Review each predicted action and outcome before moving to the next step.
