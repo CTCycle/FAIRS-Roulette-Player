@@ -15,8 +15,8 @@ from keras.utils import set_random_seed
 
 from FAIRS.server.configurations import server_settings
 from FAIRS.server.configurations.server import get_poll_interval_seconds
-from FAIRS.server.utils.logger import logger
-from FAIRS.server.utils.types import coerce_finite_float, coerce_finite_int
+from FAIRS.server.common.utils.logger import logger
+from FAIRS.server.common.utils.types import coerce_finite_float, coerce_finite_int
 from FAIRS.server.learning.training.agents import DQNAgent
 from FAIRS.server.learning.training.environment import RouletteEnvironment
 

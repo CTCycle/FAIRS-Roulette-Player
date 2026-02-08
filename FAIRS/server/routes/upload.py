@@ -6,7 +6,7 @@ from typing import Any
 
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile, status
 
-from FAIRS.server.utils.logger import logger
+from FAIRS.server.common.utils.logger import logger
 from FAIRS.server.services.importer import DatasetImportService, DatasetTable
 from FAIRS.server.services.loader import TabularFileLoader
 

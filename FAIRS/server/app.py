@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-from FAIRS.server.utils.variables import env_variables  # noqa: F401
+from FAIRS.server.common.utils.variables import env_variables  # noqa: F401
 
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
@@ -12,7 +12,7 @@ from FAIRS.server.routes.upload import router as upload_router
 from FAIRS.server.routes.training import router as training_router
 from FAIRS.server.routes.database import router as database_router
 from FAIRS.server.routes.inference import router as inference_router
-from FAIRS.server.utils.constants import (
+from FAIRS.server.common.constants import (
     FASTAPI_DESCRIPTION,
     FASTAPI_TITLE,
     FASTAPI_VERSION,

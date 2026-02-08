@@ -12,7 +12,7 @@ from typing import Any
 
 from collections.abc import Callable
 
-from FAIRS.server.utils.logger import logger
+from FAIRS.server.common.utils.logger import logger
 from FAIRS.server.learning.training.device import DeviceConfig
 from FAIRS.server.learning.training.fitting import DQNTraining
 from FAIRS.server.learning.models.qnet import FAIRSnet

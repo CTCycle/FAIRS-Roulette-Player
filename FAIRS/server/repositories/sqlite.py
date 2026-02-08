@@ -12,8 +12,8 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
 
 from FAIRS.server.configurations import DatabaseSettings
-from FAIRS.server.utils.constants import RESOURCES_PATH, DATABASE_FILENAME
-from FAIRS.server.utils.logger import logger
+from FAIRS.server.common.constants import RESOURCES_PATH, DATABASE_FILENAME
+from FAIRS.server.common.utils.logger import logger
 from FAIRS.server.repositories.schema import Base
 
 

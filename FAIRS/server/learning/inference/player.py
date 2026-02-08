@@ -8,7 +8,7 @@ import pandas as pd
 from keras import Model
 from keras.utils import set_random_seed
 
-from FAIRS.server.utils.constants import PAD_VALUE
+from FAIRS.server.common.constants import PAD_VALUE
 from FAIRS.server.repositories.serializer import DataSerializer
 from FAIRS.server.learning.training.environment import BetsAndRewards
 

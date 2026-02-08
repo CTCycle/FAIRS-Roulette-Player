@@ -9,7 +9,7 @@ from typing import Any
 
 from collections.abc import Callable
 
-from FAIRS.server.utils.logger import logger
+from FAIRS.server.common.utils.logger import logger
 
 
 ###############################################################################

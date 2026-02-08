@@ -9,11 +9,11 @@ from FAIRS.server.configurations.base import (
     load_configuration_data    
 )
 
-from FAIRS.server.utils.constants import (
+from FAIRS.server.common.constants import (
     CONFIGURATIONS_FILE,
 )
 
-from FAIRS.server.utils.types import (
+from FAIRS.server.common.utils.types import (
     coerce_bool,
     coerce_float,
     coerce_int,

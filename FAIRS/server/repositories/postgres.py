@@ -15,7 +15,7 @@ from sqlalchemy.orm import sessionmaker
 from FAIRS.server.configurations import DatabaseSettings
 from FAIRS.server.repositories.schema import Base
 from FAIRS.server.repositories.utils import normalize_postgres_engine
-from FAIRS.server.utils.logger import logger
+from FAIRS.server.common.utils.logger import logger
 
 
 ###############################################################################
