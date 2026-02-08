@@ -11,7 +11,7 @@ from FAIRS.server.repositories.schema import (
     InferenceContext,
     RouletteSeries,
 )
-from FAIRS.server.utils.constants import ROULETTE_SERIES_TABLE
+from FAIRS.server.common.constants import ROULETTE_SERIES_TABLE
 from FAIRS.server.configurations import server_settings
 from FAIRS.server.repositories.serializer import DataSerializer
 

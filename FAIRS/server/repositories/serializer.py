@@ -6,7 +6,7 @@ from typing import Any, cast
 import pandas as pd
 
 from FAIRS.server.repositories.database import database
-from FAIRS.server.utils.constants import (
+from FAIRS.server.common.constants import (
     GAME_SESSIONS_COLUMNS,
     GAME_SESSIONS_TABLE,
     INFERENCE_CONTEXT_COLUMNS,

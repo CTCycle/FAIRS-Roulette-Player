@@ -10,7 +10,7 @@ import pandas as pd
 from PIL import Image, ImageDraw, ImageFont
 from gymnasium import spaces
 
-from FAIRS.server.utils.constants import NUMBERS, PAD_VALUE, STATES
+from FAIRS.server.common.constants import NUMBERS, PAD_VALUE, STATES
 from FAIRS.server.services.process import RouletteSeriesEncoder
 
 

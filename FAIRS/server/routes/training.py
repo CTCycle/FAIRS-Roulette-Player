@@ -11,10 +11,10 @@ from FAIRS.server.schemas.training import ResumeConfig, TrainingConfig
 from FAIRS.server.schemas.jobs import JobCancelResponse, JobStartResponse, JobStatusResponse
 from FAIRS.server.configurations import server_settings
 from FAIRS.server.configurations.server import get_poll_interval_seconds
-from FAIRS.server.utils.constants import CHECKPOINT_PATH
+from FAIRS.server.common.constants import CHECKPOINT_PATH
 from FAIRS.server.services.jobs import JobManager, job_manager
-from FAIRS.server.utils.logger import logger
-from FAIRS.server.utils.types import coerce_finite_float, coerce_finite_int
+from FAIRS.server.common.utils.logger import logger
+from FAIRS.server.common.utils.types import coerce_finite_float, coerce_finite_int
 from FAIRS.server.learning.training.serializer import ModelSerializer
 from FAIRS.server.learning.training.worker import (
     ProcessWorker,

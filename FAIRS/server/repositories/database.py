@@ -7,7 +7,7 @@ import pandas as pd
 from sqlalchemy.orm import declarative_base
 
 from FAIRS.server.configurations import DatabaseSettings, server_settings
-from FAIRS.server.utils.logger import logger
+from FAIRS.server.common.utils.logger import logger
 from FAIRS.server.repositories.postgres import PostgresRepository
 from FAIRS.server.repositories.sqlite import SQLiteRepository
 

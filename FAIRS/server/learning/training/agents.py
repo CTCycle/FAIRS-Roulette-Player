@@ -9,7 +9,7 @@ from typing import Any
 import numpy as np
 from keras import Model
 
-from FAIRS.server.utils.constants import PAD_VALUE, STATES
+from FAIRS.server.common.constants import PAD_VALUE, STATES
 from FAIRS.server.learning.training.environment import RouletteEnvironment
 
 

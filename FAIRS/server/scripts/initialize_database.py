@@ -4,8 +4,8 @@ import json
 import time
 
 from FAIRS.server.repositories.initializer import initialize_database
-from FAIRS.server.utils.constants import CONFIGURATIONS_FILE
-from FAIRS.server.utils.logger import logger
+from FAIRS.server.common.constants import CONFIGURATIONS_FILE
+from FAIRS.server.common.utils.logger import logger
 
 
 # -----------------------------------------------------------------------------
