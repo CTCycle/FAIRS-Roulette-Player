@@ -22,8 +22,8 @@ from FAIRS.server.entities.inference import (
 from FAIRS.server.common.utils.logger import logger
 from FAIRS.server.learning.inference.player import RoulettePlayer
 from FAIRS.server.learning.training.device import DeviceConfig
-from FAIRS.server.learning.training.serializer import ModelSerializer
-from FAIRS.server.repositories.serialization.serializer import DataSerializer
+from FAIRS.server.repositories.serialization.data import DataSerializer
+from FAIRS.server.repositories.serialization.model import ModelSerializer
 
 
 router = APIRouter(prefix="/inference", tags=["inference"])
@@ -35,14 +35,14 @@ class InferenceSession:
         self,
         session_id: str,
         checkpoint: str,
-        dataset_name: str,
+        name: str,
         player: RoulettePlayer,
         initial_capital: int,
         current_bet: int,
     ) -> None:
         self.session_id = session_id
         self.checkpoint = checkpoint
-        self.dataset_name = dataset_name
+        self.name = name
         self.player = player
         self.initial_capital = int(initial_capital)
         self.current_bet = int(current_bet)
@@ -143,22 +143,22 @@ class InferenceEndpoint:
         self,
         session: InferenceSession,
         prediction: dict[str, Any],
-        step_index: int,
-        observed_extraction: int | None,
+        step_id: int,
+        observed_outcome: int | None,
         reward: int | None,
         capital_after: int | None,
     ) -> None:
         row = {
             "session_id": session.session_id,
-            "step_index": step_index,
-            "dataset_name": session.dataset_name,
+            "step_id": step_id,
+            "name": session.name,
             "checkpoint": session.checkpoint,
             "initial_capital": session.initial_capital,
             "bet_amount": session.current_bet,
             "predicted_action": int(prediction.get("action", 0)),
             "predicted_action_desc": str(prediction.get("description", "")),
             "predicted_confidence": prediction.get("confidence"),
-            "observed_extraction": observed_extraction,
+            "observed_outcome": observed_outcome,
             "reward": reward,
             "capital_after": capital_after,
             "timestamp": datetime.now(),
@@ -169,7 +169,7 @@ class InferenceEndpoint:
     def start_session(self, payload: InferenceStartRequest) -> InferenceStartResponse:
         checkpoint_raw = payload.checkpoint
         checkpoint = checkpoint_raw.strip()
-        dataset_name = payload.dataset_name
+        name = payload.name
         session_id = uuid.uuid4().hex
         if payload.session_id:
             inference_state.delete_session(payload.session_id)
@@ -202,7 +202,7 @@ class InferenceEndpoint:
         logger.info(
             "Resolved inference checkpoint from payload.checkpoint: %s (dataset=%s, session_id=%s)",
             checkpoint,
-            dataset_name,
+            name,
             session_id,
         )
 
@@ -233,7 +233,7 @@ class InferenceEndpoint:
                 model,
                 configuration,
                 session_id,
-                dataset_name,
+                name,
                 payload.dataset_source,
             )
             prediction = player.predict_next()
@@ -252,7 +252,7 @@ class InferenceEndpoint:
         session = InferenceSession(
             session_id,
             checkpoint,
-            dataset_name,
+            name,
             player,
             int(payload.game_capital),
             int(payload.game_bet),

@@ -34,10 +34,10 @@ class DataUploadEndpoint:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Missing filename.",
             )
-        dataset_name = None
-        if table in ["ROULETTE_SERIES", "INFERENCE_CONTEXT"]:
+        name = None
+        if table in ["roulette_series", "inference_context"]:
             base_name = os.path.splitext(os.path.basename(file.filename))[0].strip()
-            dataset_name = base_name if base_name else "dataset"
+            name = base_name if base_name else "dataset"
 
         try:
             content = await file.read()
@@ -69,7 +69,7 @@ class DataUploadEndpoint:
 
         try:
             imported = self.importer.import_dataframe(
-                dataframe, table, dataset_name=dataset_name
+                dataframe, table, name=name
             )
         except ValueError as exc:
             raise HTTPException(

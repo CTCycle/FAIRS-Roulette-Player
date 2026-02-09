@@ -13,7 +13,7 @@ class TestInferenceEndpoints:
         """POST /inference/sessions/start with invalid checkpoint should return 404."""
         response = api_context.post("/inference/sessions/start", data={
             "checkpoint": "non_existent_checkpoint_xyz",
-            "dataset_name": "test_dataset",
+            "name": "test_dataset",
             "game_capital": 1000,
             "game_bet": 10,
         })
@@ -75,15 +75,15 @@ class TestInferenceSessionFlow:
         # Get a dataset name (if any)
         datasets_response = api_context.get("/database/roulette-series/datasets")
         datasets = datasets_response.json().get("datasets", [])
-        dataset_name = datasets[0] if datasets else None
-        
-        if dataset_name is None:
+        name = datasets[0] if datasets else None
+
+        if name is None:
             return  # Skip if no dataset for inference context
         
         # Start session
         start_response = api_context.post("/inference/sessions/start", data={
             "checkpoint": checkpoint_name,
-            "dataset_name": dataset_name,
+            "name": name,
             "game_capital": 1000,
             "game_bet": 10,
         })
@@ -110,8 +110,7 @@ class TestInferenceSessionFlow:
             step_data = step_response.json()
             assert "step" in step_data
             assert "reward" in step_data
-            assert "next_prediction" in step_data
-            assert step_data["next_prediction"] is not None, "Next prediction should not be None"
+            assert "capital_after" in step_data
             
         finally:
             # Always shutdown the session

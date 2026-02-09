@@ -6,11 +6,11 @@ import sqlalchemy
 from sqlalchemy.exc import SQLAlchemyError
 
 from FAIRS.server.configurations import DatabaseSettings, server_settings
-from FAIRS.server.repositories.database.base import Base
-from FAIRS.server.repositories.queries.postgres import PostgresRepository
-from FAIRS.server.repositories.queries.sqlite import SQLiteRepository
-from FAIRS.server.repositories.utils import normalize_postgres_engine
 from FAIRS.server.common.utils.logger import logger
+from FAIRS.server.repositories.database.postgres import PostgresRepository
+from FAIRS.server.repositories.database.sqlite import SQLiteRepository
+from FAIRS.server.repositories.database.utils import normalize_postgres_engine
+from FAIRS.server.repositories.schemas.models import Base
 
 
 ###############################################################################
@@ -57,7 +57,7 @@ def clone_settings_with_database(
 
 # -----------------------------------------------------------------------------
 def initialize_sqlite_database(settings: DatabaseSettings) -> None:
-    repository = SQLiteRepository(settings)    
+    repository = SQLiteRepository(settings)
     logger.info("Initialized SQLite database at %s", repository.db_path)
 
 
@@ -111,7 +111,12 @@ def run_database_initialization() -> None:
         return
 
     engine_name = normalize_postgres_engine(settings.engine).lower()
-    if engine_name not in {"postgres", "postgresql", "postgresql+psycopg", "postgresql+psycopg2"}:
+    if engine_name not in {
+        "postgres",
+        "postgresql",
+        "postgresql+psycopg",
+        "postgresql+psycopg2",
+    }:
         raise ValueError(f"Unsupported database engine: {settings.engine}")
 
     ensure_postgres_database(settings)

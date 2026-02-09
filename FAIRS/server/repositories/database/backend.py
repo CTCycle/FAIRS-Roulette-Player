@@ -7,17 +7,22 @@ import pandas as pd
 
 from FAIRS.server.configurations import DatabaseSettings, server_settings
 from FAIRS.server.common.utils.logger import logger
-from FAIRS.server.repositories.queries.postgres import PostgresRepository
-from FAIRS.server.repositories.queries.sqlite import SQLiteRepository
+from FAIRS.server.repositories.database.postgres import PostgresRepository
+from FAIRS.server.repositories.database.sqlite import SQLiteRepository
 
 
 ###############################################################################
 class DatabaseBackend(Protocol):
-    db_path: str | None  
-    engine: Any    
+    db_path: str | None
+    engine: Any
 
     # -------------------------------------------------------------------------
-    def load_from_database(self, table_name: str) -> pd.DataFrame: ...
+    def load_from_database(
+        self,
+        table_name: str,
+        limit: int | None = None,
+        offset: int | None = None,
+    ) -> pd.DataFrame: ...
 
     # -------------------------------------------------------------------------
     def save_into_database(self, df: pd.DataFrame, table_name: str) -> None: ...
@@ -29,13 +34,17 @@ class DatabaseBackend(Protocol):
     def upsert_into_database(self, df: pd.DataFrame, table_name: str) -> None: ...
 
     # -------------------------------------------------------------------------
-    def delete_from_database(self, table_name: str, conditions: dict[str, Any]) -> None: ...
+    def delete_from_database(
+        self, table_name: str, conditions: dict[str, Any]
+    ) -> None: ...
 
     # -------------------------------------------------------------------------
     def count_rows(self, table_name: str) -> int: ...
 
     # -------------------------------------------------------------------------
-    def load_paginated(self, table_name: str, offset: int, limit: int) -> pd.DataFrame: ...
+    def load_paginated(
+        self, table_name: str, offset: int, limit: int
+    ) -> pd.DataFrame: ...
 
     # -------------------------------------------------------------------------
     def count_columns(self, table_name: str) -> int: ...
@@ -97,8 +106,13 @@ class FAIRSDatabase:
         return getattr(self.backend, "db_path", None)
 
     # -------------------------------------------------------------------------
-    def load_from_database(self, table_name: str) -> pd.DataFrame:
-        return self.backend.load_from_database(table_name)
+    def load_from_database(
+        self,
+        table_name: str,
+        limit: int | None = None,
+        offset: int | None = None,
+    ) -> pd.DataFrame:
+        return self.backend.load_from_database(table_name, limit=limit, offset=offset)
 
     # -------------------------------------------------------------------------
     def save_into_database(self, df: pd.DataFrame, table_name: str) -> None:

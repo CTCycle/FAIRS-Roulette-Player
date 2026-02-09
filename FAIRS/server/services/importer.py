@@ -14,13 +14,13 @@ from FAIRS.server.common.constants import (
     ROULETTE_SERIES_COLUMNS,
     ROULETTE_SERIES_TABLE,
 )
-from FAIRS.server.repositories.serialization.serializer import DataSerializer
+from FAIRS.server.repositories.serialization.data import DataSerializer
 from FAIRS.server.services.process import RouletteSeriesEncoder
 
 DatasetTable = Literal[
-    "ROULETTE_SERIES",
-    "INFERENCE_CONTEXT",
-    "GAME_SESSIONS",
+    "roulette_series",
+    "inference_context",
+    "game_sessions",
 ]
 
 
@@ -35,47 +35,46 @@ class DatasetImportService:
         self,
         dataframe: pd.DataFrame,
         table: DatasetTable,
-        dataset_name: str | None = None,
+        name: str | None = None,
     ) -> pd.DataFrame:
         if dataframe.empty:
             return dataframe
 
         if table == ROULETTE_SERIES_TABLE:
             normalized = dataframe.copy()
-            if dataset_name is not None:
-                cleaned_name = dataset_name.strip()
-                normalized["dataset_name"] = cleaned_name if cleaned_name else "default"
-            elif "dataset_name" not in normalized.columns:
-                normalized["dataset_name"] = "default"
+            if name is not None:
+                cleaned_name = name.strip()
+                normalized["name"] = cleaned_name if cleaned_name else "default"
+            elif "name" not in normalized.columns:
+                normalized["name"] = "default"
             else:
-                normalized["dataset_name"] = normalized["dataset_name"].fillna("default")
-            # Rename first column to "extraction" if not already present
-            if "extraction" not in normalized.columns and len(normalized.columns) > 0:
+                normalized["name"] = normalized["name"].fillna("default")
+            # Rename first column to "outcome" if not already present
+            if "outcome" not in normalized.columns and len(normalized.columns) > 0:
                 first_col = normalized.columns[0]
-                normalized = normalized.rename(columns={first_col: "extraction"})
+                normalized = normalized.rename(columns={first_col: "outcome"})
             # Always encode to add color, color_code, and position
             normalized = self.encoder.encode(normalized)
-            if "id" not in normalized.columns:
-                normalized.insert(0, "id", range(1, len(normalized) + 1))
             return normalized.reindex(columns=ROULETTE_SERIES_COLUMNS)
 
         if table == INFERENCE_CONTEXT_TABLE:
             normalized = dataframe.copy()
-            if dataset_name is not None:
-                cleaned_name = dataset_name.strip()
-                normalized["dataset_name"] = cleaned_name if cleaned_name else "context"
-            elif "dataset_name" not in normalized.columns:
-                normalized["dataset_name"] = "context"
-            if "id" not in normalized.columns:
-                normalized.insert(0, "id", range(1, len(normalized) + 1))
+            if name is not None:
+                cleaned_name = name.strip()
+                normalized["name"] = cleaned_name if cleaned_name else "context"
+            elif "name" not in normalized.columns:
+                normalized["name"] = "context"
+            if "outcome" not in normalized.columns and len(normalized.columns) > 0:
+                first_col = normalized.columns[0]
+                normalized = normalized.rename(columns={first_col: "outcome"})
             if "uploaded_at" not in normalized.columns:
                 normalized["uploaded_at"] = datetime.now()
             return normalized.reindex(columns=INFERENCE_CONTEXT_COLUMNS)
 
         if table == GAME_SESSIONS_TABLE:
             normalized = dataframe.copy()
-            if "id" not in normalized.columns:
-                normalized.insert(0, "id", range(1, len(normalized) + 1))
+            if "observed_outcome" not in normalized.columns:
+                normalized["observed_outcome"] = None
             return normalized.reindex(columns=GAME_SESSIONS_COLUMNS)
 
         raise ValueError(f"Unsupported table: {table}")
@@ -98,9 +97,9 @@ class DatasetImportService:
         self,
         dataframe: pd.DataFrame,
         table: DatasetTable,
-        dataset_name: str | None = None,
+        name: str | None = None,
     ) -> int:
-        normalized = self.normalize(dataframe, table, dataset_name)
+        normalized = self.normalize(dataframe, table, name)
         self.persist(normalized, table)
         return int(len(normalized))
 

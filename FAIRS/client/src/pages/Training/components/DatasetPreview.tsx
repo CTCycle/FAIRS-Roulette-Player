@@ -51,8 +51,8 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
             const datasetList = Array.isArray(data?.datasets)
                 ? data.datasets
                     .filter((entry: unknown) => typeof entry === 'object' && entry !== null)
-                    .map((entry: { dataset_name?: unknown; row_count?: unknown }) => ({
-                        name: typeof entry.dataset_name === 'string' ? entry.dataset_name : '',
+                    .map((entry: { name?: unknown; row_count?: unknown }) => ({
+                        name: typeof entry.name === 'string' ? entry.name : '',
                         rowCount: typeof entry.row_count === 'number' ? entry.row_count : null,
                     }))
                     .filter((entry: DatasetSummary) => entry.name.trim().length > 0)

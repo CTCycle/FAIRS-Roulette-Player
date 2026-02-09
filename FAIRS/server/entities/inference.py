@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 ###############################################################################
 class InferenceStartRequest(BaseModel):
     checkpoint: str = Field(..., min_length=1)
-    dataset_name: str = Field(..., min_length=1)
+    name: str = Field(..., min_length=1)
     dataset_source: str | None = None
     session_id: str | None = None
     game_capital: int = Field(100, ge=1)

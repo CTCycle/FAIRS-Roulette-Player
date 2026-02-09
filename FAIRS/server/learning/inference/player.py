@@ -9,7 +9,7 @@ from keras import Model
 from keras.utils import set_random_seed
 
 from FAIRS.server.common.constants import PAD_VALUE
-from FAIRS.server.repositories.serialization.serializer import DataSerializer
+from FAIRS.server.repositories.serialization.data import DataSerializer
 from FAIRS.server.learning.training.environment import BetsAndRewards
 
 
@@ -20,13 +20,13 @@ class RoulettePlayer:
         model: Model,
         configuration: dict[str, Any],
         session_id: str,
-        dataset_name: str,
+        name: str,
         dataset_source: str | None = None,
     ) -> None:
         set_random_seed(configuration.get("seed", 42))
 
         self.session_id = session_id
-        self.dataset_name = dataset_name
+        self.name = name
         self.perceptive_size = int(configuration.get("perceptive_field_size", 64))
         self.initial_capital = int(configuration.get("game_capital", 100))
         self.bet_amount = int(configuration.get("game_bet", 1))
@@ -47,23 +47,23 @@ class RoulettePlayer:
 
         self.serializer = DataSerializer()
         if dataset_source == "uploaded":
-            self.context = self.serializer.load_inference_context(dataset_name)
+            self.context = self.serializer.load_inference_context(name)
         elif dataset_source == "source":
-            self.context = self.serializer.load_roulette_dataset(dataset_name)
+            self.context = self.serializer.load_roulette_dataset(name)
         else:
-            self.context = self.serializer.load_inference_context(dataset_name)
+            self.context = self.serializer.load_inference_context(name)
             if self.context.empty:
-                self.context = self.serializer.load_roulette_dataset(dataset_name)
+                self.context = self.serializer.load_roulette_dataset(name)
 
     # -----------------------------------------------------------------------------
     def initialize_states(self) -> None:
-        if self.context.empty or "extraction" not in self.context.columns:
-            raise ValueError("Inference context is empty or missing extraction column.")
-        extractions = pd.to_numeric(self.context["extraction"], errors="coerce").dropna()
-        if extractions.empty:
-            raise ValueError("Inference context contains no extractions.")
+        if self.context.empty or "outcome" not in self.context.columns:
+            raise ValueError("Inference context is empty or missing outcome column.")
+        outcomes = pd.to_numeric(self.context["outcome"], errors="coerce").dropna()
+        if outcomes.empty:
+            raise ValueError("Inference context contains no outcomes.")
 
-        perceptive_candidates = extractions.to_numpy(dtype=np.int32)
+        perceptive_candidates = outcomes.to_numpy(dtype=np.int32)
         state = np.full(
             shape=(self.perceptive_size,),
             fill_value=PAD_VALUE,
