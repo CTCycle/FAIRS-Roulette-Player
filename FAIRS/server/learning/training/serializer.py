@@ -14,7 +14,7 @@ from keras.models import load_model
 from FAIRS.server.learning import models as custom_layers_registry  # noqa: F401
 from FAIRS.server.common.constants import CHECKPOINT_PATH
 from FAIRS.server.common.utils.logger import logger
-from FAIRS.server.repositories.database import database
+from FAIRS.server.repositories.database.manager import database
 from FAIRS.server.common.constants import ROULETTE_SERIES_TABLE
 from FAIRS.server.services.process import RouletteSeriesEncoder
 from FAIRS.server.learning.training.generator import RouletteSyntheticGenerator

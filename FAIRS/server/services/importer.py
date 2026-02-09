@@ -14,7 +14,7 @@ from FAIRS.server.common.constants import (
     ROULETTE_SERIES_COLUMNS,
     ROULETTE_SERIES_TABLE,
 )
-from FAIRS.server.repositories.serializer import DataSerializer
+from FAIRS.server.repositories.serialization.serializer import DataSerializer
 from FAIRS.server.services.process import RouletteSeriesEncoder
 
 DatasetTable = Literal[

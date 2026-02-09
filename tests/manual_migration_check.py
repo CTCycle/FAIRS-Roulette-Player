@@ -10,7 +10,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.
 
 from FAIRS.server.services.loader import TabularFileLoader
 from FAIRS.server.services.importer import DatasetImportService, ROULETTE_SERIES_TABLE
-from FAIRS.server.repositories.database import database
+from FAIRS.server.repositories.database.manager import database
 
 def test_migration_flow():
     print(f"Pandas version: {pd.__version__}")
