@@ -1,21 +1,16 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-
 from sqlalchemy import (
-    BigInteger,
     Column,
     DateTime,
     Float,
     Integer,
     String,
-    Text,
     UniqueConstraint,
     func,
 )
-from sqlalchemy.orm import declarative_base
 
-Base = declarative_base()
+from FAIRS.server.repositories.database.base import Base
 
 
 ###############################################################################

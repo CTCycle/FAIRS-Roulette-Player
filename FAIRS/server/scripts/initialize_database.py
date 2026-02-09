@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import time
 
-from FAIRS.server.repositories.initializer import initialize_database
+from FAIRS.server.repositories.database.initializer import initialize_database
 from FAIRS.server.common.constants import CONFIGURATIONS_FILE
 from FAIRS.server.common.utils.logger import logger
 

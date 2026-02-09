@@ -23,7 +23,7 @@ from FAIRS.server.common.utils.logger import logger
 from FAIRS.server.learning.inference.player import RoulettePlayer
 from FAIRS.server.learning.training.device import DeviceConfig
 from FAIRS.server.learning.training.serializer import ModelSerializer
-from FAIRS.server.repositories.serializer import DataSerializer
+from FAIRS.server.repositories.serialization.serializer import DataSerializer
 
 
 router = APIRouter(prefix="/inference", tags=["inference"])

@@ -1,15 +1,14 @@
 from __future__ import annotations
 
-import os
 import urllib.parse
 
 import sqlalchemy
 from sqlalchemy.exc import SQLAlchemyError
 
 from FAIRS.server.configurations import DatabaseSettings, server_settings
-from FAIRS.server.repositories.postgres import PostgresRepository
-from FAIRS.server.repositories.schema import Base
-from FAIRS.server.repositories.sqlite import SQLiteRepository
+from FAIRS.server.repositories.database.base import Base
+from FAIRS.server.repositories.queries.postgres import PostgresRepository
+from FAIRS.server.repositories.queries.sqlite import SQLiteRepository
 from FAIRS.server.repositories.utils import normalize_postgres_engine
 from FAIRS.server.common.utils.logger import logger
 

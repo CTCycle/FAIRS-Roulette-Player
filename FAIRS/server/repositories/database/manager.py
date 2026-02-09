@@ -1,17 +1,14 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
+from collections.abc import Callable
 from typing import Any, Protocol
 
 import pandas as pd
-from sqlalchemy.orm import declarative_base
 
 from FAIRS.server.configurations import DatabaseSettings, server_settings
 from FAIRS.server.common.utils.logger import logger
-from FAIRS.server.repositories.postgres import PostgresRepository
-from FAIRS.server.repositories.sqlite import SQLiteRepository
-
-Base = declarative_base()
+from FAIRS.server.repositories.queries.postgres import PostgresRepository
+from FAIRS.server.repositories.queries.sqlite import SQLiteRepository
 
 
 ###############################################################################
