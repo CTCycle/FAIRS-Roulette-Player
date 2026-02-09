@@ -19,7 +19,7 @@ export const buildTrainingPayload = (
     bet_amount: Number(config.betAmount),
     initial_capital: Number(config.initialCapital),
     // Dataset
-    dataset_name: datasetOverride ?? config.datasetName,
+    name: datasetOverride ?? config.datasetName,
     use_data_generator: config.useDataGen,
     num_generated_samples: Number(config.numGeneratedSamples),
     sample_size: Number(config.trainSampleSize),

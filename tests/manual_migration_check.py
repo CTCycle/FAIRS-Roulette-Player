@@ -10,7 +10,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.
 
 from FAIRS.server.services.loader import TabularFileLoader
 from FAIRS.server.services.importer import DatasetImportService, ROULETTE_SERIES_TABLE
-from FAIRS.server.repositories.database.manager import database
+from FAIRS.server.repositories.database.backend import database
 
 def test_migration_flow():
     print(f"Pandas version: {pd.__version__}")
@@ -18,14 +18,14 @@ def test_migration_flow():
 
     # 1. Simulate Loading with mixed types that might be inferred as string
     print("\n--- Testing Loader and String Inference ---")
-    csv_content = b"extraction;dataset_name\n15;test_dataset\n0;\n32;test_dataset"
+    csv_content = b"outcome;name\n15;test_dataset\n0;\n32;test_dataset"
     loader = TabularFileLoader()
     df = loader.load_bytes(csv_content, "test.csv")
-    df["dataset_name"] = df["dataset_name"].astype("string")
+    df["name"] = df["name"].astype("string")
     
     print("Loaded DataFrame dtypes:")
     print(df.dtypes)
-    assert pd.api.types.is_string_dtype(df["dataset_name"].dtype)
+    assert pd.api.types.is_string_dtype(df["name"].dtype)
     
     # Check if string inference is active (pandas 3.0 default for some read implementations?) 
     # Actually explicit string dtype is opt-in mostly but let's see what happens with default read_csv
@@ -39,7 +39,7 @@ def test_migration_flow():
     print(normalized_df.dtypes)
     print("Normalized DataFrame head:")
     print(normalized_df.head())
-    assert pd.api.types.is_string_dtype(normalized_df["dataset_name"].dtype)
+    assert pd.api.types.is_string_dtype(normalized_df["name"].dtype)
     assert "color" not in df.columns
     
     # 3. Simulate DB Save (Upsert/Insert)
@@ -50,8 +50,8 @@ def test_migration_flow():
     # Create a dataframe with string dtype and pd.NA
     df_na = pd.DataFrame({
         "id": [999999],
-        "extraction": [0],
-        "dataset_name": pd.Series(["test_na"], dtype="string"),
+        "outcome": [0],
+        "name": pd.Series(["test_na"], dtype="string"),
         "color": pd.Series([pd.NA], dtype="string"), # This should cause issues if not sanitized
         "color_code": [0],
         "position": [0]

@@ -93,15 +93,15 @@ class RouletteSeriesEncoder:
 
     # -------------------------------------------------------------------------
     def encode(self, dataframe: pd.DataFrame) -> pd.DataFrame:
-        if "extraction" not in dataframe.columns:
-            raise ValueError("Missing required column: extraction")
+        if "outcome" not in dataframe.columns:
+            raise ValueError("Missing required column: outcome")
 
         reverse_color_map = {
             value: key for key, values in self.color_map.items() for value in values
         }
 
-        dataframe["position"] = dataframe["extraction"].map(self.position_map)
-        dataframe["color"] = dataframe["extraction"].map(reverse_color_map)
+        dataframe["position"] = dataframe["outcome"].map(self.position_map)
+        dataframe["color"] = dataframe["outcome"].map(reverse_color_map)
         dataframe["color_code"] = dataframe["color"].map(self.color_code)
 
         return dataframe

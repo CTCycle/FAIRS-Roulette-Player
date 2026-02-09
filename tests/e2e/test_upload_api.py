@@ -11,7 +11,7 @@ class TestDataUploadEndpoint:
 
     def test_upload_without_file_returns_422(self, api_context: APIRequestContext):
         """POST /data/upload without a file should return 422 (validation error)."""
-        response = api_context.post("/data/upload?table=ROULETTE_SERIES")
+        response = api_context.post("/data/upload?table=roulette_series")
         # FastAPI returns 422 for missing required fields
         assert response.status == 422
 
@@ -39,7 +39,7 @@ class TestDataUploadEndpoint:
         csv_content = b"extraction\n0\n15\n32\n7\n21"
         
         response = api_context.post(
-            "/data/upload?table=ROULETTE_SERIES&csv_separator=%2C",  # URL-encoded comma
+            "/data/upload?table=roulette_series&csv_separator=%2C",  # URL-encoded comma
             multipart={
                 "file": {
                     "name": "test_extractions.csv",
@@ -55,12 +55,12 @@ class TestDataUploadEndpoint:
         data = response.json()
         assert "rows_imported" in data
         assert "table" in data
-        assert data["table"] == "ROULETTE_SERIES"
+        assert data["table"] == "roulette_series"
 
     def test_upload_empty_file_returns_400(self, api_context: APIRequestContext):
         """POST /data/upload with empty content should return 400."""
         response = api_context.post(
-            "/data/upload?table=ROULETTE_SERIES",
+            "/data/upload?table=roulette_series",
             multipart={
                 "file": {
                     "name": "empty.csv",
@@ -81,7 +81,7 @@ class TestDataUploadEdgeCases:
         # Note: Creating a real XLSX in tests is complex; this test verifies
         # the endpoint accepts the format but may fail on parsing
         response = api_context.post(
-            "/data/upload?table=ROULETTE_SERIES&sheet_name=0",
+            "/data/upload?table=roulette_series&sheet_name=0",
             multipart={
                 "file": {
                     "name": "test.xlsx",
@@ -99,7 +99,7 @@ class TestDataUploadEdgeCases:
         csv_content = b"extraction;color\n0;green\n1;red\n2;black"
         
         response = api_context.post(
-            "/data/upload?table=ROULETTE_SERIES&csv_separator=%3B",  # URL-encoded semicolon
+            "/data/upload?table=roulette_series&csv_separator=%3B",  # URL-encoded semicolon
             multipart={
                 "file": {
                     "name": "test_semicolon.csv",

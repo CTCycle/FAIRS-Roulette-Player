@@ -70,7 +70,7 @@ export const InferenceSetup: React.FC<InferenceSetupProps> = ({
         const formData = new FormData();
         formData.append('file', file);
 
-        const response = await fetch('/api/data/upload?table=INFERENCE_CONTEXT', {
+        const response = await fetch('/api/data/upload?table=inference_context', {
             method: 'POST',
             body: formData,
         });
@@ -85,7 +85,7 @@ export const InferenceSetup: React.FC<InferenceSetupProps> = ({
     const startSession = async (datasetName: string) => {
         const startPayload = {
             checkpoint,
-            dataset_name: datasetName,
+            name: datasetName,
             game_capital: initialCapital,
             game_bet: betAmount,
         };

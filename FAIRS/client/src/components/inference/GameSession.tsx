@@ -132,7 +132,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
         const formData = new FormData();
         formData.append('file', file);
 
-        const response = await fetch('/api/data/upload?table=INFERENCE_CONTEXT', {
+        const response = await fetch('/api/data/upload?table=inference_context', {
             method: 'POST',
             body: formData,
         });
@@ -208,7 +208,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
         const startPayload = {
             session_id: sessionId,
             checkpoint: setup.checkpoint,
-            dataset_name: datasetName,
+            name: datasetName,
             dataset_source: setup.datasetSource,
             game_capital: gameCapital,
             game_bet: gameBet,

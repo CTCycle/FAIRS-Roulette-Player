@@ -676,7 +676,7 @@ class TrainingEndpoint:
             return None
 
         summary = {
-            "dataset_name": configuration.get("dataset_name") or "",
+            "name": configuration.get("name") or "",
             "sample_size": configuration.get("sample_size"),
             "seed": configuration.get("seed"),
             "episodes": configuration.get("episodes") or session.get("total_episodes"),

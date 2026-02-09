@@ -23,7 +23,7 @@ class TrainingConfig(BaseModel):
     initial_capital: int = Field(1000, ge=1)
     
     # Dataset parameters
-    dataset_name: str | None = None
+    name: str | None = None
     use_data_generator: bool = False
     num_generated_samples: int = Field(10000, ge=100)
     sample_size: float = Field(1.0, gt=0.0, le=1.0)

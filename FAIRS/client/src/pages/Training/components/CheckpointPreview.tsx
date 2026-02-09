@@ -128,7 +128,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
     const cacheCheckpointMetadata = (checkpointName: string, payload: CheckpointMetadataResponse) => {
         setMetadataCache((prev) => ({ ...prev, [checkpointName]: payload }));
         const summary = payload.summary || {};
-        const datasetName = typeof summary.dataset_name === 'string' ? summary.dataset_name : '';
+        const datasetName = typeof summary.name === 'string' ? summary.name : '';
         setCheckpointDatasetMap((prev) => ({ ...prev, [checkpointName]: datasetName }));
     };
 
@@ -233,7 +233,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
                 cacheCheckpointMetadata(checkpointName, payload);
             }
             const summary = payload.summary || {};
-            const datasetName = typeof summary.dataset_name === 'string' ? summary.dataset_name : '';
+            const datasetName = typeof summary.name === 'string' ? summary.name : '';
             const betAmount = typeof summary.bet_amount === 'number' ? summary.bet_amount : 1;
             const initialCapital = typeof summary.initial_capital === 'number' ? summary.initial_capital : 100;
 
@@ -247,7 +247,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     checkpoint: checkpointName,
-                    dataset_name: datasetName,
+                    name: datasetName,
                     game_capital: Number(initialCapital),
                     game_bet: Number(betAmount),
                 }),
@@ -268,7 +268,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
 
     const buildMetadataRows = (summary: Record<string, unknown>) => {
         const rows = [
-            { label: 'Dataset', key: 'dataset_name' },
+            { label: 'Dataset', key: 'name' },
             { label: 'Sample Size', key: 'sample_size' },
             { label: 'Seed', key: 'seed' },
             { label: 'Episodes', key: 'episodes' },
@@ -289,7 +289,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
 
         return rows
             .map((row) => {
-                if (row.key === 'dataset_name') {
+                if (row.key === 'name') {
                     const datasetValue = summary[row.key];
                     const datasetName = typeof datasetValue === 'string' ? datasetValue : '';
                     return {
