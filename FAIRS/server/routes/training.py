@@ -7,8 +7,8 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
 
-from FAIRS.server.schemas.training import ResumeConfig, TrainingConfig
-from FAIRS.server.schemas.jobs import JobCancelResponse, JobStartResponse, JobStatusResponse
+from FAIRS.server.entities.training import ResumeConfig, TrainingConfig
+from FAIRS.server.entities.jobs import JobCancelResponse, JobStartResponse, JobStatusResponse
 from FAIRS.server.configurations import server_settings
 from FAIRS.server.configurations.server import get_poll_interval_seconds
 from FAIRS.server.common.constants import CHECKPOINT_PATH

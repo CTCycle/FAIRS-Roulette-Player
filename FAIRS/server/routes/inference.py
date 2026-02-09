@@ -9,7 +9,7 @@ from typing import Any
 import pandas as pd
 from fastapi import APIRouter, HTTPException, status
 
-from FAIRS.server.schemas.inference import (
+from FAIRS.server.entities.inference import (
     InferenceBetUpdateRequest,
     InferenceNextResponse,
     InferenceShutdownResponse,
