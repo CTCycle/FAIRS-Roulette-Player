@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from datetime import datetime
 from typing import Literal
 
@@ -41,21 +40,7 @@ class DatasetImportService:
             return dataframe
 
         if table == ROULETTE_SERIES_TABLE:
-            normalized = dataframe.copy()
-            if name is not None:
-                cleaned_name = name.strip()
-                normalized["name"] = cleaned_name if cleaned_name else "default"
-            elif "name" not in normalized.columns:
-                normalized["name"] = "default"
-            else:
-                normalized["name"] = normalized["name"].fillna("default")
-            # Rename first column to "outcome" if not already present
-            if "outcome" not in normalized.columns and len(normalized.columns) > 0:
-                first_col = normalized.columns[0]
-                normalized = normalized.rename(columns={first_col: "outcome"})
-            # Always encode to add color, color_code, and position
-            normalized = self.encoder.encode(normalized)
-            return normalized.reindex(columns=ROULETTE_SERIES_COLUMNS)
+            return self.normalize_roulette_series(dataframe, name)
 
         if table == INFERENCE_CONTEXT_TABLE:
             normalized = dataframe.copy()
@@ -78,6 +63,52 @@ class DatasetImportService:
             return normalized.reindex(columns=GAME_SESSIONS_COLUMNS)
 
         raise ValueError(f"Unsupported table: {table}")
+
+    # -------------------------------------------------------------------------
+    def normalize_roulette_series(
+        self,
+        dataframe: pd.DataFrame,
+        name: str | None = None,
+    ) -> pd.DataFrame:
+        if len(dataframe.columns) < 2:
+            raise ValueError(
+                "Roulette upload must contain two columns: extraction index and outcome."
+            )
+
+        normalized = pd.DataFrame(
+            {
+                "series_id": pd.to_numeric(dataframe.iloc[:, 0], errors="coerce"),
+                "outcome": pd.to_numeric(dataframe.iloc[:, 1], errors="coerce"),
+            }
+        )
+        integer_mask = (
+            normalized["series_id"].notna()
+            & normalized["outcome"].notna()
+            & normalized["series_id"].mod(1).eq(0)
+            & normalized["outcome"].mod(1).eq(0)
+        )
+        normalized = normalized.loc[integer_mask].copy()
+        if normalized.empty:
+            raise ValueError(
+                "No valid roulette rows found. Extraction index and outcome must be integers."
+            )
+
+        normalized["series_id"] = normalized["series_id"].astype(int)
+        normalized["outcome"] = normalized["outcome"].astype(int)
+        normalized = normalized.loc[normalized["outcome"].between(0, 36)].copy()
+        if normalized.empty:
+            raise ValueError(
+                "No valid roulette outcomes found. Outcomes must be in the range 0 to 36."
+            )
+
+        if name is not None:
+            cleaned_name = name.strip()
+            normalized["name"] = cleaned_name if cleaned_name else "default"
+        else:
+            normalized["name"] = "default"
+
+        normalized = self.encoder.encode(normalized)
+        return normalized.reindex(columns=ROULETTE_SERIES_COLUMNS)
 
     # -------------------------------------------------------------------------
     def persist(self, dataframe: pd.DataFrame, table: DatasetTable) -> None:

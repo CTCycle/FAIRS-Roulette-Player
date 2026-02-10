@@ -18,10 +18,10 @@ def test_migration_flow():
 
     # 1. Simulate Loading with mixed types that might be inferred as string
     print("\n--- Testing Loader and String Inference ---")
-    csv_content = b"outcome;name\n15;test_dataset\n0;\n32;test_dataset"
+    csv_content = b"idx;result\n0;15\n1;0\n2;32"
     loader = TabularFileLoader()
     df = loader.load_bytes(csv_content, "test.csv")
-    df["name"] = df["name"].astype("string")
+    df["name"] = pd.Series(["test_dataset"] * len(df), dtype="string")
     
     print("Loaded DataFrame dtypes:")
     print(df.dtypes)
@@ -50,11 +50,12 @@ def test_migration_flow():
     # Create a dataframe with string dtype and pd.NA
     df_na = pd.DataFrame({
         "id": [999999],
+        "series_id": [0],
         "outcome": [0],
         "name": pd.Series(["test_na"], dtype="string"),
         "color": pd.Series([pd.NA], dtype="string"), # This should cause issues if not sanitized
         "color_code": [0],
-        "position": [0]
+        "wheel_position": [0]
     })
     
     print("DataFrame with pd.NA:")
