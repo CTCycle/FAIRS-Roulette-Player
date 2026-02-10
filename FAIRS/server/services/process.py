@@ -100,7 +100,7 @@ class RouletteSeriesEncoder:
             value: key for key, values in self.color_map.items() for value in values
         }
 
-        dataframe["position"] = dataframe["outcome"].map(self.position_map)
+        dataframe["wheel_position"] = dataframe["outcome"].map(self.position_map)
         dataframe["color"] = dataframe["outcome"].map(reverse_color_map)
         dataframe["color_code"] = dataframe["color"].map(self.color_code)
 

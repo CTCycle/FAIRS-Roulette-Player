@@ -41,10 +41,11 @@ GAME_SESSIONS_TABLE = "game_sessions"
 ROULETTE_SERIES_COLUMNS = [
     "id",
     "name",
+    "series_id",
     "outcome",
     "color",
     "color_code",
-    "position",
+    "wheel_position",
 ]
 INFERENCE_CONTEXT_COLUMNS = ["id", "name", "outcome", "uploaded_at"]
 GAME_SESSIONS_COLUMNS = [

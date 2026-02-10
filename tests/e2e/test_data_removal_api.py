@@ -11,7 +11,7 @@ class TestDatasetRemoval:
     """Tests for dataset deletion via /database/roulette-series/datasets."""
 
     def test_delete_dataset_after_upload(self, api_context: APIRequestContext):
-        csv_content = b"extraction\n0\n12\n24\n36\n5"
+        csv_content = b"idx,outcome\n0,0\n1,12\n2,24\n3,36\n4,5"
         upload_response = api_context.post(
             "/data/upload?table=roulette_series&csv_separator=%2C",
             multipart={

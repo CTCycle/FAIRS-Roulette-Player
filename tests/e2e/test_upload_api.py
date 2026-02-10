@@ -2,8 +2,27 @@
 E2E tests for Data Upload API endpoint.
 Tests: POST /data/upload
 """
-import io
 from playwright.sync_api import APIRequestContext
+
+
+def load_rows_for_dataset(
+    api_context: APIRequestContext, dataset_name: str, max_pages: int = 20
+) -> list[dict]:
+    rows: list[dict] = []
+    offset = 0
+    for _ in range(max_pages):
+        response = api_context.get(f"/database/tables/roulette_series?offset={offset}")
+        assert response.ok, f"Expected 200, got {response.status}: {response.text()}"
+        payload = response.json()
+        batch = payload.get("rows", [])
+        if not batch:
+            break
+        rows.extend([row for row in batch if row.get("name") == dataset_name])
+        limit = int(payload.get("limit", 0) or 0)
+        if limit <= 0:
+            break
+        offset += limit
+    return rows
 
 
 class TestDataUploadEndpoint:
@@ -35,8 +54,7 @@ class TestDataUploadEndpoint:
 
     def test_upload_valid_csv_to_roulette_series(self, api_context: APIRequestContext):
         """POST /data/upload with valid CSV should import data successfully."""
-        # Create a sample CSV with extraction column
-        csv_content = b"extraction\n0\n15\n32\n7\n21"
+        csv_content = b"draw_index,observed_outcome\n0,0\n1,15\n2,32\n3,7\n4,21"
         
         response = api_context.post(
             "/data/upload?table=roulette_series&csv_separator=%2C",  # URL-encoded comma
@@ -56,6 +74,7 @@ class TestDataUploadEndpoint:
         assert "rows_imported" in data
         assert "table" in data
         assert data["table"] == "roulette_series"
+        assert data["rows_imported"] == 5
 
     def test_upload_empty_file_returns_400(self, api_context: APIRequestContext):
         """POST /data/upload with empty content should return 400."""
@@ -96,7 +115,7 @@ class TestDataUploadEdgeCases:
     def test_upload_with_custom_separator(self, api_context: APIRequestContext):
         """POST /data/upload should respect csv_separator parameter."""
         # CSV with semicolon separator
-        csv_content = b"extraction;color\n0;green\n1;red\n2;black"
+        csv_content = b"index;value\n0;0\n1;32\n2;15"
         
         response = api_context.post(
             "/data/upload?table=roulette_series&csv_separator=%3B",  # URL-encoded semicolon
@@ -110,3 +129,48 @@ class TestDataUploadEdgeCases:
         )
         # This should succeed if the separator is handled correctly
         assert response.ok, f"Expected 200, got {response.status}: {response.text()}"
+
+    def test_upload_filters_invalid_outcomes_and_enriches_all_valid_rows(
+        self, api_context: APIRequestContext
+    ):
+        """POST /data/upload should discard invalid outcomes and enrich valid rows."""
+        dataset_name = "test_invalid_outcomes_cleanup"
+        api_context.delete(f"/database/roulette-series/datasets/{dataset_name}")
+        csv_content = (
+            b"spin,result\n"
+            b"10,5\n"
+            b"11,37\n"
+            b"12,-1\n"
+            b"13,0\n"
+            b"14,36\n"
+            b"15,abc\n"
+            b"16,7.2\n"
+            b"17,7\n"
+        )
+
+        response = api_context.post(
+            "/data/upload?table=roulette_series&csv_separator=%2C",
+            multipart={
+                "file": {
+                    "name": f"{dataset_name}.csv",
+                    "mimeType": "text/csv",
+                    "buffer": csv_content,
+                }
+            },
+        )
+        assert response.ok, f"Expected 200, got {response.status}: {response.text()}"
+        payload = response.json()
+        assert payload["rows_imported"] == 4
+
+        dataset_rows = load_rows_for_dataset(api_context, dataset_name)
+        assert len(dataset_rows) == 4
+
+        expected_series_ids = {10, 13, 14, 17}
+        observed_series_ids = {int(row["series_id"]) for row in dataset_rows}
+        assert observed_series_ids == expected_series_ids
+
+        for row in dataset_rows:
+            assert 0 <= int(row["outcome"]) <= 36
+            assert row["color"] is not None
+            assert row["color_code"] is not None
+            assert row["wheel_position"] is not None

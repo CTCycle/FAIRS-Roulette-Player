@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from sqlalchemy import (
+    CheckConstraint,
     Column,
     DateTime,
     Float,
@@ -18,12 +19,16 @@ Base = declarative_base()
 class RouletteSeries(Base):
     __tablename__ = "roulette_series"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String)
-    outcome = Column(Integer)
+    name = Column(String, nullable=False)
+    series_id = Column(Integer, nullable=False)
+    outcome = Column(Integer, nullable=False)
     color = Column(String)
     color_code = Column(Integer)
-    position = Column(Integer)
-    __table_args__ = (UniqueConstraint("name", "outcome"),)
+    wheel_position = Column(Integer)
+    __table_args__ = (
+        UniqueConstraint("name", "series_id"),
+        CheckConstraint("outcome >= 0 AND outcome <= 36", name="ck_outcome_0_36"),
+    )
 
 
 ###############################################################################
@@ -56,4 +61,3 @@ class GameSessions(Base):
     __table_args__ = (UniqueConstraint("session_id", "step_id"),)
 
 
-###############################################################################
