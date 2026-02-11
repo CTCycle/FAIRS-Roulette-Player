@@ -5,24 +5,20 @@ Tests: POST /data/upload
 from playwright.sync_api import APIRequestContext
 
 
-def load_rows_for_dataset(
-    api_context: APIRequestContext, dataset_id: str, max_pages: int = 20
-) -> list[dict]:
-    rows: list[dict] = []
-    offset = 0
-    for _ in range(max_pages):
-        response = api_context.get(f"/database/tables/dataset_outcomes?offset={offset}")
-        assert response.ok, f"Expected 200, got {response.status}: {response.text()}"
-        payload = response.json()
-        batch = payload.get("rows", [])
-        if not batch:
-            break
-        rows.extend([row for row in batch if row.get("dataset_id") == dataset_id])
-        limit = int(payload.get("limit", 0) or 0)
-        if limit <= 0:
-            break
-        offset += limit
-    return rows
+def load_dataset_summary_entry(
+    api_context: APIRequestContext, dataset_id: str
+) -> dict | None:
+    response = api_context.get("/database/roulette-series/datasets/summary")
+    assert response.ok, f"Expected 200, got {response.status}: {response.text()}"
+    datasets = response.json().get("datasets", [])
+    return next(
+        (
+            item
+            for item in datasets
+            if item.get("dataset_id") == dataset_id
+        ),
+        None,
+    )
 
 
 class TestDataUploadEndpoint:
@@ -181,12 +177,6 @@ class TestDataUploadEdgeCases:
         dataset_id = payload.get("dataset_id")
         assert isinstance(dataset_id, str) and dataset_id
 
-        dataset_rows = load_rows_for_dataset(api_context, dataset_id)
-        assert len(dataset_rows) == 4
-
-        expected_series_ids = {10, 13, 14, 17}
-        observed_series_ids = {int(row["sequence_index"]) for row in dataset_rows}
-        assert observed_series_ids == expected_series_ids
-
-        for row in dataset_rows:
-            assert 0 <= int(row["outcome_id"]) <= 36
+        summary_entry = load_dataset_summary_entry(api_context, dataset_id)
+        assert summary_entry is not None
+        assert summary_entry.get("row_count") == 4

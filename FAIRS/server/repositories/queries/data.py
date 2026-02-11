@@ -48,23 +48,3 @@ class DataRepositoryQueries:
     # -------------------------------------------------------------------------
     def clear_table(self, table_name: str) -> None:
         self.database.clear_table(table_name)
-
-    # -------------------------------------------------------------------------
-    def count_rows(self, table_name: str) -> int:
-        return self.database.count_rows(table_name)
-
-    # -------------------------------------------------------------------------
-    def count_columns(self, table_name: str) -> int:
-        return self.database.count_columns(table_name)
-
-    # -------------------------------------------------------------------------
-    def load_distinct_values(self, table_name: str, column_name: str) -> list[str]:
-        return self.database.load_distinct_values(table_name, column_name)
-
-    # -------------------------------------------------------------------------
-    def load_grouped_counts(
-        self,
-        table_name: str,
-        column_name: str,
-    ) -> list[dict[str, Any]]:
-        return self.database.load_grouped_counts(table_name, column_name)

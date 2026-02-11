@@ -11,22 +11,6 @@ export interface FileMetadata {
     type: string;
 }
 
-export interface DatabaseState {
-    selectedTable: string;
-    tableData: {
-        columns: string[];
-        rows: Record<string, unknown>[];
-        offset: number;
-        limit: number;
-    } | null;
-    tableStats: {
-        table_name: string;
-        verbose_name: string;
-        row_count: number;
-        column_count: number;
-    } | null;
-}
-
 export interface DatasetUploadState {
     files: FileMetadata[];
     uploadStatus: 'idle' | 'uploading' | 'success' | 'error';
@@ -93,7 +77,6 @@ export interface InferenceState {
 }
 
 export interface AppState {
-    database: DatabaseState;
     training: TrainingState;
     inference: InferenceState;
 }
@@ -101,12 +84,6 @@ export interface AppState {
 // ============================================================================
 // Initial State
 // ============================================================================
-
-const initialDatabaseState: DatabaseState = {
-    selectedTable: '',
-    tableData: null,
-    tableStats: null,
-};
 
 const initialDatasetUploadState: DatasetUploadState = {
     files: [],
@@ -182,7 +159,6 @@ const initialInferenceState: InferenceState = {
 };
 
 const initialAppState: AppState = {
-    database: initialDatabaseState,
     training: initialTrainingState,
     inference: initialInferenceState,
 };
@@ -192,10 +168,6 @@ const initialAppState: AppState = {
 // ============================================================================
 
 type AppAction =
-    // Database Actions
-    | { type: 'SET_DATABASE_SELECTED_TABLE'; payload: string }
-    | { type: 'SET_DATABASE_TABLE_DATA'; payload: DatabaseState['tableData'] }
-    | { type: 'SET_DATABASE_TABLE_STATS'; payload: DatabaseState['tableStats'] }
     // Training Actions
     | { type: 'SET_TRAINING_IS_TRAINING'; payload: boolean }
     | { type: 'SET_DATASET_UPLOAD_STATE'; payload: Partial<DatasetUploadState> }
@@ -216,23 +188,6 @@ type AppAction =
 
 function appReducer(state: AppState, action: AppAction): AppState {
     switch (action.type) {
-        // Database
-        case 'SET_DATABASE_SELECTED_TABLE':
-            return {
-                ...state,
-                database: { ...state.database, selectedTable: action.payload },
-            };
-        case 'SET_DATABASE_TABLE_DATA':
-            return {
-                ...state,
-                database: { ...state.database, tableData: action.payload },
-            };
-        case 'SET_DATABASE_TABLE_STATS':
-            return {
-                ...state,
-                database: { ...state.database, tableStats: action.payload },
-            };
-
         // Training
         case 'SET_TRAINING_IS_TRAINING':
             return {
