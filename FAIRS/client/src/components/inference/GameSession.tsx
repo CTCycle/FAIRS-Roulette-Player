@@ -884,33 +884,35 @@ export const GameSession: React.FC<GameSessionProps> = ({
                                             </td>
                                             <td>{step.capitalAfter === null ? '--' : step.capitalAfter.toFixed(2)}</td>
                                             <td className={styles.actionsCell}>
-                                                <button
-                                                    type="button"
-                                                    className={styles.iconButton}
-                                                    onClick={() => handleRemove(index)}
-                                                    disabled={!canModify}
-                                                    aria-label="Remove row"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    className={styles.iconButton}
-                                                    onClick={() => handleModifyClick(index)}
-                                                    disabled={!canModify}
-                                                    aria-label={step.observed === null || step.isEditing ? 'Confirm observed' : 'Modify observed'}
-                                                >
-                                                    {step.observed === null || step.isEditing ? <Check size={16} /> : <Pencil size={16} />}
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    className={styles.iconButton}
-                                                    onClick={handleNextPrediction}
-                                                    disabled={!canNext}
-                                                    aria-label="Next prediction"
-                                                >
-                                                    <Play size={16} />
-                                                </button>
+                                                <div className={styles.actionsCellInner}>
+                                                    <button
+                                                        type="button"
+                                                        className={styles.iconButton}
+                                                        onClick={() => handleRemove(index)}
+                                                        disabled={!canModify}
+                                                        aria-label="Remove row"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className={styles.iconButton}
+                                                        onClick={() => handleModifyClick(index)}
+                                                        disabled={!canModify}
+                                                        aria-label={step.observed === null || step.isEditing ? 'Confirm observed' : 'Modify observed'}
+                                                    >
+                                                        {step.observed === null || step.isEditing ? <Check size={16} /> : <Pencil size={16} />}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className={styles.iconButton}
+                                                        onClick={handleNextPrediction}
+                                                        disabled={!canNext}
+                                                        aria-label="Next prediction"
+                                                    >
+                                                        <Play size={16} />
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     );

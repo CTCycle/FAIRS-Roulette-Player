@@ -308,8 +308,16 @@ class RouletteEnvironment(gym.Env):
     ) -> None:
         super(RouletteEnvironment, self).__init__()
         self.extractions = data["extraction"].values
-        self.positions = data["wheel_position"].values
-        self.colors = data["color_code"].values
+        self.positions = (
+            data["wheel_position"].values
+            if "wheel_position" in data.columns
+            else self.extractions
+        )
+        self.colors = (
+            data["color_code"].values
+            if "color_code" in data.columns
+            else np.zeros(len(self.extractions), dtype=np.int32)
+        )
         self.checkpoint_path = checkpoint_path
         self._rng = np.random.default_rng(configuration.get("train_seed", 42))
 
