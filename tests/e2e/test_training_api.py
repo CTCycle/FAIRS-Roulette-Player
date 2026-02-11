@@ -26,7 +26,7 @@ MINIMAL_TRAINING_CONFIG = {
     "perceptive_field_size": 8,
     "qnet_neurons": 8,
     "embedding_dimensions": 8,
-    "name": None,  # Use synthetic data
+    "dataset_id": None,  # Use synthetic data
     "use_data_generator": True,
 }
 

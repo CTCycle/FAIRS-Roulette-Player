@@ -19,13 +19,15 @@ class TestDatabaseEndpoints:
         
         # Check that expected tables are present
         table_names = [t["name"] for t in data]
-        assert "roulette_series" in table_names
-        assert "inference_context" in table_names
-        assert "game_sessions" in table_names
+        assert "roulette_outcomes" in table_names
+        assert "datasets" in table_names
+        assert "dataset_outcomes" in table_names
+        assert "inference_sessions" in table_names
+        assert "inference_session_steps" in table_names
 
     def test_get_table_data_valid_table(self, api_context: APIRequestContext):
         """GET /database/tables/{table_name} should return paginated data."""
-        response = api_context.get("/database/tables/roulette_series")
+        response = api_context.get("/database/tables/datasets")
         assert response.ok, f"Expected 200, got {response.status}"
         
         data = response.json()
@@ -42,7 +44,7 @@ class TestDatabaseEndpoints:
 
     def test_get_table_data_with_offset(self, api_context: APIRequestContext):
         """GET /database/tables/{table_name}?offset=N should support pagination."""
-        response = api_context.get("/database/tables/roulette_series?offset=10")
+        response = api_context.get("/database/tables/datasets?offset=10")
         assert response.ok
         
         data = response.json()
@@ -55,14 +57,14 @@ class TestDatabaseEndpoints:
 
     def test_get_table_stats_valid_table(self, api_context: APIRequestContext):
         """GET /database/tables/{table_name}/stats should return row/column counts."""
-        response = api_context.get("/database/tables/roulette_series/stats")
+        response = api_context.get("/database/tables/datasets/stats")
         assert response.ok
         
         data = response.json()
         assert "table_name" in data
         assert "row_count" in data
         assert "column_count" in data
-        assert data["table_name"] == "roulette_series"
+        assert data["table_name"] == "datasets"
 
     def test_get_table_stats_invalid_table_returns_404(self, api_context: APIRequestContext):
         """GET /database/tables/{invalid}/stats should return 404."""
@@ -77,6 +79,10 @@ class TestDatabaseEndpoints:
         data = response.json()
         assert "datasets" in data
         assert isinstance(data["datasets"], list)
+        if data["datasets"]:
+            sample = data["datasets"][0]
+            assert "dataset_id" in sample
+            assert "dataset_name" in sample
 
     def test_list_roulette_datasets_summary(self, api_context: APIRequestContext):
         """GET /database/roulette-series/datasets/summary should return dataset stats."""
@@ -88,5 +94,6 @@ class TestDatabaseEndpoints:
         assert isinstance(data["datasets"], list)
         if data["datasets"]:
             sample = data["datasets"][0]
-            assert "name" in sample
+            assert "dataset_id" in sample
+            assert "dataset_name" in sample
             assert "row_count" in sample

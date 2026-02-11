@@ -502,6 +502,21 @@ class TrainingEndpoint:
             configuration["checkpoint_name"] = trimmed_checkpoint_name or None
         else:
             configuration["checkpoint_name"] = None
+        dataset_id = configuration.get("dataset_id")
+        if isinstance(dataset_id, str):
+            trimmed_dataset_id = dataset_id.strip()
+            configuration["dataset_id"] = trimmed_dataset_id or None
+        else:
+            configuration["dataset_id"] = None
+
+        if (
+            not bool(configuration.get("use_data_generator", False))
+            and not configuration.get("dataset_id")
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="dataset_id is required when use_data_generator is false.",
+            )
 
         if configuration["checkpoint_name"]:
             checkpoint_path = os.path.join(CHECKPOINT_PATH, configuration["checkpoint_name"])
@@ -676,7 +691,7 @@ class TrainingEndpoint:
             return None
 
         summary = {
-            "name": configuration.get("name") or "",
+            "dataset_id": configuration.get("dataset_id") or configuration.get("name") or "",
             "sample_size": configuration.get("sample_size"),
             "seed": configuration.get("seed"),
             "episodes": configuration.get("episodes") or session.get("total_episodes"),

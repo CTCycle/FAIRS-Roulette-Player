@@ -5,7 +5,7 @@ from typing import Any
 
 import pandas as pd
 import sqlalchemy
-from sqlalchemy import UniqueConstraint, and_, inspect
+from sqlalchemy import UniqueConstraint, and_, event, inspect
 from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
@@ -25,10 +25,14 @@ class SQLiteRepository:
         self.engine: Engine = sqlalchemy.create_engine(
             f"sqlite:///{self.db_path}", echo=False, future=True
         )
+        @event.listens_for(self.engine, "connect")
+        def _set_sqlite_pragma(dbapi_connection, _connection_record) -> None:  # type: ignore[no-untyped-def]
+            cursor = dbapi_connection.cursor()
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.close()
         self.Session = sessionmaker(bind=self.engine, future=True)
         self.insert_batch_size = settings.insert_batch_size
-        if self.db_path is not None and not os.path.exists(self.db_path):
-            Base.metadata.create_all(self.engine)   
+        Base.metadata.create_all(self.engine)
 
     # -------------------------------------------------------------------------
     def get_table_class(self, table_name: str) -> Any:
@@ -48,7 +52,9 @@ class SQLiteRepository:
                     unique_cols = uc.columns.keys()
                     break
             if not unique_cols:
-                raise ValueError(f"No unique constraint found for {table_cls.__name__}")
+                unique_cols = list(table.primary_key.columns.keys())
+            if not unique_cols:
+                raise ValueError(f"No unique key found for {table_cls.__name__}")
             records = []
             for record in df.to_dict(orient="records"):
                 sanitized: dict[str, Any] = {}

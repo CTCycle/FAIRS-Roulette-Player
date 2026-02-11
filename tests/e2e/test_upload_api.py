@@ -6,18 +6,18 @@ from playwright.sync_api import APIRequestContext
 
 
 def load_rows_for_dataset(
-    api_context: APIRequestContext, dataset_name: str, max_pages: int = 20
+    api_context: APIRequestContext, dataset_id: str, max_pages: int = 20
 ) -> list[dict]:
     rows: list[dict] = []
     offset = 0
     for _ in range(max_pages):
-        response = api_context.get(f"/database/tables/roulette_series?offset={offset}")
+        response = api_context.get(f"/database/tables/dataset_outcomes?offset={offset}")
         assert response.ok, f"Expected 200, got {response.status}: {response.text()}"
         payload = response.json()
         batch = payload.get("rows", [])
         if not batch:
             break
-        rows.extend([row for row in batch if row.get("name") == dataset_name])
+        rows.extend([row for row in batch if row.get("dataset_id") == dataset_id])
         limit = int(payload.get("limit", 0) or 0)
         if limit <= 0:
             break
@@ -73,7 +73,10 @@ class TestDataUploadEndpoint:
         data = response.json()
         assert "rows_imported" in data
         assert "table" in data
+        assert "dataset_id" in data
+        assert "dataset_kind" in data
         assert data["table"] == "roulette_series"
+        assert data["dataset_kind"] == "training"
         assert data["rows_imported"] == 5
 
     def test_upload_empty_file_returns_400(self, api_context: APIRequestContext):
@@ -135,7 +138,21 @@ class TestDataUploadEdgeCases:
     ):
         """POST /data/upload should discard invalid outcomes and enrich valid rows."""
         dataset_name = "test_invalid_outcomes_cleanup"
-        api_context.delete(f"/database/roulette-series/datasets/{dataset_name}")
+        existing_response = api_context.get("/database/roulette-series/datasets/summary")
+        if existing_response.ok:
+            existing = existing_response.json().get("datasets", [])
+            match = next(
+                (
+                    item
+                    for item in existing
+                    if item.get("dataset_name") == dataset_name
+                ),
+                None,
+            )
+            if match and match.get("dataset_id"):
+                api_context.delete(
+                    f"/database/roulette-series/datasets/{match['dataset_id']}"
+                )
         csv_content = (
             b"spin,result\n"
             b"10,5\n"
@@ -161,16 +178,15 @@ class TestDataUploadEdgeCases:
         assert response.ok, f"Expected 200, got {response.status}: {response.text()}"
         payload = response.json()
         assert payload["rows_imported"] == 4
+        dataset_id = payload.get("dataset_id")
+        assert isinstance(dataset_id, str) and dataset_id
 
-        dataset_rows = load_rows_for_dataset(api_context, dataset_name)
+        dataset_rows = load_rows_for_dataset(api_context, dataset_id)
         assert len(dataset_rows) == 4
 
         expected_series_ids = {10, 13, 14, 17}
-        observed_series_ids = {int(row["series_id"]) for row in dataset_rows}
+        observed_series_ids = {int(row["sequence_index"]) for row in dataset_rows}
         assert observed_series_ids == expected_series_ids
 
         for row in dataset_rows:
-            assert 0 <= int(row["outcome"]) <= 36
-            assert row["color"] is not None
-            assert row["color_code"] is not None
-            assert row["wheel_position"] is not None
+            assert 0 <= int(row["outcome_id"]) <= 36

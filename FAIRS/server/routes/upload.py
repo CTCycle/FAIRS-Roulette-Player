@@ -34,10 +34,10 @@ class DataUploadEndpoint:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Missing filename.",
             )
-        name = None
+        dataset_name = None
         if table in ["roulette_series", "inference_context"]:
             base_name = os.path.splitext(os.path.basename(file.filename))[0].strip()
-            name = base_name if base_name else "dataset"
+            dataset_name = base_name if base_name else "dataset"
 
         try:
             content = await file.read()
@@ -69,7 +69,9 @@ class DataUploadEndpoint:
 
         try:
             imported = self.importer.import_dataframe(
-                dataframe, table, name=name
+                dataframe,
+                table,
+                dataset_name=dataset_name,
             )
         except ValueError as exc:
             raise HTTPException(
@@ -86,7 +88,10 @@ class DataUploadEndpoint:
         return {
             "table": table,
             "filename": file.filename,
-            "rows_imported": imported,
+            "rows_imported": imported.get("rows_imported", 0),
+            "dataset_id": imported.get("dataset_id"),
+            "dataset_name": imported.get("dataset_name"),
+            "dataset_kind": imported.get("dataset_kind"),
             "columns": list(dataframe.columns),
         }
 

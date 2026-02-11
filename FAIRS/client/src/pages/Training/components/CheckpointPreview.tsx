@@ -11,6 +11,11 @@ interface CheckpointPreviewProps {
     refreshKey?: number;
 }
 
+interface DatasetInfo {
+    datasetId: string;
+    datasetName: string;
+}
+
 type ResumeWizardStep = 0 | 1;
 
 const RESUME_STEPS = ['Resume Configuration', 'Summary'] as const;
@@ -27,7 +32,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
     const [metadataLoading, setMetadataLoading] = useState(false);
     const [metadataError, setMetadataError] = useState<string | null>(null);
     const [metadataPayload, setMetadataPayload] = useState<CheckpointMetadataResponse | null>(null);
-    const [datasets, setDatasets] = useState<string[]>([]);
+    const [datasets, setDatasets] = useState<DatasetInfo[]>([]);
     const [datasetsLoading, setDatasetsLoading] = useState(false);
     const [datasetsError, setDatasetsError] = useState<string | null>(null);
     const [metadataCache, setMetadataCache] = useState<Record<string, CheckpointMetadataResponse>>({});
@@ -66,9 +71,17 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
             if (!response.ok) {
                 throw new Error('Failed to load datasets');
             }
-            const data = await response.json();
-            const datasetList = Array.isArray(data?.datasets)
-                ? data.datasets.filter((name: unknown) => typeof name === 'string' && name.trim().length > 0)
+            const payload = await response.json();
+            const datasetList = Array.isArray(payload?.datasets)
+                ? payload.datasets
+                    .filter((entry: unknown) => typeof entry === 'object' && entry !== null)
+                    .map((entry: { dataset_id?: unknown; dataset_name?: unknown }) => ({
+                        datasetId: typeof entry.dataset_id === 'string' ? entry.dataset_id : '',
+                        datasetName: typeof entry.dataset_name === 'string' ? entry.dataset_name : '',
+                    }))
+                    .filter((entry: DatasetInfo) =>
+                        entry.datasetId.trim().length > 0 && entry.datasetName.trim().length > 0
+                    )
                 : [];
             setDatasets(datasetList);
         } catch (err) {
@@ -128,8 +141,8 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
     const cacheCheckpointMetadata = (checkpointName: string, payload: CheckpointMetadataResponse) => {
         setMetadataCache((prev) => ({ ...prev, [checkpointName]: payload }));
         const summary = payload.summary || {};
-        const datasetName = typeof summary.name === 'string' ? summary.name : '';
-        setCheckpointDatasetMap((prev) => ({ ...prev, [checkpointName]: datasetName }));
+        const datasetId = typeof summary.dataset_id === 'string' ? summary.dataset_id : '';
+        setCheckpointDatasetMap((prev) => ({ ...prev, [checkpointName]: datasetId }));
     };
 
     const prefetchCheckpointMetadata = async (checkpointList: string[]) => {
@@ -233,12 +246,12 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
                 cacheCheckpointMetadata(checkpointName, payload);
             }
             const summary = payload.summary || {};
-            const datasetName = typeof summary.name === 'string' ? summary.name : '';
+            const datasetId = typeof summary.dataset_id === 'string' ? summary.dataset_id : '';
             const betAmount = typeof summary.bet_amount === 'number' ? summary.bet_amount : 1;
             const initialCapital = typeof summary.initial_capital === 'number' ? summary.initial_capital : 100;
 
-            if (!datasetName) {
-                alert('Checkpoint metadata does not include a dataset name. Select a checkpoint with a dataset to evaluate.');
+            if (!datasetId) {
+                alert('Checkpoint metadata does not include a dataset identifier.');
                 return;
             }
 
@@ -247,7 +260,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     checkpoint: checkpointName,
-                    name: datasetName,
+                    dataset_id: datasetId,
                     game_capital: Number(initialCapital),
                     game_bet: Number(betAmount),
                 }),
@@ -268,7 +281,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
 
     const buildMetadataRows = (summary: Record<string, unknown>) => {
         const rows = [
-            { label: 'Dataset', key: 'name' },
+            { label: 'Dataset ID', key: 'dataset_id' },
             { label: 'Sample Size', key: 'sample_size' },
             { label: 'Seed', key: 'seed' },
             { label: 'Episodes', key: 'episodes' },
@@ -288,20 +301,10 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
         ];
 
         return rows
-            .map((row) => {
-                if (row.key === 'name') {
-                    const datasetValue = summary[row.key];
-                    const datasetName = typeof datasetValue === 'string' ? datasetValue : '';
-                    return {
-                        label: row.label,
-                        value: datasetName || 'All datasets',
-                    };
-                }
-                return {
-                    label: row.label,
-                    value: summary[row.key],
-                };
-            })
+            .map((row) => ({
+                label: row.label,
+                value: summary[row.key],
+            }))
             .filter((row) => row.value !== null && row.value !== undefined && row.value !== '');
     };
 
@@ -344,7 +347,10 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
         });
     };
 
-    const availableDatasetSet = useMemo(() => new Set(datasets), [datasets]);
+    const availableDatasetSet = useMemo(
+        () => new Set(datasets.map((entry) => entry.datasetId)),
+        [datasets],
+    );
 
     const resumeSummaryRows = useMemo(() => {
         if (!resumeWizardCheckpoint) {
@@ -383,8 +389,8 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
                 {!loading && !error && checkpoints.length > 0 && (
                     <div className="preview-list">
                         {checkpoints.map((name) => {
-                            const datasetName = checkpointDatasetMap[name];
-                            const canResume = datasetName && availableDatasetSet.has(datasetName);
+                            const datasetId = checkpointDatasetMap[name];
+                            const canResume = datasetId && availableDatasetSet.has(datasetId);
                             return (
                                 <div key={name} className="preview-row">
                                     <span className="preview-row-name">{name}</span>

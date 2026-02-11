@@ -28,18 +28,27 @@ class TestDatasetRemoval:
         assert summary_response.ok
         summary = summary_response.json()
         datasets = summary.get("datasets", [])
-        names = [item.get("name") for item in datasets]
-        assert DATASET_NAME in names
+        dataset_entry = next(
+            (
+                item
+                for item in datasets
+                if item.get("dataset_name") == DATASET_NAME
+            ),
+            None,
+        )
+        assert dataset_entry is not None
+        dataset_id = dataset_entry.get("dataset_id")
+        assert isinstance(dataset_id, str) and dataset_id
 
-        delete_response = api_context.delete(f"/database/roulette-series/datasets/{DATASET_NAME}")
+        delete_response = api_context.delete(f"/database/roulette-series/datasets/{dataset_id}")
         assert delete_response.ok
         delete_payload = delete_response.json()
         assert delete_payload.get("status") == "deleted"
-        assert delete_payload.get("name") == DATASET_NAME
+        assert delete_payload.get("dataset_id") == dataset_id
 
         summary_after_response = api_context.get("/database/roulette-series/datasets/summary")
         assert summary_after_response.ok
         summary_after = summary_after_response.json()
         datasets_after = summary_after.get("datasets", [])
-        names_after = [item.get("name") for item in datasets_after]
+        names_after = [item.get("dataset_name") for item in datasets_after]
         assert DATASET_NAME not in names_after

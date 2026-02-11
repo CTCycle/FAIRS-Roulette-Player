@@ -20,13 +20,13 @@ class RoulettePlayer:
         model: Model,
         configuration: dict[str, Any],
         session_id: str,
-        name: str,
+        dataset_id: str,
         dataset_source: str | None = None,
     ) -> None:
         set_random_seed(configuration.get("seed", 42))
 
         self.session_id = session_id
-        self.name = name
+        self.dataset_id = dataset_id
         self.perceptive_size = int(configuration.get("perceptive_field_size", 64))
         self.initial_capital = int(configuration.get("game_capital", 100))
         self.bet_amount = int(configuration.get("game_bet", 1))
@@ -46,14 +46,7 @@ class RoulettePlayer:
         self.configuration = configuration
 
         self.serializer = DataSerializer()
-        if dataset_source == "uploaded":
-            self.context = self.serializer.load_inference_context(name)
-        elif dataset_source == "source":
-            self.context = self.serializer.load_roulette_dataset(name)
-        else:
-            self.context = self.serializer.load_inference_context(name)
-            if self.context.empty:
-                self.context = self.serializer.load_roulette_dataset(name)
+        self.context = self.serializer.load_dataset_outcomes(dataset_id)
 
     # -----------------------------------------------------------------------------
     def initialize_states(self) -> None:
