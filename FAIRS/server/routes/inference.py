@@ -33,7 +33,7 @@ class InferenceSession:
         self,
         session_id: str,
         checkpoint: str,
-        dataset_id: str,
+        dataset_id: int,
         player: RoulettePlayer,
         initial_capital: int,
         current_bet: int,
@@ -179,7 +179,7 @@ class InferenceEndpoint:
     def start_session(self, payload: InferenceStartRequest) -> InferenceStartResponse:
         checkpoint_raw = payload.checkpoint
         checkpoint = checkpoint_raw.strip()
-        dataset_id = payload.dataset_id.strip()
+        dataset_id = int(payload.dataset_id)
         session_id = uuid.uuid4().hex
         if payload.session_id:
             inference_state.delete_session(payload.session_id)

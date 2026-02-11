@@ -16,6 +16,19 @@ interface DatasetInfo {
     datasetName: string;
 }
 
+const parseDatasetId = (value: unknown): string => {
+    if (typeof value === 'number' && Number.isInteger(value) && value > 0) {
+        return String(value);
+    }
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (/^\d+$/.test(trimmed)) {
+            return trimmed;
+        }
+    }
+    return '';
+};
+
 type ResumeWizardStep = 0 | 1;
 
 const RESUME_STEPS = ['Resume Configuration', 'Summary'] as const;
@@ -76,7 +89,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
                 ? payload.datasets
                     .filter((entry: unknown) => typeof entry === 'object' && entry !== null)
                     .map((entry: { dataset_id?: unknown; dataset_name?: unknown }) => ({
-                        datasetId: typeof entry.dataset_id === 'string' ? entry.dataset_id : '',
+                        datasetId: parseDatasetId(entry.dataset_id),
                         datasetName: typeof entry.dataset_name === 'string' ? entry.dataset_name : '',
                     }))
                     .filter((entry: DatasetInfo) =>
@@ -141,7 +154,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
     const cacheCheckpointMetadata = (checkpointName: string, payload: CheckpointMetadataResponse) => {
         setMetadataCache((prev) => ({ ...prev, [checkpointName]: payload }));
         const summary = payload.summary || {};
-        const datasetId = typeof summary.dataset_id === 'string' ? summary.dataset_id : '';
+        const datasetId = parseDatasetId(summary.dataset_id);
         setCheckpointDatasetMap((prev) => ({ ...prev, [checkpointName]: datasetId }));
     };
 
@@ -246,7 +259,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
                 cacheCheckpointMetadata(checkpointName, payload);
             }
             const summary = payload.summary || {};
-            const datasetId = typeof summary.dataset_id === 'string' ? summary.dataset_id : '';
+            const datasetId = parseDatasetId(summary.dataset_id);
             const betAmount = typeof summary.bet_amount === 'number' ? summary.bet_amount : 1;
             const initialCapital = typeof summary.initial_capital === 'number' ? summary.initial_capital : 100;
 
@@ -260,7 +273,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     checkpoint: checkpointName,
-                    dataset_id: datasetId,
+                    dataset_id: Number(datasetId),
                     game_capital: Number(initialCapital),
                     game_bet: Number(betAmount),
                 }),

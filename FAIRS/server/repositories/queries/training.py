@@ -12,9 +12,29 @@ class TrainingRepositoryQueries:
         self.database = db
 
     # -------------------------------------------------------------------------
+    @staticmethod
+    def normalize_dataset_id(value: object) -> int | None:
+        if isinstance(value, bool):
+            return None
+        if isinstance(value, int):
+            return value if value > 0 else None
+        if isinstance(value, float):
+            if not value.is_integer():
+                return None
+            candidate = int(value)
+            return candidate if candidate > 0 else None
+        if isinstance(value, str):
+            candidate = value.strip()
+            if not candidate.isdigit():
+                return None
+            resolved = int(candidate)
+            return resolved if resolved > 0 else None
+        return None
+
+    # -------------------------------------------------------------------------
     def load_training_dataset(
         self,
-        dataset_id: str | None = None,
+        dataset_id: int | None = None,
     ) -> pd.DataFrame:
         training_datasets = self.database.load_filtered(
             DATASETS_TABLE,
@@ -24,9 +44,10 @@ class TrainingRepositoryQueries:
             return pd.DataFrame()
 
         available_ids = {
-            str(value)
+            normalized
             for value in training_datasets["dataset_id"].tolist()
-            if isinstance(value, str) and value
+            for normalized in [self.normalize_dataset_id(value)]
+            if normalized is not None
         }
         if dataset_id:
             if dataset_id not in available_ids:
@@ -40,11 +61,15 @@ class TrainingRepositoryQueries:
         outcomes = self.database.load_from_database(DATASET_OUTCOMES_TABLE)
         if outcomes.empty or "dataset_id" not in outcomes.columns:
             return pd.DataFrame()
+        normalized_outcome_ids = outcomes["dataset_id"].apply(self.normalize_dataset_id)
         filtered = outcomes.loc[
-            outcomes["dataset_id"].astype(str).isin(dataset_ids)
+            normalized_outcome_ids.isin(dataset_ids)
         ].copy()
         if filtered.empty:
             return filtered
+        filtered["dataset_id"] = normalized_outcome_ids.loc[
+            normalized_outcome_ids.isin(dataset_ids)
+        ].astype(int)
         sort_columns = [
             column for column in ("dataset_id", "sequence_index") if column in filtered.columns
         ]

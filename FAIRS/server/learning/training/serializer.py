@@ -35,9 +35,15 @@ class DataSerializerExtension:
         seed = configuration.get("seed", 42)
         sample_size = configuration.get("sample_size", 1.0)
         dataset_id = configuration.get("dataset_id")
-        if isinstance(dataset_id, str):
-            dataset_id = dataset_id.strip()
-        if not dataset_id:
+        if isinstance(dataset_id, bool):
+            dataset_id = None
+        elif isinstance(dataset_id, str):
+            trimmed = dataset_id.strip()
+            dataset_id = int(trimmed) if trimmed.isdigit() else None
+        elif isinstance(dataset_id, (int, float)):
+            candidate = int(dataset_id)
+            dataset_id = candidate if candidate > 0 else None
+        else:
             dataset_id = None
         dataset = self.load_roulette_dataset(sample_size, seed, dataset_id)
         if "outcome" in dataset.columns and "extraction" not in dataset.columns:
@@ -57,7 +63,7 @@ class DataSerializerExtension:
         self,
         sample_size: float = 1.0,
         seed: int = 42,
-        dataset_id: str | None = None,
+        dataset_id: int | None = None,
     ) -> pd.DataFrame:
         return self.training_serializer.load_training_series(
             sample_size=sample_size,

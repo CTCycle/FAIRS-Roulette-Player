@@ -38,7 +38,7 @@ class TestDatasetRemoval:
         )
         assert dataset_entry is not None
         dataset_id = dataset_entry.get("dataset_id")
-        assert isinstance(dataset_id, str) and dataset_id
+        assert isinstance(dataset_id, int) and dataset_id > 0
 
         delete_response = api_context.delete(f"/database/roulette-series/datasets/{dataset_id}")
         assert delete_response.ok
