@@ -4,6 +4,11 @@ import type { InferenceSetupState } from '../../context/AppStateContext';
 import styles from './GameSession.module.css';
 import { Check, History, Pencil, Play, Square, Trash2 } from 'lucide-react';
 
+interface DatasetOption {
+    dataset_id: string;
+    dataset_name: string;
+}
+
 interface GameSessionProps {
     config: GameConfig | null;
     setup: InferenceSetupState;
@@ -26,8 +31,6 @@ const cleanObserved = (val: string) => {
     return String(num);
 };
 
-const getDatasetBaseName = (fileName: string) => fileName.replace(/\.[^/.]+$/, '') || 'context';
-
 export const GameSession: React.FC<GameSessionProps> = ({
     config,
     setup,
@@ -41,7 +44,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
     onClearSession,
 }) => {
     const [checkpoints, setCheckpoints] = useState<string[]>([]);
-    const [datasets, setDatasets] = useState<string[]>([]);
+    const [datasets, setDatasets] = useState<DatasetOption[]>([]);
     const [isUploading, setIsUploading] = useState(false);
     const [isStarting, setIsStarting] = useState(false);
     const [isStopping, setIsStopping] = useState(false);
@@ -54,7 +57,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
     const datasetLocked = sessionActive || setup.datasetSource === 'uploaded';
     const setupLocked = sessionActive;
 
-    const datasetName = useMemo(() => {
+    const datasetId = useMemo(() => {
         if (setup.datasetSource === 'uploaded') {
             return setup.uploadedDatasetName;
         }
@@ -91,10 +94,18 @@ export const GameSession: React.FC<GameSessionProps> = ({
                     return;
                 }
                 const payload = await response.json();
-                const names = Array.isArray(payload?.datasets) ? payload.datasets : [];
-                setDatasets(names);
-                if (names.length > 0 && !latestSetupRef.current.selectedDataset) {
-                    onSetupChange({ selectedDataset: String(names[0]), datasetSource: 'source' });
+                const values = Array.isArray(payload?.datasets)
+                    ? payload.datasets
+                        .filter((entry: unknown) => typeof entry === 'object' && entry !== null)
+                        .map((entry: { dataset_id?: unknown; dataset_name?: unknown }) => ({
+                            dataset_id: typeof entry.dataset_id === 'string' ? entry.dataset_id : '',
+                            dataset_name: typeof entry.dataset_name === 'string' ? entry.dataset_name : '',
+                        }))
+                        .filter((entry: DatasetOption) => entry.dataset_id.length > 0)
+                    : [];
+                setDatasets(values);
+                if (values.length > 0 && !latestSetupRef.current.selectedDataset) {
+                    onSetupChange({ selectedDataset: String(values[0].dataset_id), datasetSource: 'source' });
                 }
             } catch (err) {
                 console.error('Failed to load datasets:', err);
@@ -128,7 +139,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
         }
     };
 
-    const uploadDataset = async (file: File) => {
+    const uploadDataset = async (file: File): Promise<{ dataset_id: string }> => {
         const formData = new FormData();
         formData.append('file', file);
 
@@ -142,6 +153,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
             const detail = payload && typeof payload === 'object' && 'detail' in payload ? String(payload.detail) : 'Upload failed.';
             throw new Error(detail);
         }
+        return await response.json();
     };
 
     const clearInferenceContext = async () => {
@@ -161,10 +173,14 @@ export const GameSession: React.FC<GameSessionProps> = ({
             setError(null);
             setIsUploading(true);
             try {
-                await uploadDataset(file);
+                const uploadPayload = await uploadDataset(file);
+                const uploadedId = String(uploadPayload.dataset_id || '');
+                if (!uploadedId) {
+                    throw new Error('Upload completed but dataset_id was not returned.');
+                }
                 onSetupChange({
                     datasetSource: 'uploaded',
-                    uploadedDatasetName: getDatasetBaseName(file.name),
+                    uploadedDatasetName: uploadedId,
                 });
             } catch (err) {
                 const message = err instanceof Error ? err.message : 'Unable to upload dataset.';
@@ -197,7 +213,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
         sessionId?: string,
         overrides?: { initialCapital?: number; betAmount?: number }
     ) => {
-        if (!datasetName) {
+        if (!datasetId) {
             throw new Error('Select a dataset first.');
         }
         if (!setup.checkpoint) {
@@ -208,7 +224,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
         const startPayload = {
             session_id: sessionId,
             checkpoint: setup.checkpoint,
-            name: datasetName,
+            dataset_id: datasetId,
             dataset_source: setup.datasetSource,
             game_capital: gameCapital,
             game_bet: gameBet,
@@ -255,7 +271,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
             const newConfig: GameConfig = {
                 sessionId: String(session.session_id),
                 checkpoint: String(session.checkpoint),
-                datasetName: datasetName || '',
+                datasetName: datasetId || '',
                 initialCapital: Number(session.game_capital),
                 betAmount: Number(session.game_bet),
             };
@@ -393,7 +409,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
             onGameConfigChange({
                 sessionId: String(session.session_id),
                 checkpoint: String(session.checkpoint),
-                datasetName: datasetName || '',
+                datasetName: datasetId || '',
                 initialCapital: Number(session.game_capital),
                 betAmount: Number(session.game_bet),
             });
@@ -648,15 +664,17 @@ export const GameSession: React.FC<GameSessionProps> = ({
                         >
                             {setup.datasetSource === 'uploaded' && setup.uploadedDatasetName ? (
                                 <option value={setup.uploadedDatasetName}>
-                                    {setup.uploadedDatasetName}
+                                    {setup.datasetFileMetadata?.name ?? setup.uploadedDatasetName}
                                 </option>
                             ) : (
                                 <>
                                     {datasets.length === 0 ? (
                                         <option value="">No datasets found</option>
                                     ) : (
-                                        datasets.map((name) => (
-                                            <option key={name} value={name}>{name}</option>
+                                        datasets.map((dataset) => (
+                                            <option key={dataset.dataset_id} value={dataset.dataset_id}>
+                                                {dataset.dataset_name}
+                                            </option>
                                         ))
                                     )}
                                 </>

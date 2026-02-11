@@ -80,12 +80,13 @@ export const InferenceSetup: React.FC<InferenceSetupProps> = ({
             const detail = payload && typeof payload === 'object' && 'detail' in payload ? String(payload.detail) : 'Upload failed.';
             throw new Error(detail);
         }
+        return await response.json();
     };
 
-    const startSession = async (datasetName: string) => {
+    const startSession = async (datasetId: string) => {
         const startPayload = {
             checkpoint,
-            name: datasetName,
+            dataset_id: datasetId,
             game_capital: initialCapital,
             game_bet: betAmount,
         };
@@ -120,15 +121,20 @@ export const InferenceSetup: React.FC<InferenceSetupProps> = ({
         setError(null);
 
         try {
-            await uploadDataset(datasetFile);
-            const datasetName = datasetFile.name.replace(/\.[^/.]+$/, '') || 'context';
-            const session = await startSession(datasetName);
+            const uploadPayload = await uploadDataset(datasetFile);
+            const datasetId = String(
+                (uploadPayload as { dataset_id?: unknown }).dataset_id ?? ''
+            );
+            if (!datasetId) {
+                throw new Error('Upload completed but dataset_id was not returned.');
+            }
+            const session = await startSession(datasetId);
 
             onStartSession({
                 initialCapital,
                 betAmount,
                 checkpoint,
-                datasetName: datasetFile.name,
+                datasetName: datasetId,
                 sessionId: String(session.session_id),
             });
         } catch (err) {

@@ -32,37 +32,60 @@ CONSTANT = 1.0
 
 # [DATABASE TABLES]
 ###############################################################################
+ROULETTE_OUTCOMES_TABLE = "roulette_outcomes"
+DATASETS_TABLE = "datasets"
+DATASET_OUTCOMES_TABLE = "dataset_outcomes"
+INFERENCE_SESSIONS_TABLE = "inference_sessions"
+INFERENCE_SESSION_STEPS_TABLE = "inference_session_steps"
+
+# Upload aliases kept for route query semantics
 ROULETTE_SERIES_TABLE = "roulette_series"
 INFERENCE_CONTEXT_TABLE = "inference_context"
-GAME_SESSIONS_TABLE = "game_sessions"
 
 # [DATABASE COLUMNS]
 ###############################################################################
-ROULETTE_SERIES_COLUMNS = [
-    "id",
-    "name",
-    "series_id",
-    "outcome",
+ROULETTE_OUTCOMES_COLUMNS = [
+    "outcome_id",
     "color",
     "color_code",
     "wheel_position",
 ]
-INFERENCE_CONTEXT_COLUMNS = ["id", "name", "outcome", "uploaded_at"]
-GAME_SESSIONS_COLUMNS = [
+DATASETS_COLUMNS = [
+    "dataset_id",
+    "dataset_name",
+    "dataset_kind",
+    "created_at",
+]
+DATASET_OUTCOMES_COLUMNS = [
+    "id",
+    "dataset_id",
+    "sequence_index",
+    "outcome_id",
+]
+DATASET_OUTCOMES_WRITE_COLUMNS = [
+    "dataset_id",
+    "sequence_index",
+    "outcome_id",
+]
+INFERENCE_SESSIONS_COLUMNS = [
+    "session_id",
+    "dataset_id",
+    "checkpoint_name",
+    "initial_capital",
+    "started_at",
+    "ended_at",
+]
+INFERENCE_SESSION_STEPS_COLUMNS = [
     "id",
     "session_id",
-    "step_id",
-    "name",
-    "checkpoint",
-    "initial_capital",
+    "step_number",
     "bet_amount",
     "predicted_action",
-    "predicted_action_desc",
     "predicted_confidence",
-    "observed_outcome",
+    "observed_outcome_id",
     "reward",
     "capital_after",
-    "timestamp",
+    "recorded_at",
 ]
 
 # [TRAINING CONSTANTS]

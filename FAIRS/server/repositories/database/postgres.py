@@ -12,6 +12,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
 
 from FAIRS.server.configurations import DatabaseSettings
+from FAIRS.server.common.utils.logger import logger
 from FAIRS.server.repositories.database.utils import normalize_postgres_engine
 from FAIRS.server.repositories.schemas.models import Base
 
@@ -70,7 +71,9 @@ class PostgresRepository:
                     unique_cols = uc.columns.keys()
                     break
             if not unique_cols:
-                raise ValueError(f"No unique constraint found for {table_cls.__name__}")
+                unique_cols = list(table.primary_key.columns.keys())
+            if not unique_cols:
+                raise ValueError(f"No unique key found for {table_cls.__name__}")
             records = []
             for record in df.to_dict(orient="records"):
                 sanitized: dict[str, Any] = {}

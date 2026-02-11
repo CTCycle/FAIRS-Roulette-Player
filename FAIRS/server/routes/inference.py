@@ -2,11 +2,9 @@ from __future__ import annotations
 
 import time
 import uuid
-from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
-import pandas as pd
 from fastapi import APIRouter, HTTPException, status
 
 from FAIRS.server.entities.inference import (
@@ -35,17 +33,18 @@ class InferenceSession:
         self,
         session_id: str,
         checkpoint: str,
-        name: str,
+        dataset_id: str,
         player: RoulettePlayer,
         initial_capital: int,
         current_bet: int,
     ) -> None:
         self.session_id = session_id
         self.checkpoint = checkpoint
-        self.name = name
+        self.dataset_id = dataset_id
         self.player = player
         self.initial_capital = int(initial_capital)
         self.current_bet = int(current_bet)
+        self.started_at = datetime.now()
         self.step_count = 0
         self.last_seen = time.time()
         self.last_prediction: dict[str, Any] | None = None
@@ -139,37 +138,48 @@ class InferenceEndpoint:
         self.serializer = DataSerializer()
 
     # -------------------------------------------------------------------------
-    def persist_session_row(
+    def persist_session_header(
+        self,
+        session: InferenceSession,
+    ) -> None:
+        row = {
+            "session_id": session.session_id,
+            "dataset_id": session.dataset_id,
+            "checkpoint_name": session.checkpoint,
+            "initial_capital": session.initial_capital,
+            "started_at": session.started_at,
+            "ended_at": None,
+        }
+        self.serializer.upsert_inference_session(row)
+
+    # -------------------------------------------------------------------------
+    def persist_session_step(
         self,
         session: InferenceSession,
         prediction: dict[str, Any],
-        step_id: int,
+        step_number: int,
         observed_outcome: int | None,
         reward: int | None,
         capital_after: int | None,
     ) -> None:
         row = {
             "session_id": session.session_id,
-            "step_id": step_id,
-            "name": session.name,
-            "checkpoint": session.checkpoint,
-            "initial_capital": session.initial_capital,
+            "step_number": step_number,
             "bet_amount": session.current_bet,
             "predicted_action": int(prediction.get("action", 0)),
-            "predicted_action_desc": str(prediction.get("description", "")),
             "predicted_confidence": prediction.get("confidence"),
-            "observed_outcome": observed_outcome,
+            "observed_outcome_id": observed_outcome,
             "reward": reward,
             "capital_after": capital_after,
-            "timestamp": datetime.now(),
+            "recorded_at": datetime.now(),
         }
-        self.serializer.upsert_game_sessions(pd.DataFrame([row]))
+        self.serializer.upsert_inference_session_step(row)
 
     # -----------------------------------------------------------------------------
     def start_session(self, payload: InferenceStartRequest) -> InferenceStartResponse:
         checkpoint_raw = payload.checkpoint
         checkpoint = checkpoint_raw.strip()
-        name = payload.name
+        dataset_id = payload.dataset_id.strip()
         session_id = uuid.uuid4().hex
         if payload.session_id:
             inference_state.delete_session(payload.session_id)
@@ -199,10 +209,17 @@ class InferenceEndpoint:
                 detail=f"Checkpoint '{checkpoint}' was not found.",
             )
 
+        dataset = self.serializer.load_dataset(dataset_id)
+        if dataset is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Dataset '{dataset_id}' was not found.",
+            )
+
         logger.info(
             "Resolved inference checkpoint from payload.checkpoint: %s (dataset=%s, session_id=%s)",
             checkpoint,
-            name,
+            dataset_id,
             session_id,
         )
 
@@ -233,7 +250,7 @@ class InferenceEndpoint:
                 model,
                 configuration,
                 session_id,
-                name,
+                dataset_id,
                 payload.dataset_source,
             )
             prediction = player.predict_next()
@@ -252,7 +269,7 @@ class InferenceEndpoint:
         session = InferenceSession(
             session_id,
             checkpoint,
-            name,
+            dataset_id,
             player,
             int(payload.game_capital),
             int(payload.game_bet),
@@ -261,8 +278,9 @@ class InferenceEndpoint:
         session.prediction_pending = True
         session.prediction_step = 1
         inference_state.create_session(session)
+        self.persist_session_header(session)
 
-        self.persist_session_row(
+        self.persist_session_step(
             session,
             prediction,
             1,
@@ -297,7 +315,7 @@ class InferenceEndpoint:
                 detail="Unable to compute next prediction.",
             ) from exc
 
-        self.persist_session_row(
+        self.persist_session_step(
             session,
             prediction,
             session.prediction_step,
@@ -328,7 +346,7 @@ class InferenceEndpoint:
                 detail="Unable to execute inference step.",
             ) from exc
 
-        self.persist_session_row(
+        self.persist_session_step(
             session,
             last_prediction or {},
             int(step_payload["step"]),
@@ -349,6 +367,7 @@ class InferenceEndpoint:
 
     # -----------------------------------------------------------------------------
     def shutdown(self, session_id: str) -> InferenceShutdownResponse:
+        self.serializer.mark_inference_session_ended(session_id)
         inference_state.delete_session(session_id)
         return InferenceShutdownResponse(session_id=session_id, status="closed")
 
@@ -359,7 +378,7 @@ class InferenceEndpoint:
         session = inference_state.get_session(session_id)
         session.update_bet(payload.bet_amount)
         if session.prediction_pending and session.last_prediction is not None:
-            self.persist_session_row(
+            self.persist_session_step(
                 session,
                 session.last_prediction,
                 session.prediction_step,
@@ -371,12 +390,12 @@ class InferenceEndpoint:
 
     # -------------------------------------------------------------------------
     def clear_session_rows(self, session_id: str) -> dict[str, Any]:
-        self.serializer.delete_game_sessions(session_id)
+        self.serializer.delete_inference_session(session_id)
         return {"session_id": session_id, "status": "cleared"}
 
     # -------------------------------------------------------------------------
     def clear_inference_context(self) -> dict[str, str]:
-        self.serializer.clear_inference_context()
+        self.serializer.clear_datasets("inference")
         return {"status": "cleared"}
 
     # -----------------------------------------------------------------------------

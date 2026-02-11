@@ -9,6 +9,7 @@ interface DatasetPreviewProps {
 }
 
 interface DatasetSummary {
+    datasetId: string;
     name: string;
     rowCount: number | null;
 }
@@ -35,7 +36,8 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
 
     const [wizardOpen, setWizardOpen] = useState(false);
     const [wizardStep, setWizardStep] = useState<WizardStep>(0);
-    const [wizardDataset, setWizardDataset] = useState<string | null>(null);
+    const [wizardDatasetId, setWizardDatasetId] = useState<string | null>(null);
+    const [wizardDatasetLabel, setWizardDatasetLabel] = useState<string | null>(null);
     const [wizardError, setWizardError] = useState<string | null>(null);
     const [wizardSubmitting, setWizardSubmitting] = useState(false);
 
@@ -51,11 +53,14 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
             const datasetList = Array.isArray(data?.datasets)
                 ? data.datasets
                     .filter((entry: unknown) => typeof entry === 'object' && entry !== null)
-                    .map((entry: { name?: unknown; row_count?: unknown }) => ({
-                        name: typeof entry.name === 'string' ? entry.name : '',
+                    .map((entry: { dataset_id?: unknown; dataset_name?: unknown; row_count?: unknown }) => ({
+                        datasetId: typeof entry.dataset_id === 'string' ? entry.dataset_id : '',
+                        name: typeof entry.dataset_name === 'string' ? entry.dataset_name : '',
                         rowCount: typeof entry.row_count === 'number' ? entry.row_count : null,
                     }))
-                    .filter((entry: DatasetSummary) => entry.name.trim().length > 0)
+                    .filter((entry: DatasetSummary) =>
+                        entry.datasetId.trim().length > 0 && entry.name.trim().length > 0
+                    )
                 : [];
             setDatasets(datasetList);
         } catch (err) {
@@ -67,8 +72,15 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                 const fallbackData = await fallbackResponse.json();
                 const fallbackList = Array.isArray(fallbackData?.datasets)
                     ? fallbackData.datasets
-                        .filter((name: unknown) => typeof name === 'string' && name.trim().length > 0)
-                        .map((name: string) => ({ name, rowCount: null }))
+                        .filter((entry: unknown) => typeof entry === 'object' && entry !== null)
+                        .map((entry: { dataset_id?: unknown; dataset_name?: unknown }) => ({
+                            datasetId: typeof entry.dataset_id === 'string' ? entry.dataset_id : '',
+                            name: typeof entry.dataset_name === 'string' ? entry.dataset_name : '',
+                            rowCount: null,
+                        }))
+                        .filter((entry: DatasetSummary) =>
+                            entry.datasetId.trim().length > 0 && entry.name.trim().length > 0
+                        )
                     : [];
                 setDatasets(fallbackList);
                 setError(null);
@@ -104,9 +116,9 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
         updateNewConfig({ [name]: value } as Partial<typeof newConfig>);
     };
 
-    const handleDelete = async (datasetName: string) => {
+    const handleDelete = async (datasetId: string) => {
         try {
-            const response = await fetch(`/api/database/roulette-series/datasets/${encodeURIComponent(datasetName)}`, {
+            const response = await fetch(`/api/database/roulette-series/datasets/${encodeURIComponent(datasetId)}`, {
                 method: 'DELETE',
             });
             if (!response.ok) {
@@ -123,12 +135,17 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
         await loadDatasets();
     };
 
-    const openWizard = (datasetName: string, isGenerator = false) => {
+    const openWizard = (
+        datasetId: string | null,
+        datasetLabel: string,
+        isGenerator = false,
+    ) => {
         if (isTraining) {
             alert('Training is already in progress.');
             return;
         }
-        setWizardDataset(datasetName);
+        setWizardDatasetId(datasetId);
+        setWizardDatasetLabel(datasetLabel);
         setWizardStep(0);
         setWizardError(null);
         setWizardOpen(true);
@@ -144,7 +161,8 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
             return;
         }
         setWizardOpen(false);
-        setWizardDataset(null);
+        setWizardDatasetId(null);
+        setWizardDatasetLabel(null);
         setWizardStep(0);
         setWizardError(null);
     };
@@ -154,12 +172,12 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
             alert('Training is already in progress.');
             return;
         }
-        if (!wizardDataset) {
+        if (!newConfig.useDataGen && !wizardDatasetId) {
             setWizardError('Select a dataset to continue.');
             return;
         }
 
-        const config = buildTrainingPayload(newConfig, wizardDataset);
+        const config = buildTrainingPayload(newConfig, wizardDatasetId ?? undefined);
         setWizardSubmitting(true);
         setWizardError(null);
 
@@ -196,7 +214,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
     const validationValue = Number(newConfig.validationSize);
 
     const summaryRows = useMemo(() => ([
-        { label: 'Dataset', value: wizardDataset ?? '-' },
+        { label: 'Dataset', value: wizardDatasetLabel ?? '-' },
         { label: 'Checkpoint Name', value: newConfig.checkpointName.trim() || 'Auto-generated' },
         { label: 'Perceptive Field', value: newConfig.perceptiveField },
         { label: 'QNet Neurons', value: newConfig.numNeurons },
@@ -224,7 +242,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
         newConfig,
         sampleSizeValue,
         validationValue,
-        wizardDataset,
+        wizardDatasetLabel,
     ]);
 
     return (
@@ -243,7 +261,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                     </button>
                     <button
                         className="use-generator-btn"
-                        onClick={() => openWizard('Synthetic Data', true)}
+                        onClick={() => openWizard(null, 'Synthetic Data', true)}
                         title="Start training with synthetic data generator"
                         disabled={isTraining}
                     >
@@ -261,13 +279,13 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                 {!loading && !error && datasets.length > 0 && (
                     <div className="preview-list">
                         {datasets.slice(0, 6).map((dataset) => (
-                            <div key={dataset.name} className="preview-row">
+                            <div key={dataset.datasetId} className="preview-row">
                                 <span className="preview-row-name">{dataset.name}</span>
                                 <span className="preview-row-spacer" />
                                 <span className="preview-row-count">{formatRowCount(dataset.rowCount)}</span>
                                 <button
                                     className="preview-row-icon preview-row-icon-start"
-                                    onClick={() => openWizard(dataset.name)}
+                                    onClick={() => openWizard(dataset.datasetId, dataset.name)}
                                     title="Configure training with this dataset"
                                     disabled={isTraining}
                                 >
@@ -275,7 +293,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                                 </button>
                                 <button
                                     className="preview-row-delete"
-                                    onClick={() => handleDelete(dataset.name)}
+                                    onClick={() => handleDelete(dataset.datasetId)}
                                     title="Remove dataset"
                                 >
                                     <X size={16} />
@@ -299,7 +317,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                             </button>
                         </div>
                         <div className="wizard-modal-subtitle">
-                            <span>{newConfig.useDataGen ? 'Mode: Synthetic Generator' : `Dataset: ${wizardDataset}`}</span>
+                            <span>{newConfig.useDataGen ? 'Mode: Synthetic Generator' : `Dataset: ${wizardDatasetLabel}`}</span>
                             <span>{`Step ${wizardStep + 1} of ${WIZARD_STEPS.length}`}</span>
                         </div>
                         <div className="wizard-step-title">

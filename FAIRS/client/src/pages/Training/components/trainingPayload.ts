@@ -2,7 +2,7 @@ import type { TrainingNewConfig } from '../../../context/AppStateContext';
 
 export const buildTrainingPayload = (
     config: TrainingNewConfig,
-    datasetOverride?: string,
+    datasetIdOverride?: string,
 ): Record<string, unknown> => {
     const checkpointName = config.checkpointName.trim();
     return ({
@@ -19,7 +19,7 @@ export const buildTrainingPayload = (
     bet_amount: Number(config.betAmount),
     initial_capital: Number(config.initialCapital),
     // Dataset
-    name: datasetOverride ?? config.datasetName,
+    dataset_id: datasetIdOverride ?? config.datasetName,
     use_data_generator: config.useDataGen,
     num_generated_samples: Number(config.numGeneratedSamples),
     sample_size: Number(config.trainSampleSize),

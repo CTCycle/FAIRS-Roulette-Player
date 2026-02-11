@@ -12,6 +12,7 @@ from FAIRS.server.routes.upload import router as upload_router
 from FAIRS.server.routes.training import router as training_router
 from FAIRS.server.routes.database import router as database_router
 from FAIRS.server.routes.inference import router as inference_router
+from FAIRS.server.repositories.database.initializer import initialize_database
 from FAIRS.server.common.constants import (
     FASTAPI_DESCRIPTION,
     FASTAPI_TITLE,
@@ -29,6 +30,12 @@ app.include_router(upload_router)
 app.include_router(training_router)
 app.include_router(inference_router)
 app.include_router(database_router)
+
+
+@app.on_event("startup")
+def ensure_database_initialized() -> None:
+    initialize_database()
+
 
 @app.get("/")
 def redirect_to_docs() -> RedirectResponse:
