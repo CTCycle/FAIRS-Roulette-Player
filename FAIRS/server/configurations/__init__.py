@@ -11,15 +11,15 @@ from FAIRS.server.configurations.server import (
     JobsSettings,
     ServerSettings,
     server_settings,
-    get_server_settings,   
+    get_server_settings,
 )
 
 __all__ = [
     "ensure_mapping",
-    "load_configuration_data",   
+    "load_configuration_data",
     "DatabaseSettings",
     "JobsSettings",
     "ServerSettings",
     "server_settings",
-    "get_server_settings",    
+    "get_server_settings",
 ]

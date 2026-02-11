@@ -61,4 +61,3 @@ class InferenceBetUpdateRequest(BaseModel):
 class InferenceShutdownResponse(BaseModel):
     session_id: str
     status: str
-

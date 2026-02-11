@@ -1,13 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from FAIRS.server.configurations.base import (
-    ensure_mapping, 
-    load_configuration_data    
-)
+from FAIRS.server.configurations.base import ensure_mapping, load_configuration_data
 
 from FAIRS.server.common.constants import (
     CONFIGURATIONS_FILE,
@@ -22,29 +18,29 @@ from FAIRS.server.common.utils.types import (
 )
 
 
-
-
 # [SERVER SETTINGS]
 ###############################################################################
 @dataclass(frozen=True)
 class DatabaseSettings:
     embedded_database: bool
-    engine: str | None          
-    host: str | None            
-    port: int | None            
+    engine: str | None
+    host: str | None
+    port: int | None
     database_name: str | None
     username: str | None
     password: str | None
-    ssl: bool                   
-    ssl_ca: str | None         
+    ssl: bool
+    ssl_ca: str | None
     connect_timeout: int
     insert_batch_size: int
+
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 @dataclass(frozen=True)
 class JobsSettings:
     polling_interval: float
+
 
 # -----------------------------------------------------------------------------
 @dataclass(frozen=True)
@@ -53,12 +49,13 @@ class DeviceSettings:
     jit_backend: str
     use_mixed_precision: bool
 
+
 # -----------------------------------------------------------------------------
 @dataclass(frozen=True)
 class ServerSettings:
     database: DatabaseSettings
     jobs: JobsSettings
-    device: DeviceSettings     
+    device: DeviceSettings
 
 
 # [BUILDER FUNCTIONS]
@@ -78,7 +75,9 @@ def build_database_settings(payload: dict[str, Any] | Any) -> DatabaseSettings:
             ssl=False,
             ssl_ca=None,
             connect_timeout=10,
-            insert_batch_size=coerce_int(payload.get("insert_batch_size"), 1000, minimum=1),
+            insert_batch_size=coerce_int(
+                payload.get("insert_batch_size"), 1000, minimum=1
+            ),
         )
 
     # External DB mode
@@ -98,6 +97,7 @@ def build_database_settings(payload: dict[str, Any] | Any) -> DatabaseSettings:
         insert_batch_size=coerce_int(payload.get("insert_batch_size"), 1000, minimum=1),
     )
 
+
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 def build_jobs_settings(payload: dict[str, Any] | Any) -> JobsSettings:
@@ -108,6 +108,7 @@ def build_jobs_settings(payload: dict[str, Any] | Any) -> JobsSettings:
         ),
     )
 
+
 # -----------------------------------------------------------------------------
 def build_device_settings(payload: dict[str, Any] | Any) -> DeviceSettings:
     data = ensure_mapping(payload)
@@ -117,13 +118,14 @@ def build_device_settings(payload: dict[str, Any] | Any) -> DeviceSettings:
         use_mixed_precision=coerce_bool(data.get("use_mixed_precision"), False),
     )
 
+
 # -----------------------------------------------------------------------------
 def build_server_settings(data: dict[str, Any] | Any) -> ServerSettings:
     payload = ensure_mapping(data)
     database_payload = ensure_mapping(payload.get("database"))
     jobs_payload = ensure_mapping(payload.get("jobs"))
     device_payload = ensure_mapping(payload.get("device"))
-  
+
     return ServerSettings(
         database=build_database_settings(database_payload),
         jobs=build_jobs_settings(jobs_payload),
@@ -147,7 +149,7 @@ def get_poll_interval_seconds(
 def get_server_settings(config_path: str | None = None) -> ServerSettings:
     path = config_path or CONFIGURATIONS_FILE
     payload = load_configuration_data(path)
-    
+
     return build_server_settings(payload)
 
 

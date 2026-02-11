@@ -8,7 +8,11 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, status
 
 from FAIRS.server.entities.training import ResumeConfig, TrainingConfig
-from FAIRS.server.entities.jobs import JobCancelResponse, JobStartResponse, JobStatusResponse
+from FAIRS.server.entities.jobs import (
+    JobCancelResponse,
+    JobStartResponse,
+    JobStatusResponse,
+)
 from FAIRS.server.configurations import server_settings
 from FAIRS.server.configurations.server import get_poll_interval_seconds
 from FAIRS.server.common.constants import CHECKPOINT_PATH
@@ -146,9 +150,7 @@ class TrainingState:
         }
         self.history_points = []
         self.history_bucket_size = (
-            max_steps / float(HISTORY_POINTS_PER_EPISODE)
-            if max_steps > 0
-            else 1.0
+            max_steps / float(HISTORY_POINTS_PER_EPISODE) if max_steps > 0 else 1.0
         )
         self.last_history_episode = None
         self.last_history_bucket = None
@@ -182,12 +184,8 @@ class TrainingState:
             "time_step": time_step,
             "loss": float(loss),
             "rmse": float(rmse),
-            "val_loss": (
-                coerce_optional_finite_float(stats.get("val_loss"))
-            ),
-            "val_rmse": (
-                coerce_optional_finite_float(stats.get("val_rmse"))
-            ),
+            "val_loss": (coerce_optional_finite_float(stats.get("val_loss"))),
+            "val_rmse": (coerce_optional_finite_float(stats.get("val_rmse"))),
             "epoch": epoch,
             "reward": coerce_finite_float(stats.get("reward"), 0.0),
             "total_reward": coerce_finite_float(stats.get("total_reward"), 0.0),
@@ -234,7 +232,9 @@ training_state = TrainingState()
 def calculate_progress(stats: dict[str, Any]) -> float:
     epoch = stats.get("epoch", 0)
     total_epochs = stats.get("total_epochs", 0)
-    if not isinstance(epoch, (int, float)) or not isinstance(total_epochs, (int, float)):
+    if not isinstance(epoch, (int, float)) or not isinstance(
+        total_epochs, (int, float)
+    ):
         return 0.0
     if total_epochs <= 0:
         return 0.0
@@ -258,9 +258,9 @@ def build_history_points(
     total_rewards = history.get("total_reward", [])
     capitals = history.get("capital", [])
 
-    episode_offset = 1 if any(
-        isinstance(value, int) and value <= 0 for value in episodes
-    ) else 0
+    episode_offset = (
+        1 if any(isinstance(value, int) and value <= 0 for value in episodes) else 0
+    )
     results: list[dict[str, Any]] = []
     for index in range(len(time_steps)):
         capital_value = coerce_finite_float(
@@ -368,9 +368,7 @@ def monitor_training_process(
     result_payload = worker.read_result()
     if result_payload is None:
         if worker.exitcode not in (0, None) and not job_manager.should_stop(job_id):
-            raise RuntimeError(
-                f"Training process exited with code {worker.exitcode}"
-            )
+            raise RuntimeError(f"Training process exited with code {worker.exitcode}")
         return {}
     if "error" in result_payload and result_payload["error"]:
         raise RuntimeError(str(result_payload["error"]))
@@ -518,17 +516,18 @@ class TrainingEndpoint:
         else:
             configuration["dataset_id"] = None
 
-        if (
-            not bool(configuration.get("use_data_generator", False))
-            and not configuration.get("dataset_id")
-        ):
+        if not bool(
+            configuration.get("use_data_generator", False)
+        ) and not configuration.get("dataset_id"):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="dataset_id is required when use_data_generator is false.",
             )
 
         if configuration["checkpoint_name"]:
-            checkpoint_path = os.path.join(CHECKPOINT_PATH, configuration["checkpoint_name"])
+            checkpoint_path = os.path.join(
+                CHECKPOINT_PATH, configuration["checkpoint_name"]
+            )
             if os.path.exists(checkpoint_path):
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
@@ -586,7 +585,9 @@ class TrainingEndpoint:
             )
 
         try:
-            configuration, session = self.model_serializer.load_training_configuration(checkpoint_path)
+            configuration, session = self.model_serializer.load_training_configuration(
+                checkpoint_path
+            )
         except Exception as exc:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -596,7 +597,9 @@ class TrainingEndpoint:
         from_epoch = int(session.get("total_episodes", 0))
         initial_capital = configuration.get("initial_capital")
         initial_capital_value = (
-            float(initial_capital) if isinstance(initial_capital, (int, float)) else None
+            float(initial_capital)
+            if isinstance(initial_capital, (int, float))
+            else None
         )
         restored_points = build_history_points(session, initial_capital_value)
 
@@ -700,7 +703,9 @@ class TrainingEndpoint:
             return None
 
         summary = {
-            "dataset_id": configuration.get("dataset_id") or configuration.get("name") or "",
+            "dataset_id": configuration.get("dataset_id")
+            or configuration.get("name")
+            or "",
             "sample_size": configuration.get("sample_size"),
             "seed": configuration.get("seed"),
             "episodes": configuration.get("episodes") or session.get("total_episodes"),
@@ -724,7 +729,9 @@ class TrainingEndpoint:
         if isinstance(raw_dataset_id, str):
             trimmed_dataset_id = raw_dataset_id.strip()
             summary["dataset_id"] = (
-                int(trimmed_dataset_id) if trimmed_dataset_id.isdigit() else trimmed_dataset_id
+                int(trimmed_dataset_id)
+                if trimmed_dataset_id.isdigit()
+                else trimmed_dataset_id
             )
         elif isinstance(raw_dataset_id, (int, float)):
             summary["dataset_id"] = int(raw_dataset_id)
@@ -748,6 +755,7 @@ class TrainingEndpoint:
 
         try:
             import shutil
+
             shutil.rmtree(checkpoint_path)
             return {"status": "success", "message": f"Checkpoint {checkpoint} deleted"}
         except Exception as exc:

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 import os
 from io import BytesIO
 from typing import Any

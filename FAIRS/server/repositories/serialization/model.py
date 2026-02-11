@@ -71,7 +71,9 @@ class ModelSerializer:
         )
 
     # -------------------------------------------------------------------------
-    def load_training_configuration(self, path: str) -> tuple[dict[str, Any], dict[str, Any]]:
+    def load_training_configuration(
+        self, path: str
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
         config_path = os.path.join(path, "configuration", "configuration.json")
         history_path = os.path.join(path, "configuration", "session_history.json")
         with open(config_path, encoding="utf-8") as file:
@@ -99,7 +101,9 @@ class ModelSerializer:
         return model_folders
 
     # -------------------------------------------------------------------------
-    def load_checkpoint(self, checkpoint: str) -> tuple[Model | Any, dict[str, Any], dict[str, Any], str]:
+    def load_checkpoint(
+        self, checkpoint: str
+    ) -> tuple[Model | Any, dict[str, Any], dict[str, Any], str]:
         checkpoint_path = os.path.join(CHECKPOINT_PATH, checkpoint)
         model_path = os.path.join(checkpoint_path, "saved_model.keras")
         model = load_model(model_path)

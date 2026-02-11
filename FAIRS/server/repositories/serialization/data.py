@@ -57,8 +57,7 @@ class DataSerializer:
         if frame.empty or "dataset_id" not in frame.columns:
             return 1
         values = [
-            self.normalize_dataset_id(value)
-            for value in frame["dataset_id"].tolist()
+            self.normalize_dataset_id(value) for value in frame["dataset_id"].tolist()
         ]
         numeric_ids = [value for value in values if value is not None]
         if not numeric_ids:
@@ -178,7 +177,9 @@ class DataSerializer:
             normalized_ids = outcomes["dataset_id"].apply(self.normalize_dataset_id)
             valid = outcomes.loc[normalized_ids.notna()].copy()
             if not valid.empty:
-                valid["dataset_id"] = normalized_ids.loc[normalized_ids.notna()].astype(int)
+                valid["dataset_id"] = normalized_ids.loc[normalized_ids.notna()].astype(
+                    int
+                )
                 grouped = valid.groupby("dataset_id").size()
                 counts = {int(key): int(value) for key, value in grouped.items()}
 
@@ -199,7 +200,9 @@ class DataSerializer:
         return summaries
 
     # -------------------------------------------------------------------------
-    def replace_dataset_outcomes(self, dataset_id: int | str, outcomes: pd.DataFrame) -> int:
+    def replace_dataset_outcomes(
+        self, dataset_id: int | str, outcomes: pd.DataFrame
+    ) -> int:
         storage_dataset_id = self.to_storage_dataset_id(dataset_id)
         self.queries.delete_table_rows(
             DATASET_OUTCOMES_TABLE,
@@ -257,8 +260,7 @@ class DataSerializer:
         dataset_ids = {
             dataset_id_value
             for dataset_id_value in (
-                self.normalize_dataset_id(row.get("dataset_id"))
-                for row in training
+                self.normalize_dataset_id(row.get("dataset_id")) for row in training
             )
             if dataset_id_value is not None
         }
@@ -274,9 +276,13 @@ class DataSerializer:
         filtered = frame.loc[normalized_ids.isin(dataset_ids)].copy()
         if filtered.empty:
             return filtered
-        filtered["dataset_id"] = normalized_ids.loc[normalized_ids.isin(dataset_ids)].astype(int)
+        filtered["dataset_id"] = normalized_ids.loc[
+            normalized_ids.isin(dataset_ids)
+        ].astype(int)
         sort_columns = [
-            column for column in ("dataset_id", "sequence_index") if column in filtered.columns
+            column
+            for column in ("dataset_id", "sequence_index")
+            if column in filtered.columns
         ]
         if sort_columns:
             filtered = filtered.sort_values(sort_columns)
@@ -287,7 +293,9 @@ class DataSerializer:
     # -------------------------------------------------------------------------
     def delete_dataset(self, dataset_id: int | str) -> None:
         storage_dataset_id = self.to_storage_dataset_id(dataset_id)
-        self.queries.delete_table_rows(DATASETS_TABLE, {"dataset_id": storage_dataset_id})
+        self.queries.delete_table_rows(
+            DATASETS_TABLE, {"dataset_id": storage_dataset_id}
+        )
 
     # -------------------------------------------------------------------------
     def clear_datasets(self, dataset_kind: str | None = None) -> None:

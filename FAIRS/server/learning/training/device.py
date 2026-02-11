@@ -32,7 +32,9 @@ class DeviceConfig:
                     set_global_policy("mixed_float16")
                     logger.info("Mixed precision policy is active during training")
             else:
-                logger.info("No GPU found (torch.cuda.is_available() is False). Falling back to CPU.")
+                logger.info(
+                    "No GPU found (torch.cuda.is_available() is False). Falling back to CPU."
+                )
                 logger.info("CPU is set as the active device.")
         else:
             logger.info("CPU is set as the active device.")

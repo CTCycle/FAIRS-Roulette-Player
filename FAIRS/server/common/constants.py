@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from os.path import abspath, join
 
 # [PATHS]

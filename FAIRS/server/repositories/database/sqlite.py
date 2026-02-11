@@ -25,11 +25,13 @@ class SQLiteRepository:
         self.engine: Engine = sqlalchemy.create_engine(
             f"sqlite:///{self.db_path}", echo=False, future=True
         )
+
         @event.listens_for(self.engine, "connect")
         def _set_sqlite_pragma(dbapi_connection, _connection_record) -> None:  # type: ignore[no-untyped-def]
             cursor = dbapi_connection.cursor()
             cursor.execute("PRAGMA foreign_keys=ON")
             cursor.close()
+
         self.Session = sessionmaker(bind=self.engine, future=True)
         self.insert_batch_size = settings.insert_batch_size
         Base.metadata.create_all(self.engine)
@@ -95,9 +97,7 @@ class SQLiteRepository:
                     continue
 
                 stmt = insert(table).values(batch)
-                batch_columns = {
-                    key for item in batch for key in item.keys()
-                }
+                batch_columns = {key for item in batch for key in item.keys()}
                 update_cols = {
                     col: getattr(stmt.excluded, col)  # type: ignore[attr-defined]
                     for col in batch_columns
@@ -205,4 +205,3 @@ class SQLiteRepository:
             clauses = " AND ".join([f'"{key}" = :{key}' for key in conditions])
             query = sqlalchemy.text(f'DELETE FROM "{table_name}" WHERE {clauses}')
             conn.execute(query, conditions)
-

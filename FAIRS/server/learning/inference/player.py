@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from typing import Any
 
 import numpy as np
@@ -143,5 +142,3 @@ class RoulettePlayer:
         actions = BetsAndRewards({**self.configuration, "bet_amount": self.bet_amount})
         self.action_descriptions = actions.action_descriptions
         self.player = actions
-
-

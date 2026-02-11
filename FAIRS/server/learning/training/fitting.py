@@ -156,7 +156,9 @@ class DQNTraining:
             }
 
         # Progress update related
-        self.polling_interval_ms = int(get_poll_interval_seconds(server_settings) * 1000)
+        self.polling_interval_ms = int(
+            get_poll_interval_seconds(server_settings) * 1000
+        )
         self.last_ws_update_time = 0.0
         self.is_cancelled = False
         self.stop_event = stop_event
@@ -178,18 +180,22 @@ class DQNTraining:
             return
 
         try:
-            image_bytes = environment.render_frame(episode, time_step, action, extraction)
-            ws_env_callback({
-                "episode": episode + 1,
-                "time_step": time_step,
-                "action": int(action),
-                "extraction": int(extraction),
-                "reward": reward,
-                "total_reward": total_reward,
-                "capital": capital,
-                "image_base64": base64.b64encode(image_bytes).decode("ascii"),
-                "image_mime": "image/png",
-            })
+            image_bytes = environment.render_frame(
+                episode, time_step, action, extraction
+            )
+            ws_env_callback(
+                {
+                    "episode": episode + 1,
+                    "time_step": time_step,
+                    "action": int(action),
+                    "extraction": int(extraction),
+                    "reward": reward,
+                    "total_reward": total_reward,
+                    "capital": capital,
+                    "image_base64": base64.b64encode(image_bytes).decode("ascii"),
+                    "image_mime": "image/png",
+                }
+            )
         except Exception:
             pass
 
@@ -226,14 +232,32 @@ class DQNTraining:
         self.session_stats["capital"].append(coerce_finite_float(capital))
 
         if val_scores:
-            self.session_stats["val_loss"].append(coerce_finite_float(val_scores.get("loss", 0.0)))
-            self.session_stats["val_rmse"].append(coerce_finite_float(val_scores.get("root_mean_squared_error", 0.0)))
-            self.session_stats["img_reward"].append(coerce_finite_float(val_scores.get("reward", 0.0)))
+            self.session_stats["val_loss"].append(
+                coerce_finite_float(val_scores.get("loss", 0.0))
+            )
+            self.session_stats["val_rmse"].append(
+                coerce_finite_float(val_scores.get("root_mean_squared_error", 0.0))
+            )
+            self.session_stats["img_reward"].append(
+                coerce_finite_float(val_scores.get("reward", 0.0))
+            )
         else:
             # Carry forward last known validation metrics if available.
-            last_val_loss = self.session_stats["val_loss"][-1] if self.session_stats["val_loss"] else None
-            last_val_rmse = self.session_stats["val_rmse"][-1] if self.session_stats["val_rmse"] else None
-            last_val_reward = self.session_stats["img_reward"][-1] if self.session_stats["img_reward"] else None
+            last_val_loss = (
+                self.session_stats["val_loss"][-1]
+                if self.session_stats["val_loss"]
+                else None
+            )
+            last_val_rmse = (
+                self.session_stats["val_rmse"][-1]
+                if self.session_stats["val_rmse"]
+                else None
+            )
+            last_val_reward = (
+                self.session_stats["img_reward"][-1]
+                if self.session_stats["img_reward"]
+                else None
+            )
             self.session_stats["val_loss"].append(last_val_loss)
             self.session_stats["val_rmse"].append(last_val_rmse)
             self.session_stats["img_reward"].append(last_val_reward)
@@ -255,12 +279,20 @@ class DQNTraining:
                 "epoch": episode + 1,
                 "total_epochs": total_episodes,
                 "max_steps": max_steps,
-                "time_step": coerce_finite_int(self.latest_runtime_state.get("time_step"), 0, minimum=0),
+                "time_step": coerce_finite_int(
+                    self.latest_runtime_state.get("time_step"), 0, minimum=0
+                ),
                 "loss": self.latest_metric_state.get("loss"),
                 "rmse": self.latest_metric_state.get("rmse"),
-                "reward": coerce_finite_float(self.latest_runtime_state.get("reward"), 0.0),
-                "total_reward": coerce_finite_float(self.latest_runtime_state.get("total_reward"), 0.0),
-                "capital": coerce_finite_float(self.latest_runtime_state.get("capital"), 0.0),
+                "reward": coerce_finite_float(
+                    self.latest_runtime_state.get("reward"), 0.0
+                ),
+                "total_reward": coerce_finite_float(
+                    self.latest_runtime_state.get("total_reward"), 0.0
+                ),
+                "capital": coerce_finite_float(
+                    self.latest_runtime_state.get("capital"), 0.0
+                ),
                 "capital_gain": 0.0,
                 "status": "training" if training_ready else "exploration",
             }
@@ -268,7 +300,9 @@ class DQNTraining:
 
         latest_time_step = coerce_finite_int(
             self.latest_runtime_state.get("time_step"),
-            self.session_stats["time_step"][-1] if self.session_stats["time_step"] else 0,
+            self.session_stats["time_step"][-1]
+            if self.session_stats["time_step"]
+            else 0,
             minimum=0,
         )
         latest_reward = coerce_finite_float(
@@ -277,7 +311,9 @@ class DQNTraining:
         )
         latest_total_reward = coerce_finite_float(
             self.latest_runtime_state.get("total_reward"),
-            self.session_stats["total_reward"][-1] if self.session_stats["total_reward"] else 0.0,
+            self.session_stats["total_reward"][-1]
+            if self.session_stats["total_reward"]
+            else 0.0,
         )
         capital_value = coerce_finite_float(
             self.latest_runtime_state.get("capital"),
@@ -291,17 +327,29 @@ class DQNTraining:
         if rmse_value is None and self.session_stats["metrics"]:
             rmse_value = coerce_optional_finite_float(self.session_stats["metrics"][-1])
 
-        val_loss_value = coerce_optional_finite_float(self.latest_metric_state.get("val_loss"))
+        val_loss_value = coerce_optional_finite_float(
+            self.latest_metric_state.get("val_loss")
+        )
         if val_loss_value is None and self.session_stats["val_loss"]:
-            val_loss_value = coerce_optional_finite_float(self.session_stats["val_loss"][-1])
+            val_loss_value = coerce_optional_finite_float(
+                self.session_stats["val_loss"][-1]
+            )
 
-        val_rmse_value = coerce_optional_finite_float(self.latest_metric_state.get("val_rmse"))
+        val_rmse_value = coerce_optional_finite_float(
+            self.latest_metric_state.get("val_rmse")
+        )
         if val_rmse_value is None and self.session_stats["val_rmse"]:
-            val_rmse_value = coerce_optional_finite_float(self.session_stats["val_rmse"][-1])
+            val_rmse_value = coerce_optional_finite_float(
+                self.session_stats["val_rmse"][-1]
+            )
 
-        val_reward_value = coerce_optional_finite_float(self.latest_metric_state.get("val_reward"))
+        val_reward_value = coerce_optional_finite_float(
+            self.latest_metric_state.get("val_reward")
+        )
         if val_reward_value is None and self.session_stats["img_reward"]:
-            val_reward_value = coerce_optional_finite_float(self.session_stats["img_reward"][-1])
+            val_reward_value = coerce_optional_finite_float(
+                self.session_stats["img_reward"][-1]
+            )
 
         raw_stats = {
             "epoch": episode + 1,
@@ -319,18 +367,23 @@ class DQNTraining:
             "capital_gain": float(capital_value) - initial_capital_value,
             "status": "training" if training_ready else "exploration",
         }
-        if has_non_finite_numbers(raw_stats, [
-            "time_step",
-            "loss",
-            "rmse",
-            "val_loss",
-            "val_rmse",
-            "reward",
-            "total_reward",
-            "capital",
-            "capital_gain",
-        ]):
-            logger.warning("Invalid training metrics detected; sanitizing update payload.")
+        if has_non_finite_numbers(
+            raw_stats,
+            [
+                "time_step",
+                "loss",
+                "rmse",
+                "val_loss",
+                "val_rmse",
+                "reward",
+                "total_reward",
+                "capital",
+                "capital_gain",
+            ],
+        ):
+            logger.warning(
+                "Invalid training metrics detected; sanitizing update payload."
+            )
         return sanitize_training_stats(raw_stats)
 
     # -------------------------------------------------------------------------
@@ -446,7 +499,13 @@ class DQNTraining:
             )
 
         self.update_session_stats(
-            scores, val_scores, episode, time_step, reward, total_reward, environment.capital
+            scores,
+            val_scores,
+            episode,
+            time_step,
+            reward,
+            total_reward,
+            environment.capital,
         )
         self.latest_metric_state["loss"] = coerce_optional_finite_float(
             scores.get("loss")
@@ -482,10 +541,16 @@ class DQNTraining:
         reward: int | float,
         total_reward: int | float,
     ) -> None:
-        self.latest_runtime_state["time_step"] = coerce_finite_int(time_step, 0, minimum=0)
+        self.latest_runtime_state["time_step"] = coerce_finite_int(
+            time_step, 0, minimum=0
+        )
         self.latest_runtime_state["reward"] = coerce_finite_float(reward, 0.0)
-        self.latest_runtime_state["total_reward"] = coerce_finite_float(total_reward, 0.0)
-        self.latest_runtime_state["capital"] = coerce_finite_float(environment.capital, 0.0)
+        self.latest_runtime_state["total_reward"] = coerce_finite_float(
+            total_reward, 0.0
+        )
+        self.latest_runtime_state["capital"] = coerce_finite_float(
+            environment.capital, 0.0
+        )
 
         should_send_update = self.should_send_ws_update()
         if should_send_update and ws_callback:
@@ -540,28 +605,49 @@ class DQNTraining:
                 if self.should_stop():
                     break
 
-                gain = np.reshape(environment.capital / environment.initial_capital, (1, 1))
+                gain = np.reshape(
+                    environment.capital / environment.initial_capital, (1, 1)
+                )
                 action = self.agent.act(model, state, gain)
                 next_state, reward, done, extraction = environment.step(action)
 
                 total_reward += reward
                 next_state = np.reshape(next_state, [1, state_size])
-                next_gain = np.reshape(environment.capital / environment.initial_capital, (1, 1))
+                next_gain = np.reshape(
+                    environment.capital / environment.initial_capital, (1, 1)
+                )
 
-                self.agent.remember(state, action, reward, gain, next_gain, next_state, done)
+                self.agent.remember(
+                    state, action, reward, gain, next_gain, next_state, done
+                )
                 state = next_state
 
                 self._handle_replay_and_logging(
-                    model, target_model, environment, val_environment,
-                    episode, time_step, reward, total_reward, state_size
+                    model,
+                    target_model,
+                    environment,
+                    val_environment,
+                    episode,
+                    time_step,
+                    reward,
+                    total_reward,
+                    state_size,
                 )
 
                 if time_step % self.update_frequency == 0:
                     target_model.set_weights(model.get_weights())
 
                 self._handle_ws_updates(
-                    ws_callback, ws_env_callback, environment, episode,
-                    episodes, time_step, action, extraction, reward, total_reward
+                    ws_callback,
+                    ws_env_callback,
+                    environment,
+                    episode,
+                    episodes,
+                    time_step,
+                    action,
+                    extraction,
+                    reward,
+                    total_reward,
                 )
 
                 total_steps += 1
@@ -599,9 +685,15 @@ class DQNTraining:
             split_idx = int(len(data) * (1 - validation_split))
             train_data = data.iloc[:split_idx]
             val_data = data.iloc[split_idx:]
-            environment = RouletteEnvironment(train_data, self.configuration, checkpoint_path)
-            val_environment = RouletteEnvironment(val_data, self.configuration, checkpoint_path)
-            logger.info(f"Splitting data: Train ({len(train_data)}) | Validation ({len(val_data)})")
+            environment = RouletteEnvironment(
+                train_data, self.configuration, checkpoint_path
+            )
+            val_environment = RouletteEnvironment(
+                val_data, self.configuration, checkpoint_path
+            )
+            logger.info(
+                f"Splitting data: Train ({len(train_data)}) | Validation ({len(val_data)})"
+            )
 
         model = await self.train_with_reinforcement_learning(
             model,

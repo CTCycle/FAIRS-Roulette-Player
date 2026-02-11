@@ -2,13 +2,15 @@
 Pytest configuration for FAIRS E2E tests.
 Provides fixtures for Playwright page objects and API client.
 """
+
 import os
 
 import pytest
-from playwright.sync_api import Page
 
 
-def _build_base_url(host_env: str, port_env: str, default_host: str, default_port: str) -> str:
+def _build_base_url(
+    host_env: str, port_env: str, default_host: str, default_port: str
+) -> str:
     host = os.getenv(host_env, default_host)
     port = os.getenv(port_env, default_port)
     return f"http://{host}:{port}"
@@ -20,9 +22,8 @@ UI_BASE_URL = (
     or os.getenv("UI_URL")
     or _build_base_url("UI_HOST", "UI_PORT", "127.0.0.1", "7861")
 )
-API_BASE_URL = (
-    os.getenv("API_BASE_URL")
-    or _build_base_url("FASTAPI_HOST", "FASTAPI_PORT", "127.0.0.1", "8000")
+API_BASE_URL = os.getenv("API_BASE_URL") or _build_base_url(
+    "FASTAPI_HOST", "FASTAPI_PORT", "127.0.0.1", "8000"
 )
 
 
