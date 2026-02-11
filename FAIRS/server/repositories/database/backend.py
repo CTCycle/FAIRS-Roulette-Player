@@ -39,28 +39,9 @@ class DatabaseBackend(Protocol):
     ) -> None: ...
 
     # -------------------------------------------------------------------------
-    def count_rows(self, table_name: str) -> int: ...
-
-    # -------------------------------------------------------------------------
-    def load_paginated(
-        self, table_name: str, offset: int, limit: int
-    ) -> pd.DataFrame: ...
-
-    # -------------------------------------------------------------------------
-    def count_columns(self, table_name: str) -> int: ...
-
-    # -------------------------------------------------------------------------
-    def load_distinct_values(self, table_name: str, column_name: str) -> list[str]: ...
-
-    # -------------------------------------------------------------------------
     def load_filtered(
         self, table_name: str, conditions: dict[str, Any]
     ) -> pd.DataFrame: ...
-
-    # -------------------------------------------------------------------------
-    def load_grouped_counts(
-        self, table_name: str, column_name: str
-    ) -> list[dict[str, Any]]: ...
 
     # -------------------------------------------------------------------------
     def clear_table(self, table_name: str) -> None: ...
@@ -131,32 +112,10 @@ class FAIRSDatabase:
         self.backend.delete_from_database(table_name, conditions)
 
     # -------------------------------------------------------------------------
-    def count_rows(self, table_name: str) -> int:
-        return self.backend.count_rows(table_name)
-
-    # -------------------------------------------------------------------------
-    def load_paginated(self, table_name: str, offset: int, limit: int) -> pd.DataFrame:
-        return self.backend.load_paginated(table_name, offset, limit)
-
-    # -------------------------------------------------------------------------
-    def count_columns(self, table_name: str) -> int:
-        return self.backend.count_columns(table_name)
-
-    # -------------------------------------------------------------------------
-    def load_distinct_values(self, table_name: str, column_name: str) -> list[str]:
-        return self.backend.load_distinct_values(table_name, column_name)
-
-    # -------------------------------------------------------------------------
     def load_filtered(
         self, table_name: str, conditions: dict[str, Any]
     ) -> pd.DataFrame:
         return self.backend.load_filtered(table_name, conditions)
-
-    # -------------------------------------------------------------------------
-    def load_grouped_counts(
-        self, table_name: str, column_name: str
-    ) -> list[dict[str, Any]]:
-        return self.backend.load_grouped_counts(table_name, column_name)
 
     # -------------------------------------------------------------------------
     def clear_table(self, table_name: str) -> None:

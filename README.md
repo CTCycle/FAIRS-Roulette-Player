@@ -74,7 +74,7 @@ API docs: `http://127.0.0.1:8000/docs`
 Typical workflow:
 - Configure training settings and start or resume a run in the Training page.
 - Load a trained checkpoint and execute inference steps in the Inference page.
-- Inspect stored datasets, checkpoints, and session records in the Database Browser.
+- Review available datasets directly from the Training and Inference workflows.
 
 **Training page**: Open the Training tab, select your dataset and run parameters, then start a new training run or resume from a saved checkpoint. Use the dashboard and charts to follow progress and validate that metrics are updating as expected.
 
@@ -83,10 +83,6 @@ Typical workflow:
 **Inference page**: Open the Inference tab, choose the checkpoint to use, and run predictions step by step for the active roulette sequence. Review each predicted action and outcome before moving to the next step.
 
 ![inference_page](assets/figures/inference_page.png)
-
-**Database Browser**: Open the Database tab to navigate persisted tables and records, including dataset entries, training sessions, and checkpoint metadata. Use it to verify what has been saved before training or inference.
-
-![database_browser](assets/figures/database_browser.png)
 
 ## 5. Setup and Maintenance
 - `FAIRS/setup_and_maintenance.bat`: `Remove logs` deletes `.log` files in `FAIRS/resources/logs`.

@@ -29,21 +29,6 @@ class TestHomePage:
 class TestNavigationFlow:
     """Tests for navigating between different pages."""
 
-    def test_navigate_to_database_page(self, page: Page, base_url: str):
-        """Should be able to navigate to the Database page."""
-        page.goto(base_url)
-        page.wait_for_load_state("networkidle")
-        
-        # Try to find and click the Database link
-        # Update the selector based on your actual UI
-        db_link = page.get_by_text("Database", exact=False).first
-        expect(db_link).to_be_visible()
-        db_link.click()
-        
-        page.wait_for_load_state("networkidle")
-        # URL should now contain "database"
-        expect(page).to_have_url(re.compile(".*database.*", re.IGNORECASE))
-
     def test_navigate_to_training_page(self, page: Page, base_url: str):
         """Should be able to navigate to the Training page."""
         page.goto(base_url)
@@ -69,35 +54,6 @@ class TestNavigationFlow:
         
         page.wait_for_load_state("networkidle")
         expect(page).to_have_url(re.compile(".*inference.*", re.IGNORECASE))
-
-
-class TestDatabasePage:
-    """Tests for the Database browser page."""
-
-    def test_database_page_shows_table_list(self, page: Page, base_url: str):
-        """The Database page should display a list of tables."""
-        page.goto(f"{base_url}/database")
-        page.wait_for_load_state("networkidle")
-        
-        # Wait for tables to load (via API call)
-        page.wait_for_timeout(1000)  # Give time for API response
-        
-        # Check that the page has loaded some content
-        body = page.locator("body")
-        expect(body).to_be_visible()
-
-    def test_database_page_allows_table_selection(self, page: Page, base_url: str):
-        """Should be able to select a table from the list."""
-        page.goto(f"{base_url}/database")
-        page.wait_for_load_state("networkidle")
-        page.wait_for_timeout(1000)
-        
-        # Look for any table selector or table row
-        # This is intentionally flexible since UI varies
-        table_elements = page.locator("[data-testid='table-row'], table tbody tr, .table-row")
-        # Just verify the page loaded, actual selection depends on UI
-        body = page.locator("body")
-        expect(body).to_be_visible()
 
 
 class TestTrainingPage:

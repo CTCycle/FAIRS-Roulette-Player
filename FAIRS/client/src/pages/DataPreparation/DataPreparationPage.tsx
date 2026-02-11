@@ -44,7 +44,7 @@ const DataPreparationPage: React.FC = () => {
                             <h2 className="card-title">Validation Tools</h2>
                         </div>
                         <div className="card-body">
-                            <p className="text-muted">Data quality inspection and schema validation tools will appear here. For now, please verify data in the Database section.</p>
+                            <p className="text-muted">Data quality inspection and schema validation tools will appear here. For now, verify uploaded datasets from the Training workflow.</p>
                         </div>
                     </div>
                 </section>
