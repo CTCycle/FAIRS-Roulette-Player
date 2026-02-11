@@ -84,9 +84,13 @@ export const InferenceSetup: React.FC<InferenceSetupProps> = ({
     };
 
     const startSession = async (datasetId: string) => {
+        const resolvedDatasetId = Number(datasetId);
+        if (!Number.isInteger(resolvedDatasetId) || resolvedDatasetId <= 0) {
+            throw new Error('Invalid dataset identifier.');
+        }
         const startPayload = {
             checkpoint,
-            dataset_id: datasetId,
+            dataset_id: resolvedDatasetId,
             game_capital: initialCapital,
             game_bet: betAmount,
         };

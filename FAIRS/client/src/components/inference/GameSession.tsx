@@ -9,6 +9,19 @@ interface DatasetOption {
     dataset_name: string;
 }
 
+const parseDatasetId = (value: unknown): string => {
+    if (typeof value === 'number' && Number.isInteger(value) && value > 0) {
+        return String(value);
+    }
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (/^\d+$/.test(trimmed)) {
+            return trimmed;
+        }
+    }
+    return '';
+};
+
 interface GameSessionProps {
     config: GameConfig | null;
     setup: InferenceSetupState;
@@ -98,7 +111,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
                     ? payload.datasets
                         .filter((entry: unknown) => typeof entry === 'object' && entry !== null)
                         .map((entry: { dataset_id?: unknown; dataset_name?: unknown }) => ({
-                            dataset_id: typeof entry.dataset_id === 'string' ? entry.dataset_id : '',
+                            dataset_id: parseDatasetId(entry.dataset_id),
                             dataset_name: typeof entry.dataset_name === 'string' ? entry.dataset_name : '',
                         }))
                         .filter((entry: DatasetOption) => entry.dataset_id.length > 0)
@@ -139,7 +152,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
         }
     };
 
-    const uploadDataset = async (file: File): Promise<{ dataset_id: string }> => {
+    const uploadDataset = async (file: File): Promise<{ dataset_id: number }> => {
         const formData = new FormData();
         formData.append('file', file);
 
@@ -151,7 +164,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
         if (!response.ok) {
             const payload = await response.json().catch(() => null);
             const detail = payload && typeof payload === 'object' && 'detail' in payload ? String(payload.detail) : 'Upload failed.';
-            throw new Error(detail);
+                throw new Error(detail);
         }
         return await response.json();
     };
@@ -219,12 +232,16 @@ export const GameSession: React.FC<GameSessionProps> = ({
         if (!setup.checkpoint) {
             throw new Error('Select a checkpoint first.');
         }
+        const resolvedDatasetId = Number(datasetId);
+        if (!Number.isInteger(resolvedDatasetId) || resolvedDatasetId <= 0) {
+            throw new Error('Invalid dataset identifier.');
+        }
         const gameCapital = overrides?.initialCapital ?? setup.initialCapital;
         const gameBet = overrides?.betAmount ?? setup.betAmount;
         const startPayload = {
             session_id: sessionId,
             checkpoint: setup.checkpoint,
-            dataset_id: datasetId,
+            dataset_id: resolvedDatasetId,
             dataset_source: setup.datasetSource,
             game_capital: gameCapital,
             game_bet: gameBet,

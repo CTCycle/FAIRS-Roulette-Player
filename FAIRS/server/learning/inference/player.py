@@ -20,7 +20,7 @@ class RoulettePlayer:
         model: Model,
         configuration: dict[str, Any],
         session_id: str,
-        dataset_id: str,
+        dataset_id: int,
         dataset_source: str | None = None,
     ) -> None:
         set_random_seed(configuration.get("seed", 42))

@@ -5,6 +5,8 @@ export const buildTrainingPayload = (
     datasetIdOverride?: string,
 ): Record<string, unknown> => {
     const checkpointName = config.checkpointName.trim();
+    const rawDatasetId = (datasetIdOverride ?? config.datasetName ?? '').trim();
+    const datasetId = /^\d+$/.test(rawDatasetId) ? Number(rawDatasetId) : undefined;
     return ({
     // Agent
     perceptive_field_size: Number(config.perceptiveField),
@@ -19,7 +21,7 @@ export const buildTrainingPayload = (
     bet_amount: Number(config.betAmount),
     initial_capital: Number(config.initialCapital),
     // Dataset
-    dataset_id: datasetIdOverride ?? config.datasetName,
+    dataset_id: datasetId,
     use_data_generator: config.useDataGen,
     num_generated_samples: Number(config.numGeneratedSamples),
     sample_size: Number(config.trainSampleSize),

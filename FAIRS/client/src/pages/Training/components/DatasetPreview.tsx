@@ -14,6 +14,19 @@ interface DatasetSummary {
     rowCount: number | null;
 }
 
+const parseDatasetId = (value: unknown): string => {
+    if (typeof value === 'number' && Number.isInteger(value) && value > 0) {
+        return String(value);
+    }
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (/^\d+$/.test(trimmed)) {
+            return trimmed;
+        }
+    }
+    return '';
+};
+
 type WizardStep = 0 | 1 | 2 | 3 | 4;
 
 const WIZARD_STEPS = [
@@ -54,7 +67,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                 ? data.datasets
                     .filter((entry: unknown) => typeof entry === 'object' && entry !== null)
                     .map((entry: { dataset_id?: unknown; dataset_name?: unknown; row_count?: unknown }) => ({
-                        datasetId: typeof entry.dataset_id === 'string' ? entry.dataset_id : '',
+                        datasetId: parseDatasetId(entry.dataset_id),
                         name: typeof entry.dataset_name === 'string' ? entry.dataset_name : '',
                         rowCount: typeof entry.row_count === 'number' ? entry.row_count : null,
                     }))
@@ -74,7 +87,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                     ? fallbackData.datasets
                         .filter((entry: unknown) => typeof entry === 'object' && entry !== null)
                         .map((entry: { dataset_id?: unknown; dataset_name?: unknown }) => ({
-                            datasetId: typeof entry.dataset_id === 'string' ? entry.dataset_id : '',
+                            datasetId: parseDatasetId(entry.dataset_id),
                             name: typeof entry.dataset_name === 'string' ? entry.dataset_name : '',
                             rowCount: null,
                         }))

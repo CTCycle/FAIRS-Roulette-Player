@@ -503,9 +503,18 @@ class TrainingEndpoint:
         else:
             configuration["checkpoint_name"] = None
         dataset_id = configuration.get("dataset_id")
-        if isinstance(dataset_id, str):
+        if isinstance(dataset_id, bool):
+            configuration["dataset_id"] = None
+        elif isinstance(dataset_id, str):
             trimmed_dataset_id = dataset_id.strip()
-            configuration["dataset_id"] = trimmed_dataset_id or None
+            configuration["dataset_id"] = (
+                int(trimmed_dataset_id) if trimmed_dataset_id.isdigit() else None
+            )
+        elif isinstance(dataset_id, (int, float)):
+            resolved_dataset_id = int(dataset_id)
+            configuration["dataset_id"] = (
+                resolved_dataset_id if resolved_dataset_id > 0 else None
+            )
         else:
             configuration["dataset_id"] = None
 
@@ -711,6 +720,14 @@ class TrainingEndpoint:
             "final_val_loss": get_last_value(history.get("val_loss")),
             "final_val_rmse": get_last_value(history.get("val_rmse")),
         }
+        raw_dataset_id = summary.get("dataset_id")
+        if isinstance(raw_dataset_id, str):
+            trimmed_dataset_id = raw_dataset_id.strip()
+            summary["dataset_id"] = (
+                int(trimmed_dataset_id) if trimmed_dataset_id.isdigit() else trimmed_dataset_id
+            )
+        elif isinstance(raw_dataset_id, (int, float)):
+            summary["dataset_id"] = int(raw_dataset_id)
 
         return {"checkpoint": checkpoint, "summary": summary}
 

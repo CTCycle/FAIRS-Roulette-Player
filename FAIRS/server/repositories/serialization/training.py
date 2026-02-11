@@ -15,7 +15,7 @@ class TrainingDataSerializer:
         self,
         sample_size: float = 1.0,
         seed: int = 42,
-        dataset_id: str | None = None,
+        dataset_id: int | None = None,
     ) -> pd.DataFrame:
         dataset = self.queries.load_training_dataset(dataset_id=dataset_id)
         if dataset.empty:

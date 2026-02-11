@@ -6,7 +6,7 @@ from playwright.sync_api import APIRequestContext
 
 
 def load_dataset_summary_entry(
-    api_context: APIRequestContext, dataset_id: str
+    api_context: APIRequestContext, dataset_id: int
 ) -> dict | None:
     response = api_context.get("/database/roulette-series/datasets/summary")
     assert response.ok, f"Expected 200, got {response.status}: {response.text()}"
@@ -74,6 +74,7 @@ class TestDataUploadEndpoint:
         assert data["table"] == "roulette_series"
         assert data["dataset_kind"] == "training"
         assert data["rows_imported"] == 5
+        assert isinstance(data["dataset_id"], int)
 
     def test_upload_empty_file_returns_400(self, api_context: APIRequestContext):
         """POST /data/upload with empty content should return 400."""
@@ -175,7 +176,7 @@ class TestDataUploadEdgeCases:
         payload = response.json()
         assert payload["rows_imported"] == 4
         dataset_id = payload.get("dataset_id")
-        assert isinstance(dataset_id, str) and dataset_id
+        assert isinstance(dataset_id, int) and dataset_id > 0
 
         summary_entry = load_dataset_summary_entry(api_context, dataset_id)
         assert summary_entry is not None

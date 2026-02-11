@@ -13,7 +13,7 @@ class TestInferenceEndpoints:
         """POST /inference/sessions/start with invalid checkpoint should return 404."""
         response = api_context.post("/inference/sessions/start", data={
             "checkpoint": "non_existent_checkpoint_xyz",
-            "dataset_id": "00000000000000000000000000000000",
+            "dataset_id": 999999,
             "game_capital": 1000,
             "game_bet": 10,
         })

@@ -18,6 +18,7 @@ class TestRouletteDatasetsEndpoints:
             sample = data["datasets"][0]
             assert "dataset_id" in sample
             assert "dataset_name" in sample
+            assert isinstance(sample["dataset_id"], int)
 
     def test_list_roulette_datasets_summary(self, api_context: APIRequestContext):
         response = api_context.get("/database/roulette-series/datasets/summary")
@@ -31,3 +32,4 @@ class TestRouletteDatasetsEndpoints:
             assert "dataset_id" in sample
             assert "dataset_name" in sample
             assert "row_count" in sample
+            assert isinstance(sample["dataset_id"], int)

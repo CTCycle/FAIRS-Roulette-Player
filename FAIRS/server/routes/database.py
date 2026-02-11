@@ -28,7 +28,7 @@ class DatabaseEndpoint:
         return {"datasets": datasets}
 
     # -------------------------------------------------------------------------
-    def delete_roulette_dataset(self, dataset_id: str) -> dict[str, str]:
+    def delete_roulette_dataset(self, dataset_id: int) -> dict[str, Any]:
         self.serializer.delete_dataset(dataset_id)
         return {"status": "deleted", "dataset_id": dataset_id}
 
