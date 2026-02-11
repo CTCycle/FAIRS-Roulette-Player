@@ -234,7 +234,9 @@ class RouletteWheelRenderer:
             if number in highlight_numbers:
                 draw.pieslice(bbox, start=start, end=end, fill=self.action_highlight)
             if number == extracted_number:
-                draw.pieslice(bbox, start=start, end=end, fill=self.extraction_highlight)
+                draw.pieslice(
+                    bbox, start=start, end=end, fill=self.extraction_highlight
+                )
 
             mid_angle = (start + end) / 2.0
             angle_rad = math.radians(mid_angle)
@@ -257,10 +259,14 @@ class RouletteWheelRenderer:
             int(center_x + inner_radius),
             int(center_y + inner_radius),
         )
-        draw.ellipse(inner_bbox, fill=self.background_color, outline=self.rim_color, width=2)
+        draw.ellipse(
+            inner_bbox, fill=self.background_color, outline=self.rim_color, width=2
+        )
 
         header = f"Episode {episode + 1} • Step {time_step}"
-        footer = f"Capital: {capital} • Reward: {reward} • Extracted: {extracted_number}"
+        footer = (
+            f"Capital: {capital} • Reward: {reward} • Extracted: {extracted_number}"
+        )
         draw.text((20, 20), header, font=self.font, fill=self.label_color)
         draw.text((20, self.size - 30), footer, font=self.font, fill=self.label_color)
 
@@ -345,7 +351,9 @@ class RouletteEnvironment(gym.Env):
         self.done = False
 
     # -------------------------------------------------------------------------
-    def render_frame(self, episode: int, time_step: int, action: int, extracted_number: int) -> bytes:
+    def render_frame(
+        self, episode: int, time_step: int, action: int, extracted_number: int
+    ) -> bytes:
         return self.renderer.render(
             episode=episode,
             time_step=time_step,

@@ -9,6 +9,7 @@ NOTE: Training tests use minimal configurations to ensure fast test execution:
 - batch_size: 1
 - replay_buffer_size: 100 (minimum allowed)
 """
+
 import os
 import time
 import pytest
@@ -56,7 +57,11 @@ def wait_for_training_running(
         status = api_context.get("/training/status").json()
         if status.get("is_training"):
             return True
-        if status.get("latest_stats", {}).get("status") in ("completed", "error", "cancelled"):
+        if status.get("latest_stats", {}).get("status") in (
+            "completed",
+            "error",
+            "cancelled",
+        ):
             return False
         time.sleep(interval)
     return False
@@ -103,7 +108,7 @@ class TestTrainingEndpoints:
         """GET /training/status should return current training state."""
         response = api_context.get("/training/status")
         assert response.ok, f"Expected 200, got {response.status}"
-        
+
         data = response.json()
         assert "is_training" in data
         assert "latest_stats" in data
@@ -114,36 +119,42 @@ class TestTrainingEndpoints:
         """GET /training/checkpoints should return a list of checkpoint names."""
         response = api_context.get("/training/checkpoints")
         assert response.ok
-        
+
         data = response.json()
         assert isinstance(data, list)
 
-    def test_stop_training_when_not_running_returns_400(self, api_context: APIRequestContext):
+    def test_stop_training_when_not_running_returns_400(
+        self, api_context: APIRequestContext
+    ):
         """POST /training/stop should return 400 if no training is active."""
         response = api_context.post("/training/stop")
         # When no training is running, expect 400
         assert response.status == 400
-        
+
         data = response.json()
         assert "detail" in data
 
-    def test_start_training_while_already_running_returns_409(self, api_context: APIRequestContext):
+    def test_start_training_while_already_running_returns_409(
+        self, api_context: APIRequestContext
+    ):
         """
         POST /training/start should return 409 if training is already in progress.
         Note: This test requires training to be running. It may be skipped in CI.
         """
         # Ensure training is running
-        api_context.post("/training/stop") # Clean slate
-        start_response = api_context.post("/training/start", data=RUNNING_TRAINING_CONFIG)
+        api_context.post("/training/stop")  # Clean slate
+        start_response = api_context.post(
+            "/training/start", data=RUNNING_TRAINING_CONFIG
+        )
         assert start_response.ok, "Failed to start setup training"
 
         if not wait_for_training_running(api_context):
             pytest.skip("Training completed too quickly to test concurrent start.")
-        
+
         # Attempt to start again with minimal config
         response = api_context.post("/training/start", data=RUNNING_TRAINING_CONFIG)
         assert response.status == 409
-        
+
         # Cleanup
         api_context.post("/training/stop")
         wait_for_training_stopped(api_context)
@@ -156,13 +167,13 @@ class TestTrainingEndpoints:
         # Check if training is already running
         # Ensure clean state
         api_context.post("/training/stop")
-        
+
         # Start training with minimal config
         response = api_context.post("/training/start", data=MINIMAL_TRAINING_CONFIG)
-        
+
         # Should succeed
         assert response.ok, f"Expected 200, got {response.status}: {response.text()}"
-        
+
         if response.ok:
             data = response.json()
             assert data.get("status") in ("started", "running")
@@ -170,7 +181,7 @@ class TestTrainingEndpoints:
             assert job_id, "Job ID should be returned for polling"
             job_response = api_context.get(f"/training/jobs/{job_id}")
             assert job_response.ok, f"Expected 200, got {job_response.status}"
-            
+
             # Wait briefly then stop training to clean up
             time.sleep(1)
             api_context.post("/training/stop")
@@ -187,22 +198,24 @@ class TestTrainingLifecycle:
         # Skip if training already running
         # Ensure clean state
         api_context.post("/training/stop")
-        
+
         # Start training
-        start_response = api_context.post("/training/start", data=RUNNING_TRAINING_CONFIG)
+        start_response = api_context.post(
+            "/training/start", data=RUNNING_TRAINING_CONFIG
+        )
         assert start_response.ok, "Failed to start training"
-        
+
         # Verify training is running
         if not wait_for_training_running(api_context):
             pytest.skip("Training completed too quickly to verify stop behavior.")
 
         status = api_context.get("/training/status").json()
         assert status.get("is_training") is True
-        
+
         # Stop training
         stop_response = api_context.post("/training/stop")
         assert stop_response.ok
-        
+
         # Verify stopped
         assert wait_for_training_stopped(api_context)
         status = api_context.get("/training/status").json()
@@ -212,7 +225,9 @@ class TestTrainingLifecycle:
 class TestTrainingResume:
     """Tests for resume training and checkpoint metadata endpoints."""
 
-    def test_resume_training_invalid_checkpoint_returns_404(self, api_context: APIRequestContext):
+    def test_resume_training_invalid_checkpoint_returns_404(
+        self, api_context: APIRequestContext
+    ):
         payload = dict(RESUME_TRAINING_CONFIG, checkpoint="missing_checkpoint_123")
         response = api_context.post("/training/resume", data=payload)
         assert response.status == 404
@@ -225,8 +240,12 @@ class TestTrainingResume:
         assert before_response.ok
         before_checkpoints = before_response.json()
 
-        start_response = api_context.post("/training/start", data=MINIMAL_TRAINING_CONFIG)
-        assert start_response.ok, f"Expected 200, got {start_response.status}: {start_response.text()}"
+        start_response = api_context.post(
+            "/training/start", data=MINIMAL_TRAINING_CONFIG
+        )
+        assert start_response.ok, (
+            f"Expected 200, got {start_response.status}: {start_response.text()}"
+        )
         job_id = start_response.json().get("job_id")
         assert job_id
 
@@ -238,12 +257,16 @@ class TestTrainingResume:
         after_response = api_context.get("/training/checkpoints")
         assert after_response.ok
         after_checkpoints = after_response.json()
-        new_checkpoints = [item for item in after_checkpoints if item not in before_checkpoints]
+        new_checkpoints = [
+            item for item in after_checkpoints if item not in before_checkpoints
+        ]
         if not new_checkpoints:
             pytest.skip("No new checkpoint detected after training completion.")
 
         checkpoint = new_checkpoints[0]
-        metadata_response = api_context.get(f"/training/checkpoints/{checkpoint}/metadata")
+        metadata_response = api_context.get(
+            f"/training/checkpoints/{checkpoint}/metadata"
+        )
         assert metadata_response.ok
         metadata = metadata_response.json()
         assert metadata.get("checkpoint") == checkpoint
@@ -254,11 +277,15 @@ class TestTrainingResume:
 
         resume_payload = dict(RESUME_TRAINING_CONFIG, checkpoint=checkpoint)
         resume_response = api_context.post("/training/resume", data=resume_payload)
-        assert resume_response.ok, f"Expected 200, got {resume_response.status}: {resume_response.text()}"
+        assert resume_response.ok, (
+            f"Expected 200, got {resume_response.status}: {resume_response.text()}"
+        )
         resume_job_id = resume_response.json().get("job_id")
         assert resume_job_id
 
-        resume_job_payload = wait_for_job_completion(api_context, resume_job_id, timeout=90.0)
+        resume_job_payload = wait_for_job_completion(
+            api_context, resume_job_id, timeout=90.0
+        )
         if resume_job_payload.get("status") != "completed":
             api_context.post("/training/stop")
             pytest.skip("Resume training did not complete in time.")

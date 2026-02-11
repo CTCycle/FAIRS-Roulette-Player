@@ -12,7 +12,6 @@ router = APIRouter(prefix="/database", tags=["database"])
 
 ###############################################################################
 class DatabaseEndpoint:
-    
     def __init__(self, router: APIRouter) -> None:
         self.router = router
         self.serializer = DataSerializer()

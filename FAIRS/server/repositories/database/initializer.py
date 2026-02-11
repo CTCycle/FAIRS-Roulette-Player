@@ -242,9 +242,12 @@ def seed_roulette_outcomes(engine: sqlalchemy.Engine) -> None:
         return
     rows = build_roulette_outcome_seed_rows()
     with engine.begin() as conn:
-        current = conn.execute(
-            sqlalchemy.text("SELECT COUNT(*) FROM roulette_outcomes")
-        ).scalar() or 0
+        current = (
+            conn.execute(
+                sqlalchemy.text("SELECT COUNT(*) FROM roulette_outcomes")
+            ).scalar()
+            or 0
+        )
         if int(current) == len(rows):
             return
         conn.execute(sqlalchemy.text("DELETE FROM roulette_outcomes"))

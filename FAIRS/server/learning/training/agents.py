@@ -94,12 +94,14 @@ class DQNAgent:
         targets = model.predict({"timeseries": states, "gain": gains}, verbose=0)  # type: ignore
 
         next_action_selection = model.predict(
-            {"timeseries": next_states, "gain": next_gains}, verbose=0  # type: ignore
+            {"timeseries": next_states, "gain": next_gains},
+            verbose=0,  # type: ignore
         )
         best_next_actions = np.argmax(next_action_selection, axis=1)
 
         q_futures_target = target_model.predict(
-            {"timeseries": next_states, "gain": next_gains}, verbose=0  # type: ignore
+            {"timeseries": next_states, "gain": next_gains},
+            verbose=0,  # type: ignore
         )
         q_future_selected = q_futures_target[np.arange(batch_size), best_next_actions]
 
@@ -159,12 +161,14 @@ class DQNAgent:
         targets = model.predict({"timeseries": states, "gain": gains}, verbose=0)  # type: ignore
 
         next_action_selection = model.predict(
-            {"timeseries": next_states, "gain": next_gains}, verbose=0  # type: ignore
+            {"timeseries": next_states, "gain": next_gains},
+            verbose=0,  # type: ignore
         )
         best_next_actions = np.argmax(next_action_selection, axis=1)
 
         q_futures_target = target_model.predict(
-            {"timeseries": next_states, "gain": next_gains}, verbose=0  # type: ignore
+            {"timeseries": next_states, "gain": next_gains},
+            verbose=0,  # type: ignore
         )
         q_future_selected = q_futures_target[np.arange(batch_size), best_next_actions]
 
@@ -177,7 +181,10 @@ class DQNAgent:
         # Evaluate manually using model.evaluate or by running a single forward pass and calculating loss
         # Here we use evaluate()
         results = model.evaluate(
-            {"timeseries": states, "gain": gains}, targets, verbose=0, return_dict=True  # type: ignore
+            {"timeseries": states, "gain": gains},
+            targets,
+            verbose=0,
+            return_dict=True,  # type: ignore
         )
-        
+
         return results

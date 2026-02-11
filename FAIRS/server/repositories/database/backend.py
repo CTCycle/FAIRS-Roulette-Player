@@ -45,13 +45,15 @@ class DatabaseBackend(Protocol):
 
     # -------------------------------------------------------------------------
     def clear_table(self, table_name: str) -> None: ...
-   
+
 
 BackendFactory = Callable[[DatabaseSettings], DatabaseBackend]
+
 
 # -----------------------------------------------------------------------------
 def build_sqlite_backend(settings: DatabaseSettings) -> DatabaseBackend:
     return SQLiteRepository(settings)
+
 
 # -----------------------------------------------------------------------------
 def build_postgres_backend(settings: DatabaseSettings) -> DatabaseBackend:
@@ -80,7 +82,7 @@ class FAIRSDatabase:
             raise ValueError(f"Unsupported database engine: {backend_name}")
         factory = BACKEND_FACTORIES[normalized_name]
         return factory(self.settings)
-    
+
     # -------------------------------------------------------------------------
     @property
     def db_path(self) -> str | None:

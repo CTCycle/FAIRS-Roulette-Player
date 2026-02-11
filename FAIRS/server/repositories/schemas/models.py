@@ -153,5 +153,3 @@ class InferenceSessionSteps(Base):
         Index("ix_inference_steps_session_recorded", "session_id", "recorded_at"),
         Index("ix_inference_steps_observed_outcome", "observed_outcome_id"),
     )
-
-

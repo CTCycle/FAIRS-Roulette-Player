@@ -185,7 +185,9 @@ class InferenceEndpoint:
             inference_state.delete_session(payload.session_id)
 
         if not checkpoint:
-            logger.warning("Rejected inference start: empty checkpoint from payload.checkpoint")
+            logger.warning(
+                "Rejected inference start: empty checkpoint from payload.checkpoint"
+            )
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Checkpoint identifier is required.",
@@ -225,7 +227,9 @@ class InferenceEndpoint:
 
         try:
             logger.info("Loading %s checkpoint for inference", checkpoint)
-            model, train_config, _, _ = self.model_serializer.load_checkpoint(checkpoint)
+            model, train_config, _, _ = self.model_serializer.load_checkpoint(
+                checkpoint
+            )
         except Exception as exc:
             logger.exception("Failed to load checkpoint %s", checkpoint)
             raise HTTPException(
@@ -233,7 +237,11 @@ class InferenceEndpoint:
                 detail="Checkpoint not found or invalid.",
             ) from exc
 
-        configuration = {**train_config, "game_capital": payload.game_capital, "game_bet": payload.game_bet}
+        configuration = {
+            **train_config,
+            "game_capital": payload.game_capital,
+            "game_bet": payload.game_bet,
+        }
 
         try:
             device = DeviceConfig(configuration)
@@ -330,7 +338,9 @@ class InferenceEndpoint:
         )
 
     # -----------------------------------------------------------------------------
-    def submit_step(self, session_id: str, payload: InferenceStepRequest) -> InferenceStepResponse:
+    def submit_step(
+        self, session_id: str, payload: InferenceStepRequest
+    ) -> InferenceStepResponse:
         session = inference_state.get_session(session_id)
         try:
             step_payload, last_prediction = session.step(payload.extraction)
@@ -446,4 +456,3 @@ class InferenceEndpoint:
 
 inference_endpoint = InferenceEndpoint(router=router)
 inference_endpoint.add_routes()
-

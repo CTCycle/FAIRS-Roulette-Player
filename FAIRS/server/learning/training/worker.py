@@ -16,7 +16,10 @@ from FAIRS.server.common.utils.logger import logger
 from FAIRS.server.learning.training.device import DeviceConfig
 from FAIRS.server.learning.training.fitting import DQNTraining
 from FAIRS.server.learning.models.qnet import FAIRSnet
-from FAIRS.server.learning.training.serializer import DataSerializerExtension, ModelSerializer
+from FAIRS.server.learning.training.serializer import (
+    DataSerializerExtension,
+    ModelSerializer,
+)
 
 
 ###############################################################################
@@ -230,7 +233,9 @@ async def run_training_async(
     data_serializer = DataSerializerExtension()
     dataset, synthetic = data_serializer.get_training_series(configuration)
     if synthetic:
-        logger.info("Synthetic roulette series generated (%s extractions)", len(dataset))
+        logger.info(
+            "Synthetic roulette series generated (%s extractions)", len(dataset)
+        )
     else:
         logger.info("Roulette series has been loaded (%s extractions)", len(dataset))
 
@@ -279,7 +284,9 @@ async def run_resume_training_async(
     data_serializer = DataSerializerExtension()
     dataset, synthetic = data_serializer.get_training_series(train_config)
     if synthetic:
-        logger.info("Synthetic roulette series generated (%s extractions)", len(dataset))
+        logger.info(
+            "Synthetic roulette series generated (%s extractions)", len(dataset)
+        )
     else:
         logger.info("Roulette series has been loaded (%s extractions)", len(dataset))
 
@@ -329,7 +336,9 @@ def run_training_process(
             checkpoint_path, history, configuration
         )
 
-        history_payload = history.get("history", {}) if isinstance(history, dict) else {}
+        history_payload = (
+            history.get("history", {}) if isinstance(history, dict) else {}
+        )
         result_queue.put(
             {
                 "result": {
@@ -375,7 +384,9 @@ def run_resume_training_process(
             checkpoint_path, history, train_config
         )
 
-        history_payload = history.get("history", {}) if isinstance(history, dict) else {}
+        history_payload = (
+            history.get("history", {}) if isinstance(history, dict) else {}
+        )
         result_queue.put(
             {
                 "result": {

@@ -2,6 +2,7 @@
 E2E tests for UI navigation and page rendering.
 Tests basic UI functionality using Playwright browser automation.
 """
+
 import re
 from playwright.sync_api import Page, expect
 
@@ -20,7 +21,7 @@ class TestHomePage:
         page.goto(base_url)
         # Wait for the page to be fully loaded
         page.wait_for_load_state("networkidle")
-        
+
         # Check that the page has some content
         body = page.locator("body")
         expect(body).to_be_visible()
@@ -33,12 +34,12 @@ class TestNavigationFlow:
         """Should be able to navigate to the Training page."""
         page.goto(base_url)
         page.wait_for_load_state("networkidle")
-        
+
         # Try to find and click the Training link
         training_link = page.get_by_text("Training", exact=False).first
         expect(training_link).to_be_visible()
         training_link.click()
-        
+
         page.wait_for_load_state("networkidle")
         expect(page).to_have_url(re.compile(".*training.*", re.IGNORECASE))
 
@@ -46,12 +47,12 @@ class TestNavigationFlow:
         """Should be able to navigate to the Inference page."""
         page.goto(base_url)
         page.wait_for_load_state("networkidle")
-        
+
         # Try to find and click the Inference link
         inference_link = page.get_by_text("Inference", exact=False).first
         expect(inference_link).to_be_visible()
         inference_link.click()
-        
+
         page.wait_for_load_state("networkidle")
         expect(page).to_have_url(re.compile(".*inference.*", re.IGNORECASE))
 
@@ -63,7 +64,7 @@ class TestTrainingPage:
         """The Training page should load without errors."""
         page.goto(f"{base_url}/training")
         page.wait_for_load_state("networkidle")
-        
+
         body = page.locator("body")
         expect(body).to_be_visible()
 
@@ -72,7 +73,7 @@ class TestTrainingPage:
         page.goto(f"{base_url}/training")
         page.wait_for_load_state("networkidle")
         page.wait_for_timeout(1000)
-        
+
         # The page should have loaded the training status
         # Look for common status indicators
         body = page.locator("body")
@@ -86,7 +87,7 @@ class TestInferencePage:
         """The Inference page should load without errors."""
         page.goto(f"{base_url}/inference")
         page.wait_for_load_state("networkidle")
-        
+
         body = page.locator("body")
         expect(body).to_be_visible()
 
@@ -95,7 +96,7 @@ class TestInferencePage:
         page.goto(f"{base_url}/inference")
         page.wait_for_load_state("networkidle")
         page.wait_for_timeout(1000)
-        
+
         # Just verify page loaded successfully
         body = page.locator("body")
         expect(body).to_be_visible()

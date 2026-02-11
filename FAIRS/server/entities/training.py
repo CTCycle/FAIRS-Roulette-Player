@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from pydantic import BaseModel, Field
 
 
 ###############################################################################
 class TrainingConfig(BaseModel):
     """Configuration for starting a new training session."""
-    
+
     # Agent parameters
     perceptive_field_size: int = Field(64, ge=1, le=1024)
     qnet_neurons: int = Field(64, ge=1, le=10000)
@@ -17,11 +16,11 @@ class TrainingConfig(BaseModel):
     minimum_exploration_rate: float = Field(0.10, ge=0.0, le=1.0)
     discount_rate: float = Field(0.50, ge=0.0, le=1.0)
     model_update_frequency: int = Field(10, ge=1)
-    
+
     # Environment parameters
     bet_amount: int = Field(10, ge=1)
     initial_capital: int = Field(1000, ge=1)
-    
+
     # Dataset parameters
     dataset_id: int | None = Field(None, ge=1)
     use_data_generator: bool = False
@@ -29,7 +28,7 @@ class TrainingConfig(BaseModel):
     sample_size: float = Field(1.0, gt=0.0, le=1.0)
     validation_size: float = Field(0.2, ge=0.0, lt=1.0)
     seed: int = 42
-    
+
     # Session parameters
     episodes: int = Field(10, ge=1)
     max_steps_episode: int = Field(2000, ge=100)
@@ -39,7 +38,7 @@ class TrainingConfig(BaseModel):
     replay_buffer_size: int = Field(1000, ge=100)
     training_seed: int = 42
     checkpoint_name: str | None = None
-    
+
     # Device parameters
     use_device_gpu: bool = False
     device_id: int = Field(0, ge=0)
@@ -51,10 +50,9 @@ class TrainingConfig(BaseModel):
 ###############################################################################
 
 
-
 ###############################################################################
 class ResumeConfig(BaseModel):
     """Configuration for resuming a training session from a checkpoint."""
-    
+
     checkpoint: str
     additional_episodes: int = Field(10, ge=1)

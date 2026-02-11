@@ -86,9 +86,7 @@ class TrainingRepositoryQueries:
         if outcomes.empty or "dataset_id" not in outcomes.columns:
             return pd.DataFrame()
         normalized_outcome_ids = outcomes["dataset_id"].apply(self.normalize_dataset_id)
-        filtered = outcomes.loc[
-            normalized_outcome_ids.isin(dataset_ids)
-        ].copy()
+        filtered = outcomes.loc[normalized_outcome_ids.isin(dataset_ids)].copy()
         if filtered.empty:
             return filtered
         filtered["dataset_id"] = normalized_outcome_ids.loc[
@@ -106,8 +104,13 @@ class TrainingRepositoryQueries:
                 normalized_training_outcomes.notna()
             ].astype(int)
 
-            roulette_outcomes = self.database.load_from_database(ROULETTE_OUTCOMES_TABLE)
-            if not roulette_outcomes.empty and "outcome_id" in roulette_outcomes.columns:
+            roulette_outcomes = self.database.load_from_database(
+                ROULETTE_OUTCOMES_TABLE
+            )
+            if (
+                not roulette_outcomes.empty
+                and "outcome_id" in roulette_outcomes.columns
+            ):
                 normalized_reference_outcomes = roulette_outcomes["outcome_id"].apply(
                     self.normalize_outcome_id
                 )
@@ -121,7 +124,8 @@ class TrainingRepositoryQueries:
                     reference_columns = ["outcome_id"] + [
                         column
                         for column in ("color", "color_code", "wheel_position")
-                        if column in roulette_outcomes.columns and column not in filtered.columns
+                        if column in roulette_outcomes.columns
+                        and column not in filtered.columns
                     ]
                     if len(reference_columns) > 1:
                         filtered = filtered.merge(
@@ -131,7 +135,9 @@ class TrainingRepositoryQueries:
                         )
 
         sort_columns = [
-            column for column in ("dataset_id", "sequence_index") if column in filtered.columns
+            column
+            for column in ("dataset_id", "sequence_index")
+            if column in filtered.columns
         ]
         if sort_columns:
             filtered = filtered.sort_values(sort_columns)

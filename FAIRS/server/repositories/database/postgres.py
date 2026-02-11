@@ -23,9 +23,7 @@ class PostgresRepository:
         if not settings.host:
             raise ValueError("Database host must be provided for external database.")
         if not settings.database_name:
-            raise ValueError(
-                "Database name must be provided for external database."
-            )
+            raise ValueError("Database name must be provided for external database.")
         if not settings.username:
             raise ValueError(
                 "Database username must be provided for external database."
@@ -223,4 +221,3 @@ class PostgresRepository:
             clauses = " AND ".join([f'"{key}" = :{key}' for key in conditions])
             query = sqlalchemy.text(f'DELETE FROM "{table_name}" WHERE {clauses}')
             conn.execute(query, conditions)
-
