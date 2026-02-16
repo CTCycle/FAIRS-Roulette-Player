@@ -38,7 +38,6 @@ const TrainingPage: React.FC = () => {
                 <div className="training-top-row">
                     <div className="upload-column">
                         <DatasetUpload
-                            files={datasetUpload.files}
                             uploadStatus={datasetUpload.uploadStatus}
                             uploadMessage={datasetUpload.uploadMessage}
                             onStateChange={handleDatasetUploadStateChange}

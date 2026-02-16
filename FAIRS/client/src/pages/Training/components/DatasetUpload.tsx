@@ -1,14 +1,19 @@
 import React, { useRef, useState } from 'react';
 import { Upload, File as FileIcon, X } from 'lucide-react';
 import type { FileMetadata } from '../../../context/AppStateContext';
+import {
+    formatFileSize,
+    isSupportedDatasetFile,
+    type DatasetUploadStatus,
+    uploadDatasetFile,
+} from '../../../utils/datasetUpload';
 
 interface DatasetUploadProps {
-    files: FileMetadata[];
-    uploadStatus: 'idle' | 'uploading' | 'success' | 'error';
+    uploadStatus: DatasetUploadStatus;
     uploadMessage: string;
     onStateChange: (updates: {
         files?: FileMetadata[];
-        uploadStatus?: 'idle' | 'uploading' | 'success' | 'error';
+        uploadStatus?: DatasetUploadStatus;
         uploadMessage?: string;
     }) => void;
     onReset: () => void;
@@ -16,7 +21,6 @@ interface DatasetUploadProps {
 }
 
 export const DatasetUpload: React.FC<DatasetUploadProps> = ({
-    files: _files,
     uploadStatus,
     uploadMessage,
     onStateChange,
@@ -27,24 +31,11 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
     const [selectedFile, setSelectedFile] = useState<globalThis.File | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const formatSize = (bytes: number) => {
-        if (bytes === 0) return '0 B';
-        const k = 1024;
-        const sizes = ['B', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    };
-
-    const isSupportedFile = (file: globalThis.File) => {
-        const extension = file.name.split('.').pop()?.toLowerCase();
-        return extension === 'csv' || extension === 'xlsx' || extension === 'xls';
-    };
-
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
             const file = e.target.files[0] ?? null;
             if (!file) return;
-            if (!isSupportedFile(file)) {
+            if (!isSupportedDatasetFile(file)) {
                 onStateChange({
                     uploadStatus: 'error',
                     uploadMessage: 'Unsupported file. Please upload a CSV or XLSX.',
@@ -70,7 +61,7 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
         e.stopPropagation();
         const file = e.dataTransfer.files?.[0] ?? null;
         if (!file) return;
-        if (!isSupportedFile(file)) {
+        if (!isSupportedDatasetFile(file)) {
             onStateChange({
                 uploadStatus: 'error',
                 uploadMessage: 'Unsupported file. Please upload a CSV or XLSX.',
@@ -102,30 +93,13 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
             return;
         }
 
-        const endpoint = '/api/data/upload?table=roulette_series';
-
         onStateChange({
             uploadStatus: 'uploading',
             uploadMessage: 'Uploading and importing dataset...',
         });
 
-        const formData = new FormData();
-        formData.append('file', selectedFile);
-
         try {
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                body: formData,
-            });
-
-            if (!response.ok) {
-                const errorPayload = (await response.json().catch(() => null)) as { detail?: string } | null;
-                const detail = errorPayload?.detail ?? `Upload failed (HTTP ${response.status}).`;
-                throw new Error(detail);
-            }
-
-            const payload = (await response.json().catch(() => null)) as { rows_imported?: number } | null;
-            const rows = payload?.rows_imported ?? 0;
+            const rows = await uploadDatasetFile(selectedFile);
             onStateChange({
                 uploadStatus: 'success',
                 uploadMessage: `Imported ${rows} rows into the database.`,
@@ -158,7 +132,7 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
                                 {selectedFile.name}
                             </div>
                             <div className="upload-hint">
-                                {formatSize(selectedFile.size)}
+                                {formatFileSize(selectedFile.size)}
                             </div>
                         </>
                     ) : (

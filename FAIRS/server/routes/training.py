@@ -18,6 +18,10 @@ from FAIRS.server.configurations.server import get_poll_interval_seconds
 from FAIRS.server.common.constants import CHECKPOINT_PATH
 from FAIRS.server.services.jobs import JobManager, job_manager
 from FAIRS.server.common.utils.logger import logger
+from FAIRS.server.common.utils.trainingstats import (
+    coerce_optional_finite_float,
+    sanitize_training_stats,
+)
 from FAIRS.server.common.utils.types import coerce_finite_float, coerce_finite_int
 from FAIRS.server.learning.training.serializer import ModelSerializer
 from FAIRS.server.learning.training.worker import (
@@ -37,59 +41,6 @@ TRAINING_STATUSES = {
     "cancelled",
 }
 HISTORY_POINTS_PER_EPISODE = 20
-
-
-def coerce_optional_finite_float(value: Any) -> float | None:
-    if value is None:
-        return None
-    if isinstance(value, bool):
-        return float(value)
-    try:
-        candidate = float(value)
-    except (TypeError, ValueError):
-        return None
-    if math.isfinite(candidate):
-        return candidate
-    return None
-
-
-def sanitize_training_stats(stats: dict[str, Any]) -> dict[str, Any]:
-    if not stats:
-        return {}
-    sanitized = {**stats}
-
-    if "epoch" in stats:
-        sanitized["epoch"] = coerce_finite_int(stats.get("epoch"), 0, minimum=0)
-    if "total_epochs" in stats:
-        sanitized["total_epochs"] = coerce_finite_int(
-            stats.get("total_epochs"), 0, minimum=0
-        )
-    if "max_steps" in stats:
-        sanitized["max_steps"] = coerce_finite_int(stats.get("max_steps"), 0, minimum=0)
-    if "time_step" in stats:
-        sanitized["time_step"] = coerce_finite_int(stats.get("time_step"), 0, minimum=0)
-
-    for metric_key in (
-        "loss",
-        "rmse",
-        "val_loss",
-        "val_rmse",
-        "reward",
-        "val_reward",
-        "total_reward",
-        "capital",
-        "capital_gain",
-    ):
-        if metric_key not in stats:
-            continue
-        sanitized[metric_key] = coerce_optional_finite_float(stats.get(metric_key))
-
-    status_value = stats.get("status")
-    if isinstance(status_value, str) and status_value in TRAINING_STATUSES:
-        sanitized["status"] = status_value
-    elif "status" in sanitized:
-        sanitized.pop("status")
-    return sanitized
 
 
 ###############################################################################
@@ -158,7 +109,10 @@ class TrainingState:
 
     # -------------------------------------------------------------------------
     def update_stats(self, stats: dict[str, Any]) -> None:
-        sanitized = sanitize_training_stats(stats)
+        sanitized = sanitize_training_stats(
+            stats,
+            allowed_statuses=TRAINING_STATUSES,
+        )
         self.latest_stats = {**self.latest_stats, **sanitized}
         self.add_history_point(self.latest_stats)
 

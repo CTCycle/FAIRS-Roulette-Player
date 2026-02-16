@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useAppState } from '../../context/AppStateContext';
 import { DatasetUpload } from './components/DatasetUpload';
 import './DataPreparation.css';
@@ -7,7 +7,6 @@ const DataPreparationPage: React.FC = () => {
     const { state, dispatch } = useAppState();
     // Reusing training state for now as agreed
     const { datasetUpload } = state.training;
-    const [, setDatasetRefreshKey] = useState(0);
 
     const handleDatasetUploadStateChange = (updates: {
         files?: typeof datasetUpload.files;
@@ -15,9 +14,6 @@ const DataPreparationPage: React.FC = () => {
         uploadMessage?: string;
     }) => {
         dispatch({ type: 'SET_DATASET_UPLOAD_STATE', payload: updates });
-        if (updates.uploadStatus === 'success') {
-            setDatasetRefreshKey((prev) => prev + 1);
-        }
     };
 
     return (

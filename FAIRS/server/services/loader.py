@@ -9,17 +9,13 @@ import pandas as pd
 
 ###############################################################################
 class TabularFileLoader:
-    def __init__(self) -> None:
-        pass
-
-    # -------------------------------------------------------------------------
     def load_bytes(
         self,
         content: bytes,
         filename: str,
         *,
         csv_separator: str = ";",
-        sheet_name: str | int | None = 0,
+        sheet_name: str | int = 0,
         kwargs: dict[str, Any] | None = None,
     ) -> pd.DataFrame:
         extension = os.path.splitext(filename)[1].lower()

@@ -16,57 +16,15 @@ from keras.utils import set_random_seed
 from FAIRS.server.configurations import server_settings
 from FAIRS.server.configurations.server import get_poll_interval_seconds
 from FAIRS.server.common.utils.logger import logger
+from FAIRS.server.common.utils.trainingstats import (
+    coerce_optional_finite_float,
+    sanitize_training_stats,
+)
 from FAIRS.server.common.utils.types import coerce_finite_float, coerce_finite_int
 from FAIRS.server.learning.training.agents import DQNAgent
 from FAIRS.server.learning.training.environment import RouletteEnvironment
 
 HISTORY_POINTS_PER_EPISODE = 20
-
-
-def coerce_optional_finite_float(value: Any) -> float | None:
-    if value is None:
-        return None
-    if isinstance(value, bool):
-        return float(value)
-    try:
-        candidate = float(value)
-    except (TypeError, ValueError):
-        return None
-    if math.isfinite(candidate):
-        return candidate
-    return None
-
-
-###############################################################################
-def sanitize_training_stats(stats: dict[str, Any]) -> dict[str, Any]:
-    sanitized: dict[str, Any] = {**stats}
-    if "epoch" in stats:
-        sanitized["epoch"] = coerce_finite_int(stats.get("epoch"), 0, minimum=0)
-    if "total_epochs" in stats:
-        sanitized["total_epochs"] = coerce_finite_int(
-            stats.get("total_epochs"), 0, minimum=0
-        )
-    if "max_steps" in stats:
-        sanitized["max_steps"] = coerce_finite_int(stats.get("max_steps"), 0, minimum=0)
-    if "time_step" in stats:
-        sanitized["time_step"] = coerce_finite_int(stats.get("time_step"), 0, minimum=0)
-
-    for metric_key in (
-        "loss",
-        "rmse",
-        "val_loss",
-        "val_rmse",
-        "reward",
-        "val_reward",
-        "total_reward",
-        "capital",
-        "capital_gain",
-    ):
-        if metric_key not in stats:
-            continue
-        sanitized[metric_key] = coerce_optional_finite_float(stats.get(metric_key))
-
-    return sanitized
 
 
 ###############################################################################
