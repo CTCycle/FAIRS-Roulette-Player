@@ -179,7 +179,11 @@ def ensure_postgres_database(settings: DatabaseSettings) -> str:
         if exists:
             logger.info("PostgreSQL database %s already exists", target_database)
         else:
-            conn.execute(sqlalchemy.text(f'CREATE DATABASE "{safe_database}"'))
+            conn.execute(
+                sqlalchemy.text(
+                    f'CREATE DATABASE "{safe_database}" WITH ENCODING \'UTF8\''
+                )
+            )
             logger.info("Created PostgreSQL database %s", target_database)
 
     normalized_settings = clone_settings_with_database(settings, target_database)
@@ -233,7 +237,6 @@ def build_roulette_outcome_seed_rows() -> list[dict[str, int | str]]:
             }
         )
     return rows
-
 
 # -----------------------------------------------------------------------------
 def seed_roulette_outcomes(engine: sqlalchemy.Engine) -> None:

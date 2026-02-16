@@ -26,7 +26,7 @@ class DataUploadEndpoint:
         file: UploadFile = File(...),
         table: DatasetTable = Query(...),
         csv_separator: str = Query(";"),
-        sheet_name: str | int | None = Query(0),
+        sheet_name: str | int = Query(0),
     ) -> dict[str, Any]:
         if not file.filename:
             raise HTTPException(
