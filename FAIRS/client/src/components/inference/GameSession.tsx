@@ -45,6 +45,12 @@ const cleanObserved = (val: string) => {
 };
 
 const maybeNumber = (value: unknown): number | undefined => {
+    if (value === null || value === undefined || value === '') {
+        return undefined;
+    }
+    if (typeof value === 'boolean') {
+        return undefined;
+    }
     const parsed = Number(value);
     if (!Number.isFinite(parsed)) {
         return undefined;

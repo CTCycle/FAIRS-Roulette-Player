@@ -229,7 +229,7 @@ class InferenceEndpoint:
 
         try:
             logger.info("Loading %s checkpoint for inference", checkpoint)
-            model, train_config, _, _ = self.model_serializer.load_checkpoint(
+            model, train_config, _, checkpoint_path = self.model_serializer.load_checkpoint(
                 checkpoint
             )
         except Exception as exc:
