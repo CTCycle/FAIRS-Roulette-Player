@@ -16,6 +16,7 @@ from FAIRS.server.common.utils.logger import logger
 from FAIRS.server.learning.training.device import DeviceConfig
 from FAIRS.server.learning.training.fitting import DQNTraining
 from FAIRS.server.learning.models.qnet import FAIRSnet
+from FAIRS.server.learning.models.strategy import StrategyNet
 from FAIRS.server.learning.training.serializer import (
     DataSerializerExtension,
     ModelSerializer,
@@ -229,7 +230,7 @@ async def run_training_async(
     configuration: dict[str, Any],
     reporter: QueueProgressReporter,
     stop_event: Any,
-) -> tuple[Any, dict[str, Any], str]:
+) -> tuple[Any, Any | None, dict[str, Any], str]:
     data_serializer = DataSerializerExtension()
     dataset, synthetic = data_serializer.get_training_series(configuration)
     if synthetic:
@@ -252,6 +253,15 @@ async def run_training_async(
     learner = FAIRSnet(configuration)
     q_model = learner.get_model(model_summary=True)
     target_model = learner.get_model(model_summary=False)
+    dynamic_enabled = bool(configuration.get("dynamic_betting_enabled", False))
+    strategy_enabled = bool(configuration.get("bet_strategy_model_enabled", False))
+    strategy_model: Any | None = None
+    target_strategy_model: Any | None = None
+    if dynamic_enabled and strategy_enabled:
+        logger.info("Building strategy reinforcement learning model")
+        strategy_learner = StrategyNet(configuration)
+        strategy_model = strategy_learner.get_model(model_summary=True)
+        target_strategy_model = strategy_learner.get_model(model_summary=False)
 
     trainer = DQNTraining(configuration, stop_event=stop_event)
     progress_callback = functools.partial(queue_training_update, reporter=reporter)
@@ -259,13 +269,15 @@ async def run_training_async(
     model, history = await trainer.train_model(
         q_model,
         target_model,
+        strategy_model,
+        target_strategy_model,
         dataset,
         checkpoint_path,
         ws_callback=progress_callback,
         ws_env_callback=None,
     )
 
-    return model, history, checkpoint_path
+    return model, strategy_model, history, checkpoint_path
 
 
 ###############################################################################
@@ -274,12 +286,23 @@ async def run_resume_training_async(
     additional_episodes: int,
     reporter: QueueProgressReporter,
     stop_event: Any,
-) -> tuple[Any, dict[str, Any], dict[str, Any], str]:
+) -> tuple[Any, Any | None, dict[str, Any], dict[str, Any], str]:
     model_serializer = ModelSerializer()
     model, train_config, session, checkpoint_path = model_serializer.load_checkpoint(
         checkpoint
     )
     train_config["additional_episodes"] = additional_episodes
+    dynamic_enabled = bool(train_config.get("dynamic_betting_enabled", False))
+    strategy_enabled = bool(train_config.get("bet_strategy_model_enabled", False))
+    strategy_model: Any | None = None
+    target_strategy_model: Any | None = None
+    if dynamic_enabled and strategy_enabled:
+        strategy_model = model_serializer.load_strategy_model(
+            checkpoint_path, required=True
+        )
+        target_strategy_model = model_serializer.load_strategy_model(
+            checkpoint_path, required=True
+        )
 
     data_serializer = DataSerializerExtension()
     dataset, synthetic = data_serializer.get_training_series(train_config)
@@ -300,6 +323,8 @@ async def run_resume_training_async(
     model, history = await trainer.resume_training(
         model,
         model,
+        strategy_model,
+        target_strategy_model,
         dataset,
         checkpoint_path,
         session,
@@ -308,7 +333,7 @@ async def run_resume_training_async(
         ws_env_callback=None,
     )
 
-    return model, history, train_config, checkpoint_path
+    return model, strategy_model, history, train_config, checkpoint_path
 
 
 ###############################################################################
@@ -326,12 +351,14 @@ def run_training_process(
             result_queue.put({"result": {}})
             return
 
-        model, history, checkpoint_path = asyncio.run(
+        model, strategy_model, history, checkpoint_path = asyncio.run(
             run_training_async(configuration, reporter, stop_event)
         )
 
         model_serializer = ModelSerializer()
         model_serializer.save_pretrained_model(model, checkpoint_path)
+        if strategy_model is not None:
+            model_serializer.save_strategy_model(strategy_model, checkpoint_path)
         model_serializer.save_training_configuration(
             checkpoint_path, history, configuration
         )
@@ -372,7 +399,7 @@ def run_resume_training_process(
             result_queue.put({"result": {}})
             return
 
-        model, history, train_config, checkpoint_path = asyncio.run(
+        model, strategy_model, history, train_config, checkpoint_path = asyncio.run(
             run_resume_training_async(
                 checkpoint, additional_episodes, reporter, stop_event
             )
@@ -380,6 +407,8 @@ def run_resume_training_process(
 
         model_serializer = ModelSerializer()
         model_serializer.save_pretrained_model(model, checkpoint_path)
+        if strategy_model is not None:
+            model_serializer.save_strategy_model(strategy_model, checkpoint_path)
         model_serializer.save_training_configuration(
             checkpoint_path, history, train_config
         )

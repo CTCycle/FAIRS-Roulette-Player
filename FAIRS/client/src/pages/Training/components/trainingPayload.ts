@@ -20,6 +20,13 @@ export const buildTrainingPayload = (
     // Environment
     bet_amount: Number(config.betAmount),
     initial_capital: Number(config.initialCapital),
+    dynamic_betting_enabled: config.dynamicBettingEnabled,
+    bet_strategy_model_enabled: config.betStrategyModelEnabled,
+    bet_strategy_fixed_id: Number(config.betStrategyFixedId),
+    strategy_hold_steps: Number(config.strategyHoldSteps),
+    bet_unit: config.betUnitEnabled ? Number(config.betUnit) : undefined,
+    bet_max: config.betMaxEnabled ? Number(config.betMax) : undefined,
+    bet_enforce_capital: config.betEnforceCapital,
     // Dataset
     dataset_id: datasetId,
     use_data_generator: config.useDataGen,

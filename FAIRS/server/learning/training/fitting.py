@@ -21,7 +21,12 @@ from FAIRS.server.common.utils.trainingstats import (
     sanitize_training_stats,
 )
 from FAIRS.server.common.utils.types import coerce_finite_float, coerce_finite_int
-from FAIRS.server.learning.training.agents import DQNAgent
+from FAIRS.server.learning.betting.types import (
+    STRATEGY_KEEP,
+    normalize_strategy_id,
+    strategy_name,
+)
+from FAIRS.server.learning.training.agents import DQNAgent, StrategyAgent
 from FAIRS.server.learning.training.environment import RouletteEnvironment
 
 HISTORY_POINTS_PER_EPISODE = 20
@@ -68,11 +73,24 @@ class DQNTraining:
         )
         self.last_history_episode: int | None = None
         self.last_history_bucket: int | None = None
+        self.dynamic_betting_enabled = bool(
+            configuration.get("dynamic_betting_enabled", False)
+        )
+        self.bet_strategy_model_enabled = bool(
+            configuration.get("bet_strategy_model_enabled", False)
+        )
+        self.strategy_fixed_id = normalize_strategy_id(
+            configuration.get("bet_strategy_fixed_id", STRATEGY_KEEP),
+            STRATEGY_KEEP,
+        )
         self.latest_runtime_state: dict[str, float | int] = {
             "time_step": 0,
             "reward": 0.0,
             "total_reward": 0.0,
             "capital": 0.0,
+            "current_bet_amount": float(configuration.get("bet_amount", 10)),
+            "current_strategy_id": self.strategy_fixed_id,
+            "current_strategy_name": strategy_name(self.strategy_fixed_id),
         }
         self.latest_metric_state: dict[str, float | None] = {
             "loss": None,
@@ -83,6 +101,11 @@ class DQNTraining:
         }
 
         self.agent = DQNAgent(configuration)
+        self.strategy_agent = (
+            StrategyAgent(configuration)
+            if self.dynamic_betting_enabled and self.bet_strategy_model_enabled
+            else None
+        )
 
         # Restore session_stats from checkpoint if provided (for resume training)
         if session and "history" in session:
@@ -251,6 +274,18 @@ class DQNTraining:
                 "capital": coerce_finite_float(
                     self.latest_runtime_state.get("capital"), 0.0
                 ),
+                "current_bet_amount": coerce_finite_float(
+                    self.latest_runtime_state.get("current_bet_amount"), 0.0
+                ),
+                "current_strategy_id": coerce_finite_int(
+                    self.latest_runtime_state.get("current_strategy_id"),
+                    self.strategy_fixed_id,
+                    minimum=0,
+                ),
+                "current_strategy_name": str(
+                    self.latest_runtime_state.get("current_strategy_name")
+                    or strategy_name(self.strategy_fixed_id)
+                ),
                 "capital_gain": 0.0,
                 "status": "training" if training_ready else "exploration",
             }
@@ -322,6 +357,18 @@ class DQNTraining:
             "val_reward": val_reward_value,
             "total_reward": latest_total_reward,
             "capital": capital_value,
+            "current_bet_amount": coerce_finite_float(
+                self.latest_runtime_state.get("current_bet_amount"), 0.0
+            ),
+            "current_strategy_id": coerce_finite_int(
+                self.latest_runtime_state.get("current_strategy_id"),
+                self.strategy_fixed_id,
+                minimum=0,
+            ),
+            "current_strategy_name": str(
+                self.latest_runtime_state.get("current_strategy_name")
+                or strategy_name(self.strategy_fixed_id)
+            ),
             "capital_gain": float(capital_value) - initial_capital_value,
             "status": "training" if training_ready else "exploration",
         }
@@ -369,6 +416,8 @@ class DQNTraining:
         self,
         model: Model,
         target_model: Model,
+        strategy_model: Model | None,
+        target_strategy_model: Model | None,
         val_env: RouletteEnvironment,
         state_size: int,
         steps: int = 100,
@@ -377,6 +426,7 @@ class DQNTraining:
         val_state = np.reshape(val_state, shape=(1, state_size))
         val_total_reward = 0
         val_memory = deque(maxlen=steps + 10)
+        val_strategy_memory = deque(maxlen=steps + 10)
 
         for _ in range(steps):
             gain = val_env.capital / val_env.initial_capital
@@ -388,7 +438,23 @@ class DQNTraining:
             action = self.agent.act(model, val_state, gain)
             self.agent.epsilon = old_eps
 
-            next_state, reward, done, _ = val_env.step(action)
+            strategy_action: int | None = None
+            if (
+                self.dynamic_betting_enabled
+                and self.bet_strategy_model_enabled
+                and self.strategy_agent is not None
+                and strategy_model is not None
+                and target_strategy_model is not None
+            ):
+                old_strategy_eps = self.strategy_agent.epsilon
+                self.strategy_agent.epsilon = 0.0
+                selected_strategy = self.strategy_agent.act(strategy_model, val_state, gain)
+                self.strategy_agent.epsilon = old_strategy_eps
+                strategy_action = int(selected_strategy)
+            elif self.dynamic_betting_enabled:
+                strategy_action = self.strategy_fixed_id
+
+            next_state, reward, done, _ = val_env.step(action, strategy_action)
             val_total_reward += reward
             next_state = np.reshape(next_state, [1, state_size])
 
@@ -398,6 +464,23 @@ class DQNTraining:
             val_memory.append(
                 (val_state, action, reward, gain, next_gain, next_state, done)
             )
+            if (
+                strategy_action is not None
+                and self.strategy_agent is not None
+                and strategy_model is not None
+                and target_strategy_model is not None
+            ):
+                val_strategy_memory.append(
+                    (
+                        val_state,
+                        strategy_action,
+                        reward,
+                        gain,
+                        next_gain,
+                        next_state,
+                        done,
+                    )
+                )
             val_state = next_state
 
             if done:
@@ -408,6 +491,22 @@ class DQNTraining:
         val_metrics = self.agent.evaluate_batch(
             model, target_model, val_env, val_memory, self.batch_size
         )
+        if (
+            self.strategy_agent is not None
+            and strategy_model is not None
+            and target_strategy_model is not None
+            and len(val_strategy_memory) >= self.batch_size
+        ):
+            strategy_metrics = self.strategy_agent.evaluate_batch(
+                strategy_model,
+                target_strategy_model,
+                val_env,
+                val_strategy_memory,
+                self.batch_size,
+            )
+            val_metrics["strategy_loss"] = coerce_finite_float(
+                strategy_metrics.get("loss"), 0.0
+            )
         val_metrics["reward"] = val_total_reward / steps  # Average reward per step
         return val_metrics
 
@@ -437,6 +536,8 @@ class DQNTraining:
         self,
         model: Model,
         target_model: Model,
+        strategy_model: Model | None,
+        target_strategy_model: Model | None,
         environment: RouletteEnvironment,
         val_environment: RouletteEnvironment | None,
         episode: int,
@@ -449,11 +550,32 @@ class DQNTraining:
             return
 
         scores = self.agent.replay(model, target_model, environment, self.batch_size)
+        if (
+            self.dynamic_betting_enabled
+            and self.bet_strategy_model_enabled
+            and self.strategy_agent is not None
+            and strategy_model is not None
+            and target_strategy_model is not None
+            and self.strategy_agent.is_training_ready()
+        ):
+            strategy_scores = self.strategy_agent.replay(
+                strategy_model,
+                target_strategy_model,
+                environment,
+                self.batch_size,
+            )
+            scores["strategy_loss"] = strategy_scores.get("loss")
 
         val_scores = None
         if val_environment and time_step % 100 == 0:
             val_scores = self._run_validation(
-                model, target_model, val_environment, state_size, steps=50
+                model,
+                target_model,
+                strategy_model,
+                target_strategy_model,
+                val_environment,
+                state_size,
+                steps=50,
             )
 
         self.update_session_stats(
@@ -509,6 +631,18 @@ class DQNTraining:
         self.latest_runtime_state["capital"] = coerce_finite_float(
             environment.capital, 0.0
         )
+        self.latest_runtime_state["current_bet_amount"] = coerce_finite_float(
+            getattr(environment, "current_bet_amount", 0.0),
+            0.0,
+        )
+        self.latest_runtime_state["current_strategy_id"] = coerce_finite_int(
+            getattr(environment, "current_strategy_id", self.strategy_fixed_id),
+            self.strategy_fixed_id,
+            minimum=0,
+        )
+        self.latest_runtime_state["current_strategy_name"] = str(
+            getattr(environment, "current_strategy_name", strategy_name(self.strategy_fixed_id))
+        )
 
         should_send_update = self.should_send_ws_update()
         if should_send_update and ws_callback:
@@ -540,6 +674,8 @@ class DQNTraining:
         self,
         model: Model,
         target_model: Model,
+        strategy_model: Model | None,
+        target_strategy_model: Model | None,
         environment: RouletteEnvironment,
         start_episode: int,
         episodes: int,
@@ -566,8 +702,24 @@ class DQNTraining:
                 gain = np.reshape(
                     environment.capital / environment.initial_capital, (1, 1)
                 )
+                strategy_action: int | None = None
+                if self.dynamic_betting_enabled:
+                    if (
+                        self.bet_strategy_model_enabled
+                        and self.strategy_agent is not None
+                        and strategy_model is not None
+                        and target_strategy_model is not None
+                    ):
+                        selected_strategy = self.strategy_agent.act(
+                            strategy_model, state, gain
+                        )
+                        strategy_action = int(selected_strategy)
+                    else:
+                        strategy_action = self.strategy_fixed_id
                 action = self.agent.act(model, state, gain)
-                next_state, reward, done, extraction = environment.step(action)
+                next_state, reward, done, extraction = environment.step(
+                    action, strategy_action
+                )
 
                 total_reward += reward
                 next_state = np.reshape(next_state, [1, state_size])
@@ -578,11 +730,28 @@ class DQNTraining:
                 self.agent.remember(
                     state, action, reward, gain, next_gain, next_state, done
                 )
+                if (
+                    strategy_action is not None
+                    and self.strategy_agent is not None
+                    and strategy_model is not None
+                    and target_strategy_model is not None
+                ):
+                    self.strategy_agent.remember(
+                        state,
+                        np.int32(strategy_action),
+                        reward,
+                        gain,
+                        next_gain,
+                        next_state,
+                        done,
+                    )
                 state = next_state
 
                 self._handle_replay_and_logging(
                     model,
                     target_model,
+                    strategy_model,
+                    target_strategy_model,
                     environment,
                     val_environment,
                     episode,
@@ -594,6 +763,11 @@ class DQNTraining:
 
                 if time_step % self.update_frequency == 0:
                     target_model.set_weights(model.get_weights())
+                    if (
+                        strategy_model is not None
+                        and target_strategy_model is not None
+                    ):
+                        target_strategy_model.set_weights(strategy_model.get_weights())
 
                 self._handle_ws_updates(
                     ws_callback,
@@ -622,6 +796,8 @@ class DQNTraining:
         self,
         model: Model,
         target_model: Model,
+        strategy_model: Model | None,
+        target_strategy_model: Model | None,
         data: pd.DataFrame,
         checkpoint_path: str,
         ws_callback: Callable[[dict[str, Any]], Any] | None = None,
@@ -656,6 +832,8 @@ class DQNTraining:
         model = await self.train_with_reinforcement_learning(
             model,
             target_model,
+            strategy_model,
+            target_strategy_model,
             environment,
             start_episode,
             episodes,
@@ -680,6 +858,8 @@ class DQNTraining:
         self,
         model: Model,
         target_model: Model,
+        strategy_model: Model | None,
+        target_strategy_model: Model | None,
         data: pd.DataFrame,
         checkpoint_path: str,
         session: dict | None = None,
@@ -698,6 +878,8 @@ class DQNTraining:
         model = await self.train_with_reinforcement_learning(
             model,
             target_model,
+            strategy_model,
+            target_strategy_model,
             environment,
             from_episode,
             total_episodes,

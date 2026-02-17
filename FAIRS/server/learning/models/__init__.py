@@ -7,6 +7,7 @@ from FAIRS.server.learning.models.logits import (
     BatchNormDense,
 )
 from FAIRS.server.learning.models.qnet import FAIRSnet
+from FAIRS.server.learning.models.strategy import StrategyNet
 
 __all__ = [
     "RouletteEmbedding",
@@ -14,4 +15,5 @@ __all__ = [
     "QScoreNet",
     "BatchNormDense",
     "FAIRSnet",
+    "StrategyNet",
 ]

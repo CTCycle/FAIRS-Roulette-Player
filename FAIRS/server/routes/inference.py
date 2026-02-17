@@ -59,6 +59,8 @@ class InferenceSession:
     def predict(self) -> dict[str, Any]:
         self.touch()
         prediction = self.player.predict_next()
+        if "current_bet_amount" in prediction:
+            self.current_bet = int(prediction["current_bet_amount"])
         self.last_prediction = prediction
         self.prediction_pending = True
         self.prediction_step = self.step_count + 1
@@ -241,6 +243,30 @@ class InferenceEndpoint:
             **train_config,
             "game_capital": payload.game_capital,
             "game_bet": payload.game_bet,
+            "dynamic_betting_enabled": bool(
+                payload.dynamic_betting_enabled
+                or train_config.get("dynamic_betting_enabled", False)
+            ),
+            "bet_strategy_model_enabled": bool(
+                payload.bet_strategy_model_enabled
+                or train_config.get("bet_strategy_model_enabled", False)
+            ),
+            "bet_strategy_fixed_id": int(
+                train_config.get("bet_strategy_fixed_id", payload.bet_strategy_fixed_id)
+            ),
+            "strategy_hold_steps": int(
+                train_config.get("strategy_hold_steps", payload.strategy_hold_steps)
+            ),
+            "bet_unit": payload.bet_unit
+            if payload.bet_unit is not None
+            else train_config.get("bet_unit"),
+            "bet_max": payload.bet_max
+            if payload.bet_max is not None
+            else train_config.get("bet_max"),
+            "bet_enforce_capital": bool(
+                train_config.get("bet_enforce_capital", payload.bet_enforce_capital)
+            ),
+            "auto_apply_bet_suggestions": payload.auto_apply_bet_suggestions,
         }
 
         try:
@@ -254,15 +280,29 @@ class InferenceEndpoint:
             ) from exc
 
         try:
+            strategy_model = None
+            if (
+                bool(configuration.get("dynamic_betting_enabled", False))
+                and bool(configuration.get("bet_strategy_model_enabled", False))
+            ):
+                strategy_model = self.model_serializer.load_strategy_model(
+                    checkpoint_path, required=True
+                )
             player = RoulettePlayer(
                 model,
                 configuration,
                 session_id,
                 dataset_id,
                 payload.dataset_source,
+                strategy_model=strategy_model,
             )
             prediction = player.predict_next()
         except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(exc),
+            ) from exc
+        except FileNotFoundError as exc:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=str(exc),
@@ -280,7 +320,7 @@ class InferenceEndpoint:
             dataset_id,
             player,
             int(payload.game_capital),
-            int(payload.game_bet),
+            int(player.bet_amount),
         )
         session.last_prediction = prediction
         session.prediction_pending = True
@@ -301,7 +341,7 @@ class InferenceEndpoint:
             session_id=session_id,
             checkpoint=checkpoint,
             game_capital=int(payload.game_capital),
-            game_bet=int(payload.game_bet),
+            game_bet=int(player.bet_amount),
             current_capital=int(player.current_capital),
             prediction=PredictionResponse(**prediction),
         )

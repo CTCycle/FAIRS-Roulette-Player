@@ -44,6 +44,37 @@ const cleanObserved = (val: string) => {
     return String(num);
 };
 
+const maybeNumber = (value: unknown): number | undefined => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) {
+        return undefined;
+    }
+    return parsed;
+};
+
+const normalizePrediction = (value: unknown): PredictionResult => {
+    const payload = (typeof value === 'object' && value !== null ? value : {}) as Record<string, unknown>;
+    const action = maybeNumber(payload.action) ?? 0;
+    const description = typeof payload.description === 'string' ? payload.description : 'Unknown';
+    const confidence = maybeNumber(payload.confidence);
+    const betStrategyId = maybeNumber(payload.bet_strategy_id ?? payload.betStrategyId);
+    const betStrategyName = typeof payload.bet_strategy_name === 'string'
+        ? payload.bet_strategy_name
+        : (typeof payload.betStrategyName === 'string' ? payload.betStrategyName : undefined);
+    const suggestedBetAmount = maybeNumber(payload.suggested_bet_amount ?? payload.suggestedBetAmount);
+    const currentBetAmount = maybeNumber(payload.current_bet_amount ?? payload.currentBetAmount);
+
+    return {
+        action,
+        description,
+        confidence,
+        betStrategyId,
+        betStrategyName,
+        suggestedBetAmount,
+        currentBetAmount,
+    };
+};
+
 export const GameSession: React.FC<GameSessionProps> = ({
     config,
     setup,
@@ -260,7 +291,9 @@ export const GameSession: React.FC<GameSessionProps> = ({
             throw new Error(detail);
         }
 
-        return await response.json();
+        const payload = await response.json();
+        const prediction = normalizePrediction(payload?.prediction);
+        return { ...payload, prediction };
     };
 
     const handlePlay = async () => {
@@ -282,22 +315,23 @@ export const GameSession: React.FC<GameSessionProps> = ({
 
         try {
             const session = await startSession();
-            const prediction: PredictionResult = session.prediction;
+            const prediction: PredictionResult = normalizePrediction(session.prediction);
             const currentCapital = Number(session.current_capital);
+            const currentBet = prediction.currentBetAmount ?? Number(session.game_bet);
 
             const newConfig: GameConfig = {
                 sessionId: String(session.session_id),
                 checkpoint: String(session.checkpoint),
                 datasetName: datasetId || '',
                 initialCapital: Number(session.game_capital),
-                betAmount: Number(session.game_bet),
+                betAmount: currentBet,
             };
 
             onGameConfigChange(newConfig);
             onSessionStateChange({
                 isActive: true,
                 currentCapital,
-                currentBet: Number(session.game_bet),
+                currentBet: currentBet,
                 lastPrediction: prediction,
                 totalSteps: 0,
             });
@@ -310,7 +344,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
                 predictedConfidence: prediction.confidence,
                 observed: null,
                 observedInput: '',
-                betAmount: Number(session.game_bet),
+                betAmount: currentBet,
                 outcome: null,
                 capitalAfter: currentCapital,
                 isEditing: false,
@@ -376,7 +410,9 @@ export const GameSession: React.FC<GameSessionProps> = ({
             throw new Error(detail);
         }
 
-        return await response.json();
+        const payload = await response.json();
+        const prediction = normalizePrediction(payload?.prediction);
+        return { ...payload, prediction };
     };
 
     const submitStep = async (sessionId: string, extraction: number) => {
@@ -419,8 +455,9 @@ export const GameSession: React.FC<GameSessionProps> = ({
                 initialCapital: config.initialCapital,
                 betAmount: rows.length > 0 ? rows[0].betAmount : config.betAmount,
             });
-            const prediction: PredictionResult = session.prediction;
+            const prediction: PredictionResult = normalizePrediction(session.prediction);
             const currentCapital = Number(session.current_capital);
+            const currentBet = prediction.currentBetAmount ?? Number(session.game_bet);
             const updatedHistory: GameStep[] = [];
 
             onGameConfigChange({
@@ -428,13 +465,13 @@ export const GameSession: React.FC<GameSessionProps> = ({
                 checkpoint: String(session.checkpoint),
                 datasetName: datasetId || '',
                 initialCapital: Number(session.game_capital),
-                betAmount: Number(session.game_bet),
+                betAmount: currentBet,
             });
 
             onSessionStateChange({
                 isActive: true,
                 currentCapital,
-                currentBet: Number(session.game_bet),
+                currentBet: currentBet,
                 lastPrediction: prediction,
                 totalSteps: 0,
             });
@@ -446,13 +483,13 @@ export const GameSession: React.FC<GameSessionProps> = ({
                 predictedConfidence: prediction.confidence,
                 observed: null,
                 observedInput: '',
-                betAmount: Number(session.game_bet),
+                betAmount: currentBet,
                 outcome: null,
                 capitalAfter: currentCapital,
                 isEditing: false,
             });
 
-            let activeBet = Number(session.game_bet);
+            let activeBet = currentBet;
             for (let index = 0; index < rows.length; index += 1) {
                 const row = rows[index];
                 if (row.observed === null) {
@@ -493,7 +530,8 @@ export const GameSession: React.FC<GameSessionProps> = ({
                         activeBet = nextRowBet;
                     }
                     const nextPayload = await requestNextPrediction(String(session.session_id));
-                    const nextPrediction: PredictionResult = nextPayload.prediction;
+                    const nextPrediction: PredictionResult = normalizePrediction(nextPayload.prediction);
+                    const nextBet = nextPrediction.currentBetAmount ?? nextRowBet;
                     updatedHistory.push({
                         step: stepIndex + 1,
                         predictedAction: nextPrediction.action,
@@ -501,12 +539,15 @@ export const GameSession: React.FC<GameSessionProps> = ({
                         predictedConfidence: nextPrediction.confidence,
                         observed: null,
                         observedInput: '',
-                        betAmount: nextRowBet,
+                        betAmount: nextBet,
                         outcome: null,
                         capitalAfter,
                         isEditing: false,
                     });
-                    onSessionStateChange({ lastPrediction: nextPrediction });
+                    onSessionStateChange({
+                        lastPrediction: nextPrediction,
+                        currentBet: nextPrediction.currentBetAmount ?? activeBet,
+                    });
                 }
             }
 
@@ -611,8 +652,9 @@ export const GameSession: React.FC<GameSessionProps> = ({
         setError(null);
         try {
             const nextPayload = await requestNextPrediction(config.sessionId);
-            const prediction: PredictionResult = nextPayload.prediction;
+            const prediction: PredictionResult = normalizePrediction(nextPayload.prediction);
             const nextStep = sessionState.totalSteps + 1;
+            const activeBet = prediction.currentBetAmount ?? sessionState.currentBet;
 
             const newStep: GameStep = {
                 step: nextStep,
@@ -621,17 +663,36 @@ export const GameSession: React.FC<GameSessionProps> = ({
                 predictedConfidence: prediction.confidence,
                 observed: null,
                 observedInput: '',
-                betAmount: sessionState.currentBet,
+                betAmount: activeBet,
                 outcome: null,
                 capitalAfter: sessionState.currentCapital,
                 isEditing: false,
             };
 
             onAddHistoryStep(newStep);
-            onSessionStateChange({ lastPrediction: prediction });
+            onSessionStateChange({ lastPrediction: prediction, currentBet: activeBet });
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Unable to get next prediction.';
             setError(message);
+        }
+    };
+
+    const handleApplySuggestedBet = async () => {
+        if (!sessionActive) {
+            return;
+        }
+        const suggested = sessionState.lastPrediction?.suggestedBetAmount;
+        if (suggested === undefined) {
+            return;
+        }
+        await updateBetAmount(Number(suggested), true);
+        if (sessionState.lastPrediction) {
+            onSessionStateChange({
+                lastPrediction: {
+                    ...sessionState.lastPrediction,
+                    currentBetAmount: Number(suggested),
+                },
+            });
         }
     };
 
@@ -792,11 +853,32 @@ export const GameSession: React.FC<GameSessionProps> = ({
                     <div className={styles.predictionValue}>
                         {sessionState.lastPrediction?.description || 'Waiting for a prediction'}
                     </div>
-                    {sessionState.lastPrediction?.confidence && (
+                    {sessionState.lastPrediction?.confidence !== undefined && (
                         <div className={styles.predictionDesc}>
                             Confidence: {(sessionState.lastPrediction.confidence * 100).toFixed(0)}%
                         </div>
                     )}
+                    {sessionState.lastPrediction?.betStrategyName && (
+                        <div className={styles.predictionDesc}>
+                            Strategy: {sessionState.lastPrediction.betStrategyName}
+                        </div>
+                    )}
+                    {sessionState.lastPrediction?.suggestedBetAmount !== undefined && (
+                        <div className={styles.predictionDesc}>
+                            Suggested Bet: € {sessionState.lastPrediction.suggestedBetAmount}
+                        </div>
+                    )}
+                    <button
+                        type="button"
+                        className={styles.secondaryButton}
+                        onClick={handleApplySuggestedBet}
+                        disabled={
+                            !sessionActive ||
+                            sessionState.lastPrediction?.suggestedBetAmount === undefined
+                        }
+                    >
+                        Apply Suggested Bet
+                    </button>
                 </div>
             </div>
 

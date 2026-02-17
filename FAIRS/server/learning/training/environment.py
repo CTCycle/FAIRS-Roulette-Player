@@ -11,6 +11,13 @@ from PIL import Image, ImageDraw, ImageFont
 from gymnasium import spaces
 
 from FAIRS.server.common.constants import NUMBERS, PAD_VALUE, STATES
+from FAIRS.server.learning.betting.hold import StrategyHold
+from FAIRS.server.learning.betting.sizer import BetSizer
+from FAIRS.server.learning.betting.types import (
+    STRATEGY_KEEP,
+    normalize_strategy_id,
+    strategy_name,
+)
 from FAIRS.server.services.process import RouletteSeriesEncoder
 
 
@@ -330,8 +337,26 @@ class RouletteEnvironment(gym.Env):
         self.perceptive_size = configuration.get("perceptive_field_size", 64)
         self.initial_capital = configuration.get("initial_capital", 1000)
         self.bet_amount = configuration.get("bet_amount", 10)
+        self.dynamic_betting_enabled = bool(
+            configuration.get("dynamic_betting_enabled", False)
+        )
+        self.bet_strategy_fixed_id = normalize_strategy_id(
+            configuration.get("bet_strategy_fixed_id", STRATEGY_KEEP),
+            STRATEGY_KEEP,
+        )
         self.max_steps = configuration.get("max_steps_episode", 2000)
         self.player = BetsAndRewards(configuration)
+        self.bet_sizer = BetSizer(configuration)
+        self.strategy_hold = StrategyHold(
+            hold_steps=int(configuration.get("strategy_hold_steps", 1)),
+            fallback_strategy_id=self.bet_strategy_fixed_id,
+        )
+        self.current_strategy_id = self.bet_strategy_fixed_id
+        self.current_strategy_name = strategy_name(self.current_strategy_id)
+        self.current_bet_amount = int(self.player.bet_amount)
+        self.reward_scale_bet_max = (
+            self.bet_sizer.bet_max if self.dynamic_betting_enabled else self.bet_amount
+        )
 
         self.black_numbers = self.player.black_numbers
         self.red_numbers = self.player.red_numbers
@@ -339,6 +364,7 @@ class RouletteEnvironment(gym.Env):
 
         self.numbers = list(range(NUMBERS))
         self.action_space = spaces.Discrete(STATES)
+        self.strategy_action_space = spaces.Discrete(5)
         self.observation_window = spaces.Box(
             low=0, high=36, shape=(self.perceptive_size,), dtype=np.int32
         )
@@ -373,17 +399,32 @@ class RouletteEnvironment(gym.Env):
         )
         self.capital = self.initial_capital
         self.steps = 0
+        self.reward = 0
         self.done = False
+        self.strategy_hold.reset(self.bet_strategy_fixed_id)
+        self.bet_sizer = BetSizer(
+            {
+                "bet_amount": self.bet_amount,
+                "initial_capital": self.initial_capital,
+                "bet_unit": self.bet_sizer.unit,
+                "bet_max": self.bet_sizer.bet_max,
+                "bet_enforce_capital": self.bet_sizer.bet_enforce_capital,
+            }
+        )
+        self.player.bet_amount = int(self.bet_sizer.current_bet)
+        self.current_strategy_id = self.bet_strategy_fixed_id
+        self.current_strategy_name = strategy_name(self.current_strategy_id)
+        self.current_bet_amount = int(self.player.bet_amount)
         return self.state
 
     # -------------------------------------------------------------------------
     def scale_rewards(self, rewards) -> np.ndarray:
-        negative_scaled = (
-            (rewards - (-self.bet_amount)) / (0 - (-self.bet_amount))
-        ) * (0 - (-1)) + (-1)
-        positive_scaled = ((rewards - 0) / (self.bet_amount * 35)) * (1 - 0) + 0
+        max_bet = max(1, float(self.reward_scale_bet_max))
+        rewards = np.asarray(rewards, dtype=np.float32)
+        negative_scaled = ((rewards - (-max_bet)) / max_bet) - 1.0
+        positive_scaled = rewards / (max_bet * 35.0)
         scaled_rewards = np.where(rewards < 0, negative_scaled, positive_scaled)
-        return scaled_rewards
+        return np.clip(scaled_rewards, -1.0, 1.0)
 
     # -------------------------------------------------------------------------
     def select_random_index(self) -> int:
@@ -398,7 +439,9 @@ class RouletteEnvironment(gym.Env):
         )
 
     # -------------------------------------------------------------------------
-    def step(self, action) -> tuple[np.ndarray, int, bool, Any]:
+    def step(
+        self, action: int, strategy_action: int | None = None
+    ) -> tuple[np.ndarray, int, bool, Any]:
         if self.extraction_index >= len(self.extractions):
             self.extraction_index = self.select_random_index()
 
@@ -406,7 +449,27 @@ class RouletteEnvironment(gym.Env):
         self.state = np.delete(self.state, 0)
         self.state = np.append(self.state, next_extraction)
         self.extraction_index += 1
+        if self.dynamic_betting_enabled:
+            selected_strategy = (
+                self.bet_strategy_fixed_id
+                if strategy_action is None
+                else int(strategy_action)
+            )
+            resolved_strategy = self.strategy_hold.resolve(selected_strategy)
+            self.current_strategy_id = int(resolved_strategy)
+            self.current_strategy_name = strategy_name(self.current_strategy_id)
+            self.current_bet_amount = int(
+                self.bet_sizer.apply(self.current_strategy_id, capital=self.capital)
+            )
+            self.player.bet_amount = self.current_bet_amount
+        else:
+            self.current_strategy_id = self.bet_strategy_fixed_id
+            self.current_strategy_name = strategy_name(self.current_strategy_id)
+            self.current_bet_amount = int(self.player.bet_amount)
+
         self.update_rewards(action, next_extraction)
+        if self.dynamic_betting_enabled:
+            self.bet_sizer.set_last_outcome_from_reward(self.reward)
         self.steps += 1
 
         if self.capital <= 0 or self.steps >= self.max_steps:
