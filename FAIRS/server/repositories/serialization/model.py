@@ -18,6 +18,7 @@ from FAIRS.server.common.utils.logger import logger
 class ModelSerializer:
     def __init__(self) -> None:
         self.model_name = "FAIRS"
+        self.strategy_model_file = "strategy.keras"
 
     # -------------------------------------------------------------------------
     def create_checkpoint_folder(self, checkpoint_name: str | None = None) -> str:
@@ -47,6 +48,15 @@ class ModelSerializer:
         model.save(model_files_path)
         logger.info(
             f"Training session is over. Model {os.path.basename(path)} has been saved"
+        )
+
+    # -------------------------------------------------------------------------
+    def save_strategy_model(self, model: Model, path: str) -> None:
+        model_file_path = os.path.join(path, self.strategy_model_file)
+        model.save(model_file_path)
+        logger.info(
+            "Training session is over. Strategy model %s has been saved",
+            os.path.basename(path),
         )
 
     # -------------------------------------------------------------------------
@@ -109,3 +119,16 @@ class ModelSerializer:
         model = load_model(model_path)
         configuration, session = self.load_training_configuration(checkpoint_path)
         return model, configuration, session, checkpoint_path
+
+    # -------------------------------------------------------------------------
+    def load_strategy_model(
+        self, checkpoint_path: str, required: bool = False
+    ) -> Model | Any | None:
+        model_path = os.path.join(checkpoint_path, self.strategy_model_file)
+        if not os.path.isfile(model_path):
+            if required:
+                raise FileNotFoundError(
+                    f"Missing strategy model file: {self.strategy_model_file}"
+                )
+            return None
+        return load_model(model_path)

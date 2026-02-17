@@ -10,16 +10,20 @@ import numpy as np
 from keras import Model
 
 from FAIRS.server.common.constants import PAD_VALUE, STATES
+from FAIRS.server.learning.betting.types import STRATEGY_COUNT
 from FAIRS.server.learning.training.environment import RouletteEnvironment
 
 
 ###############################################################################
 class DQNAgent:
     def __init__(
-        self, configuration: dict[str, Any], memory: Any | None = None
+        self,
+        configuration: dict[str, Any],
+        memory: Any | None = None,
+        action_size: int | None = None,
     ) -> None:
         self.rng = np.random.default_rng(seed=configuration.get("seed", 42))
-        self.action_size = STATES
+        self.action_size = int(action_size) if action_size is not None else STATES
         self.state_size = configuration.get("perceptive_field_size", 64)
         self.gamma = configuration.get("discount_rate", 0.5)
         self.epsilon = configuration.get("exploration_rate", 0.75)
@@ -188,3 +192,15 @@ class DQNAgent:
         )
 
         return results
+
+
+###############################################################################
+class StrategyAgent(DQNAgent):
+    def __init__(
+        self, configuration: dict[str, Any], memory: Any | None = None
+    ) -> None:
+        super(StrategyAgent, self).__init__(
+            configuration=configuration,
+            memory=memory,
+            action_size=STRATEGY_COUNT,
+        )

@@ -20,6 +20,13 @@ class TrainingConfig(BaseModel):
     # Environment parameters
     bet_amount: int = Field(10, ge=1)
     initial_capital: int = Field(1000, ge=1)
+    dynamic_betting_enabled: bool = False
+    bet_strategy_model_enabled: bool = False
+    bet_strategy_fixed_id: int = Field(0, ge=0, le=4)
+    strategy_hold_steps: int = Field(1, ge=1)
+    bet_unit: int | None = Field(None, ge=1)
+    bet_max: int | None = Field(None, ge=1)
+    bet_enforce_capital: bool = True
 
     # Dataset parameters
     dataset_id: int | None = Field(None, ge=1)
@@ -45,9 +52,6 @@ class TrainingConfig(BaseModel):
     use_mixed_precision: bool = False
     jit_compile: bool = False
     jit_backend: str = Field("inductor", min_length=1)
-
-
-###############################################################################
 
 
 ###############################################################################

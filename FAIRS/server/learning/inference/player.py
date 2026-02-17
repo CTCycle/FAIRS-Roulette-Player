@@ -8,6 +8,14 @@ from keras import Model
 from keras.utils import set_random_seed
 
 from FAIRS.server.common.constants import PAD_VALUE
+from FAIRS.server.learning.betting.hold import StrategyHold
+from FAIRS.server.learning.betting.sizer import BetSizer
+from FAIRS.server.learning.betting.types import (
+    BET_OUTCOME_NEUTRAL,
+    STRATEGY_KEEP,
+    normalize_strategy_id,
+    strategy_name,
+)
 from FAIRS.server.repositories.serialization.data import DataSerializer
 from FAIRS.server.learning.training.environment import BetsAndRewards
 
@@ -21,6 +29,7 @@ class RoulettePlayer:
         session_id: str,
         dataset_id: int,
         dataset_source: str | None = None,
+        strategy_model: Model | None = None,
     ) -> None:
         set_random_seed(configuration.get("seed", 42))
 
@@ -29,6 +38,19 @@ class RoulettePlayer:
         self.perceptive_size = int(configuration.get("perceptive_field_size", 64))
         self.initial_capital = int(configuration.get("game_capital", 100))
         self.bet_amount = int(configuration.get("game_bet", 1))
+        self.dynamic_betting_enabled = bool(
+            configuration.get("dynamic_betting_enabled", False)
+        )
+        self.bet_strategy_model_enabled = bool(
+            configuration.get("bet_strategy_model_enabled", False)
+        )
+        self.auto_apply_bet_suggestions = bool(
+            configuration.get("auto_apply_bet_suggestions", False)
+        )
+        self.fixed_strategy_id = normalize_strategy_id(
+            configuration.get("bet_strategy_fixed_id", STRATEGY_KEEP),
+            STRATEGY_KEEP,
+        )
 
         actions = BetsAndRewards({**configuration, "bet_amount": self.bet_amount})
         self.action_descriptions = actions.action_descriptions
@@ -42,7 +64,19 @@ class RoulettePlayer:
 
         self.player = BetsAndRewards({**configuration, "bet_amount": self.bet_amount})
         self.model = model
+        self.strategy_model = strategy_model
         self.configuration = configuration
+        self.bet_sizer = BetSizer(
+            {
+                **configuration,
+                "bet_amount": self.bet_amount,
+                "initial_capital": self.initial_capital,
+            }
+        )
+        self.strategy_hold = StrategyHold(
+            hold_steps=int(configuration.get("strategy_hold_steps", 1)),
+            fallback_strategy_id=self.fixed_strategy_id,
+        )
 
         self.serializer = DataSerializer()
         self.context = self.serializer.load_dataset_outcomes(dataset_id)
@@ -78,6 +112,23 @@ class RoulettePlayer:
         return exp_values / denom
 
     # -----------------------------------------------------------------------------
+    def predict_strategy(self, current_state: np.ndarray, gain_input: np.ndarray) -> int:
+        if (
+            not self.dynamic_betting_enabled
+            or not self.bet_strategy_model_enabled
+            or self.strategy_model is None
+        ):
+            return self.fixed_strategy_id
+        strategy_logits = self.strategy_model.predict(
+            {"timeseries": current_state, "gain": gain_input},
+            verbose=0,  # type: ignore
+        )
+        logits = np.asarray(strategy_logits).reshape(-1)
+        if logits.size == 0:
+            return self.fixed_strategy_id
+        return int(np.argmax(logits))
+
+    # -----------------------------------------------------------------------------
     def predict_next(self) -> dict[str, Any]:
         if self.last_state is None:
             self.initialize_states()
@@ -108,11 +159,26 @@ class RoulettePlayer:
         probabilities = self.softmax(logits)
         confidence = float(probabilities[self.next_action])
 
-        return {
+        prediction: dict[str, Any] = {
             "action": self.next_action,
             "description": self.next_action_desc,
             "confidence": confidence,
         }
+
+        if self.dynamic_betting_enabled:
+            selected_strategy = self.predict_strategy(current_state, gain_input)
+            resolved_strategy = self.strategy_hold.resolve(selected_strategy)
+            suggested_bet = int(
+                self.bet_sizer.apply(resolved_strategy, capital=self.current_capital)
+            )
+            if self.auto_apply_bet_suggestions:
+                self.update_bet_amount(suggested_bet, reset_strategy_state=False)
+            prediction["bet_strategy_id"] = int(resolved_strategy)
+            prediction["bet_strategy_name"] = strategy_name(resolved_strategy)
+            prediction["suggested_bet_amount"] = int(suggested_bet)
+            prediction["current_bet_amount"] = int(self.bet_amount)
+
+        return prediction
 
     # -----------------------------------------------------------------------------
     def update_with_true_extraction(self, real_number: int) -> tuple[int, int]:
@@ -133,12 +199,21 @@ class RoulettePlayer:
                 self.last_action, real_number, int(self.current_capital)
             )
             self.current_capital = int(new_capital)
+            if self.dynamic_betting_enabled:
+                self.bet_sizer.set_last_outcome_from_reward(reward)
 
         return int(reward), int(self.current_capital)
 
     # -----------------------------------------------------------------------------
-    def update_bet_amount(self, bet_amount: int) -> None:
+    def update_bet_amount(self, bet_amount: int, reset_strategy_state: bool = True) -> None:
         self.bet_amount = int(bet_amount)
         actions = BetsAndRewards({**self.configuration, "bet_amount": self.bet_amount})
         self.action_descriptions = actions.action_descriptions
         self.player = actions
+        if self.dynamic_betting_enabled and reset_strategy_state:
+            self.bet_sizer.set_base_bet(self.bet_amount, self.current_capital)
+            self.bet_sizer.last_outcome = BET_OUTCOME_NEUTRAL
+        self.fixed_strategy_id = normalize_strategy_id(
+            self.configuration.get("bet_strategy_fixed_id", STRATEGY_KEEP),
+            STRATEGY_KEEP,
+        )

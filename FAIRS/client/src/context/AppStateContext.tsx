@@ -44,6 +44,15 @@ export interface TrainingNewConfig {
     useMixedPrecision: boolean;
     maxMemorySize: number;
     replayBufferSize: number;
+    dynamicBettingEnabled: boolean;
+    betStrategyModelEnabled: boolean;
+    betStrategyFixedId: number;
+    strategyHoldSteps: number;
+    betUnitEnabled: boolean;
+    betUnit: number;
+    betMaxEnabled: boolean;
+    betMax: number;
+    betEnforceCapital: boolean;
     checkpointName: string;
 }
 
@@ -118,6 +127,15 @@ const initialNewConfig: TrainingNewConfig = {
     useMixedPrecision: false,
     maxMemorySize: 10000,
     replayBufferSize: 1000,
+    dynamicBettingEnabled: false,
+    betStrategyModelEnabled: false,
+    betStrategyFixedId: 0,
+    strategyHoldSteps: 1,
+    betUnitEnabled: false,
+    betUnit: 10,
+    betMaxEnabled: false,
+    betMax: 1000,
+    betEnforceCapital: true,
     checkpointName: '',
 };
 

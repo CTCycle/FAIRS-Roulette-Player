@@ -10,6 +10,10 @@ export interface PredictionResult {
     action: number;
     description: string;
     confidence?: number;
+    betStrategyId?: number;
+    betStrategyName?: string;
+    suggestedBetAmount?: number;
+    currentBetAmount?: number;
 }
 
 export interface GameStep {

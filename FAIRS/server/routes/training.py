@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import math
 import os
 import time
 from typing import Any
@@ -121,14 +120,10 @@ class TrainingState:
         if stats.get("status") not in {"training", "exploration"}:
             return
         time_step = stats.get("time_step")
-        loss = stats.get("loss")
-        rmse = stats.get("rmse")
+        loss = coerce_optional_finite_float(stats.get("loss"))
+        rmse = coerce_optional_finite_float(stats.get("rmse"))
         epoch = stats.get("epoch")
         if not isinstance(time_step, int):
-            return
-        if not isinstance(loss, (int, float)) or not isinstance(rmse, (int, float)):
-            return
-        if not math.isfinite(float(loss)) or not math.isfinite(float(rmse)):
             return
         if not isinstance(epoch, int):
             return
@@ -136,8 +131,8 @@ class TrainingState:
             return
         point = {
             "time_step": time_step,
-            "loss": float(loss),
-            "rmse": float(rmse),
+            "loss": loss if loss is not None else 0.0,
+            "rmse": rmse if rmse is not None else 0.0,
             "val_loss": (coerce_optional_finite_float(stats.get("val_loss"))),
             "val_rmse": (coerce_optional_finite_float(stats.get("val_rmse"))),
             "epoch": epoch,

@@ -27,14 +27,23 @@ const parseDatasetId = (value: unknown): string => {
     return '';
 };
 
-type WizardStep = 0 | 1 | 2 | 3 | 4;
+type WizardStep = 0 | 1 | 2 | 3 | 4 | 5;
 
 const WIZARD_STEPS = [
     'Agent Configuration',
     'Environment & Memory',
-    'Dataset Configuration', // This will be dynamic
+    'Bet Strategy Policy',
+    'Dataset Configuration',
     'Session & Compute',
     'Summary',
+] as const;
+
+const BET_STRATEGY_OPTIONS = [
+    { id: 0, name: 'Keep' },
+    { id: 1, name: 'Martingale' },
+    { id: 2, name: 'Reverse' },
+    { id: 3, name: "D'Alembert" },
+    { id: 4, name: 'Fibonacci' },
 ] as const;
 
 export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
@@ -115,14 +124,14 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
     };
 
     const handleInputChange = (
-        event: React.ChangeEvent<HTMLInputElement>,
+        event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
     ) => {
-        const { name, value, type, checked } = event.target;
-        if (type === 'checkbox') {
-            updateNewConfig({ [name]: checked } as Partial<typeof newConfig>);
+        const target = event.target;
+        if (target instanceof HTMLInputElement && target.type === 'checkbox') {
+            updateNewConfig({ [target.name]: target.checked } as Partial<typeof newConfig>);
             return;
         }
-        updateNewConfig({ [name]: value } as Partial<typeof newConfig>);
+        updateNewConfig({ [target.name]: target.value } as Partial<typeof newConfig>);
     };
 
     const handleNumberChange = (name: keyof typeof newConfig, value: number) => {
@@ -241,6 +250,16 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
         { label: 'Initial Capital', value: newConfig.initialCapital },
         { label: 'Max Memory', value: newConfig.maxMemorySize },
         { label: 'Replay Buffer', value: newConfig.replayBufferSize },
+        { label: 'Dynamic Betting', value: newConfig.dynamicBettingEnabled ? 'Enabled' : 'Disabled' },
+        { label: 'Strategy Model', value: newConfig.betStrategyModelEnabled ? 'Enabled' : 'Disabled' },
+        {
+            label: 'Fixed Strategy',
+            value: BET_STRATEGY_OPTIONS.find((option) => option.id === Number(newConfig.betStrategyFixedId))?.name ?? 'Keep',
+        },
+        { label: 'Strategy Hold Steps', value: newConfig.strategyHoldSteps },
+        { label: 'Bet Unit', value: newConfig.betUnitEnabled ? newConfig.betUnit : 'Default (base bet)' },
+        { label: 'Bet Max', value: newConfig.betMaxEnabled ? newConfig.betMax : 'Auto' },
+        { label: 'Cap By Capital', value: newConfig.betEnforceCapital ? 'Yes' : 'No' },
         { label: 'Sample Size', value: sampleSizeValue },
         { label: 'Validation Split', value: validationValue },
         { label: 'Split Seed', value: newConfig.splitSeed },
@@ -334,7 +353,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                             <span>{`Step ${wizardStep + 1} of ${WIZARD_STEPS.length}`}</span>
                         </div>
                         <div className="wizard-step-title">
-                            {wizardStep === 2 && newConfig.useDataGen ? 'Generator Parameters' : WIZARD_STEPS[wizardStep]}
+                            {wizardStep === 3 && newConfig.useDataGen ? 'Generator Parameters' : WIZARD_STEPS[wizardStep]}
                         </div>
                         <div className="wizard-step-content">
                             {wizardStep === 0 && (
@@ -397,6 +416,123 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
 
                             {wizardStep === 2 && (
                                 <div className="wizard-stack">
+                                    <div className="wizard-topic-panel">
+                                        <div className="wizard-topic-title">Strategy Selection</div>
+                                        <div className="wizard-grid wizard-grid-2x2">
+                                            <label className="wizard-inline-toggle">
+                                                <input
+                                                    type="checkbox"
+                                                    name="dynamicBettingEnabled"
+                                                    checked={newConfig.dynamicBettingEnabled}
+                                                    onChange={handleInputChange}
+                                                />
+                                                <span>Enable dynamic bet sizing</span>
+                                            </label>
+                                            <label className="wizard-inline-toggle">
+                                                <input
+                                                    type="checkbox"
+                                                    name="betStrategyModelEnabled"
+                                                    checked={newConfig.betStrategyModelEnabled}
+                                                    onChange={handleInputChange}
+                                                    disabled={!newConfig.dynamicBettingEnabled}
+                                                />
+                                                <span>Use strategy model (5 actions)</span>
+                                            </label>
+                                            <div className="form-group">
+                                                <label className="form-label">Fallback Strategy</label>
+                                                <select
+                                                    name="betStrategyFixedId"
+                                                    value={newConfig.betStrategyFixedId}
+                                                    onChange={(event) => handleNumberChange('betStrategyFixedId', Number(event.target.value))}
+                                                    className="form-select"
+                                                    disabled={!newConfig.dynamicBettingEnabled || newConfig.betStrategyModelEnabled}
+                                                >
+                                                    {BET_STRATEGY_OPTIONS.map((option) => (
+                                                        <option key={option.id} value={option.id}>
+                                                            {option.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">Strategy Hold Steps</label>
+                                                <input
+                                                    type="number"
+                                                    name="strategyHoldSteps"
+                                                    value={newConfig.strategyHoldSteps}
+                                                    onChange={(event) => handleNumberChange('strategyHoldSteps', Number(event.target.value))}
+                                                    className="form-input"
+                                                    min="1"
+                                                    disabled={!newConfig.dynamicBettingEnabled}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="wizard-topic-panel">
+                                        <div className="wizard-topic-title">Bet Limits & Progression</div>
+                                        <div className="wizard-grid wizard-grid-2x2">
+                                            <label className="wizard-inline-toggle wizard-inline-toggle-span">
+                                                <input
+                                                    type="checkbox"
+                                                    name="betEnforceCapital"
+                                                    checked={newConfig.betEnforceCapital}
+                                                    onChange={handleInputChange}
+                                                    disabled={!newConfig.dynamicBettingEnabled}
+                                                />
+                                                <span>Clamp bet by current capital</span>
+                                            </label>
+                                            <div className="wizard-optional-field">
+                                                <label className="wizard-inline-toggle">
+                                                    <input
+                                                        type="checkbox"
+                                                        name="betUnitEnabled"
+                                                        checked={newConfig.betUnitEnabled}
+                                                        onChange={handleInputChange}
+                                                        disabled={!newConfig.dynamicBettingEnabled}
+                                                    />
+                                                    <span>Override bet unit</span>
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    name="betUnit"
+                                                    value={newConfig.betUnit}
+                                                    onChange={(event) => handleNumberChange('betUnit', Number(event.target.value))}
+                                                    className="form-input"
+                                                    min="1"
+                                                    disabled={!newConfig.dynamicBettingEnabled || !newConfig.betUnitEnabled}
+                                                />
+                                            </div>
+                                            <div className="wizard-optional-field wizard-inline-toggle-span">
+                                                <label className="wizard-inline-toggle">
+                                                    <input
+                                                        type="checkbox"
+                                                        name="betMaxEnabled"
+                                                        checked={newConfig.betMaxEnabled}
+                                                        onChange={handleInputChange}
+                                                        disabled={!newConfig.dynamicBettingEnabled}
+                                                    />
+                                                    <span>Override max bet</span>
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    name="betMax"
+                                                    value={newConfig.betMax}
+                                                    onChange={(event) => handleNumberChange('betMax', Number(event.target.value))}
+                                                    className="form-input"
+                                                    min="1"
+                                                    disabled={!newConfig.dynamicBettingEnabled || !newConfig.betMaxEnabled}
+                                                />
+                                            </div>
+                                        </div>
+                                        <p className="form-hint">
+                                            Rewards use the currently applied bet. Disable dynamic betting to keep fixed `Bet Amount`.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {wizardStep === 3 && (
+                                <div className="wizard-stack">
                                     {!newConfig.useDataGen ? (
                                         <>
                                             <div className="form-group">
@@ -451,7 +587,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                                 </div>
                             )}
 
-                            {wizardStep === 3 && (
+                            {wizardStep === 4 && (
                                 <div className="wizard-session-compute">
                                     <div className="wizard-grid wizard-grid-2x2">
                                         <div className="form-group">
@@ -488,7 +624,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                                 </div>
                             )}
 
-                            {wizardStep === 4 && (
+                            {wizardStep === 5 && (
                                 <div className="wizard-stack">
                                     <div className="form-group">
                                         <label className="form-label">Checkpoint name</label>

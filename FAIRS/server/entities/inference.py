@@ -11,6 +11,14 @@ class InferenceStartRequest(BaseModel):
     session_id: str | None = None
     game_capital: int = Field(100, ge=1)
     game_bet: int = Field(1, ge=1)
+    dynamic_betting_enabled: bool = False
+    bet_strategy_model_enabled: bool = False
+    bet_strategy_fixed_id: int = Field(0, ge=0, le=4)
+    strategy_hold_steps: int = Field(1, ge=1)
+    bet_unit: int | None = Field(None, ge=1)
+    bet_max: int | None = Field(None, ge=1)
+    bet_enforce_capital: bool = True
+    auto_apply_bet_suggestions: bool = False
 
 
 ###############################################################################
@@ -18,6 +26,10 @@ class PredictionResponse(BaseModel):
     action: int
     description: str
     confidence: float | None = None
+    bet_strategy_id: int | None = None
+    bet_strategy_name: str | None = None
+    suggested_bet_amount: int | None = None
+    current_bet_amount: int | None = None
 
 
 ###############################################################################
