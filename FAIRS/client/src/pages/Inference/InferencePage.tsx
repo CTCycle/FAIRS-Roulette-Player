@@ -2,6 +2,7 @@ import React from 'react';
 import { useAppState } from '../../context/AppStateContext';
 import { GameSession } from '../../components/inference/GameSession';
 import type { GameConfig, SessionState, GameStep } from '../../types/inference';
+import './InferencePage.css';
 
 const InferencePage: React.FC = () => {
     const { state, dispatch } = useAppState();
@@ -24,7 +25,7 @@ const InferencePage: React.FC = () => {
     };
 
     return (
-        <div style={{ height: '100%', padding: '2rem' }}>
+        <div className="inference-page">
             <GameSession
                 config={gameConfig}
                 setup={setup}
