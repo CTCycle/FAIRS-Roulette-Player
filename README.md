@@ -1,11 +1,14 @@
 # FAIRS: Fabulous Automated Intelligent Roulette System
 
 ## 1. Project Overview
-FAIRS is a local research web application for roulette training and inference experiments. It combines:
+FAIRS is a research web application for roulette training and inference experiments. It combines:
 - A FastAPI backend for dataset ingestion, training orchestration, checkpoint management, inference sessions, and persistence.
-- A React + Vite frontend for running training workflows, monitoring metrics, managing checkpoints, and stepping through inference sessions.
+- A React + Vite frontend for training workflows, checkpoint management, and interactive inference sessions.
 
-The application runs locally and stores artifacts in `FAIRS/resources`. It is intended for experimentation and does not guarantee predictive performance.
+The runtime model is dual-mode and configuration-first:
+- Local mode is the default path (`FAIRS/start_on_windows.bat`), no Docker required.
+- Cloud mode uses Docker (`docker-compose.yml`) for backend + frontend.
+- Mode switching is done by changing `FAIRS/settings/.env` values only.
 
 ## 2. Model and Dataset (Optional)
 FAIRS uses a Deep Q-Network (DQN) workflow for roulette sequence decision making. Training can use:
@@ -14,117 +17,138 @@ FAIRS uses a Deep Q-Network (DQN) workflow for roulette sequence decision making
 
 Inference sessions consume a trained checkpoint and a selected dataset, then evaluate predictions step by step with tracked capital and reward outcomes.
 
-## 3. Installation
+## 3. Runtime Modes
 
-### 3.1 Windows (One Click Setup)
-Run `FAIRS/start_on_windows.bat`.
+### 3.1 Local Mode (Default)
+Run:
+
+```cmd
+FAIRS\start_on_windows.bat
+```
 
 The launcher automatically:
 1. Downloads portable Python, `uv`, and Node.js into `FAIRS/resources/runtimes`.
-2. Installs backend dependencies from `pyproject.toml`.
-3. Installs frontend dependencies and builds the client.
-4. Starts backend + frontend and opens the UI URL.
+2. Installs backend dependencies from `pyproject.toml`/`uv.lock`.
+3. Installs frontend dependencies (uses `npm ci` when `package-lock.json` is present).
+4. Builds the frontend and launches backend + frontend.
 
-First run performs runtime download/build; next runs reuse local artifacts.
-
-### 3.2 macOS / Linux (Manual Setup)
-Prerequisites:
-- Python 3.14+
-- `uv`
-- Node.js 22+
-
-Steps:
-1. Clone the repository.
-2. Optionally create `FAIRS/settings/.env` (you can start from `FAIRS/resources/templates/.env` and add UI settings if needed).
-3. Install backend dependencies:
+### 3.2 Cloud Mode (Docker)
+1. Switch `.env` to cloud values (see section 4).
+2. Build and run:
 
 ```bash
-uv sync
+docker compose --env-file FAIRS/settings/.env build --no-cache
+docker compose --env-file FAIRS/settings/.env up -d
 ```
 
-4. Start backend:
+Stop containers:
 
 ```bash
-uv run python -m uvicorn FAIRS.server.app:app --host 127.0.0.1 --port 8000
+docker compose --env-file FAIRS/settings/.env down
 ```
 
-5. Start frontend:
+Cloud topology:
+- `backend`: FastAPI (Uvicorn) on container port `8000`.
+- `frontend`: Nginx serving SPA static files.
+- Nginx proxies `/api/*` to `http://backend:8000/*`.
 
-```bash
-cd FAIRS/client
-npm install
-npm run build
-npm run preview -- --host 127.0.0.1 --port 5173 --strictPort
+Validate:
+- Frontend: `http://<UI_HOST>:<UI_PORT>/`
+- API docs through proxy: `http://<UI_HOST>:<UI_PORT>/api/docs`
+
+## 4. Mode Switching Procedure
+Profiles:
+- Local reference: `FAIRS/settings/.env.local.example`
+- Cloud reference: `FAIRS/settings/.env.cloud.example`
+- Active runtime file: `FAIRS/settings/.env`
+
+Use one of the profiles as active `.env`:
+
+```cmd
+copy /Y FAIRS\settings\.env.local.example FAIRS\settings\.env
+copy /Y FAIRS\settings\.env.cloud.example FAIRS\settings\.env
 ```
 
-## 4. How to Use
+No application code changes are required to switch modes.
 
-### 4.1 Windows
-Run `FAIRS/start_on_windows.bat`. The launcher reads `FAIRS/settings/.env` when present (`FASTAPI_*`, `UI_*`). If no overrides are provided, defaults are backend `127.0.0.1:8000` and UI `127.0.0.1:5173`.
-In the current local setup shown by `FAIRS/settings/.env`, UI is `127.0.0.1:8000` and API is `127.0.0.1:5000`.
+## 5. Configuration Contract
+`FAIRS/settings/.env` defines runtime values for launcher/tests/docker.
 
-### 4.2 macOS / Linux
-Run backend and frontend separately.
+### 5.1 Core Runtime
+- `FASTAPI_HOST`
+- `FASTAPI_PORT`
+- `UI_HOST`
+- `UI_PORT`
+- `VITE_API_BASE_URL`
+- `RELOAD`
 
-```bash
-uv run python -m uvicorn FAIRS.server.app:app --host 127.0.0.1 --port 8000
+### 5.2 Database Runtime
+- `DB_EMBEDDED`
+- `DB_ENGINE`
+- `DB_HOST`
+- `DB_PORT`
+- `DB_NAME`
+- `DB_USER`
+- `DB_PASSWORD`
+- `DB_SSL`
+- `DB_SSL_CA`
+- `DB_CONNECT_TIMEOUT`
+- `DB_INSERT_BATCH_SIZE`
+
+### 5.3 Other Runtime Variables
+- `OPTIONAL_DEPENDENCIES`
+- `MPLBACKEND`
+- `KERAS_BACKEND`
+
+Behavior:
+- `FAIRS/settings/configurations.json` now contains non-runtime defaults only.
+- `DB_EMBEDDED` is read from env first, with JSON fallback only for backward compatibility.
+- When `DB_EMBEDDED=true`, embedded SQLite is used.
+- When `DB_EMBEDDED=false`, external DB fields are read from env first.
+
+## 6. Testing
+Run automated tests:
+
+```cmd
+tests\run_tests.bat
 ```
 
-```bash
-cd FAIRS/client
-npm run preview -- --host 127.0.0.1 --port 5173 --strictPort
-```
+The runner now:
+- Loads host/port from `FAIRS/settings/.env`.
+- Exports `APP_TEST_FRONTEND_URL` and `APP_TEST_BACKEND_URL`.
+- Uses resolved URLs for readiness checks and server startup.
 
-Typical URLs:
-- UI: `http://127.0.0.1:5173`
-- API: `http://127.0.0.1:8000`
-- API docs: `http://127.0.0.1:8000/docs`
+## 7. Setup and Maintenance
+- `FAIRS/setup_and_maintenance.bat` -> `Remove logs`: deletes `.log` files in `FAIRS/resources/logs`.
+- `FAIRS/setup_and_maintenance.bat` -> `Uninstall app`: removes local runtime/dependency artifacts (`resources/runtimes`, `.venv`, frontend build and node modules, cache files).
+- `FAIRS/setup_and_maintenance.bat` -> `Initialize database`: runs `FAIRS/scripts/initialize_database.py`.
 
-### 4.3 Using the Application
-Typical flow:
-- Upload or select roulette datasets from the Training workflow.
-- Configure and start training from the wizard (including dynamic betting/strategy options when needed).
-- Monitor live training metrics (loss, RMSE, reward, capital, strategy, progress) from the dashboard.
-- Review checkpoint metadata, resume training, or open evaluation from checkpoint actions.
-- In Inference, pick a checkpoint and dataset, start a session, submit observed outcomes, apply suggested bets, and inspect session history.
+## 8. Deterministic Build Notes
+- Backend lockfile: `uv.lock`.
+- Backend install path in Docker: `uv sync --frozen`.
+- Frontend lockfile: `FAIRS/client/package-lock.json` (committed).
+- Frontend install path in Docker: `npm ci`.
+- Docker base images are pinned by tag in `docker/backend.Dockerfile` and `docker/frontend.Dockerfile`.
 
+## 9. Resources
+`FAIRS/resources` contains local runtime and data assets:
+- `checkpoints`: trained model artifacts.
+- `database`: embedded SQLite and related files.
+- `logs`: runtime logs.
+- `runtimes`: portable Python/uv/Node.js downloaded by the Windows launcher.
+- `templates`: starter files.
+
+## 10. Screenshots
 **Training page**
 ![training_page](assets/figures/training_page.png)
 
 **Inference page**
 ![inference_page](assets/figures/inference_page.png)
 
-## 5. Setup and Maintenance
-- `FAIRS/setup_and_maintenance.bat` -> `Remove logs`: deletes `.log` files in `FAIRS/resources/logs`.
-- `FAIRS/setup_and_maintenance.bat` -> `Uninstall app`: removes local runtime/dependency artifacts (`resources/runtimes`, `.venv`, frontend build and node modules, cache files).
-- `FAIRS/setup_and_maintenance.bat` -> `Initialize database`: runs `FAIRS/scripts/initialize_database.py`.
-- `tests/run_tests.bat`: starts backend + static frontend test server, runs pytest/Playwright tests, then stops started services.
+## 11. Additional Documentation
+- `docs/PACKAGING_AND_RUNTIME_MODES.md`
+- `.agent/rules/ARCHITECTURE.md`
+- `.agent/rules/GUIDELINES_TESTS.md`
 
-## 6. Resources
-`FAIRS/resources` contains local runtime and data assets:
-- `checkpoints`: trained model artifacts used for inference and resume flows.
-- `database`: embedded SQLite database and related files.
-- `logs`: runtime logs.
-- `runtimes`: portable Python/uv/Node.js downloaded by the Windows launcher.
-- `templates`: starter files (including `.env` template).
-
-## 7. Configuration
-Runtime configuration is loaded from `FAIRS/settings/.env` and `FAIRS/settings/configurations.json`.
-
-| Variable | Description |
-|----------|-------------|
-| `FASTAPI_HOST` | Backend bind host (`FAIRS/settings/.env`, default `127.0.0.1`). |
-| `FASTAPI_PORT` | Backend bind port (`FAIRS/settings/.env`, default `8000`). |
-| `UI_HOST` | Frontend bind host for Vite preview/dev (`FAIRS/settings/.env`, default `127.0.0.1`). |
-| `UI_PORT` | Frontend bind port for Vite preview/dev (`FAIRS/settings/.env`, default `5173`). |
-| `RELOAD` | Enables uvicorn reload in launcher (`FAIRS/settings/.env`, default `false`). |
-| `VITE_API_BASE_URL` | Frontend API prefix proxied to backend (`FAIRS/settings/.env`, default `/api`). |
-| `OPTIONAL_DEPENDENCIES` | Installs optional/test extras in Windows launcher when `true` (`FAIRS/settings/.env`). |
-| `MPLBACKEND` | Matplotlib backend for headless execution (`FAIRS/settings/.env`, commonly `Agg`). |
-| `KERAS_BACKEND` | Keras backend selection (`FAIRS/settings/.env`, currently `torch`). |
-| `database.embedded_database` | Use embedded SQLite when `true`, else external DB settings are used (`FAIRS/settings/configurations.json`). |
-| `database.engine` | Database engine preference for non-embedded mode (`FAIRS/settings/configurations.json`). |
-| `jobs.polling_interval` | Training polling interval (seconds) returned by `/training/status` (`FAIRS/settings/configurations.json`). |
-
-## 8. License
+## 12. License
 This project is licensed under the MIT License. See `LICENSE` for details.

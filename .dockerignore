@@ -1,0 +1,11 @@
+.git
+.venv
+__pycache__/
+*.pyc
+
+FAIRS/client/node_modules
+FAIRS/client/dist
+FAIRS/resources/runtimes
+FAIRS/resources/logs
+FAIRS/resources/checkpoints
+FAIRS/resources/database

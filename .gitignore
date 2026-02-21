@@ -8,7 +8,6 @@ FAIRS/resources/checkpoints/**
 FAIRS/client/node_modules/
 FAIRS/client/dist/
 FAIRS/client/dist-ssr/
-FAIRS/client/package-lock.json
 FAIRS/client/logs/
 FAIRS/client/*.local
 

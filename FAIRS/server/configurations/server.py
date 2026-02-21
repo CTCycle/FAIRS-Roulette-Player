@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from typing import Any
 
 from FAIRS.server.configurations.base import ensure_mapping, load_configuration_data
@@ -25,8 +26,19 @@ from FAIRS.server.common.utils.types import (
 
 # [BUILDER FUNCTIONS]
 ###############################################################################
+def _read_env_value(env_key: str, payload: dict[str, Any], payload_key: str) -> Any:
+    env_value = os.getenv(env_key)
+    if env_value is not None:
+        return env_value
+    return payload.get(payload_key)
+
+
+# -----------------------------------------------------------------------------
 def build_database_settings(payload: dict[str, Any] | Any) -> DatabaseSettings:
-    embedded = bool(payload.get("embedded_database", True))
+    data = ensure_mapping(payload)
+
+    embedded_raw = _read_env_value("DB_EMBEDDED", data, "embedded_database")
+    embedded = coerce_bool(embedded_raw, True)
     if embedded:
         # External fields are ignored entirely when embedded DB is active
         return DatabaseSettings(
@@ -39,27 +51,50 @@ def build_database_settings(payload: dict[str, Any] | Any) -> DatabaseSettings:
             password=None,
             ssl=False,
             ssl_ca=None,
-            connect_timeout=10,
+            connect_timeout=coerce_int(
+                _read_env_value("DB_CONNECT_TIMEOUT", data, "connect_timeout"),
+                10,
+                minimum=1,
+            ),
             insert_batch_size=coerce_int(
-                payload.get("insert_batch_size"), 1000, minimum=1
+                _read_env_value("DB_INSERT_BATCH_SIZE", data, "insert_batch_size"),
+                1000,
+                minimum=1,
             ),
         )
 
     # External DB mode
-    engine_value = coerce_str_or_none(payload.get("engine")) or "postgres"
+    engine_value = (
+        coerce_str_or_none(_read_env_value("DB_ENGINE", data, "engine")) or "postgres"
+    )
     normalized_engine = engine_value.lower() if engine_value else None
     return DatabaseSettings(
         embedded_database=False,
         engine=normalized_engine,
-        host=coerce_str_or_none(payload.get("host")),
-        port=coerce_int(payload.get("port"), 5432, minimum=1, maximum=65535),
-        database_name=coerce_str_or_none(payload.get("database_name")),
-        username=coerce_str_or_none(payload.get("username")),
-        password=coerce_str_or_none(payload.get("password")),
-        ssl=bool(payload.get("ssl", False)),
-        ssl_ca=coerce_str_or_none(payload.get("ssl_ca")),
-        connect_timeout=coerce_int(payload.get("connect_timeout"), 10, minimum=1),
-        insert_batch_size=coerce_int(payload.get("insert_batch_size"), 1000, minimum=1),
+        host=coerce_str_or_none(_read_env_value("DB_HOST", data, "host")),
+        port=coerce_int(
+            _read_env_value("DB_PORT", data, "port"),
+            5432,
+            minimum=1,
+            maximum=65535,
+        ),
+        database_name=coerce_str_or_none(
+            _read_env_value("DB_NAME", data, "database_name")
+        ),
+        username=coerce_str_or_none(_read_env_value("DB_USER", data, "username")),
+        password=coerce_str_or_none(_read_env_value("DB_PASSWORD", data, "password")),
+        ssl=coerce_bool(_read_env_value("DB_SSL", data, "ssl"), False),
+        ssl_ca=coerce_str_or_none(_read_env_value("DB_SSL_CA", data, "ssl_ca")),
+        connect_timeout=coerce_int(
+            _read_env_value("DB_CONNECT_TIMEOUT", data, "connect_timeout"),
+            10,
+            minimum=1,
+        ),
+        insert_batch_size=coerce_int(
+            _read_env_value("DB_INSERT_BATCH_SIZE", data, "insert_batch_size"),
+            1000,
+            minimum=1,
+        ),
     )
 
 

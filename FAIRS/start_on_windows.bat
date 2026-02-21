@@ -245,7 +245,11 @@ start "" /b "%uv_exe%" run --python "%python_exe%" python -m uvicorn %UVICORN_MO
 if not exist "%FRONTEND_DIR%\node_modules" (
   echo [STEP] Installing frontend dependencies...
   pushd "%FRONTEND_DIR%" >nul
-  call "%NPM_CMD%" install
+  if exist "%FRONTEND_DIR%\package-lock.json" (
+    call "%NPM_CMD%" ci
+  ) else (
+    call "%NPM_CMD%" install
+  )
   set "npm_ec=!ERRORLEVEL!"
   popd >nul
   if not "!npm_ec!"=="0" (
