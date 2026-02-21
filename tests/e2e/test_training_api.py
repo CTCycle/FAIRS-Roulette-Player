@@ -113,7 +113,13 @@ class TestTrainingEndpoints:
         assert "is_training" in data
         assert "latest_stats" in data
         assert "history" in data
+        assert "poll_interval" in data
         assert isinstance(data["is_training"], bool)
+        assert isinstance(data["latest_stats"], dict)
+        assert "status" in data["latest_stats"]
+        assert isinstance(data["history"], list)
+        assert isinstance(data["poll_interval"], (int, float))
+        assert float(data["poll_interval"]) > 0
 
     def test_get_checkpoints_list(self, api_context: APIRequestContext):
         """GET /training/checkpoints should return a list of checkpoint names."""
@@ -122,6 +128,7 @@ class TestTrainingEndpoints:
 
         data = response.json()
         assert isinstance(data, list)
+        assert all(isinstance(item, str) for item in data)
 
     def test_stop_training_when_not_running_returns_400(
         self, api_context: APIRequestContext
@@ -179,12 +186,26 @@ class TestTrainingEndpoints:
             assert data.get("status") in ("started", "running")
             job_id = data.get("job_id")
             assert job_id, "Job ID should be returned for polling"
+            assert isinstance(data.get("poll_interval"), (int, float))
+            assert float(data["poll_interval"]) > 0
             job_response = api_context.get(f"/training/jobs/{job_id}")
             assert job_response.ok, f"Expected 200, got {job_response.status}"
+            job_data = job_response.json()
+            assert job_data.get("job_id") == job_id
+            assert job_data.get("job_type") == "training"
+            assert job_data.get("status") in ("pending", "running", "completed")
 
             # Wait briefly then stop training to clean up
             time.sleep(1)
             api_context.post("/training/stop")
+
+    def test_cancel_unknown_training_job_returns_404(
+        self, api_context: APIRequestContext
+    ):
+        response = api_context.delete("/training/jobs/missing_job_123")
+        assert response.status == 404
+        payload = response.json()
+        assert "detail" in payload
 
 
 class TestTrainingLifecycle:
@@ -220,6 +241,36 @@ class TestTrainingLifecycle:
         assert wait_for_training_stopped(api_context)
         status = api_context.get("/training/status").json()
         assert status.get("is_training") is False
+
+    def test_training_job_can_be_cancelled_via_jobs_endpoint(
+        self, api_context: APIRequestContext
+    ):
+        api_context.post("/training/stop")
+        start_response = api_context.post(
+            "/training/start", data=RUNNING_TRAINING_CONFIG
+        )
+        assert start_response.ok, (
+            f"Expected 200, got {start_response.status}: {start_response.text()}"
+        )
+        start_payload = start_response.json()
+        job_id = start_payload.get("job_id")
+        assert isinstance(job_id, str) and job_id
+
+        if not wait_for_training_running(api_context):
+            pytest.skip("Training completed too quickly to validate cancellation.")
+
+        cancel_response = api_context.delete(f"/training/jobs/{job_id}")
+        assert cancel_response.ok, (
+            f"Expected 200, got {cancel_response.status}: {cancel_response.text()}"
+        )
+        cancel_payload = cancel_response.json()
+        assert cancel_payload.get("job_id") == job_id
+        assert cancel_payload.get("success") is True
+        assert "message" in cancel_payload
+
+        job_payload = wait_for_job_completion(api_context, job_id, timeout=30.0)
+        assert job_payload.get("status") in ("cancelled", "completed")
+        assert wait_for_training_stopped(api_context, timeout=10.0)
 
 
 class TestTrainingResume:
