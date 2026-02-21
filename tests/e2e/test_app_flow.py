@@ -13,18 +13,14 @@ class TestHomePage:
     def test_homepage_loads_successfully(self, page: Page, base_url: str):
         """The homepage should load without errors."""
         page.goto(base_url)
-        # Page should have loaded successfully
-        expect(page).to_have_title(re.compile(".*"))  # Any title is fine
+        expect(page).to_have_title(re.compile("FAIRS Roulette Player", re.IGNORECASE))
 
     def test_homepage_has_navigation(self, page: Page, base_url: str):
         """The homepage should have navigation elements."""
         page.goto(base_url)
-        # Wait for the page to be fully loaded
         page.wait_for_load_state("networkidle")
-
-        # Check that the page has some content
-        body = page.locator("body")
-        expect(body).to_be_visible()
+        expect(page.get_by_text("Training", exact=False).first).to_be_visible()
+        expect(page.get_by_text("Inference", exact=False).first).to_be_visible()
 
 
 class TestNavigationFlow:
@@ -65,19 +61,15 @@ class TestTrainingPage:
         page.goto(f"{base_url}/training")
         page.wait_for_load_state("networkidle")
 
-        body = page.locator("body")
-        expect(body).to_be_visible()
+        expect(page.get_by_text("Training Dashboard", exact=False)).to_be_visible()
+        expect(page.get_by_text("Checkpoints", exact=False).first).to_be_visible()
 
     def test_training_page_shows_status(self, page: Page, base_url: str):
         """The Training page should display training status."""
         page.goto(f"{base_url}/training")
         page.wait_for_load_state("networkidle")
-        page.wait_for_timeout(1000)
-
-        # The page should have loaded the training status
-        # Look for common status indicators
-        body = page.locator("body")
-        expect(body).to_be_visible()
+        expect(page.get_by_text("Training Dashboard", exact=False)).to_be_visible()
+        expect(page.get_by_text("Checkpoints", exact=False).first).to_be_visible()
 
 
 class TestInferencePage:
@@ -88,15 +80,12 @@ class TestInferencePage:
         page.goto(f"{base_url}/inference")
         page.wait_for_load_state("networkidle")
 
-        body = page.locator("body")
-        expect(body).to_be_visible()
+        expect(page.get_by_text("Session History", exact=False)).to_be_visible()
+        expect(page.get_by_text("AI Suggestion", exact=False)).to_be_visible()
 
     def test_inference_page_shows_checkpoint_selector(self, page: Page, base_url: str):
         """The Inference page should have a checkpoint selector."""
         page.goto(f"{base_url}/inference")
         page.wait_for_load_state("networkidle")
-        page.wait_for_timeout(1000)
-
-        # Just verify page loaded successfully
-        body = page.locator("body")
-        expect(body).to_be_visible()
+        expect(page.get_by_text("Select checkpoint", exact=False)).to_be_visible()
+        expect(page.get_by_text("Selected dataset", exact=False)).to_be_visible()

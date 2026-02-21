@@ -69,11 +69,18 @@ class TestDataUploadEndpoint:
         assert "rows_imported" in data
         assert "table" in data
         assert "dataset_id" in data
+        assert "dataset_name" in data
+        assert "filename" in data
         assert "dataset_kind" in data
+        assert "columns" in data
         assert data["table"] == "roulette_series"
+        assert data["filename"] == "test_extractions.csv"
+        assert data["dataset_name"] == "test_extractions"
         assert data["dataset_kind"] == "training"
         assert data["rows_imported"] == 5
         assert isinstance(data["dataset_id"], int)
+        assert isinstance(data["columns"], list)
+        assert data["columns"] == ["draw_index", "observed_outcome"]
 
     def test_upload_empty_file_returns_400(self, api_context: APIRequestContext):
         """POST /data/upload with empty content should return 400."""
@@ -110,6 +117,8 @@ class TestDataUploadEdgeCases:
         )
         # Expect 400 because it's not a valid XLSX
         assert response.status == 400
+        payload = response.json()
+        assert "detail" in payload
 
     def test_upload_with_custom_separator(self, api_context: APIRequestContext):
         """POST /data/upload should respect csv_separator parameter."""
@@ -128,6 +137,9 @@ class TestDataUploadEdgeCases:
         )
         # This should succeed if the separator is handled correctly
         assert response.ok, f"Expected 200, got {response.status}: {response.text()}"
+        data = response.json()
+        assert data.get("rows_imported") == 3
+        assert data.get("dataset_kind") == "training"
 
     def test_upload_filters_invalid_outcomes_and_enriches_all_valid_rows(
         self, api_context: APIRequestContext

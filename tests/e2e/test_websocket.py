@@ -16,3 +16,8 @@ class TestTrainingPolling:
         assert "latest_stats" in data
         assert "history" in data
         assert "poll_interval" in data
+        assert isinstance(data["is_training"], bool)
+        assert isinstance(data["latest_stats"], dict)
+        assert isinstance(data["history"], list)
+        assert isinstance(data["poll_interval"], (int, float))
+        assert float(data["poll_interval"]) > 0
