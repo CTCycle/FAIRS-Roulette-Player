@@ -1,5 +1,4 @@
 # Project-specific generated/runtime artifacts
-assets/docs/**
 FAIRS/resources/database/**
 FAIRS/resources/runtimes/**
 FAIRS/resources/runtimes/uv_cache/**
