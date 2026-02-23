@@ -293,6 +293,27 @@ class DataSerializer:
     # -------------------------------------------------------------------------
     def delete_dataset(self, dataset_id: int | str) -> None:
         storage_dataset_id = self.to_storage_dataset_id(dataset_id)
+        sessions = self.queries.load_filtered_table(
+            INFERENCE_SESSIONS_TABLE,
+            {"dataset_id": storage_dataset_id},
+        )
+        if not sessions.empty and "session_id" in sessions.columns:
+            for session_id in sessions["session_id"].tolist():
+                resolved_session_id = str(session_id).strip()
+                if not resolved_session_id:
+                    continue
+                self.queries.delete_table_rows(
+                    INFERENCE_SESSION_STEPS_TABLE,
+                    {"session_id": resolved_session_id},
+                )
+        self.queries.delete_table_rows(
+            INFERENCE_SESSIONS_TABLE,
+            {"dataset_id": storage_dataset_id},
+        )
+        self.queries.delete_table_rows(
+            DATASET_OUTCOMES_TABLE,
+            {"dataset_id": storage_dataset_id},
+        )
         self.queries.delete_table_rows(
             DATASETS_TABLE, {"dataset_id": storage_dataset_id}
         )
