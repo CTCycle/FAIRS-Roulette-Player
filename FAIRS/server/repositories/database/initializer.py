@@ -122,25 +122,6 @@ def build_postgres_url(settings: DatabaseSettings, database_name: str) -> str:
     )
 
 
-# -----------------------------------------------------------------------------
-def clone_settings_with_database(
-    settings: DatabaseSettings, database_name: str
-) -> DatabaseSettings:
-    return DatabaseSettings(
-        embedded_database=False,
-        engine=settings.engine,
-        host=settings.host,
-        port=settings.port,
-        database_name=database_name,
-        username=settings.username,
-        password=settings.password,
-        ssl=settings.ssl,
-        ssl_ca=settings.ssl_ca,
-        connect_timeout=settings.connect_timeout,
-        insert_batch_size=settings.insert_batch_size,
-    )
-
-# -----------------------------------------------------------------------------
 def build_postgres_create_database_sql(
     database_name: str,
 ) -> TextClause:
@@ -189,7 +170,19 @@ def ensure_postgres_database(settings: DatabaseSettings) -> str:
             conn.execute(build_postgres_create_database_sql(target_database))
             logger.info("Created PostgreSQL database %s", target_database)
 
-    normalized_settings = clone_settings_with_database(settings, target_database)
+    normalized_settings = DatabaseSettings(
+        embedded_database=False,
+        engine=settings.engine,
+        host=settings.host,
+        port=settings.port,
+        database_name=target_database,
+        username=settings.username,
+        password=settings.password,
+        ssl=settings.ssl,
+        ssl_ca=settings.ssl_ca,
+        connect_timeout=settings.connect_timeout,
+        insert_batch_size=settings.insert_batch_size,
+    )
     repository = PostgresRepository(normalized_settings)
     Base.metadata.create_all(repository.engine)
     seed_roulette_outcomes(repository.engine)

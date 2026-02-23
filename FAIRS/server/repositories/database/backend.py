@@ -50,19 +50,9 @@ class DatabaseBackend(Protocol):
 BackendFactory = Callable[[DatabaseSettings], DatabaseBackend]
 
 
-# -----------------------------------------------------------------------------
-def build_sqlite_backend(settings: DatabaseSettings) -> DatabaseBackend:
-    return SQLiteRepository(settings)
-
-
-# -----------------------------------------------------------------------------
-def build_postgres_backend(settings: DatabaseSettings) -> DatabaseBackend:
-    return PostgresRepository(settings)
-
-
 BACKEND_FACTORIES: dict[str, BackendFactory] = {
-    "sqlite": build_sqlite_backend,
-    "postgres": build_postgres_backend,
+    "sqlite": SQLiteRepository,
+    "postgres": PostgresRepository,
 }
 
 
