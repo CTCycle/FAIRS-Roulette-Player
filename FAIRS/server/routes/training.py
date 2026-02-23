@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import time
 from typing import Any
 
@@ -259,6 +260,15 @@ def build_history_points(
             results.append(point)
 
     return results
+
+
+###############################################################################
+def get_last_history_value(values: Any) -> float | None:
+    if isinstance(values, list) and values:
+        last_value = values[-1]
+        if isinstance(last_value, (int, float)):
+            return float(last_value)
+    return None
 
 
 ###############################################################################
@@ -644,13 +654,6 @@ class TrainingEndpoint:
 
         history = session.get("history", {}) if isinstance(session, dict) else {}
 
-        def get_last_value(values: Any) -> float | None:
-            if isinstance(values, list) and values:
-                last_value = values[-1]
-                if isinstance(last_value, (int, float)):
-                    return float(last_value)
-            return None
-
         summary = {
             "dataset_id": configuration.get("dataset_id")
             or configuration.get("name")
@@ -669,10 +672,10 @@ class TrainingEndpoint:
             "model_update_frequency": configuration.get("model_update_frequency"),
             "bet_amount": configuration.get("bet_amount"),
             "initial_capital": configuration.get("initial_capital"),
-            "final_loss": get_last_value(history.get("loss")),
-            "final_rmse": get_last_value(history.get("metrics")),
-            "final_val_loss": get_last_value(history.get("val_loss")),
-            "final_val_rmse": get_last_value(history.get("val_rmse")),
+            "final_loss": get_last_history_value(history.get("loss")),
+            "final_rmse": get_last_history_value(history.get("metrics")),
+            "final_val_loss": get_last_history_value(history.get("val_loss")),
+            "final_val_rmse": get_last_history_value(history.get("val_rmse")),
         }
         raw_dataset_id = summary.get("dataset_id")
         if isinstance(raw_dataset_id, str):
@@ -703,8 +706,6 @@ class TrainingEndpoint:
             )
 
         try:
-            import shutil
-
             shutil.rmtree(checkpoint_path)
             return {"status": "success", "message": f"Checkpoint {checkpoint} deleted"}
         except Exception as exc:

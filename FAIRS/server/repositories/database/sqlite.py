@@ -16,6 +16,16 @@ from FAIRS.server.common.utils.logger import logger
 from FAIRS.server.repositories.schemas.models import Base
 
 
+# -----------------------------------------------------------------------------
+def set_sqlite_pragma(
+    dbapi_connection: Any,
+    _connection_record: Any,
+) -> None:
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
+
+
 # [SQLITE DATABASE]
 ###############################################################################
 class SQLiteRepository:
@@ -25,14 +35,9 @@ class SQLiteRepository:
         self.engine: Engine = sqlalchemy.create_engine(
             f"sqlite:///{self.db_path}", echo=False, future=True
         )
+        event.listen(self.engine, "connect", set_sqlite_pragma)
 
-        @event.listens_for(self.engine, "connect")
-        def _set_sqlite_pragma(dbapi_connection, _connection_record) -> None:  # type: ignore[no-untyped-def]
-            cursor = dbapi_connection.cursor()
-            cursor.execute("PRAGMA foreign_keys=ON")
-            cursor.close()
-
-        self.Session = sessionmaker(bind=self.engine, future=True)
+        self.session = sessionmaker(bind=self.engine, future=True)
         self.insert_batch_size = settings.insert_batch_size
         Base.metadata.create_all(self.engine)
 
@@ -46,7 +51,7 @@ class SQLiteRepository:
     # -------------------------------------------------------------------------
     def upsert_dataframe(self, df: pd.DataFrame, table_cls) -> None:
         table = table_cls.__table__
-        session = self.Session()
+        session = self.session()
         try:
             unique_cols = []
             for uc in table.constraints:
