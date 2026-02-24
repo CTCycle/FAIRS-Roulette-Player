@@ -29,7 +29,11 @@ def set_sqlite_pragma(
 # [SQLITE DATABASE]
 ###############################################################################
 class SQLiteRepository:
-    def __init__(self, settings: DatabaseSettings) -> None:
+    def __init__(
+        self,
+        settings: DatabaseSettings,
+        initialize_schema: bool = False,
+    ) -> None:
         self.db_path: str | None = os.path.join(RESOURCES_PATH, DATABASE_FILENAME)
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
         self.engine: Engine = sqlalchemy.create_engine(
@@ -39,7 +43,8 @@ class SQLiteRepository:
 
         self.session = sessionmaker(bind=self.engine, future=True)
         self.insert_batch_size = settings.insert_batch_size
-        Base.metadata.create_all(self.engine)
+        if initialize_schema:
+            Base.metadata.create_all(self.engine)
 
     # -------------------------------------------------------------------------
     def get_table_class(self, table_name: str) -> Any:

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import os
 import urllib.parse
 import sqlalchemy
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.sql.elements import TextClause
 
 from FAIRS.server.configurations import DatabaseSettings, server_settings
+from FAIRS.server.common.constants import DATABASE_FILENAME, RESOURCES_PATH
 from FAIRS.server.common.utils.logger import logger
 from FAIRS.server.repositories.database.postgres import PostgresRepository
 from FAIRS.server.repositories.database.sqlite import SQLiteRepository
@@ -132,9 +134,29 @@ def build_postgres_create_database_sql(
 
 # -----------------------------------------------------------------------------
 def initialize_sqlite_database(settings: DatabaseSettings) -> None:
-    repository = SQLiteRepository(settings)
+    repository = SQLiteRepository(settings, initialize_schema=True)
     seed_roulette_outcomes(repository.engine)
     logger.info("Initialized SQLite database at %s", repository.db_path)
+
+
+# -----------------------------------------------------------------------------
+def initialize_sqlite_database_if_missing(settings: DatabaseSettings) -> None:
+    db_path = os.path.join(RESOURCES_PATH, DATABASE_FILENAME)
+    if os.path.exists(db_path):
+        logger.info(
+            "SQLite database file already exists at %s. Skipping initialization.",
+            db_path,
+        )
+        return
+    initialize_sqlite_database(settings)
+
+
+# -----------------------------------------------------------------------------
+def initialize_sqlite_on_startup_if_missing() -> None:
+    settings = server_settings.database
+    if not settings.embedded_database:
+        return
+    initialize_sqlite_database_if_missing(settings)
 
 
 # -----------------------------------------------------------------------------
