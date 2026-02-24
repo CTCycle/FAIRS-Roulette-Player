@@ -14,6 +14,9 @@ from FAIRS.server.common.constants import (
     FASTAPI_TITLE,
     FASTAPI_VERSION,
 )
+from FAIRS.server.repositories.database.initializer import (
+    initialize_sqlite_on_startup_if_missing,
+)
 from FAIRS.server.routes.database import router as database_router
 from FAIRS.server.routes.inference import router as inference_router
 from FAIRS.server.routes.training import router as training_router
@@ -30,6 +33,11 @@ app.include_router(upload_router)
 app.include_router(training_router)
 app.include_router(database_router)
 app.include_router(inference_router)
+
+
+@app.on_event("startup")
+def initialize_embedded_database() -> None:
+    initialize_sqlite_on_startup_if_missing()
 
 
 @app.get("/")
