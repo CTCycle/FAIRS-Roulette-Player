@@ -113,6 +113,11 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
         }
     };
 
+    const messageVariantClass = uploadStatus === 'success'
+        ? 'upload-message-success'
+        : uploadStatus === 'error'
+            ? 'upload-message-error'
+            : 'upload-message-info';
 
 
     return (
@@ -134,7 +139,15 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
                             onClick={() => fileInputRef.current?.click()}
                             onDragOver={handleDragOver}
                             onDrop={handleDrop}
-                            style={{ height: '100%', minHeight: '120px' }}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(event) => {
+                                if (event.key === 'Enter' || event.key === ' ') {
+                                    event.preventDefault();
+                                    fileInputRef.current?.click();
+                                }
+                            }}
+                            aria-label={selectedFile ? `Selected file ${selectedFile.name}` : 'Upload dataset file'}
                         >
                             <Upload className="upload-icon" />
                             <div className="upload-text">
@@ -147,24 +160,24 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
                                 type="file"
                                 ref={fileInputRef}
                                 onChange={handleFileChange}
-                                style={{ display: 'none' }}
+                                className="hidden-file-input"
                                 accept=".csv,.xlsx,.xls"
                             />
                         </div>
 
                         {/* File Info + Clear Selection (Moved here to match width of dropzone) */}
-                        <div className="dataset-v2-bottom" style={{ marginTop: '1rem' }}>
+                        <div className="dataset-v2-bottom dataset-v2-bottom-spaced">
                             <div className="dataset-v2-file-info">
                                 {files.length > 0 ? (
                                     <>
                                         <File className="file-icon" size={18} />
-                                        <span className="file-name" title={files[0].name} style={{ fontWeight: 600 }}>
+                                        <span className="file-name dataset-file-name-strong" title={files[0].name}>
                                             {files[0].name}
                                         </span>
                                         <span className="file-size">{formatFileSize(files[0].size)}</span>
                                     </>
                                 ) : (
-                                    <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <span className="dataset-file-placeholder">
                                         <File size={18} /> No dataset selected
                                     </span>
                                 )}
@@ -193,42 +206,15 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
                                 className="btn-primary"
                                 onClick={uploadDataset}
                                 disabled={!selectedFile || uploadStatus === 'uploading'}
-                                style={{
-                                    marginTop: 0,
-                                    width: '100%',
-                                    opacity: !selectedFile || uploadStatus === 'uploading' ? 0.7 : 1
-                                }}
                             >
                                 <Upload /> Upload
                             </button>
 
                             {uploadMessage && (
                                 <div
-                                    style={{
-                                        marginTop: '0.5rem',
-                                        padding: '0.5rem',
-                                        borderRadius: '6px',
-                                        fontSize: '0.75rem',
-                                        lineHeight: '1.25',
-                                        background:
-                                            uploadStatus === 'success'
-                                                ? 'rgba(34, 197, 94, 0.16)'
-                                                : uploadStatus === 'error'
-                                                    ? 'rgba(239, 68, 68, 0.16)'
-                                                    : 'rgba(56, 189, 248, 0.16)',
-                                        color:
-                                            uploadStatus === 'success'
-                                                ? '#86efac'
-                                                : uploadStatus === 'error'
-                                                    ? '#fecaca'
-                                                    : '#bae6fd',
-                                        border:
-                                            uploadStatus === 'success'
-                                                ? '1px solid rgba(34, 197, 94, 0.45)'
-                                                : uploadStatus === 'error'
-                                                    ? '1px solid rgba(239, 68, 68, 0.45)'
-                                                    : '1px solid rgba(56, 189, 248, 0.45)',
-                                    }}
+                                    className={`upload-message ${messageVariantClass}`}
+                                    role="status"
+                                    aria-live="polite"
                                 >
                                     {uploadMessage}
                                 </div>
@@ -238,11 +224,8 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
                 </div>
             </div>
 
-            {/* Separator mostly hidden or removed spacing */}
-            <div style={{ paddingBottom: '0.5rem' }}></div>
-
-            {/* Configuration moved to TrainingControls */}
-            <div style={{ paddingBottom: '1rem' }}></div>
+            <div className="dataset-v2-spacer-sm" />
+            <div className="dataset-v2-spacer-md" />
         </div>
     );
 };

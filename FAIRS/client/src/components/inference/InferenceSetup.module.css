@@ -32,6 +32,7 @@
 
 .input,
 .select {
+    width: 100%;
     padding: var(--spacing-md);
     background-color: var(--bg-primary);
     border: 1px solid var(--border-color);
@@ -81,6 +82,12 @@
     margin-top: var(--spacing-xs);
     font-size: 0.85rem;
     color: var(--success);
+}
+
+.errorText {
+    margin-top: var(--spacing-sm);
+    color: var(--danger, #ff6b6b);
+    font-size: var(--font-size-sm);
 }
 
 /* Hide spin buttons for variety of browsers */

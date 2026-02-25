@@ -114,6 +114,11 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
         }
     };
 
+    const messageVariantClass = uploadStatus === 'success'
+        ? 'upload-message-success'
+        : uploadStatus === 'error'
+            ? 'upload-message-error'
+            : 'upload-message-info';
 
 
     return (
@@ -121,14 +126,23 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
             <div className="dataset-upload-controls">
                 <div
                     className={`upload-area ${selectedFile ? 'active' : ''}`}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => fileInputRef.current?.click()}
+                    onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            fileInputRef.current?.click();
+                        }
+                    }}
                     onDragOver={handleDragOver}
                     onDrop={handleDrop}
+                    aria-label={selectedFile ? `Selected file ${selectedFile.name}` : 'Upload dataset file'}
                 >
                     {selectedFile ? (
                         <>
-                            <FileIcon className="upload-icon" style={{ color: 'var(--roulette-green)' }} />
-                            <div className="upload-text" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                            <FileIcon className="upload-icon upload-icon-active" />
+                            <div className="upload-text upload-text-active">
                                 {selectedFile.name}
                             </div>
                             <div className="upload-hint">
@@ -150,7 +164,7 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
                         type="file"
                         ref={fileInputRef}
                         onChange={handleFileChange}
-                        style={{ display: 'none' }}
+                        className="hidden-file-input"
                         accept=".csv,.xlsx,.xls"
                     />
                 </div>
@@ -158,12 +172,11 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
                 <div className="upload-actions-row">
                     <button
                         type="button"
-                        className="btn-primary"
+                        className="btn-primary upload-button-grow"
                         onClick={uploadDataset}
                         disabled={!selectedFile || uploadStatus === 'uploading'}
-                        style={{ flex: 1, padding: '0.5rem 1rem', opacity: !selectedFile || uploadStatus === 'uploading' ? 0.7 : 1 }}
                     >
-                        <Upload size={16} style={{ marginRight: '0.5rem' }} /> Upload Data
+                        <Upload size={16} className="upload-button-icon" /> Upload Data
                     </button>
 
                     {selectedFile && (
@@ -179,30 +192,9 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
 
                 {uploadMessage && (
                     <div
-                        style={{
-                            marginTop: '0.75rem',
-                            padding: '0.5rem',
-                            borderRadius: '6px',
-                            fontSize: '0.85rem',
-                            background:
-                                uploadStatus === 'success'
-                                    ? 'rgba(34, 197, 94, 0.16)'
-                                    : uploadStatus === 'error'
-                                        ? 'rgba(239, 68, 68, 0.16)'
-                                        : 'rgba(56, 189, 248, 0.16)',
-                            color:
-                                uploadStatus === 'success'
-                                    ? '#86efac'
-                                    : uploadStatus === 'error'
-                                        ? '#fecaca'
-                                        : '#bae6fd',
-                            border:
-                                uploadStatus === 'success'
-                                    ? '1px solid rgba(34, 197, 94, 0.45)'
-                                    : uploadStatus === 'error'
-                                        ? '1px solid rgba(239, 68, 68, 0.45)'
-                                        : '1px solid rgba(56, 189, 248, 0.45)',
-                        }}
+                        className={`upload-message ${messageVariantClass}`}
+                        role="status"
+                        aria-live="polite"
                     >
                         {uploadMessage}
                     </div>

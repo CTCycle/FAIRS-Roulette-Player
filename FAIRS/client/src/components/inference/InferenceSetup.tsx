@@ -154,8 +154,9 @@ export const InferenceSetup: React.FC<InferenceSetupProps> = ({
             <h2 className={styles.title}>New Game Session</h2>
 
             <div className={styles.formGroup}>
-                <label className={styles.label}>Model Checkpoint</label>
+                <label className={styles.label} htmlFor="inference-setup-checkpoint">Model Checkpoint</label>
                 <select
+                    id="inference-setup-checkpoint"
                     className={styles.select}
                     value={checkpoint}
                     onChange={(e) => onSetupChange({ checkpoint: e.target.value })}
@@ -172,8 +173,9 @@ export const InferenceSetup: React.FC<InferenceSetupProps> = ({
             </div>
 
             <div className={styles.formGroup}>
-                <label className={styles.label}>Initial Capital (€)</label>
+                <label className={styles.label} htmlFor="inference-setup-capital">Initial Capital (€)</label>
                 <input
+                    id="inference-setup-capital"
                     type="number"
                     className={styles.input}
                     value={initialCapital}
@@ -183,8 +185,9 @@ export const InferenceSetup: React.FC<InferenceSetupProps> = ({
             </div>
 
             <div className={styles.formGroup}>
-                <label className={styles.label}>Bet Amount (€)</label>
+                <label className={styles.label} htmlFor="inference-setup-bet">Bet Amount (€)</label>
                 <input
+                    id="inference-setup-bet"
                     type="number"
                     className={styles.input}
                     value={betAmount}
@@ -194,15 +197,15 @@ export const InferenceSetup: React.FC<InferenceSetupProps> = ({
             </div>
 
             <div className={styles.formGroup}>
-                <label className={styles.label}>Inference Context (Dataset)</label>
+                <label className={styles.label} htmlFor="inference-setup-file">Inference Context (Dataset)</label>
                 <div className={styles.fileInputWrapper}>
                     <input
+                        id="inference-setup-file"
                         type="file"
                         ref={fileInputRef}
                         accept=".csv,.xlsx"
                         onChange={handleFileChange}
                         className={styles.input}
-                        style={{ width: '100%' }}
                     />
                 </div>
                 {(datasetFile || datasetFileMetadata) && (
@@ -213,7 +216,7 @@ export const InferenceSetup: React.FC<InferenceSetupProps> = ({
             </div>
 
             {error && (
-                <div style={{ marginTop: '0.5rem', color: 'var(--danger, #ff6b6b)' }}>
+                <div className={styles.errorText} role="alert" aria-live="polite">
                     {error}
                 </div>
             )}

@@ -1,25 +1,14 @@
 /* Data Preparation Page Styles - Copied and Adapted from Training.css */
-:root {
-    --roulette-red: var(--danger);
-    --roulette-black: var(--text-primary);
-    --roulette-green: var(--success);
-    --roulette-gold: var(--warning);
-    --bg-light: var(--bg-primary);
-    --card-bg: var(--bg-secondary);
-    --text-dark: var(--text-primary);
-    --text-light: #ffffff;
-}
 
 .data-preparation-page {
     display: flex;
     flex-direction: column;
     gap: 2rem;
     padding: 2rem;
-    background-color: var(--bg-light);
+    background-color: var(--bg-primary);
     height: 100%;
     overflow-y: auto;
-    font-family: 'Inter', system-ui, sans-serif;
-    color: var(--text-dark);
+    color: var(--text-primary);
 }
 
 .page-header {
@@ -29,9 +18,9 @@
 .page-title {
     font-size: 2rem;
     font-weight: 700;
-    color: var(--roulette-black);
+    color: var(--text-primary);
     margin: 0;
-    border-left: 5px solid var(--roulette-red);
+    border-left: 5px solid var(--danger);
     padding-left: 1rem;
 }
 
@@ -50,7 +39,7 @@
 
 /* Card Styles */
 .card {
-    background-color: var(--card-bg);
+    background-color: var(--bg-secondary);
     border-radius: 20px;
     box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.05);
     padding: 1.5rem;
@@ -73,14 +62,14 @@
 .card-title {
     font-size: 1.25rem;
     font-weight: 600;
-    color: var(--roulette-black);
+    color: var(--text-primary);
     display: flex;
     align-items: center;
     gap: 0.5rem;
 }
 
 .card-title svg {
-    color: var(--roulette-red);
+    color: var(--danger);
 }
 
 /* Dataset Upload Section */
@@ -116,11 +105,21 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    min-height: 120px;
+}
+
+.upload-area:focus-visible {
+    border-color: var(--primary-accent);
+    background-color: rgba(14, 165, 233, 0.08);
+}
+
+.hidden-file-input {
+    display: none;
 }
 
 .upload-area:hover,
 .dataset-upload-controls .upload-area.active {
-    border-color: var(--roulette-green);
+    border-color: var(--success);
     background-color: rgba(34, 197, 94, 0.12);
 }
 
@@ -166,7 +165,7 @@
 
 .file-icon {
     margin-right: 0.75rem;
-    color: var(--roulette-black);
+    color: var(--text-primary);
     width: 18px;
     height: 18px;
 }
@@ -187,7 +186,7 @@
 .btn-primary {
     width: 100%;
     padding: 1rem;
-    background-color: var(--roulette-green);
+    background-color: var(--success);
     color: white;
     border: none;
     border-radius: 12px;
@@ -202,6 +201,10 @@
     margin-top: 1rem;
 }
 
+.dataset-action-button-wrapper .btn-primary {
+    margin-top: 0;
+}
+
 .btn-primary:hover {
     background-color: #16a34a;
 }
@@ -210,12 +213,6 @@
     transform: translateY(1px);
 }
 
-text-align: center;
-border: 1px dashed #eee;
-border-radius: 8px;
-}
-
-/* New Layout V2 */
 /* New Layout V2 */
 .dataset-v2-container {
     display: flex;
@@ -270,11 +267,27 @@ border-radius: 8px;
     border-radius: 12px;
 }
 
+.dataset-v2-bottom-spaced {
+    margin-top: 1rem;
+}
+
 .dataset-v2-file-info {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    color: var(--text-dark);
+    color: var(--text-primary);
+}
+
+.dataset-file-name-strong {
+    font-weight: 600;
+}
+
+.dataset-file-placeholder {
+    color: var(--text-secondary);
+    font-style: italic;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .dataset-v2-clear-btn {
@@ -295,4 +308,39 @@ border-radius: 8px;
     background: rgba(239, 68, 68, 0.12);
     border-color: rgba(239, 68, 68, 0.45);
     color: #fecaca;
+}
+
+.upload-message {
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    line-height: 1.25;
+    border: 1px solid transparent;
+}
+
+.upload-message-success {
+    background: rgba(34, 197, 94, 0.16);
+    color: #86efac;
+    border-color: rgba(34, 197, 94, 0.45);
+}
+
+.upload-message-error {
+    background: rgba(239, 68, 68, 0.16);
+    color: #fecaca;
+    border-color: rgba(239, 68, 68, 0.45);
+}
+
+.upload-message-info {
+    background: rgba(56, 189, 248, 0.16);
+    color: #bae6fd;
+    border-color: rgba(56, 189, 248, 0.45);
+}
+
+.dataset-v2-spacer-sm {
+    padding-bottom: 0.5rem;
+}
+
+.dataset-v2-spacer-md {
+    padding-bottom: 1rem;
 }

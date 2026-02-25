@@ -13,7 +13,10 @@ from sqlalchemy.orm import sessionmaker
 
 from FAIRS.server.configurations import DatabaseSettings
 from FAIRS.server.common.utils.logger import logger
-from FAIRS.server.repositories.database.utils import normalize_postgres_engine
+from FAIRS.server.repositories.database.utils import (
+    coerce_value_for_sql_column,
+    normalize_postgres_engine,
+)
 from FAIRS.server.repositories.schemas.models import Base
 
 
@@ -77,6 +80,11 @@ class PostgresRepository:
                 sanitized: dict[str, Any] = {}
                 for key, value in record.items():
                     normalized = None if pd.isna(value) else value
+                    if key in table.c:
+                        normalized = coerce_value_for_sql_column(
+                            normalized,
+                            table.c[key].type,
+                        )
                     if key == "id" and normalized is None:
                         continue
                     sanitized[key] = normalized

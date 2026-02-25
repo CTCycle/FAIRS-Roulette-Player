@@ -1,6 +1,7 @@
 .main-layout {
     display: flex;
-    height: 100vh;
+    height: 100%;
+    min-height: 100vh;
     overflow: hidden;
 }
 
@@ -8,9 +9,22 @@
     flex: 1;
     margin-left: 180px;
     /* Width of sidebar */
-    /* Padding removed to allow pages to control their full layout */
     background-color: var(--bg-primary);
-    overflow: hidden;
+    overflow: auto;
     display: flex;
     flex-direction: column;
+    min-width: 0;
+}
+
+@media (max-width: 900px) {
+    .main-layout {
+        flex-direction: column;
+        min-height: 100dvh;
+        overflow: auto;
+    }
+
+    .content-area {
+        margin-left: 0;
+        min-height: 0;
+    }
 }

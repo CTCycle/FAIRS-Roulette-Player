@@ -163,9 +163,10 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
         isGenerator = false,
     ) => {
         if (isTraining) {
-            alert('Training is already in progress.');
+            setError('Training is already in progress.');
             return;
         }
+        setError(null);
         setWizardDatasetId(datasetId);
         setWizardDatasetLabel(datasetLabel);
         setWizardStep(0);
@@ -191,7 +192,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
 
     const handleStartTraining = async () => {
         if (isTraining) {
-            alert('Training is already in progress.');
+            setWizardError('Training is already in progress.');
             return;
         }
         if (!newConfig.useDataGen && !wizardDatasetId) {
@@ -338,9 +339,14 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
 
             {wizardOpen && (
                 <div className="wizard-modal-overlay">
-                    <div className="wizard-modal" role="dialog" aria-modal="true">
+                    <div
+                        className="wizard-modal"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="new-training-wizard-title"
+                    >
                         <div className="wizard-modal-header">
-                            <div className="wizard-modal-title">
+                            <div id="new-training-wizard-title" className="wizard-modal-title">
                                 <Play size={18} />
                                 New Training Wizard
                             </div>
@@ -579,7 +585,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                                                 className="form-input"
                                                 min="100"
                                             />
-                                            <p className="form-hint" style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                            <p className="form-hint form-hint-compact">
                                                 The synthetic generator will produce this many roulette extraction samples for training.
                                             </p>
                                         </div>

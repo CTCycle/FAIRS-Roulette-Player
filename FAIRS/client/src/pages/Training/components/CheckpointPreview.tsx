@@ -41,6 +41,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
     const [checkpoints, setCheckpoints] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [notice, setNotice] = useState<string | null>(null);
     const [metadataOpen, setMetadataOpen] = useState(false);
     const [metadataLoading, setMetadataLoading] = useState(false);
     const [metadataError, setMetadataError] = useState<string | null>(null);
@@ -60,6 +61,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
     const loadCheckpoints = async () => {
         setLoading(true);
         setError(null);
+        setNotice(null);
         try {
             const response = await fetch('/api/training/checkpoints');
             if (!response.ok) {
@@ -123,6 +125,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
         if (!confirm(`Are you sure you want to delete checkpoint "${checkpointName}"?`)) {
             return;
         }
+        setNotice(null);
 
         try {
             const response = await fetch(`/api/training/checkpoints/${checkpointName}`, {
@@ -137,7 +140,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
             setCheckpoints((prev) => prev.filter((name) => name !== checkpointName));
         } catch (err) {
             console.error('Error deleting checkpoint:', err);
-            alert(`Error deleting checkpoint: ${err instanceof Error ? err.message : String(err)}`);
+            setError(`Error deleting checkpoint: ${err instanceof Error ? err.message : String(err)}`);
         }
     };
 
@@ -216,7 +219,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
 
     const handleResumeTraining = async () => {
         if (isTraining) {
-            alert('Training is already in progress.');
+            setResumeWizardError('Training is already in progress.');
             return;
         }
         if (!resumeWizardCheckpoint) {
@@ -253,6 +256,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
     };
 
     const handleEvaluateCheckpoint = async (checkpointName: string) => {
+        setNotice(null);
         try {
             const payload = metadataCache[checkpointName] ?? await loadCheckpointMetadata(checkpointName);
             if (!metadataCache[checkpointName]) {
@@ -264,7 +268,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
             const initialCapital = typeof summary.initial_capital === 'number' ? summary.initial_capital : 100;
 
             if (!datasetId) {
-                alert('Checkpoint metadata does not include a dataset identifier.');
+                setError('Checkpoint metadata does not include a dataset identifier.');
                 return;
             }
 
@@ -281,14 +285,14 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
 
             if (!response.ok) {
                 const errorPayload = await response.json();
-                alert(`Failed to start evaluation: ${errorPayload.detail || 'Unknown error'}`);
+                setError(`Failed to start evaluation: ${errorPayload.detail || 'Unknown error'}`);
                 return;
             }
 
             const result = await response.json();
-            alert(`Evaluation session started (session ${result.session_id}). Continue from the Inference page.`);
+            setNotice(`Evaluation session started (session ${result.session_id}). Continue from the Inference page.`);
         } catch (err) {
-            alert(err instanceof Error ? err.message : 'Unable to start evaluation.');
+            setError(err instanceof Error ? err.message : 'Unable to start evaluation.');
         }
     };
 
@@ -323,7 +327,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
 
     const openResumeWizard = async (checkpointName: string) => {
         if (isTraining) {
-            alert('Training is already in progress.');
+            setError('Training is already in progress.');
             return;
         }
         setResumeWizardOpen(true);
@@ -396,6 +400,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
             <div className="preview-content">
                 {loading && <div className="preview-loading">Loading...</div>}
                 {error && <div className="preview-error">{error}</div>}
+                {notice && <div className="preview-notice">{notice}</div>}
                 {!loading && !error && checkpoints.length === 0 && (
                     <div className="preview-empty">No checkpoints available</div>
                 )}
@@ -486,9 +491,14 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
 
             {resumeWizardOpen && (
                 <div className="wizard-modal-overlay">
-                    <div className="wizard-modal" role="dialog" aria-modal="true">
+                    <div
+                        className="wizard-modal"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="resume-training-wizard-title"
+                    >
                         <div className="wizard-modal-header">
-                            <div className="wizard-modal-title">
+                            <div id="resume-training-wizard-title" className="wizard-modal-title">
                                 <RefreshCw size={18} />
                                 Resume Training Wizard
                             </div>
