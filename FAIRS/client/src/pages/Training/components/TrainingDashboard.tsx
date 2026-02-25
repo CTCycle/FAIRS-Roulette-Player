@@ -572,7 +572,7 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                         <span className="visual-card-title">Loss</span>
                         <div className="visual-card-legend">
                             <span className="legend-item"><span className="legend-dot loss"></span>Train</span>
-                            <span className="legend-item" style={{ opacity: 0.7 }}><span className="legend-dot loss" style={{ opacity: 0.5 }}></span>Validation</span>
+                            <span className="legend-item legend-item-muted"><span className="legend-dot loss legend-dot-muted"></span>Validation</span>
                         </div>
                     </div>
                     <TrainingLossChart points={chartPoints} />

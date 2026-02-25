@@ -705,16 +705,6 @@ export const GameSession: React.FC<GameSessionProps> = ({
     const canPlay = !sessionActive && !isStarting;
     const canStop = sessionActive && !isStopping;
     const canClear = !sessionActive && history.length > 0;
-    const uniformButtonStyle: React.CSSProperties = {
-        height: 36,
-        minHeight: 36,
-        paddingTop: 0,
-        paddingBottom: 0,
-        lineHeight: '36px',
-        boxSizing: 'border-box',
-        borderWidth: 1,
-        borderStyle: 'solid',
-    };
 
     return (
         <div className={styles.sessionContainer}>
@@ -722,10 +712,12 @@ export const GameSession: React.FC<GameSessionProps> = ({
                 <div className={styles.card}>
                     <div className={styles.sectionTitle}>Select checkpoint</div>
                     <select
+                        id="inference-checkpoint"
                         className={styles.select}
                         value={setup.checkpoint}
                         onChange={(e) => onSetupChange({ checkpoint: e.target.value })}
                         disabled={checkpoints.length === 0 || setupLocked}
+                        aria-label="Model checkpoint"
                     >
                         {checkpoints.length === 0 ? (
                             <option value="">No checkpoints found</option>
@@ -739,12 +731,14 @@ export const GameSession: React.FC<GameSessionProps> = ({
                     <div className={styles.sectionTitle}>Selected dataset</div>
                     <div className={styles.datasetRow}>
                         <select
+                            id="inference-dataset"
                             className={styles.select}
                             value={setup.datasetSource === 'uploaded'
                                 ? setup.uploadedDatasetName || ''
                                 : setup.selectedDataset}
                             onChange={(e) => onSetupChange({ selectedDataset: e.target.value, datasetSource: 'source' })}
                             disabled={datasets.length === 0 || datasetLocked}
+                            aria-label="Inference dataset"
                         >
                             {setup.datasetSource === 'uploaded' && setup.uploadedDatasetName ? (
                                 <option value={setup.uploadedDatasetName}>
@@ -771,13 +765,13 @@ export const GameSession: React.FC<GameSessionProps> = ({
                             onChange={handleFileChange}
                             className={styles.hiddenFileInput}
                             disabled={setupLocked}
+                            aria-label="Upload inference dataset"
                         />
                         <button
                             type="button"
                             className={`${styles.secondaryButton} ${styles.uploadButton}`}
                             onClick={handleUploadClick}
                             disabled={setupLocked || isUploading}
-                            style={uniformButtonStyle}
                         >
                             {isUploading ? 'Uploading...' : 'Upload'}
                         </button>
@@ -786,7 +780,6 @@ export const GameSession: React.FC<GameSessionProps> = ({
                             className={styles.ghostButton}
                             onClick={handleClearUpload}
                             disabled={setupLocked || setup.datasetSource !== 'uploaded'}
-                            style={uniformButtonStyle}
                         >
                             Clear
                         </button>
@@ -795,8 +788,9 @@ export const GameSession: React.FC<GameSessionProps> = ({
                     <div className={styles.sectionTitle}>Initial parameters</div>
                     <div className={styles.inlineFields}>
                         <div className={styles.inlineField}>
-                            <label className={styles.label}>Initial capital</label>
+                            <label className={styles.label} htmlFor="inference-initial-capital">Initial capital</label>
                             <input
+                                id="inference-initial-capital"
                                 type="number"
                                 className={styles.input}
                                 value={setup.initialCapital}
@@ -812,8 +806,9 @@ export const GameSession: React.FC<GameSessionProps> = ({
                             />
                         </div>
                         <div className={styles.inlineField}>
-                            <label className={styles.label}>Bet amount</label>
+                            <label className={styles.label} htmlFor="inference-bet-amount">Bet amount</label>
                             <input
+                                id="inference-bet-amount"
                                 type="number"
                                 className={styles.input}
                                 value={setup.betAmount}
@@ -828,7 +823,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
                     <div className={styles.statGrid}>
                         <div className={styles.statItem}>
                             <span className={styles.statLabel}>Current Capital</span>
-                            <span className={styles.statValue} style={{ color: 'var(--primary-accent)' }}>
+                            <span className={`${styles.statValue} ${styles.statValueAccent}`}>
                                 € {sessionState.currentCapital.toFixed(2)}
                             </span>
                         </div>
@@ -900,7 +895,6 @@ export const GameSession: React.FC<GameSessionProps> = ({
                                 className={styles.primaryButton}
                                 onClick={handlePlay}
                                 disabled={!canPlay || isRecomputing}
-                                style={uniformButtonStyle}
                             >
                                 <Play size={16} /> Play
                             </button>
@@ -909,7 +903,6 @@ export const GameSession: React.FC<GameSessionProps> = ({
                                 className={styles.secondaryButton}
                                 onClick={handleStop}
                                 disabled={!canStop || isRecomputing}
-                                style={uniformButtonStyle}
                             >
                                 <Square size={16} /> Stop
                             </button>
@@ -924,7 +917,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
                         </div>
                     </div>
                     {error && (
-                        <div className={styles.errorText}>{error}</div>
+                        <div className={styles.errorText} role="alert" aria-live="polite">{error}</div>
                     )}
                     <div className={styles.tableBody}>
                         <table className={styles.historyTable}>
@@ -958,6 +951,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
                                                     type="text"
                                                     className={styles.tableInput}
                                                     value={step.observedInput}
+                                                    aria-label={`Observed value for step ${step.step}`}
                                                     onChange={(e) => handleObservedChange(index, e.target.value)}
                                                     onKeyDown={(e) => {
                                                         if (e.key === 'Enter') {

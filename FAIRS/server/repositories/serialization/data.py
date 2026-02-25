@@ -16,6 +16,7 @@ from FAIRS.server.common.constants import (
     INFERENCE_SESSION_STEPS_COLUMNS,
     INFERENCE_SESSION_STEPS_TABLE,
 )
+from FAIRS.server.repositories.database.utils import normalize_datetime_value
 from FAIRS.server.repositories.queries.data import DataRepositoryQueries
 
 
@@ -339,6 +340,9 @@ class DataSerializer:
                 resolved_row["dataset_id"] = str(normalized_dataset_id)
             else:
                 resolved_row["dataset_id"] = str(dataset_id)
+        for key in ("started_at", "ended_at"):
+            if key in resolved_row:
+                resolved_row[key] = normalize_datetime_value(resolved_row.get(key))
         frame = pd.DataFrame([resolved_row]).reindex(columns=INFERENCE_SESSIONS_COLUMNS)
         frame = frame.where(pd.notnull(frame), cast(Any, None))
         self.queries.upsert_table(frame, INFERENCE_SESSIONS_TABLE)

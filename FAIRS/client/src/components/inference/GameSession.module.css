@@ -24,7 +24,7 @@
 
 .card {
     background-color: var(--bg-secondary);
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     border: 1px solid var(--border-color);
     padding: var(--spacing-md);
     overflow: hidden;
@@ -61,7 +61,7 @@
     padding: var(--spacing-sm) var(--spacing-md);
     background-color: var(--bg-primary);
     border: 1px solid var(--border-color);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     color: var(--text-primary);
     font-size: 0.95rem;
     outline: none;
@@ -108,7 +108,7 @@
     background-color: var(--primary-accent);
     color: white;
     padding: var(--spacing-sm) var(--spacing-md);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     font-weight: 600;
     font-size: 0.9rem;
     display: inline-flex;
@@ -116,7 +116,7 @@
     gap: var(--spacing-xs);
     border: none;
     cursor: pointer;
-    height: 36px;
+    height: var(--control-height);
 }
 
 .primaryButton:disabled {
@@ -128,7 +128,7 @@
     background-color: var(--bg-primary);
     color: var(--text-primary);
     padding: var(--spacing-sm) var(--spacing-md);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     font-weight: 600;
     font-size: 0.85rem;
     border: 1px solid var(--border-color);
@@ -136,17 +136,18 @@
     align-items: center;
     gap: var(--spacing-xs);
     cursor: pointer;
-    height: 36px;
+    height: var(--control-height);
 }
 
 .uploadButton {
     background-color: var(--text-accent);
     border-color: transparent;
-    color: #fff;
+    color: var(--bg-primary);
 }
 
 .uploadButton:hover {
     background-color: var(--primary-accent);
+    color: var(--bg-primary);
 }
 
 .uploadButton:disabled {
@@ -162,18 +163,18 @@
     background-color: transparent;
     color: var(--text-secondary);
     padding: var(--spacing-sm) var(--spacing-md);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     font-weight: 500;
     font-size: 0.85rem;
     border: 1px solid var(--border-color);
     cursor: pointer;
-    height: 36px;
+    height: var(--control-height);
 }
 
 .primaryButton,
 .secondaryButton,
 .ghostButton {
-    height: 36px;
+    height: var(--control-height);
     padding: 0 var(--spacing-md);
     line-height: 1;
     box-sizing: border-box;
@@ -186,6 +187,13 @@
 .ghostButton:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+.primaryButton:focus-visible,
+.secondaryButton:focus-visible,
+.ghostButton:focus-visible,
+.iconButton:focus-visible {
+    border-color: var(--primary-accent);
 }
 
 .statGrid {
@@ -210,10 +218,14 @@
     font-weight: 600;
 }
 
+.statValueAccent {
+    color: var(--primary-accent);
+}
+
 .predictionCard {
     background-color: var(--bg-secondary);
     border: 1px solid var(--primary-accent);
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     padding: var(--spacing-lg);
     text-align: center;
     display: flex;
@@ -221,7 +233,7 @@
     align-items: center;
     justify-content: center;
     gap: var(--spacing-sm);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    box-shadow: var(--shadow-sm);
     flex: 0 0 auto;
     min-height: 220px;
 }
@@ -252,7 +264,7 @@
 }
 
 .tableBody {
-    overflow-y: auto;
+    overflow: auto;
     flex: 1;
     min-height: 0;
 }
@@ -285,6 +297,7 @@
 
 .historyTable {
     width: 100%;
+    min-width: 640px;
     border-collapse: collapse;
     font-size: 0.9rem;
 }
@@ -326,13 +339,21 @@
 .iconButton {
     background-color: transparent;
     border: 1px solid var(--border-color);
-    border-radius: 6px;
-    padding: 4px 6px;
+    border-radius: var(--radius-sm);
+    width: var(--icon-button-size);
+    height: var(--icon-button-size);
     display: inline-flex;
     align-items: center;
     justify-content: center;
     color: var(--text-secondary);
     cursor: pointer;
+    transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.iconButton:hover:not(:disabled) {
+    color: var(--text-primary);
+    border-color: var(--primary-accent);
+    background-color: rgba(14, 165, 233, 0.1);
 }
 
 .iconButton:disabled {
