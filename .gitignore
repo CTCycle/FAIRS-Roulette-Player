@@ -1,5 +1,4 @@
 # Project-specific generated/runtime artifacts
-FAIRS/resources/database/**
 FAIRS/resources/runtimes/**
 FAIRS/resources/runtimes/uv_cache/**
 FAIRS/resources/logs/**
@@ -42,7 +41,7 @@ lerna-debug.log*
 Thumbs.db
 
 # Agents
-.agent/**
+.agent/skills/**
 
 # Misc
 *.lock
@@ -51,8 +50,9 @@ Thumbs.db
 *.sqlite*
 *.exe
 *.gz
+uv.lock
 
 !.gitkeep
 
 
-
+FAIRS/client/package-lock.json
