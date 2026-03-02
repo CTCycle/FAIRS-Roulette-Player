@@ -19,6 +19,20 @@ from FAIRS.server.repositories.database.utils import (
 )
 from FAIRS.server.repositories.schemas.models import Base
 
+ALLOWED_TABLE_NAMES = frozenset(Base.metadata.tables.keys())
+
+
+###############################################################################
+def normalize_table_name(table_name: str) -> str:
+    if not isinstance(table_name, str):
+        raise ValueError("Table name must be a string.")
+    candidate = table_name.strip()
+    if candidate != table_name or not candidate:
+        raise ValueError("Invalid table name.")
+    if candidate not in ALLOWED_TABLE_NAMES:
+        raise ValueError(f"Unsupported table name: {table_name}")
+    return candidate
+
 
 ###############################################################################
 class PostgresRepository:
@@ -56,6 +70,7 @@ class PostgresRepository:
 
     # -------------------------------------------------------------------------
     def get_table_class(self, table_name: str) -> Any:
+        table_name = normalize_table_name(table_name)
         for cls in Base.__subclasses__():
             if getattr(cls, "__tablename__", None) == table_name:
                 return cls
@@ -145,6 +160,7 @@ class PostgresRepository:
         limit: int | None = None,
         offset: int | None = None,
     ) -> pd.DataFrame:
+        table_name = normalize_table_name(table_name)
         with self.engine.connect() as conn:
             inspector = inspect(conn)
             if not inspector.has_table(table_name):
@@ -168,6 +184,7 @@ class PostgresRepository:
     def load_filtered(
         self, table_name: str, conditions: dict[str, Any]
     ) -> pd.DataFrame:
+        table_name = normalize_table_name(table_name)
         with self.engine.connect() as conn:
             inspector = inspect(conn)
             if not inspector.has_table(table_name):
@@ -187,6 +204,7 @@ class PostgresRepository:
 
     # -------------------------------------------------------------------------
     def save_into_database(self, df: pd.DataFrame, table_name: str) -> None:
+        table_name = normalize_table_name(table_name)
         with self.engine.begin() as conn:
             inspector = inspect(conn)
             if inspector.has_table(table_name):
@@ -195,6 +213,7 @@ class PostgresRepository:
 
     # -------------------------------------------------------------------------
     def clear_table(self, table_name: str) -> None:
+        table_name = normalize_table_name(table_name)
         with self.engine.begin() as conn:
             inspector = inspect(conn)
             if inspector.has_table(table_name):
@@ -202,6 +221,7 @@ class PostgresRepository:
 
     # -------------------------------------------------------------------------
     def append_into_database(self, df: pd.DataFrame, table_name: str) -> None:
+        table_name = normalize_table_name(table_name)
         if df.empty:
             return
         with self.engine.begin() as conn:
@@ -209,11 +229,13 @@ class PostgresRepository:
 
     # -------------------------------------------------------------------------
     def upsert_into_database(self, df: pd.DataFrame, table_name: str) -> None:
+        table_name = normalize_table_name(table_name)
         table_cls = self.get_table_class(table_name)
         self.upsert_dataframe(df, table_cls)
 
     # -------------------------------------------------------------------------
     def delete_from_database(self, table_name: str, conditions: dict[str, Any]) -> None:
+        table_name = normalize_table_name(table_name)
         if not conditions:
             return
         with self.engine.begin() as conn:

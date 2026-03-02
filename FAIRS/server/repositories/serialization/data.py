@@ -19,6 +19,20 @@ from FAIRS.server.common.constants import (
 from FAIRS.server.repositories.database.utils import normalize_datetime_value
 from FAIRS.server.repositories.queries.data import DataRepositoryQueries
 
+MAX_DATASET_NAME_LENGTH = 128
+
+
+###############################################################################
+def normalize_dataset_name(dataset_name: str) -> str:
+    cleaned = dataset_name.strip()
+    if not cleaned:
+        raise ValueError("Dataset name cannot be empty.")
+    if len(cleaned) > MAX_DATASET_NAME_LENGTH:
+        raise ValueError("Dataset name is too long.")
+    if any(ord(char) < 32 for char in cleaned):
+        raise ValueError("Dataset name contains invalid control characters.")
+    return cleaned
+
 
 ###############################################################################
 class DataSerializer:
@@ -67,10 +81,8 @@ class DataSerializer:
 
     # -------------------------------------------------------------------------
     def ensure_dataset(self, dataset_name: str, dataset_kind: str) -> int:
-        clean_name = dataset_name.strip()
+        clean_name = normalize_dataset_name(dataset_name)
         clean_kind = dataset_kind.strip().lower()
-        if not clean_name:
-            raise ValueError("Dataset name cannot be empty.")
         if clean_kind not in {"training", "inference"}:
             raise ValueError(f"Unsupported dataset kind: {dataset_kind}")
 

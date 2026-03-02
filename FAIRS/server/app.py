@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import warnings
 
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -22,11 +23,23 @@ from FAIRS.server.routes.inference import router as inference_router
 from FAIRS.server.routes.training import router as training_router
 from FAIRS.server.routes.upload import router as upload_router
 
+
+###############################################################################
+def is_api_docs_enabled() -> bool:
+    raw = os.getenv("ENABLE_API_DOCS", "true").strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
+ENABLE_API_DOCS = is_api_docs_enabled()
+
 ###############################################################################
 app = FastAPI(
     title=FASTAPI_TITLE,
     version=FASTAPI_VERSION,
     description=FASTAPI_DESCRIPTION,
+    docs_url="/docs" if ENABLE_API_DOCS else None,
+    redoc_url="/redoc" if ENABLE_API_DOCS else None,
+    openapi_url="/openapi.json" if ENABLE_API_DOCS else None,
 )
 
 app.include_router(upload_router)
@@ -41,5 +54,7 @@ def initialize_embedded_database() -> None:
 
 
 @app.get("/")
-def redirect_to_docs() -> RedirectResponse:
-    return RedirectResponse(url="/docs")
+def redirect_to_docs() -> RedirectResponse | dict[str, str]:
+    if ENABLE_API_DOCS:
+        return RedirectResponse(url="/docs")
+    return {"status": "ok"}
