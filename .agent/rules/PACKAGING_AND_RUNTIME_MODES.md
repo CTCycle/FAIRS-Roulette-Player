@@ -26,6 +26,7 @@ Runtime switching is configuration-only:
 | `FASTAPI_HOST`, `FASTAPI_PORT` | Backend host/port. |
 | `UI_HOST`, `UI_PORT` | Frontend host/port. |
 | `VITE_API_BASE_URL` | Frontend API base path (`/api` expected for same-origin proxying). |
+| `ENABLE_API_DOCS` | Enables FastAPI docs/OpenAPI endpoints (`true` for local, `false` recommended in cloud). |
 | `RELOAD` | Enables Uvicorn reload in local mode when `true`. |
 | `OPTIONAL_DEPENDENCIES` | Enables optional extras (tests/playwright) during local setup. |
 | `DB_EMBEDDED` | `true` = embedded SQLite, `false` = external DB config required. |
@@ -82,7 +83,7 @@ docker compose --env-file FAIRS/settings/.env down
 
 Cloud topology:
 
-- `backend`: FastAPI/Uvicorn on internal `8000`.
+- `backend`: FastAPI/Uvicorn on internal `8000` (not published to host by docker compose).
 - `frontend`: Nginx serving built SPA.
 - `/api/*` is proxied from frontend to backend.
 

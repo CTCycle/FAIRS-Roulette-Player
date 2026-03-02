@@ -5,8 +5,8 @@ services:
       dockerfile: docker/backend.Dockerfile
     env_file:
       - FAIRS/settings/.env
-    ports:
-      - "${FASTAPI_HOST:-0.0.0.0}:${FASTAPI_PORT:-8000}:8000"
+    expose:
+      - "8000"
     volumes:
       - fairs_resources:/app/FAIRS/resources
     healthcheck:
@@ -15,7 +15,7 @@ services:
           "CMD",
           ".venv/bin/python",
           "-c",
-          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/docs').read()",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/').read()",
         ]
       interval: 10s
       timeout: 5s

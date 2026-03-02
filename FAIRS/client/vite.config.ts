@@ -13,7 +13,10 @@ export default defineConfig(({ mode }) => {
     const apiHost = env.FASTAPI_HOST || '127.0.0.1'
     const apiPort = env.FASTAPI_PORT || '8000'
     const apiTarget = `http://${apiHost}:${apiPort}`
-    const apiBase = env.VITE_API_BASE_URL || '/api'
+    const apiBase = (env.VITE_API_BASE_URL || '/api').trim() || '/api'
+    if (!apiBase.startsWith('/') || apiBase.startsWith('//') || /^[a-z]+:\/\//i.test(apiBase)) {
+        throw new Error('VITE_API_BASE_URL must be a relative API path like /api')
+    }
     const apiBasePattern = new RegExp(`^${apiBase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`)
 
     const uiHost = env.UI_HOST || '127.0.0.1'

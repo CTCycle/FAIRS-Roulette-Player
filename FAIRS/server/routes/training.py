@@ -41,6 +41,35 @@ TRAINING_STATUSES = {
     "cancelled",
 }
 HISTORY_POINTS_PER_EPISODE = 20
+MAX_CHECKPOINT_NAME_LENGTH = 128
+CHECKPOINT_EMPTY_MESSAGE_TEXT = "Checkpoint name cannot be empty"
+
+
+###############################################################################
+def normalize_checkpoint_name(checkpoint: str) -> str:
+    candidate = checkpoint.strip()
+    if not candidate:
+        raise ValueError(CHECKPOINT_EMPTY_MESSAGE_TEXT)
+    if len(candidate) > MAX_CHECKPOINT_NAME_LENGTH:
+        raise ValueError("Checkpoint name is too long.")
+    if candidate in {".", ".."}:
+        raise ValueError("Invalid checkpoint name.")
+    if any(ord(char) < 32 for char in candidate):
+        raise ValueError("Checkpoint name contains invalid control characters.")
+    if any(separator in candidate for separator in ("/", "\\", ":")):
+        raise ValueError("Invalid checkpoint name.")
+    if os.path.basename(candidate) != candidate:
+        raise ValueError("Invalid checkpoint name.")
+    return candidate
+
+
+# -----------------------------------------------------------------------------
+def build_checkpoint_path(checkpoint: str) -> str:
+    checkpoints_root = os.path.realpath(CHECKPOINT_PATH)
+    checkpoint_path = os.path.realpath(os.path.join(checkpoints_root, checkpoint))
+    if os.path.commonpath([checkpoints_root, checkpoint_path]) != checkpoints_root:
+        raise ValueError("Invalid checkpoint path.")
+    return checkpoint_path
 
 
 ###############################################################################
@@ -429,7 +458,7 @@ def run_resume_training_job(
 ###############################################################################
 class TrainingEndpoint:
     JOB_TYPE = "training"
-    CHECKPOINT_EMPTY_MESSAGE = "Checkpoint name cannot be empty"
+    CHECKPOINT_EMPTY_MESSAGE = CHECKPOINT_EMPTY_MESSAGE_TEXT
 
     def __init__(
         self,
@@ -441,6 +470,30 @@ class TrainingEndpoint:
         self.job_manager = job_manager
         self.training_state = training_state
         self.model_serializer = ModelSerializer()
+
+    # -------------------------------------------------------------------------
+    def resolve_existing_checkpoint(self, checkpoint: str) -> tuple[str, str]:
+        try:
+            normalized_checkpoint = normalize_checkpoint_name(checkpoint)
+            checkpoint_path = build_checkpoint_path(normalized_checkpoint)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(exc),
+            ) from exc
+
+        available_checkpoints = set(self.model_serializer.scan_checkpoints_folder())
+        if normalized_checkpoint not in available_checkpoints:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Checkpoint not found: {normalized_checkpoint}",
+            )
+        if not os.path.isdir(checkpoint_path):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Checkpoint not found: {normalized_checkpoint}",
+            )
+        return normalized_checkpoint, checkpoint_path
 
     # -------------------------------------------------------------------------
     def start_training(self, config: TrainingConfig) -> dict[str, Any]:
@@ -456,7 +509,25 @@ class TrainingEndpoint:
         checkpoint_name = configuration.get("checkpoint_name")
         if isinstance(checkpoint_name, str):
             trimmed_checkpoint_name = checkpoint_name.strip()
-            configuration["checkpoint_name"] = trimmed_checkpoint_name or None
+            if trimmed_checkpoint_name:
+                try:
+                    normalized_checkpoint = normalize_checkpoint_name(
+                        trimmed_checkpoint_name
+                    )
+                    checkpoint_path = build_checkpoint_path(normalized_checkpoint)
+                except ValueError as exc:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=str(exc),
+                    ) from exc
+                if os.path.exists(checkpoint_path):
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail=f"Checkpoint already exists: {normalized_checkpoint}",
+                    )
+                configuration["checkpoint_name"] = normalized_checkpoint
+            else:
+                configuration["checkpoint_name"] = None
         else:
             configuration["checkpoint_name"] = None
         dataset_id = configuration.get("dataset_id")
@@ -482,16 +553,6 @@ class TrainingEndpoint:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="dataset_id is required when use_data_generator is false.",
             )
-
-        if configuration["checkpoint_name"]:
-            checkpoint_path = os.path.join(
-                CHECKPOINT_PATH, configuration["checkpoint_name"]
-            )
-            if os.path.exists(checkpoint_path):
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail=f"Checkpoint already exists: {configuration['checkpoint_name']}",
-                )
 
         job_id = self.job_manager.start_job(
             job_type=self.JOB_TYPE,
@@ -529,19 +590,7 @@ class TrainingEndpoint:
                 detail="Training is already in progress.",
             )
 
-        checkpoint = config.checkpoint.strip()
-        if not checkpoint:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=self.CHECKPOINT_EMPTY_MESSAGE,
-            )
-
-        checkpoint_path = os.path.join(CHECKPOINT_PATH, checkpoint)
-        if not os.path.isdir(checkpoint_path):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Checkpoint not found: {checkpoint}",
-            )
+        checkpoint, checkpoint_path = self.resolve_existing_checkpoint(config.checkpoint)
 
         try:
             configuration, session = self.model_serializer.load_training_configuration(
@@ -629,18 +678,7 @@ class TrainingEndpoint:
 
     # -------------------------------------------------------------------------
     def get_checkpoint_metadata(self, checkpoint: str) -> dict[str, Any]:
-        if not checkpoint:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=self.CHECKPOINT_EMPTY_MESSAGE,
-            )
-
-        checkpoint_path = os.path.join(CHECKPOINT_PATH, checkpoint)
-        if not os.path.isdir(checkpoint_path):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Checkpoint not found: {checkpoint}",
-            )
+        checkpoint, checkpoint_path = self.resolve_existing_checkpoint(checkpoint)
 
         try:
             configuration, session = self.model_serializer.load_training_configuration(
@@ -692,18 +730,7 @@ class TrainingEndpoint:
 
     # -------------------------------------------------------------------------
     def delete_checkpoint(self, checkpoint: str) -> dict[str, Any]:
-        if not checkpoint:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=self.CHECKPOINT_EMPTY_MESSAGE,
-            )
-
-        checkpoint_path = os.path.join(CHECKPOINT_PATH, checkpoint)
-        if not os.path.isdir(checkpoint_path):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Checkpoint not found: {checkpoint}",
-            )
+        checkpoint, checkpoint_path = self.resolve_existing_checkpoint(checkpoint)
 
         try:
             shutil.rmtree(checkpoint_path)
