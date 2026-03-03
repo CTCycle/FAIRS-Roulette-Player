@@ -1,22 +1,19 @@
-import React, { useRef, useState } from 'react';
+import React from 'react';
 import { Upload, Folder, File, X } from 'lucide-react';
 import type { FileMetadata } from '../../../context/AppStateContext';
 import {
     formatFileSize,
-    isSupportedDatasetFile,
     type DatasetUploadStatus,
-    uploadDatasetFile,
 } from '../../../utils/datasetUpload';
+import type { DatasetUploadStateUpdates } from '../../../types/datasetUpload';
+import { useDatasetFileUpload } from '../../../components/datasetUpload/useDatasetFileUpload';
+import { UploadStatusMessage } from '../../../components/datasetUpload/UploadStatusMessage';
 
 interface DatasetUploadProps {
     files: FileMetadata[];
     uploadStatus: DatasetUploadStatus;
     uploadMessage: string;
-    onStateChange: (updates: {
-        files?: FileMetadata[];
-        uploadStatus?: DatasetUploadStatus;
-        uploadMessage?: string;
-    }) => void;
+    onStateChange: (updates: DatasetUploadStateUpdates) => void;
     onReset: () => void;
 }
 
@@ -27,98 +24,18 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
     onStateChange,
     onReset,
 }) => {
-    // Keep actual File object in local ref (not serializable for context)
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
-
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files) {
-            const file = e.target.files[0] ?? null;
-            if (!file) return;
-            if (!isSupportedDatasetFile(file)) {
-                onStateChange({
-                    uploadStatus: 'error',
-                    uploadMessage: 'Unsupported file. Please upload a CSV or XLSX.',
-                });
-                return;
-            }
-            setSelectedFile(file);
-            onStateChange({
-                uploadStatus: 'idle',
-                uploadMessage: '',
-                files: [{ name: file.name, size: file.size, type: file.type }],
-            });
-        }
-    };
-
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-    };
-
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const file = e.dataTransfer.files?.[0] ?? null;
-        if (!file) return;
-        if (!isSupportedDatasetFile(file)) {
-            onStateChange({
-                uploadStatus: 'error',
-                uploadMessage: 'Unsupported file. Please upload a CSV or XLSX.',
-            });
-            return;
-        }
-        setSelectedFile(file);
-        onStateChange({
-            uploadStatus: 'idle',
-            uploadMessage: '',
-            files: [{ name: file.name, size: file.size, type: file.type }],
-        });
-    };
-
-    const clearFiles = () => {
-        setSelectedFile(null);
-        onReset();
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-        }
-    };
-
-    const uploadDataset = async () => {
-        if (!selectedFile) {
-            onStateChange({
-                uploadStatus: 'error',
-                uploadMessage: 'Select a CSV/XLSX file first.',
-            });
-            return;
-        }
-
-        onStateChange({
-            uploadStatus: 'uploading',
-            uploadMessage: 'Uploading and importing dataset...',
-        });
-
-        try {
-            const rows = await uploadDatasetFile(selectedFile);
-            onStateChange({
-                uploadStatus: 'success',
-                uploadMessage: `Imported ${rows} rows into the database.`,
-            });
-        } catch (err) {
-            const message = err instanceof Error ? err.message : 'Upload failed.';
-            onStateChange({
-                uploadStatus: 'error',
-                uploadMessage: message,
-            });
-        }
-    };
-
-    const messageVariantClass = uploadStatus === 'success'
-        ? 'upload-message-success'
-        : uploadStatus === 'error'
-            ? 'upload-message-error'
-            : 'upload-message-info';
-
+    const {
+        selectedFile,
+        fileInputRef,
+        handleFileChange,
+        handleDragOver,
+        handleDrop,
+        clearFiles,
+        uploadDataset,
+    } = useDatasetFileUpload({
+        onStateChange,
+        onReset,
+    });
 
     return (
         <div className="card dataset-section">
@@ -185,6 +102,7 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
 
                             {files.length > 0 && (
                                 <button
+                                    type="button"
                                     className="dataset-v2-clear-btn"
                                     onClick={(e) => { e.stopPropagation(); clearFiles(); }}
                                 >
@@ -210,15 +128,7 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
                                 <Upload /> Upload
                             </button>
 
-                            {uploadMessage && (
-                                <div
-                                    className={`upload-message ${messageVariantClass}`}
-                                    role="status"
-                                    aria-live="polite"
-                                >
-                                    {uploadMessage}
-                                </div>
-                            )}
+                            <UploadStatusMessage uploadStatus={uploadStatus} uploadMessage={uploadMessage} />
                         </div>
                     </div>
                 </div>

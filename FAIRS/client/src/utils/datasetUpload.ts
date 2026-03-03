@@ -2,6 +2,32 @@ export type DatasetUploadStatus = 'idle' | 'uploading' | 'success' | 'error';
 
 const DATASET_UPLOAD_ENDPOINT = '/api/data/upload?table=roulette_series';
 
+const isObjectRecord = (value: unknown): value is Record<string, unknown> => (
+    typeof value === 'object' && value !== null
+);
+
+const extractErrorDetail = (value: unknown): string | null => {
+    if (!isObjectRecord(value)) {
+        return null;
+    }
+    return typeof value.detail === 'string' ? value.detail : null;
+};
+
+const extractImportedRows = (value: unknown): number => {
+    if (!isObjectRecord(value)) {
+        return 0;
+    }
+    return typeof value.rows_imported === 'number' ? value.rows_imported : 0;
+};
+
+const readJsonSafely = async (response: Response): Promise<unknown | null> => {
+    try {
+        return await response.json();
+    } catch {
+        return null;
+    }
+};
+
 export function formatFileSize(bytes: number): string {
     if (bytes === 0) {
         return '0 B';
@@ -27,11 +53,11 @@ export async function uploadDatasetFile(file: File): Promise<number> {
     });
 
     if (!response.ok) {
-        const errorPayload = (await response.json().catch(() => null)) as { detail?: string } | null;
-        const detail = errorPayload?.detail ?? `Upload failed (HTTP ${response.status}).`;
+        const errorPayload = await readJsonSafely(response);
+        const detail = extractErrorDetail(errorPayload) ?? `Upload failed (HTTP ${response.status}).`;
         throw new Error(detail);
     }
 
-    const payload = (await response.json().catch(() => null)) as { rows_imported?: number } | null;
-    return payload?.rows_imported ?? 0;
+    const payload = await readJsonSafely(response);
+    return extractImportedRows(payload);
 }

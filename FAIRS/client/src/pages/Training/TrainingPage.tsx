@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAppState } from '../../context/AppStateContext';
+import { useDatasetUploadState } from '../../hooks/useDatasetUploadState';
 import './Training.css';
 import { TrainingDashboard } from './components/TrainingDashboard';
 import { DatasetUpload } from './components/DatasetUpload';
@@ -8,16 +9,13 @@ import { CheckpointPreview } from './components/CheckpointPreview';
 
 const TrainingPage: React.FC = () => {
     const { state, dispatch } = useAppState();
-    const { isTraining, datasetUpload } = state.training;
+    const { isTraining } = state.training;
+    const {
+        datasetUpload,
+        updateDatasetUploadState,
+        resetDatasetUploadState,
+    } = useDatasetUploadState();
     const [datasetRefreshKey, setDatasetRefreshKey] = useState(0);
-
-    const handleDatasetUploadStateChange = (updates: {
-        files?: typeof datasetUpload.files;
-        uploadStatus?: typeof datasetUpload.uploadStatus;
-        uploadMessage?: string;
-    }) => {
-        dispatch({ type: 'SET_DATASET_UPLOAD_STATE', payload: updates });
-    };
 
     const handleUploadSuccess = () => {
         setDatasetRefreshKey((prev) => prev + 1);
@@ -40,8 +38,8 @@ const TrainingPage: React.FC = () => {
                         <DatasetUpload
                             uploadStatus={datasetUpload.uploadStatus}
                             uploadMessage={datasetUpload.uploadMessage}
-                            onStateChange={handleDatasetUploadStateChange}
-                            onReset={() => dispatch({ type: 'RESET_DATASET_UPLOAD' })}
+                            onStateChange={updateDatasetUploadState}
+                            onReset={resetDatasetUploadState}
                             onUploadSuccess={handleUploadSuccess}
                         />
                     </div>

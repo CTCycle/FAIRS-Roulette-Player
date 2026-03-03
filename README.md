@@ -10,6 +10,8 @@ The runtime model is dual-mode and configuration-first:
 - Cloud mode uses Docker (`docker-compose.yml`) for backend + frontend.
 - Mode switching is done by changing `FAIRS/settings/.env` values only.
 
+> **Work in Progress**: This project is still under active development. It will be updated regularly, but you may encounter bugs, issues, or incomplete features.
+
 ## 2. Model and Dataset (Optional)
 FAIRS uses a Deep Q-Network (DQN) workflow for roulette sequence decision making. Training can use:
 - User-provided CSV/XLSX datasets uploaded from the UI.
