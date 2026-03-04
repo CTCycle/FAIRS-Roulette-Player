@@ -149,8 +149,8 @@ The runner now:
 
 ## 11. Additional Documentation
 - `docs/PACKAGING_AND_RUNTIME_MODES.md`
-- `.agent/ARCHITECTURE.md`
-- `.agent/GUIDELINES_TESTS.md`
+- `assets/docs/ARCHITECTURE.md`
+- `assets/docs/GUIDELINES_TESTS.md`
 
 ## 12. License
 This project is licensed under the MIT License. See `LICENSE` for details.
