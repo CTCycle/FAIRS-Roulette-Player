@@ -217,10 +217,6 @@ class DataSerializer:
         self, dataset_id: int | str, outcomes: pd.DataFrame
     ) -> int:
         storage_dataset_id = self.to_storage_dataset_id(dataset_id)
-        self.queries.delete_table_rows(
-            DATASET_OUTCOMES_TABLE,
-            {"dataset_id": storage_dataset_id},
-        )
         if outcomes.empty:
             return 0
 
@@ -228,7 +224,7 @@ class DataSerializer:
         frame["dataset_id"] = storage_dataset_id
         frame = frame.reindex(columns=DATASET_OUTCOMES_WRITE_COLUMNS)
         frame = frame.where(pd.notnull(frame), cast(Any, None))
-        self.queries.append_table(frame, DATASET_OUTCOMES_TABLE)
+        self.queries.upsert_table(frame, DATASET_OUTCOMES_TABLE)
         return int(len(frame))
 
     # -------------------------------------------------------------------------
@@ -334,8 +330,8 @@ class DataSerializer:
     # -------------------------------------------------------------------------
     def clear_datasets(self, dataset_kind: str | None = None) -> None:
         if not dataset_kind:
-            self.queries.clear_table(DATASET_OUTCOMES_TABLE)
-            self.queries.clear_table(DATASETS_TABLE)
+            for kind in ("training", "inference"):
+                self.clear_datasets(kind)
             return
         for row in self.list_datasets(dataset_kind=dataset_kind):
             dataset_id = self.normalize_dataset_id(row.get("dataset_id"))

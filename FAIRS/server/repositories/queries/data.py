@@ -30,10 +30,6 @@ class DataRepositoryQueries:
         return self.database.load_filtered(table_name, conditions)
 
     # -------------------------------------------------------------------------
-    def save_table(self, dataset: pd.DataFrame, table_name: str) -> None:
-        self.database.save_into_database(dataset, table_name)
-
-    # -------------------------------------------------------------------------
     def append_table(self, dataset: pd.DataFrame, table_name: str) -> None:
         self.database.append_into_database(dataset, table_name)
 
@@ -44,7 +40,3 @@ class DataRepositoryQueries:
     # -------------------------------------------------------------------------
     def delete_table_rows(self, table_name: str, conditions: dict[str, Any]) -> None:
         self.database.delete_from_database(table_name, conditions)
-
-    # -------------------------------------------------------------------------
-    def clear_table(self, table_name: str) -> None:
-        self.database.clear_table(table_name)

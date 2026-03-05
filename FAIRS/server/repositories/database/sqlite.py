@@ -195,23 +195,6 @@ class SQLiteRepository:
         return data
 
     # -------------------------------------------------------------------------
-    def save_into_database(self, df: pd.DataFrame, table_name: str) -> None:
-        table_name = normalize_table_name(table_name)
-        with self.engine.begin() as conn:
-            inspector = inspect(conn)
-            if inspector.has_table(table_name):
-                conn.execute(sqlalchemy.text(f'DELETE FROM "{table_name}"'))
-            df.to_sql(table_name, conn, if_exists="append", index=False)
-
-    # -------------------------------------------------------------------------
-    def clear_table(self, table_name: str) -> None:
-        table_name = normalize_table_name(table_name)
-        with self.engine.begin() as conn:
-            inspector = inspect(conn)
-            if inspector.has_table(table_name):
-                conn.execute(sqlalchemy.text(f'DELETE FROM "{table_name}"'))
-
-    # -------------------------------------------------------------------------
     def append_into_database(self, df: pd.DataFrame, table_name: str) -> None:
         table_name = normalize_table_name(table_name)
         if df.empty:
