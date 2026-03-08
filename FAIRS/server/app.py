@@ -53,7 +53,7 @@ def initialize_embedded_database() -> None:
     initialize_sqlite_on_startup_if_missing()
 
 
-@app.get("/")
+@app.get("/", response_model=None)
 def redirect_to_docs() -> RedirectResponse | dict[str, str]:
     if ENABLE_API_DOCS:
         return RedirectResponse(url="/docs")
