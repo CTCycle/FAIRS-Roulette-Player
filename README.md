@@ -4,11 +4,13 @@
 FAIRS is a research web application for roulette training and inference experiments. It combines:
 - A FastAPI backend for dataset ingestion, training orchestration, checkpoint management, inference sessions, and persistence.
 - A React + Vite frontend for training workflows, checkpoint management, and interactive inference sessions.
+- An optional Tauri desktop shell for packaged Windows distribution.
 
-The runtime model is dual-mode and configuration-first:
+The runtime model is multi-mode and configuration-first:
 - Local mode is the default path (`FAIRS/start_on_windows.bat`), no Docker required.
 - Cloud mode uses Docker (`docker-compose.yml`) for backend + frontend.
-- Mode switching is done by changing `FAIRS/settings/.env` values only.
+- Desktop mode uses Tauri, starts a local packaged backend, and serves the SPA through FastAPI.
+- Mode switching is done by changing `FAIRS/settings/.env` values.
 
 > **Work in Progress**: This project is still under active development. It will be updated regularly, but you may encounter bugs, issues, or incomplete features.
 
@@ -35,7 +37,7 @@ The launcher automatically:
 4. Builds the frontend and launches backend + frontend.
 
 ### 3.2 Cloud Mode (Docker)
-1. Switch `.env` to cloud values (see section 4).
+1. Switch `.env` to cloud values.
 2. Build and run:
 
 ```bash
@@ -54,14 +56,39 @@ Cloud topology:
 - `frontend`: Nginx serving SPA static files.
 - Nginx proxies `/api/*` to `http://backend:8000/*`.
 
-Validate:
-- Frontend: `http://<UI_HOST>:<UI_PORT>/`
-- API docs through proxy: `http://<UI_HOST>:<UI_PORT>/api/docs`
+### 3.3 Desktop Mode (Tauri Packaging)
+1. Activate desktop profile:
+
+```cmd
+copy /Y FAIRS\settings\.env.local.tauri.example FAIRS\settings\.env
+```
+
+2. Ensure portable runtimes exist:
+
+```cmd
+FAIRS\start_on_windows.bat
+```
+
+3. Build desktop artifacts:
+
+```cmd
+release\tauri\build_with_tauri.bat
+```
+
+Build output:
+- `release/windows/installers`
+- `release/windows/portable`
+
+Runtime behavior:
+- Tauri starts with `about:blank` and shows a startup screen.
+- Rust runs `uv sync`, starts local Uvicorn, then redirects to `http://127.0.0.1:<FASTAPI_PORT>/`.
+- FastAPI serves the packaged SPA and exposes API routes under `/api`.
 
 ## 4. Mode Switching Procedure
 Profiles:
 - Local reference: `FAIRS/settings/.env.local.example`
 - Cloud reference: `FAIRS/settings/.env.cloud.example`
+- Desktop reference: `FAIRS/settings/.env.local.tauri.example`
 - Active runtime file: `FAIRS/settings/.env`
 
 Use one of the profiles as active `.env`:
@@ -69,12 +96,13 @@ Use one of the profiles as active `.env`:
 ```cmd
 copy /Y FAIRS\settings\.env.local.example FAIRS\settings\.env
 copy /Y FAIRS\settings\.env.cloud.example FAIRS\settings\.env
+copy /Y FAIRS\settings\.env.local.tauri.example FAIRS\settings\.env
 ```
 
 No application code changes are required to switch modes.
 
 ## 5. Configuration Contract
-`FAIRS/settings/.env` defines runtime values for launcher/tests/docker.
+`FAIRS/settings/.env` defines runtime values for launcher/tests/docker/desktop.
 
 ### 5.1 Core Runtime
 - `FASTAPI_HOST`
@@ -82,6 +110,7 @@ No application code changes are required to switch modes.
 - `UI_HOST`
 - `UI_PORT`
 - `VITE_API_BASE_URL`
+- `ENABLE_API_DOCS`
 - `RELOAD`
 
 ### 5.2 Database Runtime
@@ -103,8 +132,8 @@ No application code changes are required to switch modes.
 - `KERAS_BACKEND`
 
 Behavior:
-- `FAIRS/settings/configurations.json` now contains non-runtime defaults only.
-- `DB_EMBEDDED` is read from env first, with JSON fallback only for backward compatibility.
+- `FAIRS/settings/configurations.json` contains non-runtime defaults only.
+- `DB_EMBEDDED` is read from env first, with JSON fallback for backward compatibility.
 - When `DB_EMBEDDED=true`, embedded SQLite is used.
 - When `DB_EMBEDDED=false`, external DB fields are read from env first.
 
@@ -115,21 +144,23 @@ Run automated tests:
 tests\run_tests.bat
 ```
 
-The runner now:
+The runner:
 - Loads host/port from `FAIRS/settings/.env`.
 - Exports `APP_TEST_FRONTEND_URL` and `APP_TEST_BACKEND_URL`.
 - Uses resolved URLs for readiness checks and server startup.
 
 ## 7. Setup and Maintenance
-- `FAIRS/setup_and_maintenance.bat` -> `Remove logs`: deletes `.log` files in `FAIRS/resources/logs`.
-- `FAIRS/setup_and_maintenance.bat` -> `Uninstall app`: removes local runtime/dependency artifacts (`resources/runtimes`, `.venv`, frontend build and node modules, cache files).
-- `FAIRS/setup_and_maintenance.bat` -> `Initialize database`: runs `FAIRS/scripts/initialize_database.py`.
+`FAIRS/setup_and_maintenance.bat` options:
+- Remove logs.
+- Uninstall app (local runtime/dependency artifacts).
+- Clean desktop build artifacts (`client/src-tauri/target/release` and `release/windows`).
+- Initialize database (`FAIRS/scripts/initialize_database.py`).
 
 ## 8. Deterministic Build Notes
 - Backend lockfile: `uv.lock`.
 - Backend install path in Docker: `uv sync --frozen`.
-- Frontend lockfile: `FAIRS/client/package-lock.json` (committed).
-- Frontend install path in Docker: `npm ci`.
+- Frontend lockfile: `FAIRS/client/package-lock.json`.
+- Frontend install path in Docker/desktop packaging: `npm ci`.
 - Docker base images are pinned by tag in `docker/backend.Dockerfile` and `docker/frontend.Dockerfile`.
 
 ## 9. Resources
@@ -138,7 +169,6 @@ The runner now:
 - `database`: embedded SQLite and related files.
 - `logs`: runtime logs.
 - `runtimes`: portable Python/uv/Node.js downloaded by the Windows launcher.
-- `templates`: starter files.
 
 ## 10. Screenshots
 **Training page**
@@ -148,7 +178,7 @@ The runner now:
 ![inference_page](assets/figures/inference_page.png)
 
 ## 11. Additional Documentation
-- `docs/PACKAGING_AND_RUNTIME_MODES.md`
+- `assets/docs/PACKAGING_AND_RUNTIME_MODES.md`
 - `assets/docs/ARCHITECTURE.md`
 - `assets/docs/GUIDELINES_TESTS.md`
 

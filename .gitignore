@@ -8,6 +8,9 @@ FAIRS/client/dist/
 FAIRS/client/dist-ssr/
 FAIRS/client/logs/
 FAIRS/client/*.local
+FAIRS/client/src-tauri/target/
+FAIRS/client/src-tauri/r/
+release/windows/
 
 # Python
 __pycache__/
@@ -54,6 +57,4 @@ Thumbs.db
 *.gz
 
 !.gitkeep
-
-
 
