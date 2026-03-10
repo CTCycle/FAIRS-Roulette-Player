@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use std::collections::HashSet;
 use std::fs;
 use std::net::{TcpStream, ToSocketAddrs};
 #[cfg(target_os = "windows")]
@@ -8,7 +9,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use tauri::{Manager, RunEvent};
 
@@ -164,42 +165,93 @@ fn is_workspace_root(candidate: &Path) -> bool {
         && candidate.join("FAIRS").join("server").join("app.py").is_file()
 }
 
+fn has_workspace_venv(candidate: &Path) -> bool {
+    candidate
+        .join(".venv")
+        .join("Scripts")
+        .join("python.exe")
+        .is_file()
+}
+
+fn push_with_ancestors(base: &Path, candidates: &mut Vec<PathBuf>) {
+    let mut cursor = Some(base);
+    while let Some(path) = cursor {
+        candidates.push(path.to_path_buf());
+        cursor = path.parent();
+    }
+}
+
 fn find_workspace_root(app_handle: &tauri::AppHandle) -> Option<PathBuf> {
     let mut candidates: Vec<PathBuf> = Vec::new();
 
     if let Ok(resource_dir) = app_handle.path().resource_dir() {
-        candidates.push(resource_dir.clone());
-        if let Some(parent) = resource_dir.parent() {
-            candidates.push(parent.to_path_buf());
-        }
+        push_with_ancestors(&resource_dir, &mut candidates);
     }
 
     if let Ok(exe_path) = std::env::current_exe() {
         if let Some(exe_dir) = exe_path.parent() {
-            candidates.push(exe_dir.to_path_buf());
-            candidates.push(exe_dir.join("resources"));
+            push_with_ancestors(exe_dir, &mut candidates);
+            push_with_ancestors(&exe_dir.join("resources"), &mut candidates);
         }
     }
 
     if let Ok(current_dir) = std::env::current_dir() {
-        candidates.push(current_dir.clone());
-        if let Some(parent) = current_dir.parent() {
-            candidates.push(parent.to_path_buf());
-        }
+        push_with_ancestors(&current_dir, &mut candidates);
     }
 
-    let mut expanded: Vec<PathBuf> = Vec::new();
+    let mut seen: HashSet<PathBuf> = HashSet::new();
+    let mut workspace_candidates: Vec<PathBuf> = Vec::new();
     for candidate in candidates {
-        expanded.push(candidate.clone());
-        if let Some(parent) = candidate.parent() {
-            expanded.push(parent.to_path_buf());
-            if let Some(grand_parent) = parent.parent() {
-                expanded.push(grand_parent.to_path_buf());
-            }
+        if seen.insert(candidate.clone()) && is_workspace_root(&candidate) {
+            workspace_candidates.push(candidate);
         }
     }
 
-    expanded.into_iter().find(|candidate| is_workspace_root(candidate))
+    if let Some(with_venv) = workspace_candidates
+        .iter()
+        .find(|candidate| has_workspace_venv(candidate))
+    {
+        return Some(with_venv.clone());
+    }
+
+    workspace_candidates.into_iter().next()
+}
+
+fn directory_is_writable(path: &Path) -> bool {
+    if fs::create_dir_all(path).is_err() {
+        return false;
+    }
+
+    let probe_path = path.join(".fairs-write-probe");
+    let wrote_probe = fs::write(&probe_path, b"ok").is_ok();
+    let _ = fs::remove_file(&probe_path);
+    wrote_probe
+}
+
+fn resolve_runtime_root(
+    app_handle: &tauri::AppHandle,
+    workspace_root: &Path,
+) -> Result<PathBuf, String> {
+    if has_workspace_venv(workspace_root) {
+        return Ok(workspace_root.to_path_buf());
+    }
+
+    if directory_is_writable(workspace_root) {
+        return Ok(workspace_root.to_path_buf());
+    }
+
+    let app_data_dir = app_handle.path().app_local_data_dir().map_err(|error| {
+        format!("Cannot resolve per-user runtime directory for packaged desktop mode: {error}")
+    })?;
+    let runtime_root = app_data_dir.join("runtime");
+    if directory_is_writable(&runtime_root) {
+        return Ok(runtime_root);
+    }
+
+    Err(format!(
+        "Cannot access writable runtime directory at {}.",
+        runtime_root.display()
+    ))
 }
 
 fn configure_background_command(command: &mut Command) -> &mut Command {
@@ -210,12 +262,45 @@ fn configure_background_command(command: &mut Command) -> &mut Command {
     command
 }
 
+fn run_command_with_timeout(
+    command: &mut Command,
+    timeout: Duration,
+    context: &str,
+) -> Result<bool, String> {
+    let mut child = command
+        .spawn()
+        .map_err(|error| format!("Failed to spawn {context}: {error}"))?;
+    let start = Instant::now();
+
+    loop {
+        if let Some(status) = child
+            .try_wait()
+            .map_err(|error| format!("Failed while waiting for {context}: {error}"))?
+        {
+            return Ok(status.success());
+        }
+
+        if start.elapsed() >= timeout {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(format!(
+                "{context} timed out after {} seconds.",
+                timeout.as_secs()
+            ));
+        }
+
+        thread::sleep(Duration::from_millis(250));
+    }
+}
+
 fn spawn_backend(app_handle: &tauri::AppHandle, state: &BackendChildState) -> Result<(), String> {
     #[cfg(not(target_os = "windows"))]
     {
         let _ = app_handle;
         let _ = state;
-        return Err(String::from("Desktop packaged backend mode is currently supported on Windows only."));
+        return Err(String::from(
+            "Packaged desktop mode is currently supported on Windows only.",
+        ));
     }
 
     #[cfg(target_os = "windows")]
@@ -223,6 +308,7 @@ fn spawn_backend(app_handle: &tauri::AppHandle, state: &BackendChildState) -> Re
         let workspace_root = find_workspace_root(app_handle).ok_or_else(|| {
             String::from("Cannot resolve packaged backend workspace (missing pyproject.toml/FAIRS).")
         })?;
+        let runtime_root = resolve_runtime_root(app_handle, &workspace_root)?;
         let project_dir = workspace_root.join("FAIRS");
         let env_path = project_dir.join("settings").join(".env");
         let backend_config = resolve_backend_launch_config(&env_path);
@@ -236,10 +322,9 @@ fn spawn_backend(app_handle: &tauri::AppHandle, state: &BackendChildState) -> Re
             .join("runtimes")
             .join("python")
             .join("python.exe");
-        let python_dir = python_exe
-            .parent()
-            .ok_or_else(|| String::from("Invalid bundled python path."))?
-            .to_path_buf();
+        let venv_dir = runtime_root.join(".venv");
+        let venv_python_exe = venv_dir.join("Scripts").join("python.exe");
+        let uv_cache_dir = runtime_root.join(".uv-cache");
 
         if !uv_exe.is_file() {
             return Err(format!("Bundled uv runtime not found at {}", uv_exe.display()));
@@ -252,10 +337,13 @@ fn spawn_backend(app_handle: &tauri::AppHandle, state: &BackendChildState) -> Re
         }
 
         let python_exe_str = python_exe.to_string_lossy().to_string();
+        let uv_cache_dir_str = uv_cache_dir.to_string_lossy().to_string();
+        let venv_dir_str = venv_dir.to_string_lossy().to_string();
         let mut sync_args = vec![String::from("sync")];
         if backend_config.install_extras {
             sync_args.push(String::from("--all-extras"));
         }
+        sync_args.push(String::from("--frozen"));
 
         let mut sync_with_embedded_args = vec![
             String::from("sync"),
@@ -265,61 +353,75 @@ fn spawn_backend(app_handle: &tauri::AppHandle, state: &BackendChildState) -> Re
         if backend_config.install_extras {
             sync_with_embedded_args.push(String::from("--all-extras"));
         }
+        sync_with_embedded_args.push(String::from("--frozen"));
 
-        let mut embedded_sync_command = Command::new(&uv_exe);
-        let embedded_sync_ok = configure_background_command(&mut embedded_sync_command)
-            .args(sync_with_embedded_args.iter().map(|s| s.as_str()))
-            .current_dir(&workspace_root)
-            .env("UV_LINK_MODE", "copy")
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status()
-            .map_err(|error| format!("Failed to run uv sync (embedded python): {error}"))?
-            .success();
+        if !venv_python_exe.is_file() {
+            fs::create_dir_all(&uv_cache_dir).map_err(|error| {
+                format!(
+                    "Cannot create uv cache directory at {}: {error}",
+                    uv_cache_dir.display()
+                )
+            })?;
 
-        let mut use_uv_managed_python = false;
-        if !embedded_sync_ok {
-            let mut fallback_sync_command = Command::new(&uv_exe);
-            let fallback_sync_ok = configure_background_command(&mut fallback_sync_command)
-                .args(sync_args.iter().map(|s| s.as_str()))
+            render_startup_status(
+                app_handle,
+                "Synchronizing Python environment. First launch can take several minutes while dependencies are prepared.",
+            );
+
+            let mut embedded_sync_command = Command::new(&uv_exe);
+            configure_background_command(&mut embedded_sync_command);
+            embedded_sync_command
+                .args(sync_with_embedded_args.iter().map(|s| s.as_str()))
                 .current_dir(&workspace_root)
-                .env("UV_LINK_MODE", "copy")
+                .env("UV_PROJECT_ENVIRONMENT", &venv_dir_str)
+                .env("UV_CACHE_DIR", &uv_cache_dir_str)
                 .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .status()
-                .map_err(|error| format!("Failed to run uv sync fallback: {error}"))?
-                .success();
-            if !fallback_sync_ok {
-                return Err(String::from("uv sync failed for packaged runtime."));
+                .stderr(Stdio::null());
+
+            let embedded_sync_ok = run_command_with_timeout(
+                &mut embedded_sync_command,
+                Duration::from_secs(15 * 60),
+                "uv sync (embedded python)",
+            )?;
+
+            if !embedded_sync_ok {
+                let mut fallback_sync_command = Command::new(&uv_exe);
+                configure_background_command(&mut fallback_sync_command);
+                fallback_sync_command
+                    .args(sync_args.iter().map(|s| s.as_str()))
+                    .current_dir(&workspace_root)
+                    .env("UV_PROJECT_ENVIRONMENT", &venv_dir_str)
+                    .env("UV_CACHE_DIR", &uv_cache_dir_str)
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null());
+
+                let fallback_sync_ok = run_command_with_timeout(
+                    &mut fallback_sync_command,
+                    Duration::from_secs(15 * 60),
+                    "uv sync fallback",
+                )?;
+
+                if !fallback_sync_ok {
+                    return Err(String::from("uv sync failed for packaged runtime."));
+                }
             }
-            use_uv_managed_python = true;
+
+            if !venv_python_exe.is_file() {
+                return Err(format!(
+                    "Python environment setup completed but {} is missing.",
+                    venv_python_exe.display()
+                ));
+            }
         }
+
+        render_startup_status(app_handle, "Starting local API service.");
 
         let backend_host = backend_config.host.clone();
         let backend_port = backend_config.port;
         let backend_port_str = backend_port.to_string();
-        let mut child_command = Command::new(&uv_exe);
+        let mut child_command = Command::new(&venv_python_exe);
         configure_background_command(&mut child_command);
-        if use_uv_managed_python {
-            child_command
-                .arg("run")
-                .arg("python")
-                .arg("-m")
-                .arg("uvicorn");
-            child_command.env_remove("PYTHONHOME");
-            child_command.env_remove("PYTHONPATH");
-        } else {
-            child_command
-                .arg("run")
-                .arg("--python")
-                .arg(&python_exe_str)
-                .arg("python")
-                .arg("-m")
-                .arg("uvicorn")
-                .env("PYTHONHOME", python_dir.to_string_lossy().to_string())
-                .env("PYTHONPATH", "")
-                .env("PYTHONNOUSERSITE", "1");
-        }
+        child_command.arg("-m").arg("uvicorn");
         child_command
             .arg("FAIRS.server.app:app")
             .arg("--host")
@@ -335,7 +437,6 @@ fn spawn_backend(app_handle: &tauri::AppHandle, state: &BackendChildState) -> Re
         let child = child_command
             .current_dir(&workspace_root)
             .env("FAIRS_TAURI_MODE", "true")
-            .env("UV_LINK_MODE", "copy")
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null())
