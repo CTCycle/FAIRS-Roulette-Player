@@ -69,7 +69,14 @@ copy /Y FAIRS\settings\.env.local.tauri.example FAIRS\settings\.env
 FAIRS\start_on_windows.bat
 ```
 
-3. Build desktop artifacts:
+3. Regenerate desktop icon assets from the shared web favicon when needed:
+
+```cmd
+cd FAIRS\client
+npm run tauri:icon
+```
+
+4. Build desktop artifacts through the repo packaging entrypoint:
 
 ```cmd
 release\tauri\build_with_tauri.bat
@@ -80,8 +87,9 @@ Build output:
 - `release/windows/portable`
 
 Runtime behavior:
-- Tauri starts with `about:blank` and shows a startup screen.
-- Rust runs `uv sync`, starts local Uvicorn, then redirects to `http://127.0.0.1:<FASTAPI_PORT>/`.
+- Tauri starts with `about:blank` and shows a startup screen immediately.
+- Rust resolves the packaged workspace, reuses an existing `.venv` when available, otherwise runs `uv sync --frozen` into a controlled runtime root.
+- The backend is started from the resolved `.venv`, then the window redirects to `http://127.0.0.1:<FASTAPI_PORT>/`.
 - FastAPI serves the packaged SPA and exposes API routes under `/api`.
 
 ## 4. Mode Switching Procedure
@@ -184,3 +192,4 @@ The runner:
 
 ## 12. License
 This project is licensed under the MIT License. See `LICENSE` for details.
+

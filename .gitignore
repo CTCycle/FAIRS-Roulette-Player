@@ -10,6 +10,7 @@ FAIRS/client/logs/
 FAIRS/client/*.local
 FAIRS/client/src-tauri/target/
 FAIRS/client/src-tauri/r/
+FAIRS/client/src-tauri/gen/
 release/windows/
 
 # Python
@@ -57,4 +58,3 @@ Thumbs.db
 *.gz
 
 !.gitkeep
-
