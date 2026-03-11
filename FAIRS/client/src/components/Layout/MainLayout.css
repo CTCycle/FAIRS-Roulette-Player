@@ -1,30 +1,126 @@
 .main-layout {
     display: flex;
+    flex-direction: column;
     height: 100%;
     min-height: 100vh;
     overflow: hidden;
+    background-color: var(--bg-primary);
+}
+
+.app-shell-header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 76px;
+    padding: 1rem 1.5rem 0.85rem;
+    background-color: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    z-index: 10;
+}
+
+.app-shell-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.85rem;
+    min-width: 0;
+}
+
+.app-shell-logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    flex: 0 0 auto;
+}
+
+.app-shell-brand-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
+}
+
+.app-shell-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-primary);
+}
+
+.app-shell-subtitle {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.app-shell-nav {
+    padding: 0.55rem 1.5rem 0.7rem;
+    background-color: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.app-shell-nav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.top-nav-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    min-height: 36px;
+    padding: 0.45rem 0.9rem;
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.top-nav-link:hover {
+    color: var(--text-primary);
+    background-color: var(--bg-tertiary);
+}
+
+.top-nav-link.active {
+    color: var(--primary-accent);
+    background-color: rgba(14, 165, 233, 0.1);
 }
 
 .content-area {
     flex: 1;
-    margin-left: 180px;
-    /* Width of sidebar */
-    background-color: var(--bg-primary);
     overflow: auto;
     display: flex;
     flex-direction: column;
     min-width: 0;
+    min-height: 0;
+    background-color: transparent;
 }
 
 @media (max-width: 900px) {
-    .main-layout {
-        flex-direction: column;
-        min-height: 100dvh;
-        overflow: auto;
+    .app-shell-header {
+        min-height: auto;
+        padding: 0.9rem 1rem 0.8rem;
     }
 
-    .content-area {
-        margin-left: 0;
-        min-height: 0;
+    .app-shell-nav {
+        padding: 0.55rem 1rem 0.7rem;
+    }
+
+    .top-nav-link {
+        flex: 1 1 auto;
+        justify-content: flex-start;
+    }
+
+    .app-shell-title {
+        font-size: 1rem;
+    }
+
+    .app-shell-subtitle {
+        font-size: 0.75rem;
     }
 }

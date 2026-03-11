@@ -73,7 +73,7 @@ FAIRS is a FastAPI + React/Vite web application for roulette model training and 
 
 ## 4. Frontend architecture
 
-- Router setup in `FAIRS/client/src/App.tsx`.
+- Router setup in `FAIRS/client/src/App.tsx` with the shared shell rendered from `components/Layout/MainLayout.tsx`.
 - Main pages currently mounted:
   - `/training` -> training dashboard, dataset upload/preview, checkpoint management.
   - `/inference` -> interactive inference session and session history controls.
@@ -96,4 +96,5 @@ Primary tables:
 
 - New API domain: add route in `FAIRS/server/routes`, service in `FAIRS/server/services`, and serializer/query support in `FAIRS/server/repositories` as needed.
 - New training/inference behavior: extend `FAIRS/server/learning/*` and expose controls in frontend page components.
-- New UI page: register route in `FAIRS/client/src/App.tsx` and add navigation in `components/Layout/Sidebar.tsx`.
+- New UI page: register route in `FAIRS/client/src/App.tsx` and add navigation in `components/Layout/TopNavigation.tsx`.
+

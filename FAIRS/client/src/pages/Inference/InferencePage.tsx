@@ -25,23 +25,33 @@ const InferencePage: React.FC = () => {
     };
 
     return (
-        <div className="inference-page">
-            <GameSession
-                config={gameConfig}
-                setup={setup}
-                sessionState={sessionState}
-                history={history}
-                onSetupChange={(updates) =>
-                    dispatch({ type: 'SET_INFERENCE_SETUP', payload: updates })
-                }
-                onSessionStateChange={handleSessionStateChange}
-                onAddHistoryStep={handleAddHistoryStep}
-                onHistoryChange={handleHistoryChange}
-                onGameConfigChange={handleGameConfigChange}
-                onClearSession={() => dispatch({ type: 'RESET_INFERENCE_SESSION' })}
-            />
+        <div className="inference-page page-shell">
+            <div className="page-header">
+                <h1 className="page-title">Inference Workspace</h1>
+                <p className="page-subtitle">
+                    Pair a trained checkpoint with a dataset, step through predictions, and inspect session history in real time.
+                </p>
+            </div>
+
+            <div className="inference-workspace">
+                <GameSession
+                    config={gameConfig}
+                    setup={setup}
+                    sessionState={sessionState}
+                    history={history}
+                    onSetupChange={(updates) =>
+                        dispatch({ type: 'SET_INFERENCE_SETUP', payload: updates })
+                    }
+                    onSessionStateChange={handleSessionStateChange}
+                    onAddHistoryStep={handleAddHistoryStep}
+                    onHistoryChange={handleHistoryChange}
+                    onGameConfigChange={handleGameConfigChange}
+                    onClearSession={() => dispatch({ type: 'RESET_INFERENCE_SESSION' })}
+                />
+            </div>
         </div>
     );
 };
 
 export default InferencePage;
+
