@@ -179,35 +179,22 @@ The runner:
 - `runtimes`: portable Python/uv/Node.js downloaded by the Windows launcher.
 
 ## 10. Screenshots
-These documentation captures were generated from a local full-stack run with adaptive Playwright viewports.
-Capture metadata (route, files, viewport, notes) is available in `assets/figures/manifest.json`.
-
-### Landing (redirects to Training)
-![Home](assets/figures/home.png)
+Documentation captures were regenerated from a local backend (`http://127.0.0.1:5003`) and frontend (`http://127.0.0.1:8003`) run with adaptive Playwright viewports.
+Capture metadata (route, output files, viewport, notes) is available in `assets/figures/manifest.json`.
 
 ### Training Workspace
-**Overview (upper section)**
-![Training overview part 1](assets/figures/training-overview-part1.png)
+Overview:
+![Training overview](assets/figures/training-page.png)
 
-**Overview (below the fold)**
-![Training overview part 2](assets/figures/training-overview-part2.png)
-
-**Training wizard detail**
+Generator wizard:
 ![Training wizard detail](assets/figures/training-wizard-detail.png)
 
 ### Inference Workspace
 ![Inference overview](assets/figures/inference-overview.png)
 
-### Legacy Captures
-![training_page](assets/figures/training_page.png)
-![inference_page](assets/figures/inference_page.png)
-
-## 11. Additional Documentation
-- `assets/docs/PACKAGING_AND_RUNTIME_MODES.md`
-- `assets/docs/ARCHITECTURE.md`
-- `assets/docs/GUIDELINES_TESTS.md`
-
-## 12. License
+## 11. License
 This project is licensed under the MIT License. See `LICENSE` for details.
+
+
 
 
