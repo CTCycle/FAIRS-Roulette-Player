@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
 const envDir = path.resolve(__dirname, '../settings')
+const INTERNAL_API_BASE = '/api'
 
 export default defineConfig(({ mode }) => {
     const settingsEnv = loadEnv(mode, envDir, '')
@@ -32,7 +33,7 @@ export default defineConfig(({ mode }) => {
                 [apiBase]: {
                     target: apiTarget,
                     changeOrigin: true,
-                    rewrite: (path) => path.replace(apiBasePattern, ''),
+                    rewrite: (requestPath) => requestPath.replace(apiBasePattern, INTERNAL_API_BASE),
                 },
             },
         },
@@ -44,7 +45,7 @@ export default defineConfig(({ mode }) => {
                 [apiBase]: {
                     target: apiTarget,
                     changeOrigin: true,
-                    rewrite: (path) => path.replace(apiBasePattern, ''),
+                    rewrite: (requestPath) => requestPath.replace(apiBasePattern, INTERNAL_API_BASE),
                 },
             },
         },

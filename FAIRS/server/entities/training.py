@@ -1,15 +1,49 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+import os
+
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
+
+
+MAX_CHECKPOINT_NAME_LENGTH = 128
+
+
+###############################################################################
+def normalize_checkpoint_identifier(value: str) -> str:
+    candidate = value.strip()
+    if not candidate:
+        raise ValueError("Checkpoint name cannot be empty.")
+    if len(candidate) > MAX_CHECKPOINT_NAME_LENGTH:
+        raise ValueError("Checkpoint name is too long.")
+    if candidate in {".", ".."}:
+        raise ValueError("Invalid checkpoint name.")
+    if any(ord(char) < 32 for char in candidate):
+        raise ValueError("Checkpoint name contains invalid control characters.")
+    if any(separator in candidate for separator in ("/", "\\", ":")):
+        raise ValueError("Invalid checkpoint name.")
+    if os.path.basename(candidate) != candidate:
+        raise ValueError("Invalid checkpoint name.")
+    return candidate
 
 
 ###############################################################################
 class TrainingConfig(BaseModel):
     """Configuration for starting a new training session."""
 
+    model_config = ConfigDict(
+        extra="forbid",
+        str_strip_whitespace=True,
+        populate_by_name=True,
+    )
+
     # Agent parameters
     perceptive_field_size: int = Field(64, ge=1, le=1024)
-    qnet_neurons: int = Field(64, ge=1, le=10000)
+    qnet_neurons: int = Field(
+        64,
+        ge=1,
+        le=10000,
+        validation_alias=AliasChoices("qnet_neurons", "QNet_neurons"),
+    )
     embedding_dimensions: int = Field(200, ge=8)
     exploration_rate: float = Field(0.75, ge=0.0, le=1.0)
     exploration_rate_decay: float = Field(0.995, ge=0.0, le=1.0)
@@ -44,7 +78,7 @@ class TrainingConfig(BaseModel):
     max_memory_size: int = Field(10000, ge=100)
     replay_buffer_size: int = Field(1000, ge=100)
     training_seed: int = 42
-    checkpoint_name: str | None = None
+    checkpoint_name: str | None = Field(None, max_length=MAX_CHECKPOINT_NAME_LENGTH)
 
     # Device parameters
     use_device_gpu: bool = False
@@ -53,10 +87,31 @@ class TrainingConfig(BaseModel):
     jit_compile: bool = False
     jit_backend: str = Field("inductor", min_length=1)
 
+    # -------------------------------------------------------------------------
+    @field_validator("checkpoint_name")
+    @classmethod
+    def validate_checkpoint_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if not value:
+            return None
+        return normalize_checkpoint_identifier(value)
+
 
 ###############################################################################
 class ResumeConfig(BaseModel):
     """Configuration for resuming a training session from a checkpoint."""
 
-    checkpoint: str
+    model_config = ConfigDict(
+        extra="forbid",
+        str_strip_whitespace=True,
+    )
+
+    checkpoint: str = Field(..., min_length=1, max_length=MAX_CHECKPOINT_NAME_LENGTH)
     additional_episodes: int = Field(10, ge=1)
+
+    # -------------------------------------------------------------------------
+    @field_validator("checkpoint")
+    @classmethod
+    def validate_checkpoint(cls, value: str) -> str:
+        return normalize_checkpoint_identifier(value)

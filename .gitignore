@@ -1,4 +1,5 @@
 # Project-specific generated/runtime artifacts
+FAIRS/settings/.env
 FAIRS/resources/runtimes/**
 FAIRS/resources/runtimes/uv_cache/**
 FAIRS/resources/logs/**

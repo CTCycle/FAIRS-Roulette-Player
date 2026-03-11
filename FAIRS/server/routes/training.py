@@ -597,9 +597,10 @@ class TrainingEndpoint:
                 checkpoint_path
             )
         except Exception as exc:
+            logger.exception("Failed to load checkpoint metadata")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to load checkpoint metadata: {exc}",
+                detail="Failed to load checkpoint metadata.",
             ) from exc
 
         from_epoch = int(session.get("total_episodes", 0))
@@ -685,9 +686,10 @@ class TrainingEndpoint:
                 checkpoint_path
             )
         except Exception as exc:
+            logger.exception("Failed to load checkpoint metadata")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to load checkpoint metadata: {exc}",
+                detail="Failed to load checkpoint metadata.",
             ) from exc
 
         history = session.get("history", {}) if isinstance(session, dict) else {}
@@ -736,9 +738,10 @@ class TrainingEndpoint:
             shutil.rmtree(checkpoint_path)
             return {"status": "success", "message": f"Checkpoint {checkpoint} deleted"}
         except Exception as exc:
+            logger.exception("Failed to delete checkpoint %s", checkpoint)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to delete checkpoint: {exc}",
+                detail="Failed to delete checkpoint.",
             ) from exc
 
     # -------------------------------------------------------------------------
@@ -844,3 +847,4 @@ training_endpoint = TrainingEndpoint(
     training_state=training_state,
 )
 training_endpoint.add_routes()
+

@@ -1,13 +1,58 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+MAX_CHECKPOINT_NAME_LENGTH = 128
+MAX_SESSION_ID_LENGTH = 64
+
+
+###############################################################################
+def normalize_checkpoint_identifier(value: str) -> str:
+    candidate = value.strip()
+    if not candidate:
+        raise ValueError("Checkpoint name cannot be empty.")
+    if len(candidate) > MAX_CHECKPOINT_NAME_LENGTH:
+        raise ValueError("Checkpoint name is too long.")
+    if candidate in {".", ".."}:
+        raise ValueError("Invalid checkpoint name.")
+    if any(ord(char) < 32 for char in candidate):
+        raise ValueError("Checkpoint name contains invalid control characters.")
+    if any(separator in candidate for separator in ("/", "\\", ":")):
+        raise ValueError("Invalid checkpoint name.")
+    return candidate
+
+
+###############################################################################
+def normalize_session_id(value: str | None) -> str | None:
+    if value is None:
+        return None
+    candidate = value.strip()
+    if not candidate:
+        return None
+    if len(candidate) > MAX_SESSION_ID_LENGTH:
+        raise ValueError("Session identifier is too long.")
+    if any(ord(char) < 32 for char in candidate):
+        raise ValueError("Session identifier contains invalid control characters.")
+    if any(
+        not (char.isalnum() or char in {"-", "_"}) for char in candidate
+    ):
+        raise ValueError(
+            "Session identifier can contain only letters, numbers, '-' and '_'."
+        )
+    return candidate
 
 
 ###############################################################################
 class InferenceStartRequest(BaseModel):
-    checkpoint: str = Field(..., min_length=1)
+    model_config = ConfigDict(
+        extra="forbid",
+        str_strip_whitespace=True,
+    )
+
+    checkpoint: str = Field(..., min_length=1, max_length=MAX_CHECKPOINT_NAME_LENGTH)
     dataset_id: int = Field(..., ge=1)
-    dataset_source: str | None = None
+    dataset_source: str | None = Field(None, pattern="^(source|uploaded)$")
     session_id: str | None = None
     game_capital: int = Field(100, ge=1)
     game_bet: int = Field(1, ge=1)
@@ -19,6 +64,18 @@ class InferenceStartRequest(BaseModel):
     bet_max: int | None = Field(None, ge=1)
     bet_enforce_capital: bool = True
     auto_apply_bet_suggestions: bool = False
+
+    # -------------------------------------------------------------------------
+    @field_validator("checkpoint")
+    @classmethod
+    def validate_checkpoint(cls, value: str) -> str:
+        return normalize_checkpoint_identifier(value)
+
+    # -------------------------------------------------------------------------
+    @field_validator("session_id")
+    @classmethod
+    def validate_session_id(cls, value: str | None) -> str | None:
+        return normalize_session_id(value)
 
 
 ###############################################################################
@@ -50,6 +107,8 @@ class InferenceNextResponse(BaseModel):
 
 ###############################################################################
 class InferenceStepRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     extraction: int = Field(..., ge=0, le=36)
 
 
@@ -66,6 +125,8 @@ class InferenceStepResponse(BaseModel):
 
 ###############################################################################
 class InferenceBetUpdateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     bet_amount: int = Field(..., ge=1)
 
 

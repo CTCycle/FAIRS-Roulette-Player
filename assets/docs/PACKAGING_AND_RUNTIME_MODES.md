@@ -29,6 +29,7 @@ Runtime switching is configuration-only:
 | `UI_HOST`, `UI_PORT` | Local frontend preview host and port. |
 | `VITE_API_BASE_URL` | Frontend API base path. Desktop mode uses `/api`. |
 | `ENABLE_API_DOCS` | Enables FastAPI docs/OpenAPI endpoints. |
+| `FAIRS_ALLOW_DIRECT_API_ROUTES` | When `false`, backend domain routes are exposed only under `/api/*` (recommended for cloud mode behind Nginx). |
 | `RELOAD` | Enables Uvicorn reload in local mode when `true`. |
 | `OPTIONAL_DEPENDENCIES` | Adds optional backend extras during `uv sync`. |
 | `DB_EMBEDDED` | `true` = embedded SQLite, `false` = external DB config required. |
@@ -226,3 +227,4 @@ FAIRS\setup_and_maintenance.bat
 ```
 
 Then choose `Clean desktop build artifacts`.
+
