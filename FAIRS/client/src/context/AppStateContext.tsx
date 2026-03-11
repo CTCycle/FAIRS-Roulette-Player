@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useReducer, type ReactNode } from 'react';
+import React, { useReducer, type ReactNode } from 'react';
 import type { GameConfig, SessionState, GameStep } from '../types/inference';
+import { AppStateContext } from './AppStateStore';
 
 // ============================================================================
 // State Interfaces
@@ -303,13 +304,6 @@ function appReducer(state: AppState, action: AppAction): AppState {
 // Context
 // ============================================================================
 
-interface AppStateContextType {
-    state: AppState;
-    dispatch: React.Dispatch<AppAction>;
-}
-
-const AppStateContext = createContext<AppStateContextType | undefined>(undefined);
-
 export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [state, dispatch] = useReducer(appReducer, initialAppState);
 
@@ -319,14 +313,5 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
         </AppStateContext.Provider>
     );
 };
-
-export const useAppState = (): AppStateContextType => {
-    const context = useContext(AppStateContext);
-    if (context === undefined) {
-        throw new Error('useAppState must be used within an AppStateProvider');
-    }
-    return context;
-};
-
 // Export action type for components
 export type { AppAction };
