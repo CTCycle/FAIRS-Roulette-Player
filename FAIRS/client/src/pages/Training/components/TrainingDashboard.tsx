@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useRef, useId } from 'react';
+import React, { useCallback, useMemo, useState, useEffect, useRef, useId } from 'react';
 import { Activity, ArrowUpRight, TrendingUp, DollarSign, Target, Clock, AlertCircle } from 'lucide-react';
 
 import { TrainingLossChart, type TrainingHistoryPoint } from './TrainingLossChart';
@@ -76,8 +76,12 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
     const jobIdRef = useRef<string | null>(null);
 
     const maxHistoryPoints = 2000;
-    const trainingEndStatuses: TrainingStats['status'][] = ['completed', 'error', 'cancelled'];
-    const validStatus = (value: unknown): value is TrainingStats['status'] => (
+    const trainingEndStatuses = useMemo<TrainingStats['status'][]>(
+        () => ['completed', 'error', 'cancelled'],
+        [],
+    );
+
+    const validStatus = useCallback((value: unknown): value is TrainingStats['status'] => (
         typeof value === 'string'
         && (
             trainingEndStatuses.includes(value as TrainingStats['status'])
@@ -85,19 +89,22 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
             || value === 'exploration'
             || value === 'training'
         )
-    );
-    const toFiniteNumber = (value: unknown, fallback: number) => {
+    ), [trainingEndStatuses]);
+
+    const toFiniteNumber = useCallback((value: unknown, fallback: number) => {
         const numeric = typeof value === 'number' ? value : Number(value);
         return Number.isFinite(numeric) ? numeric : fallback;
-    };
-    const toFiniteNumberOrNull = (value: unknown): number | null => {
+    }, []);
+
+    const toFiniteNumberOrNull = useCallback((value: unknown): number | null => {
         if (value === null || value === undefined || value === '') {
             return null;
         }
         const numeric = typeof value === 'number' ? value : Number(value);
         return Number.isFinite(numeric) ? numeric : null;
-    };
-    const normalizeOptionalMetric = (
+    }, []);
+
+    const normalizeOptionalMetric = useCallback((
         candidate: Partial<TrainingStats>,
         key: 'loss' | 'rmse' | 'val_loss' | 'val_rmse' | 'val_reward',
         fallback: number | null,
@@ -106,8 +113,9 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
             return fallback;
         }
         return toFiniteNumberOrNull(candidate[key]);
-    };
-    const normalizeStats = (value: unknown, fallback: TrainingStats): TrainingStats | null => {
+    }, [toFiniteNumberOrNull]);
+
+    const normalizeStats = useCallback((value: unknown, fallback: TrainingStats): TrainingStats | null => {
         if (!value || typeof value !== 'object') {
             return null;
         }
@@ -140,8 +148,9 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
             status: validStatus(candidate.status) ? candidate.status : fallback.status,
             message: typeof candidate.message === 'string' ? candidate.message : fallback.message,
         };
-    };
-    const isHistoryPoint = (point: unknown): point is TrainingHistoryPoint => {
+    }, [normalizeOptionalMetric, toFiniteNumber, toFiniteNumberOrNull, validStatus]);
+
+    const isHistoryPoint = useCallback((point: unknown): point is TrainingHistoryPoint => {
         if (!point || typeof point !== 'object') {
             return false;
         }
@@ -150,7 +159,7 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
             && Number.isFinite(candidate.epoch)
             && Number.isFinite(candidate.loss)
             && Number.isFinite(candidate.rmse);
-    };
+    }, []);
 
     useEffect(() => {
         onTrainingStartRef.current = onTrainingStart;
@@ -244,14 +253,13 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                 setIsConnected(false);
                 setConnectionError('Failed to connect to training server');
             } finally {
-                if (cancelled) {
-                    return;
-                }
-                const shouldContinue = isActive || backendActiveRef.current;
-                if (shouldContinue && !trainingEnded) {
-                    const elapsedMs = Date.now() - pollStartTime;
-                    const delayMs = Math.max(0, pollIntervalRef.current - elapsedMs);
-                    pollTimeoutRef.current = setTimeout(pollStatus, delayMs);
+                if (!cancelled) {
+                    const shouldContinue = isActive || backendActiveRef.current;
+                    if (shouldContinue && !trainingEnded) {
+                        const elapsedMs = Date.now() - pollStartTime;
+                        const delayMs = Math.max(0, pollIntervalRef.current - elapsedMs);
+                        pollTimeoutRef.current = setTimeout(pollStatus, delayMs);
+                    }
                 }
             }
         };
@@ -266,7 +274,7 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                 pollTimeoutRef.current = null;
             }
         };
-    }, [isActive]);
+    }, [isActive, isHistoryPoint, normalizeStats, trainingEndStatuses]);
 
     const chartPoints = useMemo(() => {
         if (historyPoints.length === 0) {

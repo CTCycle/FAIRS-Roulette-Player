@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAppState } from '../../context/AppStateContext';
+import { useAppState } from '../../hooks/useAppState';
 import { GameSession } from '../../components/inference/GameSession';
 import type { GameConfig, SessionState, GameStep } from '../../types/inference';
 import './InferencePage.css';

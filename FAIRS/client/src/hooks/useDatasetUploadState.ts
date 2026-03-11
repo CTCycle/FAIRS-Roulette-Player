@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useAppState } from '../context/AppStateContext';
+import { useAppState } from './useAppState';
 import type { DatasetUploadState } from '../context/AppStateContext';
 import type { DatasetUploadStateUpdates } from '../types/datasetUpload';
 

@@ -1,6 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Activity, Check, ChevronLeft, ChevronRight, Info, RefreshCw, Save, X } from 'lucide-react';
-import { useAppState } from '../../../context/AppStateContext';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Activity, Info, RefreshCw, Save, X } from 'lucide-react';
+import { useAppState } from '../../../hooks/useAppState';
+import { useWizardStep } from '../../../hooks/useWizardStep';
+import { WizardActions } from './WizardActions';
 
 interface CheckpointMetadataResponse {
     checkpoint: string;
@@ -29,8 +31,6 @@ const parseDatasetId = (value: unknown): string => {
     return '';
 };
 
-type ResumeWizardStep = 0 | 1;
-
 const RESUME_STEPS = ['Resume Configuration', 'Summary'] as const;
 
 export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
@@ -53,7 +53,14 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
     const [checkpointDatasetMap, setCheckpointDatasetMap] = useState<Record<string, string>>({});
 
     const [resumeWizardOpen, setResumeWizardOpen] = useState(false);
-    const [resumeWizardStep, setResumeWizardStep] = useState<ResumeWizardStep>(0);
+    const {
+        step: resumeWizardStep,
+        isFirstStep: isFirstResumeWizardStep,
+        isLastStep: isLastResumeWizardStep,
+        goToPreviousStep: goToPreviousResumeWizardStep,
+        goToNextStep: goToNextResumeWizardStep,
+        resetStep: resetResumeWizardStep,
+    } = useWizardStep({ totalSteps: RESUME_STEPS.length });
     const [resumeWizardCheckpoint, setResumeWizardCheckpoint] = useState<string | null>(null);
     const [resumeWizardError, setResumeWizardError] = useState<string | null>(null);
     const [resumeSubmitting, setResumeSubmitting] = useState(false);
@@ -70,7 +77,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
             const data = await response.json();
             const checkpointList = Array.isArray(data) ? data : [];
             setCheckpoints(checkpointList);
-        } catch (err) {
+        } catch {
             setError('Unable to load checkpoints.');
             setCheckpoints([]);
         } finally {
@@ -99,7 +106,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
                     )
                 : [];
             setDatasets(datasetList);
-        } catch (err) {
+        } catch {
             setDatasets([]);
             setDatasetsError('Unable to load dataset names.');
         } finally {
@@ -144,7 +151,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
         }
     };
 
-    const loadCheckpointMetadata = async (checkpointName: string) => {
+    const loadCheckpointMetadata = useCallback(async (checkpointName: string) => {
         const response = await fetch(`/api/training/checkpoints/${encodeURIComponent(checkpointName)}/metadata`);
         if (!response.ok) {
             const errorData = await response.json();
@@ -152,16 +159,16 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
         }
         const payload = (await response.json()) as CheckpointMetadataResponse;
         return payload;
-    };
+    }, []);
 
-    const cacheCheckpointMetadata = (checkpointName: string, payload: CheckpointMetadataResponse) => {
+    const cacheCheckpointMetadata = useCallback((checkpointName: string, payload: CheckpointMetadataResponse) => {
         setMetadataCache((prev) => ({ ...prev, [checkpointName]: payload }));
         const summary = payload.summary || {};
         const datasetId = parseDatasetId(summary.dataset_id);
         setCheckpointDatasetMap((prev) => ({ ...prev, [checkpointName]: datasetId }));
-    };
+    }, []);
 
-    const prefetchCheckpointMetadata = async (checkpointList: string[]) => {
+    const prefetchCheckpointMetadata = useCallback(async (checkpointList: string[]) => {
         const toFetch = checkpointList.filter((name) => !metadataCache[name]);
         if (toFetch.length === 0) {
             return;
@@ -171,7 +178,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
                 try {
                     const payload = await loadCheckpointMetadata(name);
                     return { name, payload };
-                } catch (err) {
+                } catch {
                     return { name, payload: null };
                 }
             })
@@ -181,14 +188,14 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
                 cacheCheckpointMetadata(result.name, result.payload);
             }
         });
-    };
+    }, [cacheCheckpointMetadata, loadCheckpointMetadata, metadataCache]);
 
     useEffect(() => {
         if (checkpoints.length === 0) {
             return;
         }
         void prefetchCheckpointMetadata(checkpoints);
-    }, [checkpoints, metadataCache]);
+    }, [checkpoints, prefetchCheckpointMetadata]);
 
     const openMetadataModal = async (checkpointName: string) => {
         setMetadataOpen(true);
@@ -248,7 +255,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
 
             dispatch({ type: 'SET_TRAINING_IS_TRAINING', payload: true });
             closeResumeWizard();
-        } catch (err) {
+        } catch {
             setResumeWizardError('Failed to connect to training server');
         } finally {
             setResumeSubmitting(false);
@@ -331,7 +338,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
             return;
         }
         setResumeWizardOpen(true);
-        setResumeWizardStep(0);
+        resetResumeWizardStep();
         setResumeWizardError(null);
         setResumeWizardCheckpoint(checkpointName);
         dispatch({ type: 'SET_TRAINING_RESUME_CONFIG', payload: { selectedCheckpoint: checkpointName } });
@@ -340,7 +347,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
             try {
                 const payload = await loadCheckpointMetadata(checkpointName);
                 cacheCheckpointMetadata(checkpointName, payload);
-            } catch (err) {
+            } catch {
                 setResumeWizardError('Unable to load checkpoint metadata.');
             }
         }
@@ -351,16 +358,15 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
             return;
         }
         setResumeWizardOpen(false);
-        setResumeWizardStep(0);
+        resetResumeWizardStep();
         setResumeWizardCheckpoint(null);
         setResumeWizardError(null);
     };
 
-    const handleResumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
+    const handleResumeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         dispatch({
             type: 'SET_TRAINING_RESUME_CONFIG',
-            payload: { [name]: Number(value) },
+            payload: { numAdditionalEpisodes: Number(event.target.value) },
         });
     };
 
@@ -545,48 +551,15 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
                         {resumeWizardError && (
                             <div className="wizard-error">{resumeWizardError}</div>
                         )}
-                        <div className="wizard-actions">
-                            <button
-                                type="button"
-                                className="wizard-btn wizard-btn-secondary"
-                                onClick={closeResumeWizard}
-                                disabled={resumeSubmitting}
-                            >
-                                Cancel
-                            </button>
-                            <div className="wizard-actions-right">
-                                <button
-                                    type="button"
-                                    className="wizard-btn wizard-btn-secondary"
-                                    onClick={() => setResumeWizardStep((prev) => Math.max(0, prev - 1) as ResumeWizardStep)}
-                                    disabled={resumeWizardStep === 0 || resumeSubmitting}
-                                >
-                                    <ChevronLeft size={16} />
-                                    Previous
-                                </button>
-                                {resumeWizardStep < RESUME_STEPS.length - 1 ? (
-                                    <button
-                                        type="button"
-                                        className="wizard-btn wizard-btn-primary"
-                                        onClick={() => setResumeWizardStep((prev) => Math.min(RESUME_STEPS.length - 1, prev + 1) as ResumeWizardStep)}
-                                        disabled={resumeSubmitting}
-                                    >
-                                        Next
-                                        <ChevronRight size={16} />
-                                    </button>
-                                ) : (
-                                    <button
-                                        type="button"
-                                        className="wizard-btn wizard-btn-primary"
-                                        onClick={handleResumeTraining}
-                                        disabled={resumeSubmitting}
-                                    >
-                                        <Check size={16} />
-                                        Confirm
-                                    </button>
-                                )}
-                            </div>
-                        </div>
+                        <WizardActions
+                            isFirstStep={isFirstResumeWizardStep}
+                            isLastStep={isLastResumeWizardStep}
+                            isSubmitting={resumeSubmitting}
+                            onCancel={closeResumeWizard}
+                            onPrevious={goToPreviousResumeWizardStep}
+                            onNext={goToNextResumeWizardStep}
+                            onConfirm={handleResumeTraining}
+                        />
                     </div>
                 </div>
             )}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAppState } from '../../context/AppStateContext';
+import { useAppState } from '../../hooks/useAppState';
 import { useDatasetUploadState } from '../../hooks/useDatasetUploadState';
 import './Training.css';
 import { TrainingDashboard } from './components/TrainingDashboard';

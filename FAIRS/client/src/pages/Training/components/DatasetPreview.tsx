@@ -1,7 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Check, ChevronLeft, ChevronRight, Database, Play, RefreshCw, X } from 'lucide-react';
-import { useAppState } from '../../../context/AppStateContext';
+import { Database, Play, RefreshCw, X } from 'lucide-react';
+import type { TrainingNewConfig } from '../../../context/AppStateContext';
+import { useAppState } from '../../../hooks/useAppState';
+import { useWizardStep } from '../../../hooks/useWizardStep';
 import { buildTrainingPayload } from './trainingPayload';
+import { WizardActions } from './WizardActions';
 
 interface DatasetPreviewProps {
     refreshKey: number;
@@ -26,8 +29,6 @@ const parseDatasetId = (value: unknown): string => {
     }
     return '';
 };
-
-type WizardStep = 0 | 1 | 2 | 3 | 4 | 5;
 
 const WIZARD_STEPS = [
     'Agent Configuration',
@@ -57,7 +58,14 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
     const [error, setError] = useState<string | null>(null);
 
     const [wizardOpen, setWizardOpen] = useState(false);
-    const [wizardStep, setWizardStep] = useState<WizardStep>(0);
+    const {
+        step: wizardStep,
+        isFirstStep: isFirstWizardStep,
+        isLastStep: isLastWizardStep,
+        goToPreviousStep: goToPreviousWizardStep,
+        goToNextStep: goToNextWizardStep,
+        resetStep: resetWizardStep,
+    } = useWizardStep({ totalSteps: WIZARD_STEPS.length });
     const [wizardDatasetId, setWizardDatasetId] = useState<string | null>(null);
     const [wizardDatasetLabel, setWizardDatasetLabel] = useState<string | null>(null);
     const [wizardError, setWizardError] = useState<string | null>(null);
@@ -85,7 +93,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                     )
                 : [];
             setDatasets(datasetList);
-        } catch (err) {
+        } catch {
             try {
                 const fallbackResponse = await fetch('/api/database/roulette-series/datasets');
                 if (!fallbackResponse.ok) {
@@ -106,7 +114,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                     : [];
                 setDatasets(fallbackList);
                 setError(null);
-            } catch (fallbackError) {
+            } catch {
                 setError('Unable to load datasets.');
                 setDatasets([]);
             }
@@ -119,23 +127,52 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
         void loadDatasets();
     }, [refreshKey]);
 
-    const updateNewConfig = (updates: Partial<typeof newConfig>) => {
+    const updateNewConfig = (updates: Partial<TrainingNewConfig>) => {
         dispatch({ type: 'SET_TRAINING_NEW_CONFIG', payload: updates });
+    };
+
+    const isTrainingNewConfigKey = (value: string): value is keyof TrainingNewConfig => {
+        return Object.prototype.hasOwnProperty.call(newConfig, value);
+    };
+
+    const updateNewConfigField = <K extends keyof TrainingNewConfig>(
+        name: K,
+        value: TrainingNewConfig[K],
+    ) => {
+        const payload: Pick<TrainingNewConfig, K> = { [name]: value } as Pick<TrainingNewConfig, K>;
+        updateNewConfig(payload);
     };
 
     const handleInputChange = (
         event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
     ) => {
         const target = event.target;
-        if (target instanceof HTMLInputElement && target.type === 'checkbox') {
-            updateNewConfig({ [target.name]: target.checked } as Partial<typeof newConfig>);
+        if (!isTrainingNewConfigKey(target.name)) {
             return;
         }
-        updateNewConfig({ [target.name]: target.value } as Partial<typeof newConfig>);
+
+        const key = target.name;
+        const currentValue = newConfig[key];
+
+        if (target instanceof HTMLInputElement && target.type === 'checkbox') {
+            if (typeof currentValue === 'boolean') {
+                updateNewConfigField(key, target.checked as TrainingNewConfig[typeof key]);
+            }
+            return;
+        }
+
+        if (typeof currentValue === 'number') {
+            updateNewConfigField(key, Number(target.value) as TrainingNewConfig[typeof key]);
+            return;
+        }
+
+        updateNewConfigField(key, target.value as TrainingNewConfig[typeof key]);
     };
 
-    const handleNumberChange = (name: keyof typeof newConfig, value: number) => {
-        updateNewConfig({ [name]: value } as Partial<typeof newConfig>);
+    const handleNumberChange = (name: keyof TrainingNewConfig, value: number) => {
+        if (typeof newConfig[name] === 'number') {
+            updateNewConfigField(name, value as TrainingNewConfig[typeof name]);
+        }
     };
 
     const handleDelete = async (datasetId: string) => {
@@ -148,7 +185,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
             }
             await loadDatasets();
             onDelete?.();
-        } catch (err) {
+        } catch {
             setError('Failed to delete dataset.');
         }
     };
@@ -169,7 +206,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
         setError(null);
         setWizardDatasetId(datasetId);
         setWizardDatasetLabel(datasetLabel);
-        setWizardStep(0);
+        resetWizardStep();
         setWizardError(null);
         setWizardOpen(true);
         if (isGenerator) {
@@ -186,7 +223,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
         setWizardOpen(false);
         setWizardDatasetId(null);
         setWizardDatasetLabel(null);
-        setWizardStep(0);
+        resetWizardStep();
         setWizardError(null);
     };
 
@@ -219,7 +256,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
 
             dispatch({ type: 'SET_TRAINING_IS_TRAINING', payload: true });
             closeWizard();
-        } catch (err) {
+        } catch {
             setWizardError('Failed to connect to training server');
         } finally {
             setWizardSubmitting(false);
@@ -661,48 +698,15 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                             <div className="wizard-error">{wizardError}</div>
                         )}
 
-                        <div className="wizard-actions">
-                            <button
-                                type="button"
-                                className="wizard-btn wizard-btn-secondary"
-                                onClick={closeWizard}
-                                disabled={wizardSubmitting}
-                            >
-                                Cancel
-                            </button>
-                            <div className="wizard-actions-right">
-                                <button
-                                    type="button"
-                                    className="wizard-btn wizard-btn-secondary"
-                                    onClick={() => setWizardStep((prev) => Math.max(0, prev - 1) as WizardStep)}
-                                    disabled={wizardStep === 0 || wizardSubmitting}
-                                >
-                                    <ChevronLeft size={16} />
-                                    Previous
-                                </button>
-                                {wizardStep < WIZARD_STEPS.length - 1 ? (
-                                    <button
-                                        type="button"
-                                        className="wizard-btn wizard-btn-primary"
-                                        onClick={() => setWizardStep((prev) => Math.min(WIZARD_STEPS.length - 1, prev + 1) as WizardStep)}
-                                        disabled={wizardSubmitting}
-                                    >
-                                        Next
-                                        <ChevronRight size={16} />
-                                    </button>
-                                ) : (
-                                    <button
-                                        type="button"
-                                        className="wizard-btn wizard-btn-primary"
-                                        onClick={handleStartTraining}
-                                        disabled={wizardSubmitting}
-                                    >
-                                        <Check size={16} />
-                                        Confirm
-                                    </button>
-                                )}
-                            </div>
-                        </div>
+                        <WizardActions
+                            isFirstStep={isFirstWizardStep}
+                            isLastStep={isLastWizardStep}
+                            isSubmitting={wizardSubmitting}
+                            onCancel={closeWizard}
+                            onPrevious={goToPreviousWizardStep}
+                            onNext={goToNextWizardStep}
+                            onConfirm={handleStartTraining}
+                        />
                     </div>
                 </div>
             )}
