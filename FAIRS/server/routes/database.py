@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, HTTPException, Path, status
 
 from FAIRS.server.repositories.serialization.data import DataSerializer
 
@@ -27,8 +27,17 @@ class DatabaseEndpoint:
         return {"datasets": datasets}
 
     # -------------------------------------------------------------------------
-    def delete_roulette_dataset(self, dataset_id: int) -> dict[str, Any]:
-        self.serializer.delete_dataset(dataset_id)
+    def delete_roulette_dataset(
+        self,
+        dataset_id: int = Path(..., ge=1),
+    ) -> dict[str, Any]:
+        try:
+            self.serializer.delete_dataset(dataset_id)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(exc),
+            ) from exc
         return {"status": "deleted", "dataset_id": dataset_id}
 
     # -------------------------------------------------------------------------

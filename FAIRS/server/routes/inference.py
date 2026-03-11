@@ -303,9 +303,10 @@ class InferenceEndpoint:
                 detail=str(exc),
             ) from exc
         except FileNotFoundError as exc:
+            logger.warning("Missing inference artifact for checkpoint %s", checkpoint)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=str(exc),
+                detail="Required inference artifact is missing.",
             ) from exc
         except Exception as exc:
             logger.exception("Failed to initialize inference session")
@@ -496,3 +497,4 @@ class InferenceEndpoint:
 
 inference_endpoint = InferenceEndpoint(router=router)
 inference_endpoint.add_routes()
+
