@@ -26,13 +26,15 @@ const TrainingPage: React.FC = () => {
     };
 
     return (
-        <div className="training-page">
+        <div className="training-page page-shell">
             <div className="page-header">
-                <h1 className="page-title">Training Dashboard</h1>
+                <h1 className="page-title">Model Training Workspace</h1>
+                <p className="page-subtitle">
+                    Upload roulette datasets, manage checkpoints, and monitor live agent training from a single surface.
+                </p>
             </div>
 
             <div className="training-content">
-                {/* Top Row: Upload (30%) + Dataset Preview (70%) */}
                 <div className="training-top-row">
                     <div className="upload-column">
                         <DatasetUpload
@@ -53,13 +55,12 @@ const TrainingPage: React.FC = () => {
 
                 <div className="section-separator" />
 
-                {/* Second Row: Info (30%) + Checkpoints (70%) */}
                 <div className="checkpoints-row">
                     <div className="info-column">
                         <div className="info-content">
                             <h3>Checkpoints</h3>
                             <p>
-                                Your trained models are saved automatically as checkpoints (right). The system handles all data preprocessing, including normalization and validation splits, ensuring your models are ready for inference or continued training.
+                                Review trained snapshots, resume runs, or launch evaluation sessions directly from the checkpoint panel.
                             </p>
                         </div>
                     </div>
@@ -81,3 +82,4 @@ const TrainingPage: React.FC = () => {
 };
 
 export default TrainingPage;
+

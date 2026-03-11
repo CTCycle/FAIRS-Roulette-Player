@@ -11,8 +11,9 @@ const DataPreparationPage: React.FC = () => {
     } = useDatasetUploadState();
 
     return (
-        <div className="data-preparation-page">
+        <div className="data-preparation-page page-shell">
             <div className="page-header">
+                <p className="page-eyebrow">Datasets</p>
                 <h1 className="page-title">Dataset Preparation</h1>
                 <p className="page-subtitle">Upload, validate, and prepare your data for training.</p>
             </div>
