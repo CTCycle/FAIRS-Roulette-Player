@@ -179,10 +179,27 @@ The runner:
 - `runtimes`: portable Python/uv/Node.js downloaded by the Windows launcher.
 
 ## 10. Screenshots
-**Training page**
-![training_page](assets/figures/training_page.png)
+These documentation captures were generated from a local full-stack run with adaptive Playwright viewports.
+Capture metadata (route, files, viewport, notes) is available in `assets/figures/manifest.json`.
 
-**Inference page**
+### Landing (redirects to Training)
+![Home](assets/figures/home.png)
+
+### Training Workspace
+**Overview (upper section)**
+![Training overview part 1](assets/figures/training-overview-part1.png)
+
+**Overview (below the fold)**
+![Training overview part 2](assets/figures/training-overview-part2.png)
+
+**Training wizard detail**
+![Training wizard detail](assets/figures/training-wizard-detail.png)
+
+### Inference Workspace
+![Inference overview](assets/figures/inference-overview.png)
+
+### Legacy Captures
+![training_page](assets/figures/training_page.png)
 ![inference_page](assets/figures/inference_page.png)
 
 ## 11. Additional Documentation
@@ -192,4 +209,5 @@ The runner:
 
 ## 12. License
 This project is licensed under the MIT License. See `LICENSE` for details.
+
 
