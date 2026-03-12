@@ -3,6 +3,7 @@ import { Activity, ArrowUpRight, TrendingUp, DollarSign, Target, Clock, AlertCir
 
 import { TrainingLossChart, type TrainingHistoryPoint } from './TrainingLossChart';
 import { TrainingMetricsChart } from './TrainingMetricsChart';
+import { TrainingMetricCard } from './TrainingMetricCard';
 
 interface TrainingStats {
     epoch: number;
@@ -427,107 +428,19 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
                 <div className="metrics-progress-row">
                     <div className="metrics-panel">
                         <div className="metrics-grid">
-                            <div className="metric-card loss">
-                                <div className="metric-icon">
-                                    <TrendingUp size={20} />
-                                </div>
-                                <div className="metric-content">
-                                    <span className="metric-label">Loss</span>
-                                    <span className="metric-value">{formatMetric(stats.loss)}</span>
-                                </div>
-                            </div>
-
-                            <div className="metric-card rmse">
-                                <div className="metric-icon">
-                                    <Target size={20} />
-                                </div>
-                                <div className="metric-content">
-                                    <span className="metric-label">RMSE</span>
-                                    <span className="metric-value">{formatMetric(stats.rmse)}</span>
-                                </div>
-                            </div>
-
-                            <div className="metric-card loss">
-                                <div className="metric-icon">
-                                    <TrendingUp size={20} />
-                                </div>
-                                <div className="metric-content">
-                                    <span className="metric-label">Val Loss</span>
-                                    <span className="metric-value">{formatMetric(stats.val_loss)}</span>
-                                </div>
-                            </div>
-
-                            <div className="metric-card rmse">
-                                <div className="metric-icon">
-                                    <Target size={20} />
-                                </div>
-                                <div className="metric-content">
-                                    <span className="metric-label">Val RMSE</span>
-                                    <span className="metric-value">{formatMetric(stats.val_rmse)}</span>
-                                </div>
-                            </div>
-
-                            <div className="metric-card total-reward">
-                                <div className="metric-icon">
-                                    <TrendingUp size={20} />
-                                </div>
-                                <div className="metric-content">
-                                    <span className="metric-label">Total Reward</span>
-                                    <span className="metric-value">{formatMetric(stats.total_reward)}</span>
-                                </div>
-                            </div>
-
-                            <div className="metric-card capital-gain">
-                                <div className="metric-icon">
-                                    <ArrowUpRight size={20} />
-                                </div>
-                                <div className="metric-content">
-                                    <span className="metric-label">Capital Gain</span>
-                                    <span className="metric-value">{formatMetric(stats.capital_gain)}</span>
-                                </div>
-                            </div>
-
-                            <div className="metric-card capital">
-                                <div className="metric-icon">
-                                    <DollarSign size={20} />
-                                </div>
-                                <div className="metric-content">
-                                    <span className="metric-label">Capital</span>
-                                    <span className="metric-value">{formatMetric(stats.capital)}</span>
-                                </div>
-                            </div>
-
-                            <div className="metric-card capital">
-                                <div className="metric-icon">
-                                    <DollarSign size={20} />
-                                </div>
-                                <div className="metric-content">
-                                    <span className="metric-label">Current Bet</span>
-                                    <span className="metric-value">{formatMetric(stats.current_bet_amount ?? 0)}</span>
-                                </div>
-                            </div>
+                            <TrainingMetricCard tone="loss" label="Loss" value={formatMetric(stats.loss)} Icon={TrendingUp} />
+                            <TrainingMetricCard tone="rmse" label="RMSE" value={formatMetric(stats.rmse)} Icon={Target} />
+                            <TrainingMetricCard tone="loss" label="Val Loss" value={formatMetric(stats.val_loss)} Icon={TrendingUp} />
+                            <TrainingMetricCard tone="rmse" label="Val RMSE" value={formatMetric(stats.val_rmse)} Icon={Target} />
+                            <TrainingMetricCard tone="total-reward" label="Total Reward" value={formatMetric(stats.total_reward)} Icon={TrendingUp} />
+                            <TrainingMetricCard tone="capital-gain" label="Capital Gain" value={formatMetric(stats.capital_gain)} Icon={ArrowUpRight} />
+                            <TrainingMetricCard tone="capital" label="Capital" value={formatMetric(stats.capital)} Icon={DollarSign} />
+                            <TrainingMetricCard tone="capital" label="Current Bet" value={formatMetric(stats.current_bet_amount ?? 0)} Icon={DollarSign} />
                         </div>
 
                         <div className="metrics-meta-row">
-                            <div className="metric-card rmse metric-meta-card">
-                                <div className="metric-icon">
-                                    <Target size={20} />
-                                </div>
-                                <div className="metric-content">
-                                    <span className="metric-label">Strategy</span>
-                                    <span className="metric-value">{stats.current_strategy_name ?? 'Keep'}</span>
-                                </div>
-                            </div>
-
-                            <div className="metric-card timestep metric-meta-card">
-                                <div className="metric-icon">
-                                    <Clock size={20} />
-                                </div>
-                                <div className="metric-content">
-                                    <span className="metric-label">Time Step</span>
-                                    <span className="metric-value">{formatMetric(stats.time_step)}</span>
-                                </div>
-                            </div>
+                            <TrainingMetricCard tone="rmse" label="Strategy" value={stats.current_strategy_name ?? 'Keep'} Icon={Target} compact />
+                            <TrainingMetricCard tone="timestep" label="Time Step" value={formatMetric(stats.time_step)} Icon={Clock} compact />
                         </div>
                     </div>
 
@@ -598,3 +511,4 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
         </div>
     );
 };
+

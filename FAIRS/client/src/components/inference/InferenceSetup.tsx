@@ -1,8 +1,10 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import type { GameConfig } from '../../types/inference';
 import type { InferenceSetupState } from '../../context/AppStateContext';
 import styles from './InferenceSetup.module.css';
 import { Play } from 'lucide-react';
+import { useCheckpointOptions } from '../../hooks/useCheckpointOptions';
+import { isRecord, parseApiErrorDetail, parseDatasetId } from '../../utils/apiParsers';
 
 interface InferenceSetupProps {
     setup: InferenceSetupState;
@@ -19,37 +21,14 @@ export const InferenceSetup: React.FC<InferenceSetupProps> = ({
 
     // Keep actual File object in local state (not serializable for context)
     const [datasetFile, setDatasetFile] = useState<File | null>(null);
-    const [checkpoints, setCheckpoints] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const latestCheckpointRef = useRef(checkpoint);
 
-    useEffect(() => {
-        latestCheckpointRef.current = checkpoint;
-    }, [checkpoint]);
-
-    useEffect(() => {
-        const loadCheckpoints = async () => {
-            try {
-                const response = await fetch('/api/training/checkpoints');
-                if (!response.ok) {
-                    return;
-                }
-                const data = await response.json();
-                if (Array.isArray(data)) {
-                    setCheckpoints(data);
-                    if (data.length > 0 && !latestCheckpointRef.current) {
-                        onSetupChange({ checkpoint: String(data[0]) });
-                    }
-                }
-            } catch (err) {
-                console.error('Failed to load checkpoints:', err);
-            }
-        };
-
-        loadCheckpoints();
-    }, [onSetupChange]);
+    const checkpoints = useCheckpointOptions({
+        selectedCheckpoint: checkpoint,
+        onSelectCheckpoint: (nextCheckpoint) => onSetupChange({ checkpoint: nextCheckpoint }),
+    });
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
@@ -77,7 +56,7 @@ export const InferenceSetup: React.FC<InferenceSetupProps> = ({
 
         if (!response.ok) {
             const payload = await response.json().catch(() => null);
-            const detail = payload && typeof payload === 'object' && 'detail' in payload ? String(payload.detail) : 'Upload failed.';
+            const detail = parseApiErrorDetail(payload, 'Upload failed.');
             throw new Error(detail);
         }
         return await response.json();
@@ -104,7 +83,7 @@ export const InferenceSetup: React.FC<InferenceSetupProps> = ({
 
         if (!response.ok) {
             const payload = await response.json().catch(() => null);
-            const detail = payload && typeof payload === 'object' && 'detail' in payload ? String(payload.detail) : 'Session start failed.';
+            const detail = parseApiErrorDetail(payload, 'Session start failed.');
             throw new Error(detail);
         }
 
@@ -126,9 +105,9 @@ export const InferenceSetup: React.FC<InferenceSetupProps> = ({
 
         try {
             const uploadPayload = await uploadDataset(datasetFile);
-            const datasetId = String(
-                (uploadPayload as { dataset_id?: unknown }).dataset_id ?? ''
-            );
+            const datasetId = isRecord(uploadPayload)
+                ? parseDatasetId(uploadPayload.dataset_id)
+                : '';
             if (!datasetId) {
                 throw new Error('Upload completed but dataset_id was not returned.');
             }
@@ -232,3 +211,4 @@ export const InferenceSetup: React.FC<InferenceSetupProps> = ({
         </div>
     );
 };
+

@@ -5,6 +5,7 @@ import { useAppState } from '../../../hooks/useAppState';
 import { useWizardStep } from '../../../hooks/useWizardStep';
 import { buildTrainingPayload } from './trainingPayload';
 import { WizardActions } from './WizardActions';
+import { parseDatasetId } from '../../../utils/apiParsers';
 
 interface DatasetPreviewProps {
     refreshKey: number;
@@ -16,19 +17,6 @@ interface DatasetSummary {
     name: string;
     rowCount: number | null;
 }
-
-const parseDatasetId = (value: unknown): string => {
-    if (typeof value === 'number' && Number.isInteger(value) && value > 0) {
-        return String(value);
-    }
-    if (typeof value === 'string') {
-        const trimmed = value.trim();
-        if (/^\d+$/.test(trimmed)) {
-            return trimmed;
-        }
-    }
-    return '';
-};
 
 const WIZARD_STEPS = [
     'Agent Configuration',
@@ -713,3 +701,4 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
         </div>
     );
 };
+
