@@ -3,24 +3,13 @@ import type { GameConfig, GameStep, PredictionResult, SessionState } from '../..
 import type { InferenceSetupState } from '../../context/AppStateContext';
 import styles from './GameSession.module.css';
 import { Check, History, Pencil, Play, Square, Trash2 } from 'lucide-react';
+import { useCheckpointOptions } from '../../hooks/useCheckpointOptions';
+import { isRecord, parseApiErrorDetail, parseDatasetId } from '../../utils/apiParsers';
 
 interface DatasetOption {
     dataset_id: string;
     dataset_name: string;
 }
-
-const parseDatasetId = (value: unknown): string => {
-    if (typeof value === 'number' && Number.isInteger(value) && value > 0) {
-        return String(value);
-    }
-    if (typeof value === 'string') {
-        const trimmed = value.trim();
-        if (/^\d+$/.test(trimmed)) {
-            return trimmed;
-        }
-    }
-    return '';
-};
 
 interface GameSessionProps {
     config: GameConfig | null;
@@ -59,7 +48,7 @@ const maybeNumber = (value: unknown): number | undefined => {
 };
 
 const normalizePrediction = (value: unknown): PredictionResult => {
-    const payload = (typeof value === 'object' && value !== null ? value : {}) as Record<string, unknown>;
+    const payload = isRecord(value) ? value : {};
     const action = maybeNumber(payload.action) ?? 0;
     const description = typeof payload.description === 'string' ? payload.description : 'Unknown';
     const confidence = maybeNumber(payload.confidence);
@@ -93,7 +82,10 @@ export const GameSession: React.FC<GameSessionProps> = ({
     onGameConfigChange,
     onClearSession,
 }) => {
-    const [checkpoints, setCheckpoints] = useState<string[]>([]);
+    const checkpoints = useCheckpointOptions({
+        selectedCheckpoint: setup.checkpoint,
+        onSelectCheckpoint: (nextCheckpoint) => onSetupChange({ checkpoint: nextCheckpoint }),
+    });
     const [datasets, setDatasets] = useState<DatasetOption[]>([]);
     const [isUploading, setIsUploading] = useState(false);
     const [isStarting, setIsStarting] = useState(false);
@@ -119,24 +111,6 @@ export const GameSession: React.FC<GameSessionProps> = ({
     }, [setup]);
 
     useEffect(() => {
-        const loadCheckpoints = async () => {
-            try {
-                const response = await fetch('/api/training/checkpoints');
-                if (!response.ok) {
-                    return;
-                }
-                const data = await response.json();
-                if (Array.isArray(data)) {
-                    setCheckpoints(data);
-                    if (data.length > 0 && !latestSetupRef.current.checkpoint) {
-                        onSetupChange({ checkpoint: String(data[0]) });
-                    }
-                }
-            } catch (err) {
-                console.error('Failed to load checkpoints:', err);
-            }
-        };
-
         const loadDatasets = async () => {
             try {
                 const response = await fetch('/api/database/roulette-series/datasets');
@@ -162,7 +136,6 @@ export const GameSession: React.FC<GameSessionProps> = ({
             }
         };
 
-        loadCheckpoints();
         loadDatasets();
     }, [onSetupChange]);
 
@@ -180,7 +153,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
             });
             if (!response.ok) {
                 const payload = await response.json().catch(() => null);
-                const detail = payload && typeof payload === 'object' && 'detail' in payload ? String(payload.detail) : 'Bet update failed.';
+                const detail = parseApiErrorDetail(payload, 'Bet update failed.');
                 throw new Error(detail);
             }
         } catch (err) {
@@ -200,7 +173,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
 
         if (!response.ok) {
             const payload = await response.json().catch(() => null);
-            const detail = payload && typeof payload === 'object' && 'detail' in payload ? String(payload.detail) : 'Upload failed.';
+            const detail = parseApiErrorDetail(payload, 'Upload failed.');
                 throw new Error(detail);
         }
         return await response.json();
@@ -293,7 +266,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
 
         if (!response.ok) {
             const payload = await response.json().catch(() => null);
-            const detail = payload && typeof payload === 'object' && 'detail' in payload ? String(payload.detail) : 'Session start failed.';
+            const detail = parseApiErrorDetail(payload, 'Session start failed.');
             throw new Error(detail);
         }
 
@@ -376,7 +349,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
             });
             if (!response.ok) {
                 const payload = await response.json().catch(() => null);
-                const detail = payload && typeof payload === 'object' && 'detail' in payload ? String(payload.detail) : 'Stop failed.';
+                const detail = parseApiErrorDetail(payload, 'Stop failed.');
                 throw new Error(detail);
             }
             onSessionStateChange({ isActive: false });
@@ -412,7 +385,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
 
         if (!response.ok) {
             const payload = await response.json().catch(() => null);
-            const detail = payload && typeof payload === 'object' && 'detail' in payload ? String(payload.detail) : 'Prediction failed.';
+            const detail = parseApiErrorDetail(payload, 'Prediction failed.');
             throw new Error(detail);
         }
 
@@ -430,7 +403,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
 
         if (!response.ok) {
             const payload = await response.json().catch(() => null);
-            const detail = payload && typeof payload === 'object' && 'detail' in payload ? String(payload.detail) : 'Step failed.';
+            const detail = parseApiErrorDetail(payload, 'Step failed.');
             throw new Error(detail);
         }
 
@@ -1014,3 +987,4 @@ export const GameSession: React.FC<GameSessionProps> = ({
         </div>
     );
 };
+

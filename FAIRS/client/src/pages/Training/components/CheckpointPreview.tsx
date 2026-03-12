@@ -3,6 +3,7 @@ import { Activity, Info, RefreshCw, Save, X } from 'lucide-react';
 import { useAppState } from '../../../hooks/useAppState';
 import { useWizardStep } from '../../../hooks/useWizardStep';
 import { WizardActions } from './WizardActions';
+import { parseDatasetId } from '../../../utils/apiParsers';
 
 interface CheckpointMetadataResponse {
     checkpoint: string;
@@ -17,19 +18,6 @@ interface DatasetInfo {
     datasetId: string;
     datasetName: string;
 }
-
-const parseDatasetId = (value: unknown): string => {
-    if (typeof value === 'number' && Number.isInteger(value) && value > 0) {
-        return String(value);
-    }
-    if (typeof value === 'string') {
-        const trimmed = value.trim();
-        if (/^\d+$/.test(trimmed)) {
-            return trimmed;
-        }
-    }
-    return '';
-};
 
 const RESUME_STEPS = ['Resume Configuration', 'Summary'] as const;
 
@@ -566,3 +554,4 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
         </div>
     );
 };
+
