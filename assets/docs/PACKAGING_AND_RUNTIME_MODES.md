@@ -8,17 +8,15 @@ FAIRS uses one active runtime file:
 
 Runtime switching is configuration-only:
 
-- Local mode: host execution without Docker.
-- Cloud mode: Docker Compose (`backend` + `frontend`).
+- Local mode: host execution through `FAIRS\start_on_windows.bat`.
 - Desktop packaged mode: Tauri shell + local packaged backend.
 - Switch modes by copying the relevant profile into `FAIRS/settings/.env`.
 
 ## 2. Runtime profiles
 
 - `FAIRS/settings/.env.local.example`: local defaults.
-- `FAIRS/settings/.env.cloud.example`: cloud defaults.
 - `FAIRS/settings/.env.local.tauri.example`: packaged desktop defaults.
-- `FAIRS/settings/.env`: active values for launcher, tests, docker compose, and desktop packaging.
+- `FAIRS/settings/.env`: active values for launcher, tests, and desktop packaging.
 - `FAIRS/settings/configurations.json`: non-runtime defaults.
 
 ## 3. Required environment keys
@@ -29,7 +27,7 @@ Runtime switching is configuration-only:
 | `UI_HOST`, `UI_PORT` | Local frontend preview host and port. |
 | `VITE_API_BASE_URL` | Frontend API base path. Desktop mode uses `/api`. |
 | `ENABLE_API_DOCS` | Enables FastAPI docs/OpenAPI endpoints. |
-| `FAIRS_ALLOW_DIRECT_API_ROUTES` | When `false`, backend domain routes are exposed only under `/api/*` (recommended for cloud mode behind Nginx). |
+| `FAIRS_ALLOW_DIRECT_API_ROUTES` | When `false`, backend domain routes are exposed only under `/api/*` for consistent frontend routing. |
 | `RELOAD` | Enables Uvicorn reload in local mode when `true`. |
 | `OPTIONAL_DEPENDENCIES` | Adds optional backend extras during `uv sync`. |
 | `DB_EMBEDDED` | `true` = embedded SQLite, `false` = external DB config required. |
@@ -58,35 +56,9 @@ FAIRS\start_on_windows.bat
 tests\run_tests.bat
 ```
 
-## 5. Cloud mode
+## 5. Desktop packaged mode
 
-1. Activate cloud profile:
-
-```cmd
-copy /Y FAIRS\settings\.env.cloud.example FAIRS\settings\.env
-```
-
-2. Build images:
-
-```bash
-docker compose --env-file FAIRS/settings/.env build --no-cache
-```
-
-3. Start services:
-
-```bash
-docker compose --env-file FAIRS/settings/.env up -d
-```
-
-4. Stop services:
-
-```bash
-docker compose --env-file FAIRS/settings/.env down
-```
-
-## 6. Desktop packaged mode
-
-### 6.1 Maintainer prerequisites
+### 5.1 Maintainer prerequisites
 
 - Rust/Cargo installed on the maintainer machine.
 - WebView2 installed on the maintainer machine.
@@ -107,7 +79,7 @@ That script prepares:
 
 It also normalizes the extracted Node layout so `node.exe` lives directly under `FAIRS/resources/runtimes/nodejs`.
 
-### 6.2 Shared desktop icon source
+### 5.2 Shared desktop icon source
 
 The canonical desktop icon source is:
 
@@ -126,7 +98,7 @@ That command:
 - refreshes `FAIRS/client/src-tauri/icons`;
 - removes generated `android` and `ios` icon folders so the repo stays desktop-only.
 
-### 6.3 Packaging entrypoint
+### 5.3 Packaging entrypoint
 
 1. Activate the packaged desktop profile:
 
@@ -142,7 +114,7 @@ release\tauri\build_with_tauri.bat
 
 Do not treat raw `tauri build` as the primary path, because the repo helper also validates runtimes, stages resources, and exports public artifacts.
 
-### 6.4 What the packaging helper does
+### 5.4 What the packaging helper does
 
 `release/tauri/build_with_tauri.bat`:
 
@@ -156,7 +128,7 @@ Do not treat raw `tauri build` as the primary path, because the repo helper also
 - removes the transient staging tree on both success and failure;
 - exports distribution artifacts to `release/windows`.
 
-### 6.5 Resource map and runtime tree
+### 5.5 Resource map and runtime tree
 
 The packaged runtime reconstructs this workspace shape:
 
@@ -180,7 +152,7 @@ The packaged runtime reconstructs this workspace shape:
 
 `FAIRS/client/src-tauri/tauri.conf.json` keeps that layout explicit through the Tauri resource whitelist.
 
-### 6.6 Packaged startup behavior
+### 5.6 Packaged startup behavior
 
 - Tauri starts at `about:blank` and renders an in-window splash screen immediately.
 - Rust resolves a packaged workspace by looking for `pyproject.toml` plus `FAIRS/server/app.py`.
@@ -192,7 +164,7 @@ The packaged runtime reconstructs this workspace shape:
 - The window redirects to `http://127.0.0.1:<FASTAPI_PORT>/` after backend readiness is inferred from TCP connectivity.
 - On exit, the app kills the backend process tree with `taskkill /PID <pid> /T /F`.
 
-### 6.7 Packaged HTTP behavior
+### 5.7 Packaged HTTP behavior
 
 When `FAIRS_TAURI_MODE=true` and `FAIRS/client/dist` exists:
 
@@ -202,7 +174,7 @@ When `FAIRS_TAURI_MODE=true` and `FAIRS/client/dist` exists:
 - Unknown SPA routes fall back to `index.html`.
 - If the packaged frontend is unavailable, `/` redirects to `/docs` when docs are enabled.
 
-### 6.8 Distribution output
+### 5.8 Distribution output
 
 The user-facing output is exported to:
 
@@ -211,7 +183,7 @@ The user-facing output is exported to:
 
 The portable folder contains the desktop `.exe` plus the runtime payload entries required by the packaged launcher (`FAIRS`, `pyproject.toml`, `uv.lock`, and `_up_` when present).
 
-## 7. Desktop cleanup
+## 6. Desktop cleanup
 
 Clean desktop build residue with:
 
@@ -227,4 +199,3 @@ FAIRS\setup_and_maintenance.bat
 ```
 
 Then choose `Clean desktop build artifacts`.
-
