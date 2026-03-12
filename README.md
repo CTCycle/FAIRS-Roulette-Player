@@ -6,9 +6,8 @@ FAIRS is a research web application for roulette training and inference experime
 - A React + Vite frontend for training workflows, checkpoint management, and interactive inference sessions.
 - An optional Tauri desktop shell for packaged Windows distribution.
 
-The runtime model is multi-mode and configuration-first:
-- Local mode is the default path (`FAIRS/start_on_windows.bat`), no Docker required.
-- Cloud mode uses Docker (`docker-compose.yml`) for backend + frontend.
+The runtime model is local-only and configuration-first:
+- Local webapp mode is the default path (`FAIRS/start_on_windows.bat`).
 - Desktop mode uses Tauri, starts a local packaged backend, and serves the SPA through FastAPI.
 - Mode switching is done by changing `FAIRS/settings/.env` values.
 
@@ -36,27 +35,7 @@ The launcher automatically:
 3. Installs frontend dependencies (uses `npm ci` when `package-lock.json` is present).
 4. Builds the frontend and launches backend + frontend.
 
-### 3.2 Cloud Mode (Docker)
-1. Switch `.env` to cloud values.
-2. Build and run:
-
-```bash
-docker compose --env-file FAIRS/settings/.env build --no-cache
-docker compose --env-file FAIRS/settings/.env up -d
-```
-
-Stop containers:
-
-```bash
-docker compose --env-file FAIRS/settings/.env down
-```
-
-Cloud topology:
-- `backend`: FastAPI (Uvicorn) on container port `8000`.
-- `frontend`: Nginx serving SPA static files.
-- Nginx proxies `/api/*` to `http://backend:8000/*`.
-
-### 3.3 Desktop Mode (Tauri Packaging)
+### 3.2 Desktop Mode (Tauri Packaging)
 1. Activate desktop profile:
 
 ```cmd
@@ -95,7 +74,6 @@ Runtime behavior:
 ## 4. Mode Switching Procedure
 Profiles:
 - Local reference: `FAIRS/settings/.env.local.example`
-- Cloud reference: `FAIRS/settings/.env.cloud.example`
 - Desktop reference: `FAIRS/settings/.env.local.tauri.example`
 - Active runtime file: `FAIRS/settings/.env`
 
@@ -103,14 +81,13 @@ Use one of the profiles as active `.env`:
 
 ```cmd
 copy /Y FAIRS\settings\.env.local.example FAIRS\settings\.env
-copy /Y FAIRS\settings\.env.cloud.example FAIRS\settings\.env
 copy /Y FAIRS\settings\.env.local.tauri.example FAIRS\settings\.env
 ```
 
 No application code changes are required to switch modes.
 
 ## 5. Configuration Contract
-`FAIRS/settings/.env` defines runtime values for launcher/tests/docker/desktop.
+`FAIRS/settings/.env` defines runtime values for launcher/tests/desktop.
 
 ### 5.1 Core Runtime
 - `FASTAPI_HOST`
@@ -166,10 +143,9 @@ The runner:
 
 ## 8. Deterministic Build Notes
 - Backend lockfile: `uv.lock`.
-- Backend install path in Docker: `uv sync --frozen`.
+- Backend install path in local and packaged desktop runtime setup: `uv sync --frozen`.
 - Frontend lockfile: `FAIRS/client/package-lock.json`.
-- Frontend install path in Docker/desktop packaging: `npm ci`.
-- Docker base images are pinned by tag in `docker/backend.Dockerfile` and `docker/frontend.Dockerfile`.
+- Frontend install path in local launcher and desktop packaging: `npm ci`.
 
 ## 9. Resources
 `FAIRS/resources` contains local runtime and data assets:
@@ -194,7 +170,3 @@ Generator wizard:
 
 ## 11. License
 This project is licensed under the MIT License. See `LICENSE` for details.
-
-
-
-

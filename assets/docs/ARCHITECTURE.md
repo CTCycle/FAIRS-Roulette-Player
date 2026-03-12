@@ -8,23 +8,23 @@ FAIRS is a FastAPI + React/Vite web application for roulette model training and 
 - `FAIRS/client`: React + TypeScript frontend built with Vite.
 - `FAIRS/settings`: Runtime configuration (`.env`, profile examples, `configurations.json`).
 - `FAIRS/resources`: Runtime data (`checkpoints`, `database`, `logs`, `runtimes`).
+- `release/tauri`: Desktop packaging scripts and output staging helpers.
 - `tests`: Python unit and E2E tests (pytest + pytest-playwright).
-- `docker`: Backend/frontend container images and Nginx proxy config.
 
 ## 2. Runtime topology
 
-### Local mode (default)
+### Local mode (default webapp)
 
 - Start with `FAIRS\start_on_windows.bat`.
 - Backend runs Uvicorn (`FAIRS.server.app:app`) on `FASTAPI_HOST:FASTAPI_PORT`.
 - Frontend runs Vite preview on `UI_HOST:UI_PORT`.
 - Frontend talks to backend through `/api` proxying.
 
-### Cloud mode (Docker)
+### Desktop packaged mode (Tauri)
 
-- `backend` service: FastAPI/Uvicorn (`:8000`).
-- `frontend` service: Nginx serving static SPA (`:80`).
-- Nginx proxies `/api/*` to `http://backend:8000/*`.
+- Desktop artifacts are produced via `release\tauri\build_with_tauri.bat`.
+- Tauri launches a local backend from a packaged runtime root and then opens `http://127.0.0.1:<FASTAPI_PORT>/`.
+- FastAPI serves the packaged SPA and exposes API routes under `/api`.
 
 ## 3. Backend architecture
 
@@ -97,4 +97,3 @@ Primary tables:
 - New API domain: add route in `FAIRS/server/routes`, service in `FAIRS/server/services`, and serializer/query support in `FAIRS/server/repositories` as needed.
 - New training/inference behavior: extend `FAIRS/server/learning/*` and expose controls in frontend page components.
 - New UI page: register route in `FAIRS/client/src/App.tsx` and add navigation in `components/Layout/TopNavigation.tsx`.
-
