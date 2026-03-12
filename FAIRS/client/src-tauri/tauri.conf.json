@@ -42,8 +42,8 @@
       "r/resources/checkpoints": "FAIRS/resources/checkpoints",
       "r/resources/database.db": "FAIRS/resources/database.db",
       "r/resources/logs": "FAIRS/resources/logs",
-      "r/resources/runtimes/python": "FAIRS/resources/runtimes/python",
-      "r/resources/runtimes/uv": "FAIRS/resources/runtimes/uv"
+      "r/runtimes/python": "runtimes/python",
+      "r/runtimes/uv": "runtimes/uv"
     }
   }
 }

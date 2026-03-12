@@ -7,7 +7,8 @@ FAIRS is a FastAPI + React/Vite web application for roulette model training and 
 - `FAIRS/server`: FastAPI backend, training/inference logic, database access.
 - `FAIRS/client`: React + TypeScript frontend built with Vite.
 - `FAIRS/settings`: Runtime configuration (`.env`, profile examples, `configurations.json`).
-- `FAIRS/resources`: Runtime data (`checkpoints`, `database`, `logs`, `runtimes`).
+- `FAIRS/resources`: Runtime data (`checkpoints`, `database`, `logs`).
+- `runtimes`: Portable Python/uv/Node.js runtimes provisioned by Windows scripts.
 - `release/tauri`: Desktop packaging scripts and output staging helpers.
 - `tests`: Python unit and E2E tests (pytest + pytest-playwright).
 

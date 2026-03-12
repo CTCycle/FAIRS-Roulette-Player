@@ -6,7 +6,7 @@ REM == Configuration: define project and tool paths
 REM ============================================================================
 set "project_folder=%~dp0"
 set "root_folder=%project_folder%..\"
-set "runtimes_dir=%project_folder%resources\runtimes"
+set "runtimes_dir=%root_folder%runtimes"
 set "settings_dir=%project_folder%settings"
 set "python_dir=%runtimes_dir%\python"
 set "python_exe=%python_dir%\python.exe"
@@ -83,7 +83,7 @@ goto :setup_menu
 :uninstall
 echo --------------------------------------------------------------------------
 echo This operation will remove uv artifacts, caches, local Python files in
-echo resources\runtimes, the portable Node.js installation, and the .venv
+echo runtimes, the portable Node.js installation, and the .venv
 echo directory. The embedded Python folder will be cleaned but the folder
 echo structure will be preserved.
 echo.

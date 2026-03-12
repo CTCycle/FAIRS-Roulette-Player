@@ -62,7 +62,7 @@ tests\run_tests.bat
 
 - Rust/Cargo installed on the maintainer machine.
 - WebView2 installed on the maintainer machine.
-- Portable runtimes provisioned under `FAIRS/resources/runtimes`.
+- Portable runtimes provisioned under `runtimes`.
 
 Provision the portable runtimes with:
 
@@ -72,12 +72,12 @@ FAIRS\start_on_windows.bat
 
 That script prepares:
 
-- `FAIRS/resources/runtimes/python/python.exe`
-- `FAIRS/resources/runtimes/uv/uv.exe`
-- `FAIRS/resources/runtimes/nodejs/node.exe`
-- `FAIRS/resources/runtimes/nodejs/npm.cmd`
+- `runtimes/python/python.exe`
+- `runtimes/uv/uv.exe`
+- `runtimes/nodejs/node.exe`
+- `runtimes/nodejs/npm.cmd`
 
-It also normalizes the extracted Node layout so `node.exe` lives directly under `FAIRS/resources/runtimes/nodejs`.
+It also normalizes the extracted Node layout so `node.exe` lives directly under `runtimes/nodejs`.
 
 ### 5.2 Shared desktop icon source
 
@@ -145,9 +145,9 @@ The packaged runtime reconstructs this workspace shape:
       checkpoints/
       database.db
       logs/
-      runtimes/
-        python/
-        uv/
+  runtimes/
+    python/
+    uv/
 ```
 
 `FAIRS/client/src-tauri/tauri.conf.json` keeps that layout explicit through the Tauri resource whitelist.

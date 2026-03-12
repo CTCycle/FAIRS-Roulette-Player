@@ -6,7 +6,7 @@ REM == Configuration
 REM ============================================================================
 set "project_folder=%~dp0"
 set "root_folder=%project_folder%..\"
-set "runtimes_dir=%project_folder%resources\runtimes"
+set "runtimes_dir=%root_folder%runtimes"
 set "settings_dir=%project_folder%settings"
 set "python_dir=%runtimes_dir%\python"
 set "python_exe=%python_dir%\python.exe"

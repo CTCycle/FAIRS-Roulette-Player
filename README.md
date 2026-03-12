@@ -30,7 +30,7 @@ FAIRS\start_on_windows.bat
 ```
 
 The launcher automatically:
-1. Downloads portable Python, `uv`, and Node.js into `FAIRS/resources/runtimes`.
+1. Downloads portable Python, `uv`, and Node.js into `runtimes`.
 2. Installs backend dependencies from `pyproject.toml`/`uv.lock`.
 3. Installs frontend dependencies (uses `npm ci` when `package-lock.json` is present).
 4. Builds the frontend and launches backend + frontend.
@@ -148,11 +148,12 @@ The runner:
 - Frontend install path in local launcher and desktop packaging: `npm ci`.
 
 ## 9. Resources
-`FAIRS/resources` contains local runtime and data assets:
+`FAIRS/resources` contains local data assets:
 - `checkpoints`: trained model artifacts.
 - `database`: embedded SQLite and related files.
 - `logs`: runtime logs.
-- `runtimes`: portable Python/uv/Node.js downloaded by the Windows launcher.
+
+`runtimes` (repo root) contains portable Python/uv/Node.js downloaded by the Windows launcher.
 
 ## 10. Screenshots
 Documentation captures were regenerated from a local backend (`http://127.0.0.1:5003`) and frontend (`http://127.0.0.1:8003`) run with adaptive Playwright viewports.
