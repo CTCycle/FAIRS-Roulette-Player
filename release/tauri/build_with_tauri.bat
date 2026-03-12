@@ -9,9 +9,10 @@ set "tauri_dir=%client_dir%\src-tauri"
 set "bundle_source_dir=%tauri_dir%\r"
 set "bundle_dir=%tauri_dir%\target\release\bundle"
 set "release_export_dir=%repo_root%\release\windows"
-set "runtime_python_exe=%project_folder%resources\runtimes\python\python.exe"
-set "runtime_uv_exe=%project_folder%resources\runtimes\uv\uv.exe"
-set "runtime_node_dir=%project_folder%resources\runtimes\nodejs"
+set "runtime_root=%repo_root%\runtimes"
+set "runtime_python_exe=%runtime_root%\python\python.exe"
+set "runtime_uv_exe=%runtime_root%\uv\uv.exe"
+set "runtime_node_dir=%runtime_root%\nodejs"
 set "node_cmd=%runtime_node_dir%\node.exe"
 set "npm_cmd=%runtime_node_dir%\npm.cmd"
 
@@ -131,7 +132,7 @@ if errorlevel 1 (
 )
 md "%bundle_source_dir%\resources" >nul 2>&1
 md "%bundle_source_dir%\client" >nul 2>&1
-md "%bundle_source_dir%\resources\runtimes" >nul 2>&1
+md "%bundle_source_dir%\runtimes" >nul 2>&1
 
 copy /y "%repo_root%\pyproject.toml" "%bundle_source_dir%\pyproject.toml" >nul
 if errorlevel 1 (
@@ -156,8 +157,8 @@ call :make_junction "%bundle_source_dir%\settings" "%project_folder%settings" ||
 call :make_junction "%bundle_source_dir%\client\dist" "%client_dir%\dist" || exit /b 1
 call :make_junction "%bundle_source_dir%\resources\checkpoints" "%project_folder%resources\checkpoints" || exit /b 1
 call :make_junction "%bundle_source_dir%\resources\logs" "%project_folder%resources\logs" || exit /b 1
-call :make_junction "%bundle_source_dir%\resources\runtimes\python" "%project_folder%resources\runtimes\python" || exit /b 1
-call :make_junction "%bundle_source_dir%\resources\runtimes\uv" "%project_folder%resources\runtimes\uv" || exit /b 1
+call :make_junction "%bundle_source_dir%\runtimes\python" "%runtime_root%\python" || exit /b 1
+call :make_junction "%bundle_source_dir%\runtimes\uv" "%runtime_root%\uv" || exit /b 1
 exit /b 0
 
 :make_junction
