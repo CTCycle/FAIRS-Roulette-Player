@@ -4,12 +4,18 @@ import os
 import urllib.parse
 import sqlalchemy
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.sql.elements import TextClause
 
 from FAIRS.server.configurations import DatabaseSettings, server_settings
 from FAIRS.server.common.constants import DATABASE_FILENAME, RESOURCES_PATH
 from FAIRS.server.common.utils.logger import logger
 from FAIRS.server.repositories.database.postgres import PostgresRepository
+from FAIRS.server.repositories.queries.database import (
+    POSTGRES_DATABASE_EXISTS_QUERY,
+    ROULETTE_OUTCOMES_COUNT_QUERY,
+    ROULETTE_OUTCOMES_DELETE_QUERY,
+    ROULETTE_OUTCOMES_INSERT_QUERY,
+    build_create_database_query,
+)
 from FAIRS.server.repositories.database.sqlite import SQLiteRepository
 from FAIRS.server.repositories.database.utils import normalize_postgres_engine
 from FAIRS.server.repositories.schemas.models import Base
@@ -124,14 +130,6 @@ def build_postgres_url(settings: DatabaseSettings, database_name: str) -> str:
     )
 
 
-def build_postgres_create_database_sql(
-    database_name: str,
-) -> TextClause:
-    safe_database = database_name.replace('"', '""')
-    return sqlalchemy.text(
-        f'CREATE DATABASE "{safe_database}" WITH ENCODING \'UTF8\' TEMPLATE template0'
-    )
-
 # -----------------------------------------------------------------------------
 def initialize_sqlite_database(settings: DatabaseSettings) -> None:
     repository = SQLiteRepository(settings, initialize_schema=True)
@@ -183,13 +181,13 @@ def ensure_postgres_database(settings: DatabaseSettings) -> str:
 
     with admin_engine.connect() as conn:
         exists = conn.execute(
-            sqlalchemy.text("SELECT 1 FROM pg_database WHERE datname=:name"),
+            POSTGRES_DATABASE_EXISTS_QUERY,
             {"name": target_database},
         ).scalar()
         if exists:
             logger.info("PostgreSQL database %s already exists", target_database)
         else:
-            conn.execute(build_postgres_create_database_sql(target_database))
+            conn.execute(build_create_database_query(target_database))
             logger.info("Created PostgreSQL database %s", target_database)
 
     normalized_settings = DatabaseSettings(
@@ -263,21 +261,11 @@ def seed_roulette_outcomes(engine: sqlalchemy.Engine) -> None:
         return
     rows = build_roulette_outcome_seed_rows()
     with engine.begin() as conn:
-        current = (
-            conn.execute(
-                sqlalchemy.text("SELECT COUNT(*) FROM roulette_outcomes")
-            ).scalar()
-            or 0
-        )
+        current = conn.execute(ROULETTE_OUTCOMES_COUNT_QUERY).scalar() or 0
         if int(current) == len(rows):
             return
-        conn.execute(sqlalchemy.text("DELETE FROM roulette_outcomes"))
-        insert_stmt = sqlalchemy.text(
-            "INSERT INTO roulette_outcomes "
-            "(outcome_id, color, color_code, wheel_position) "
-            "VALUES (:outcome_id, :color, :color_code, :wheel_position)"
-        )
-        conn.execute(insert_stmt, rows)
+        conn.execute(ROULETTE_OUTCOMES_DELETE_QUERY)
+        conn.execute(ROULETTE_OUTCOMES_INSERT_QUERY, rows)
     logger.info("Seeded roulette_outcomes table with %d rows", len(rows))
 
 

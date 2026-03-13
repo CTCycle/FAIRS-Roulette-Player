@@ -14,6 +14,12 @@ from FAIRS.server.configurations import DatabaseSettings
 from FAIRS.server.common.constants import RESOURCES_PATH, DATABASE_FILENAME
 from FAIRS.server.common.utils.logger import logger
 from FAIRS.server.repositories.database.utils import coerce_value_for_sql_column
+from FAIRS.server.repositories.queries.database import (
+    SQLITE_FOREIGN_KEYS_PRAGMA,
+    build_delete_filtered_query,
+    build_select_filtered_query,
+    build_select_table_query,
+)
 from FAIRS.server.repositories.schemas.models import Base
 
 ALLOWED_TABLE_NAMES = frozenset(Base.metadata.tables.keys())
@@ -37,7 +43,7 @@ def set_sqlite_pragma(
     _connection_record: Any,
 ) -> None:
     cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.execute(SQLITE_FOREIGN_KEYS_PRAGMA)
     cursor.close()
 
 
@@ -161,14 +167,15 @@ class SQLiteRepository:
             if limit is None and offset is None:
                 data = pd.read_sql_table(table_name, conn)
             else:
-                query = f'SELECT * FROM "{table_name}"'
-                query_limit = limit if limit is not None else 9223372036854775807
-                query_offset = offset if offset is not None else 0
-                query += " LIMIT :limit OFFSET :offset"
+                query, params = build_select_table_query(
+                    table_name,
+                    limit=limit,
+                    offset=offset,
+                )
                 data = pd.read_sql(
-                    sqlalchemy.text(query),
+                    query,
                     conn,
-                    params={"limit": query_limit, "offset": query_offset},
+                    params=params,
                 )
         return data
 
@@ -189,8 +196,7 @@ class SQLiteRepository:
                 if key not in columns:
                     logger.warning("Column %s does not exist in %s", key, table_name)
                     return pd.DataFrame()
-            clauses = " AND ".join([f'"{key}" = :{key}' for key in conditions])
-            query = sqlalchemy.text(f'SELECT * FROM "{table_name}" WHERE {clauses}')
+            query = build_select_filtered_query(table_name, conditions.keys())
             data = pd.read_sql(query, conn, params=conditions)
         return data
 
@@ -223,6 +229,5 @@ class SQLiteRepository:
                 if key not in columns:
                     logger.warning("Column %s does not exist in %s", key, table_name)
                     return
-            clauses = " AND ".join([f'"{key}" = :{key}' for key in conditions])
-            query = sqlalchemy.text(f'DELETE FROM "{table_name}" WHERE {clauses}')
+            query = build_delete_filtered_query(table_name, conditions.keys())
             conn.execute(query, conditions)

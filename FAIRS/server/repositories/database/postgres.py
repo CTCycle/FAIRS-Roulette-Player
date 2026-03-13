@@ -17,6 +17,11 @@ from FAIRS.server.repositories.database.utils import (
     coerce_value_for_sql_column,
     normalize_postgres_engine,
 )
+from FAIRS.server.repositories.queries.database import (
+    build_delete_filtered_query,
+    build_select_filtered_query,
+    build_select_table_query,
+)
 from FAIRS.server.repositories.schemas.models import Base
 
 ALLOWED_TABLE_NAMES = frozenset(Base.metadata.tables.keys())
@@ -169,14 +174,15 @@ class PostgresRepository:
             if limit is None and offset is None:
                 data = pd.read_sql_table(table_name, conn)
             else:
-                query = f'SELECT * FROM "{table_name}"'
-                query_limit = limit if limit is not None else 9223372036854775807
-                query_offset = offset if offset is not None else 0
-                query += " LIMIT :limit OFFSET :offset"
+                query, params = build_select_table_query(
+                    table_name,
+                    limit=limit,
+                    offset=offset,
+                )
                 data = pd.read_sql(
-                    sqlalchemy.text(query),
+                    query,
                     conn,
-                    params={"limit": query_limit, "offset": query_offset},
+                    params=params,
                 )
         return data
 
@@ -197,8 +203,7 @@ class PostgresRepository:
                 if key not in columns:
                     logger.warning("Column %s does not exist in %s", key, table_name)
                     return pd.DataFrame()
-            clauses = " AND ".join([f'"{key}" = :{key}' for key in conditions])
-            query = sqlalchemy.text(f'SELECT * FROM "{table_name}" WHERE {clauses}')
+            query = build_select_filtered_query(table_name, conditions.keys())
             data = pd.read_sql(query, conn, params=conditions)
         return data
 
@@ -231,6 +236,5 @@ class PostgresRepository:
                 if key not in columns:
                     logger.warning("Column %s does not exist in %s", key, table_name)
                     return
-            clauses = " AND ".join([f'"{key}" = :{key}' for key in conditions])
-            query = sqlalchemy.text(f'DELETE FROM "{table_name}" WHERE {clauses}')
+            query = build_delete_filtered_query(table_name, conditions.keys())
             conn.execute(query, conditions)
