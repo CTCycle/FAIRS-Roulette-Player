@@ -31,7 +31,7 @@ FAIRS\start_on_windows.bat
 
 The launcher automatically:
 1. Downloads portable Python, `uv`, and Node.js into `runtimes`.
-2. Installs backend dependencies from `pyproject.toml`/`uv.lock`.
+2. Uses `runtimes/uv.lock` as the runtime lock source, syncing through workspace `uv.lock` for `uv sync`.
 3. Installs frontend dependencies (uses `npm ci` when `package-lock.json` is present).
 4. Builds the frontend and launches backend + frontend.
 
@@ -42,24 +42,28 @@ The launcher automatically:
 copy /Y FAIRS\settings\.env.local.tauri.example FAIRS\settings\.env
 ```
 
-2. Ensure portable runtimes exist:
+2. Ensure Rust is installed and a default toolchain is configured (`rustup default stable`).
+
+3. Ensure portable runtimes exist:
 
 ```cmd
 FAIRS\start_on_windows.bat
 ```
 
-3. Regenerate desktop icon assets from the shared web favicon when needed:
+4. Regenerate desktop icon assets from the shared web favicon when needed:
 
 ```cmd
 cd FAIRS\client
 npm run tauri:icon
 ```
 
-4. Build desktop artifacts through the repo packaging entrypoint:
+5. Build desktop artifacts through the repo packaging entrypoint:
 
 ```cmd
 release\tauri\build_with_tauri.bat
 ```
+
+The helper fails fast if required root runtime files are missing (`runtimes/python/python.exe`, `runtimes/uv/uv.exe`, `runtimes/nodejs/node.exe`, `runtimes/nodejs/npm.cmd`, `runtimes/uv.lock`) and prints `rustup` remediation when Cargo exists without a default toolchain.
 
 Build output:
 - `release/windows/installers`
@@ -67,8 +71,9 @@ Build output:
 
 Runtime behavior:
 - Tauri starts with `about:blank` and shows a startup screen immediately.
-- Rust resolves the packaged workspace, reuses an existing `.venv` when available, otherwise runs `uv sync --frozen` into a controlled runtime root.
-- The backend is started from the resolved `.venv`, then the window redirects to `http://127.0.0.1:<FASTAPI_PORT>/`.
+- Rust resolves the packaged workspace, reuses an existing `runtimes/.venv` when available, otherwise runs `uv sync --frozen` into a controlled runtime root.
+- Runtime state is kept under `runtimes/.venv` and `runtimes/.uv-cache`.
+- The backend is started from the resolved `runtimes/.venv`, then the window redirects to `http://127.0.0.1:<FASTAPI_PORT>/`.
 - FastAPI serves the packaged SPA and exposes API routes under `/api`.
 
 ## 4. Mode Switching Procedure
@@ -142,7 +147,8 @@ The runner:
 - Initialize database (`FAIRS/scripts/initialize_database.py`).
 
 ## 8. Deterministic Build Notes
-- Backend lockfile: `uv.lock`.
+- Backend runtime lockfile: `runtimes/uv.lock` (staged into packaged `uv.lock` during build).
+- Backend virtual environment path: `runtimes/.venv`.
 - Backend install path in local and packaged desktop runtime setup: `uv sync --frozen`.
 - Frontend lockfile: `FAIRS/client/package-lock.json`.
 - Frontend install path in local launcher and desktop packaging: `npm ci`.

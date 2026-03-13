@@ -60,7 +60,7 @@ tests\run_tests.bat
 
 ### 5.1 Maintainer prerequisites
 
-- Rust/Cargo installed on the maintainer machine.
+- Rust/Cargo installed on the maintainer machine, with a default toolchain configured (`rustup default stable`).
 - WebView2 installed on the maintainer machine.
 - Portable runtimes provisioned under `runtimes`.
 
@@ -76,6 +76,8 @@ That script prepares:
 - `runtimes/uv/uv.exe`
 - `runtimes/nodejs/node.exe`
 - `runtimes/nodejs/npm.cmd`
+- `runtimes/.venv`
+- `runtimes/uv.lock`
 
 It also normalizes the extracted Node layout so `node.exe` lives directly under `runtimes/nodejs`.
 
@@ -119,8 +121,9 @@ Do not treat raw `tauri build` as the primary path, because the repo helper also
 `release/tauri/build_with_tauri.bat`:
 
 - validates the bundled runtime files before build;
+- fails early with actionable Rust setup guidance when Cargo is present but no default Rust toolchain is configured;
 - stages a short bundle source tree at `FAIRS/client/src-tauri/r`;
-- copies `pyproject.toml` and `uv.lock` into that staging tree;
+- copies `pyproject.toml` and `runtimes/uv.lock` into that staging tree as packaged `uv.lock` (and `runtimes/uv.lock`);
 - junctions the runtime directories required by the packaged app;
 - prepends the portable Node runtime to `PATH` for frontend build steps;
 - installs frontend dependencies with the portable Node runtime;
@@ -146,6 +149,10 @@ The packaged runtime reconstructs this workspace shape:
       database.db
       logs/
   runtimes/
+    uv.lock
+    .venv/
+    .uv-cache/
+    nodejs/
     python/
     uv/
 ```
@@ -156,11 +163,11 @@ The packaged runtime reconstructs this workspace shape:
 
 - Tauri starts at `about:blank` and renders an in-window splash screen immediately.
 - Rust resolves a packaged workspace by looking for `pyproject.toml` plus `FAIRS/server/app.py`.
-- If multiple valid roots are found, it prefers one that already contains `.venv\Scripts\python.exe`.
+- If multiple valid roots are found, it prefers one that already contains `runtimes\.venv\Scripts\python.exe`.
 - Rust picks a writable runtime root: the workspace root when reusable, otherwise `%LOCALAPPDATA%\com.fairs.desktop\runtime`.
-- If `.venv\Scripts\python.exe` is missing in that runtime root, Rust runs `uv sync --python <bundled-python> --frozen` first, then falls back to `uv sync --frozen`.
-- Sync runs with `UV_PROJECT_ENVIRONMENT=<runtime-root>\.venv` and `UV_CACHE_DIR=<runtime-root>\.uv-cache`.
-- After sync, Rust launches `python -m uvicorn FAIRS.server.app:app --host <host> --port <port>` from the resolved `.venv`.
+- If `runtimes\.venv\Scripts\python.exe` is missing in that runtime root, Rust runs `uv sync --python <bundled-python> --frozen` first, then falls back to `uv sync --frozen`.
+- Sync runs with `UV_PROJECT_ENVIRONMENT=<runtime-root>\runtimes\.venv` and `UV_CACHE_DIR=<runtime-root>\runtimes\.uv-cache`.
+- After sync, Rust launches `python -m uvicorn FAIRS.server.app:app --host <host> --port <port>` from the resolved `runtimes\.venv`.
 - The window redirects to `http://127.0.0.1:<FASTAPI_PORT>/` after backend readiness is inferred from TCP connectivity.
 - On exit, the app kills the backend process tree with `taskkill /PID <pid> /T /F`.
 
@@ -181,7 +188,9 @@ The user-facing output is exported to:
 - `release/windows/installers`
 - `release/windows/portable`
 
-The portable folder contains the desktop `.exe` plus the runtime payload entries required by the packaged launcher (`FAIRS`, `pyproject.toml`, `uv.lock`, and `_up_` when present).
+The portable folder contains the desktop `.exe` plus the runtime payload entries required by the packaged launcher (`FAIRS`, `runtimes`, `pyproject.toml`, `uv.lock`, and `_up_` when present).
+
+`release/tauri/scripts/export-windows-artifacts.ps1` also verifies that `portable/runtimes/uv/uv.exe`, `portable/runtimes/python/python.exe`, `portable/runtimes/nodejs/node.exe`, and `portable/runtimes/nodejs/npm.cmd` are present in the exported payload.
 
 ## 6. Desktop cleanup
 
