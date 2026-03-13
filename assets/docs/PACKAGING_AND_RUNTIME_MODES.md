@@ -167,6 +167,7 @@ The packaged runtime reconstructs this workspace shape:
 - Rust picks a writable runtime root: the workspace root when reusable, otherwise `%LOCALAPPDATA%\com.fairs.desktop\runtime`.
 - If `runtimes\.venv\Scripts\python.exe` is missing in that runtime root, Rust runs `uv sync --python <bundled-python> --frozen` first, then falls back to `uv sync --frozen`.
 - Sync runs with `UV_PROJECT_ENVIRONMENT=<runtime-root>\runtimes\.venv` and `UV_CACHE_DIR=<runtime-root>\runtimes\.uv-cache`.
+- If desktop `.env` does not define them, backend launch defaults `DB_EMBEDDED=true`, `MPLBACKEND=Agg`, and `KERAS_BACKEND=torch`.
 - After sync, Rust launches `python -m uvicorn FAIRS.server.app:app --host <host> --port <port>` from the resolved `runtimes\.venv`.
 - The window redirects to `http://127.0.0.1:<FASTAPI_PORT>/` after backend readiness is inferred from TCP connectivity.
 - On exit, the app kills the backend process tree with `taskkill /PID <pid> /T /F`.
