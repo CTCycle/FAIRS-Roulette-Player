@@ -12,6 +12,7 @@ set "release_export_dir=%repo_root%\release\windows"
 set "runtime_root=%repo_root%\runtimes"
 set "runtime_python_exe=%runtime_root%\python\python.exe"
 set "runtime_uv_exe=%runtime_root%\uv\uv.exe"
+set "runtime_uv_lock=%runtime_root%\uv.lock"
 set "runtime_node_dir=%runtime_root%\nodejs"
 set "node_cmd=%runtime_node_dir%\node.exe"
 set "npm_cmd=%runtime_node_dir%\npm.cmd"
@@ -24,6 +25,7 @@ call :require_file "%runtime_python_exe%" "embedded Python runtime" || goto buil
 call :require_file "%runtime_uv_exe%" "embedded uv runtime" || goto build_error
 call :require_file "%node_cmd%" "embedded Node.js runtime" || goto build_error
 call :require_file "%npm_cmd%" "embedded npm runtime" || goto build_error
+call :require_file "%runtime_uv_lock%" "runtime backend lockfile runtimes\\uv.lock" || goto build_error
 
 echo [CHECK] Preparing short Tauri bundle sources...
 call :prepare_bundle_sources || goto build_error
@@ -33,19 +35,28 @@ echo [CHECK] Resolving Cargo...
 set "cargo_cmd="
 if exist "%USERPROFILE%\.cargo\bin\cargo.exe" set "cargo_cmd=%USERPROFILE%\.cargo\bin\cargo.exe"
 if not defined cargo_cmd (
-  cargo --version >nul 2>&1
+  where cargo >nul 2>&1
   if not errorlevel 1 set "cargo_cmd=cargo"
 )
 if not defined cargo_cmd (
   echo [FATAL] Rust/Cargo not found. Install Rust first: https://rustup.rs/
   goto build_error
 )
-for /f "delims=" %%V in ('"%cargo_cmd%" --version 2^>nul') do set "cargo_version=%%V"
-echo [INFO] Cargo command: %cargo_cmd%
-if defined cargo_version echo [INFO] !cargo_version!
 if /I not "%cargo_cmd%"=="cargo" (
   for %%I in ("%cargo_cmd%") do set "PATH=%%~dpI;%PATH%"
 )
+set "cargo_version="
+for /f "delims=" %%V in ('"%cargo_cmd%" --version 2^>nul') do set "cargo_version=%%V"
+if not defined cargo_version (
+  call :handle_unusable_cargo "%cargo_cmd%" || goto build_error
+  for /f "delims=" %%V in ('"%cargo_cmd%" --version 2^>nul') do set "cargo_version=%%V"
+)
+if not defined cargo_version (
+  echo [FATAL] Unable to read cargo version from "%cargo_cmd%".
+  goto build_error
+)
+echo [INFO] Cargo command: %cargo_cmd%
+echo [INFO] !cargo_version!
 set "CARGO=%cargo_cmd%"
 
 if /I not "%node_cmd%"=="node" (
@@ -139,9 +150,14 @@ if errorlevel 1 (
   echo [FATAL] Failed to stage pyproject.toml for Tauri bundling.
   exit /b 1
 )
-copy /y "%repo_root%\uv.lock" "%bundle_source_dir%\uv.lock" >nul
+copy /y "%runtime_uv_lock%" "%bundle_source_dir%\uv.lock" >nul
 if errorlevel 1 (
-  echo [FATAL] Failed to stage uv.lock for Tauri bundling.
+  echo [FATAL] Failed to stage runtime lockfile from "%runtime_uv_lock%" to "%bundle_source_dir%\uv.lock".
+  exit /b 1
+)
+copy /y "%runtime_uv_lock%" "%bundle_source_dir%\runtimes\uv.lock" >nul
+if errorlevel 1 (
+  echo [FATAL] Failed to stage runtime lockfile at "%bundle_source_dir%\runtimes\uv.lock".
   exit /b 1
 )
 
@@ -159,6 +175,7 @@ call :make_junction "%bundle_source_dir%\resources\checkpoints" "%project_folder
 call :make_junction "%bundle_source_dir%\resources\logs" "%project_folder%resources\logs" || exit /b 1
 call :make_junction "%bundle_source_dir%\runtimes\python" "%runtime_root%\python" || exit /b 1
 call :make_junction "%bundle_source_dir%\runtimes\uv" "%runtime_root%\uv" || exit /b 1
+call :make_junction "%bundle_source_dir%\runtimes\nodejs" "%runtime_root%\nodejs" || exit /b 1
 exit /b 0
 
 :make_junction
@@ -172,6 +189,35 @@ exit /b 0
 :cleanup_bundle_sources
 if exist "%bundle_source_dir%" rd /s /q "%bundle_source_dir%" >nul 2>&1
 exit /b 0
+
+:handle_unusable_cargo
+set "cargo_probe=%~1"
+"%cargo_probe%" --version >nul 2>&1
+if not errorlevel 1 exit /b 0
+set "rustup_cmd="
+if exist "%USERPROFILE%\.cargo\bin\rustup.exe" set "rustup_cmd=%USERPROFILE%\.cargo\bin\rustup.exe"
+if not defined rustup_cmd (
+  rustup --version >nul 2>&1
+  if not errorlevel 1 set "rustup_cmd=rustup"
+)
+if defined rustup_cmd (
+  "%rustup_cmd%" show active-toolchain >nul 2>&1
+  if errorlevel 1 (
+    echo [FATAL] Cargo exists but no default Rust toolchain is configured.
+    echo         Remediation:
+    echo           "%rustup_cmd%" toolchain install stable
+    echo           "%rustup_cmd%" default stable
+    exit /b 1
+  )
+)
+echo [FATAL] Cargo command "%cargo_probe%" is not usable.
+if defined rustup_cmd (
+  echo         Try:
+  echo           "%rustup_cmd%" default stable
+) else (
+  echo         Install Rust via https://rustup.rs/ and configure a default toolchain.
+)
+exit /b 1
 
 :build_error
 call :cleanup_bundle_sources

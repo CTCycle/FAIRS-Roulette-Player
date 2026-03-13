@@ -16,7 +16,7 @@ set "env_marker=%python_dir%\.is_installed"
 set "uv_dir=%runtimes_dir%\uv"
 set "uv_exe=%uv_dir%\uv.exe"
 set "uv_zip_path=%uv_dir%\uv.zip"
-set "UV_CACHE_DIR=%runtimes_dir%\uv_cache"
+set "UV_CACHE_DIR=%runtimes_dir%\.uv-cache"
 
 set "py_version=3.14.2"
 set "python_zip_filename=python-%py_version%-embed-amd64.zip"
@@ -37,9 +37,14 @@ set "npm_cmd=%nodejs_dir%\npm.cmd"
 set "env_marker_node=%nodejs_dir%\.is_installed"
 
 set "pyproject=%root_folder%pyproject.toml"
+set "venv_dir=%runtimes_dir%\.venv"
+set "UV_PROJECT_ENVIRONMENT=%venv_dir%"
+set "runtime_uv_lock=%runtimes_dir%\uv.lock"
+set "uv_lock_file=%root_folder%uv.lock"
 set "UVICORN_MODULE=FAIRS.server.app:app"
 set "FRONTEND_DIR=%project_folder%client"
 set "FRONTEND_DIST=%FRONTEND_DIR%\dist"
+set "FRONTEND_LOCKFILE=%FRONTEND_DIR%\package-lock.json"
 
 set "DOTENV=%settings_dir%\.env"
 set "TMPDL=%TEMP%\app_dl.ps1"
@@ -47,7 +52,6 @@ set "TMPEXP=%TEMP%\app_expand.ps1"
 set "TMPTXT=%TEMP%\app_txt.ps1"
 set "TMPFIND=%TEMP%\app_find_uv.ps1"
 set "TMPVER=%TEMP%\app_pyver.ps1"
-set "TMPFINDNODE=%TEMP%\app_find_node.ps1"
 
 set "UV_LINK_MODE=copy"
 
@@ -72,7 +76,6 @@ echo $ErrorActionPreference='Stop'; Expand-Archive -LiteralPath $args[0] -Destin
 echo $ErrorActionPreference='Stop'; (Get-Content -LiteralPath $args[0]) -replace '#import site','import site' ^| Set-Content -LiteralPath $args[0] > "%TMPTXT%"
 echo $ErrorActionPreference='Stop'; (Get-ChildItem -LiteralPath $args[0] -Recurse -Filter 'uv.exe' ^| Select-Object -First 1).FullName > "%TMPFIND%"
 echo $ErrorActionPreference='Stop'; ^& $args[0] -c "import platform;print(platform.python_version())" > "%TMPVER%"
-echo $ErrorActionPreference='Stop'; (Get-ChildItem -LiteralPath $args[0] -Recurse -Filter 'node.exe' ^| Select-Object -First 1).FullName > "%TMPFINDNODE%"
 
 REM ============================================================================
 REM == Step 1: Ensure Python (embeddable)
@@ -128,17 +131,12 @@ if not exist "%node_exe%" (
   powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%TMPDL%" "%nodejs_zip_url%" "%nodejs_zip_path%" || goto error
   powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%TMPEXP%" "%nodejs_zip_path%" "%nodejs_dir%" || goto error
   del /q "%nodejs_zip_path%" >nul 2>&1
+)
 
-  for /f "delims=" %%F in ('powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%TMPFINDNODE%" "%nodejs_dir%"') do set "found_node=%%F"
-  if not defined found_node (
-    echo [FATAL] node.exe not found after extraction.
-    goto error
-  )
-
-  if /i not "%found_node%"=="%node_exe%" (
-    for %%D in ("!found_node!") do set "node_parent=%%~dpD"
-    xcopy /s /e /i /q "!node_parent!*" "%nodejs_dir%" >nul
-  )
+set "node_archive_dir=%nodejs_dir%\node-v%nodejs_version%-win-x64"
+if exist "%node_archive_dir%\node.exe" (
+  call :promote_node_runtime "%node_archive_dir%"
+  if errorlevel 1 goto error
 )
 
 if exist "%node_exe%" (
@@ -148,7 +146,8 @@ if exist "%node_exe%" (
   set "PATH=%nodejs_dir%;%PATH%"
 
 ) else (
-  echo [FATAL] node.exe not found at expected location.
+  echo [FATAL] node.exe not found in "%nodejs_dir%".
+  echo [INFO] Expected file: "%node_exe%"
   goto error
 )
 
@@ -159,21 +158,21 @@ REM ============================================================================
 set "FASTAPI_HOST=127.0.0.1"
 set "FASTAPI_PORT=8000"
 set "UI_HOST=127.0.0.1"
-set "UI_PORT=5173"
+set "UI_PORT=8001"
 set "RELOAD=true"
-set "VITE_API_BASE_URL=/api"
 set "OPTIONAL_DEPENDENCIES=false"
 
 if exist "%DOTENV%" (
   for /f "usebackq tokens=* delims=" %%L in ("%DOTENV%") do (
     set "line=%%L"
     if not "!line!"=="" if "!line:~0,1!" NEQ "#" if "!line:~0,1!" NEQ ";" (
-      for /f "tokens=1* delims==" %%K in ("!line!") do (
-        set "k=%%K"
-        set "v=%%L"
+      for /f "tokens=1,* delims==" %%A in ("!line!") do (
+        set "k=%%A"
+        set "v=%%B"
         if defined v (
-          if "!v:~0,1!"=="\"" set "v=!v:~1,-1!"
-          if "!v:~0,1!"=="'" set "v=!v:~1,-1!"
+          for /f "tokens=* delims= " %%Q in ("!v!") do set "v=%%Q"
+          set "v=!v:"=!"
+          if "!v:~0,1!"=="'" if "!v:~-1!"=="'" set "v=!v:~1,-1!"
         )
         set "!k!=!v!"
       )
@@ -204,6 +203,15 @@ if not exist "%pyproject%" (
   echo [FATAL] Missing pyproject: "%pyproject%"
   goto error
 )
+if exist "%runtime_uv_lock%" (
+  echo [INFO] Using runtime lockfile "%runtime_uv_lock%" for uv sync.
+  copy /y "%runtime_uv_lock%" "%uv_lock_file%" >nul
+  if errorlevel 1 (
+    echo [WARN] Failed to copy runtime lockfile to "%uv_lock_file%". Continuing with existing root lockfile.
+  )
+) else (
+  echo [INFO] Runtime lockfile not found at "%runtime_uv_lock%". uv sync will use "%uv_lock_file%" if present.
+)
 
 pushd "%root_folder%" >nul
 set "uv_extras_flag="
@@ -219,6 +227,16 @@ popd >nul
 if not "%sync_ec%"=="0" (
   echo [FATAL] uv sync failed with code %sync_ec%.
   goto error
+)
+if exist "%uv_lock_file%" (
+  copy /y "%uv_lock_file%" "%runtime_uv_lock%" >nul
+  if errorlevel 1 (
+    echo [WARN] Failed to update runtime lockfile at "%runtime_uv_lock%" from "%uv_lock_file%".
+  ) else (
+    echo [INFO] Updated runtime lockfile at "%runtime_uv_lock%".
+  )
+) else (
+  echo [WARN] Root lockfile "%uv_lock_file%" not found after sync; runtime lockfile was not updated.
 )
 
 > "%env_marker%" echo setup_completed
@@ -245,7 +263,7 @@ start "" /b "%uv_exe%" run --python "%python_exe%" python -m uvicorn %UVICORN_MO
 if not exist "%FRONTEND_DIR%\node_modules" (
   echo [STEP] Installing frontend dependencies...
   pushd "%FRONTEND_DIR%" >nul
-  if exist "%FRONTEND_DIR%\package-lock.json" (
+  if exist "%FRONTEND_LOCKFILE%" (
     call "%NPM_CMD%" ci
   ) else (
     call "%NPM_CMD%" install
@@ -253,7 +271,7 @@ if not exist "%FRONTEND_DIR%\node_modules" (
   set "npm_ec=!ERRORLEVEL!"
   popd >nul
   if not "!npm_ec!"=="0" (
-    echo [FATAL] npm install failed with code !npm_ec!.
+    echo [FATAL] Frontend dependency install failed with code !npm_ec!.
     goto error
   )
 )
@@ -294,11 +312,27 @@ start "" "%UI_URL%"
 echo [SUCCESS] Backend and frontend correctly launched
 goto cleanup
 
+:promote_node_runtime
+set "node_source_dir=%~1"
+if not defined node_source_dir exit /b 1
+for %%D in ("%~1") do set "node_source_dir=%%~fD"
+if /i "!node_source_dir!"=="%nodejs_dir%" exit /b 0
+
+robocopy "!node_source_dir!" "%nodejs_dir%" /MOVE /E /R:2 /W:1 /NFL /NDL /NJH /NJS /NC /NS >nul
+set "node_move_ec=!ERRORLEVEL!"
+if !node_move_ec! geq 8 (
+  echo [FATAL] Failed to flatten portable Node.js runtime from "!node_source_dir!".
+  exit /b !node_move_ec!
+)
+
+if exist "!node_source_dir!" rd /s /q "!node_source_dir!" >nul 2>&1
+exit /b 0
+
 REM ============================================================================
 REM Cleanup temp helpers
 REM ============================================================================
 :cleanup
-del /q "%TMPDL%" "%TMPEXP%" "%TMPTXT%" "%TMPFIND%" "%TMPVER%" "%TMPFINDNODE%" >nul 2>&1
+del /q "%TMPDL%" "%TMPEXP%" "%TMPTXT%" "%TMPFIND%" "%TMPVER%" >nul 2>&1
 endlocal & exit /b 0
 
 REM ============================================================================
@@ -308,7 +342,7 @@ REM ============================================================================
 echo.
 echo !!! An error occurred during execution. !!!
 pause
-del /q "%TMPDL%" "%TMPEXP%" "%TMPTXT%" "%TMPFIND%" "%TMPVER%" "%TMPFINDNODE%" >nul 2>&1
+del /q "%TMPDL%" "%TMPEXP%" "%TMPTXT%" "%TMPFIND%" "%TMPVER%" >nul 2>&1
 endlocal & exit /b 1
 
 :kill_port

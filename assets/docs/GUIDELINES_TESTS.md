@@ -44,7 +44,7 @@ tests\run_tests.bat
 What the script does:
 
 1. Resolves host/port/runtime values from `FAIRS/settings/.env`.
-2. Verifies `.venv` and required tools.
+2. Verifies `runtimes/.venv` and required tools.
 3. Starts backend/frontend if not already running.
 4. Runs `pytest tests -v --tb=short`.
 5. Stops only the servers started by the script.
@@ -113,5 +113,5 @@ uv run pytest -q tests\e2e\test_app_flow.py --headed
 ## 8. Common troubleshooting
 
 - `422` responses on POST endpoints are often request-shape or missing field issues.
-- If Playwright tests fail before running, verify optional dependencies and browsers are installed in `.venv`.
+- If Playwright tests fail before running, verify optional dependencies and browsers are installed in `runtimes/.venv`.
 - If E2E readiness fails, check `APP_TEST_BACKEND_URL` / `APP_TEST_FRONTEND_URL` derivation from `.env` values.

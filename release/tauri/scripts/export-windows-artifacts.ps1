@@ -53,14 +53,48 @@ if (Test-Path $msiDir) {
 $portableExeCandidates = Get-ChildItem -Path $releaseDir -Filter "*.exe" -File |
   Where-Object { $_.Name -notmatch "(?i)(setup|installer|uninstall|updater)" }
 
+if ($portableExeCandidates.Count -eq 0) {
+  throw "No portable desktop executable found in $releaseDir. Run release\tauri\build_with_tauri.bat and confirm Tauri release output."
+}
+
 foreach ($file in $portableExeCandidates) {
   Copy-Item -Path $file.FullName -Destination $portableDir -Force
 }
 
+$requiredPortableEntries = @(
+  "FAIRS",
+  "runtimes",
+  "pyproject.toml",
+  "uv.lock"
+)
+
+foreach ($entry in $requiredPortableEntries) {
+  $sourcePath = Join-Path $releaseDir $entry
+  if (-not (Test-Path $sourcePath)) {
+    throw "Missing required portable payload entry: $sourcePath. Run release\tauri\build_with_tauri.bat again after fixing runtime staging."
+  }
+}
+
+$requiredPortableRuntimeFiles = @(
+  "runtimes\uv\uv.exe",
+  "runtimes\python\python.exe",
+  "runtimes\nodejs\node.exe",
+  "runtimes\nodejs\npm.cmd"
+)
+
+foreach ($entry in $requiredPortableRuntimeFiles) {
+  $sourcePath = Join-Path $releaseDir $entry
+  if (-not (Test-Path $sourcePath)) {
+    throw "Missing required portable runtime file: $sourcePath. Ensure root runtimes are staged before export."
+  }
+}
+
 $portableResourceEntries = @(
   "FAIRS",
+  "runtimes",
   "pyproject.toml",
   "uv.lock",
+  "resources",
   "_up_"
 )
 
@@ -69,6 +103,13 @@ foreach ($entry in $portableResourceEntries) {
   if (Test-Path $sourcePath) {
     $destinationPath = Join-Path $portableDir $entry
     Copy-Item -Path $sourcePath -Destination $destinationPath -Recurse -Force
+  }
+}
+
+foreach ($entry in $requiredPortableRuntimeFiles) {
+  $portablePath = Join-Path $portableDir $entry
+  if (-not (Test-Path $portablePath)) {
+    throw "Exported portable payload is incomplete. Missing: $portablePath"
   }
 }
 

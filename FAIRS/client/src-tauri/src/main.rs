@@ -166,11 +166,38 @@ fn is_workspace_root(candidate: &Path) -> bool {
 }
 
 fn has_workspace_venv(candidate: &Path) -> bool {
-    candidate
+    runtime_venv_python(candidate).is_file()
+}
+
+fn has_workspace_runtime_layout(candidate: &Path) -> bool {
+    runtime_uv_exe(candidate).is_file() && runtime_python_exe(candidate).is_file()
+}
+
+fn runtime_uv_exe(root: &Path) -> PathBuf {
+    root.join("runtimes").join("uv").join("uv.exe")
+}
+
+fn runtime_python_exe(root: &Path) -> PathBuf {
+    root.join("runtimes").join("python").join("python.exe")
+}
+
+fn runtime_venv_python(root: &Path) -> PathBuf {
+    root.join("runtimes")
         .join(".venv")
         .join("Scripts")
         .join("python.exe")
-        .is_file()
+}
+
+fn format_checked_paths(paths: &[PathBuf]) -> String {
+    if paths.is_empty() {
+        String::from("  (none)")
+    } else {
+        paths
+            .iter()
+            .map(|path| format!("  - {}", path.display()))
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
 }
 
 fn push_with_ancestors(base: &Path, candidates: &mut Vec<PathBuf>) {
@@ -181,17 +208,12 @@ fn push_with_ancestors(base: &Path, candidates: &mut Vec<PathBuf>) {
     }
 }
 
-fn find_workspace_root(app_handle: &tauri::AppHandle) -> Option<PathBuf> {
+fn find_workspace_root(app_handle: &tauri::AppHandle) -> Result<PathBuf, String> {
     let mut candidates: Vec<PathBuf> = Vec::new();
-
-    if let Ok(resource_dir) = app_handle.path().resource_dir() {
-        push_with_ancestors(&resource_dir, &mut candidates);
-    }
 
     if let Ok(exe_path) = std::env::current_exe() {
         if let Some(exe_dir) = exe_path.parent() {
             push_with_ancestors(exe_dir, &mut candidates);
-            push_with_ancestors(&exe_dir.join("resources"), &mut candidates);
         }
     }
 
@@ -199,22 +221,52 @@ fn find_workspace_root(app_handle: &tauri::AppHandle) -> Option<PathBuf> {
         push_with_ancestors(&current_dir, &mut candidates);
     }
 
+    if let Ok(resource_dir) = app_handle.path().resource_dir() {
+        push_with_ancestors(&resource_dir, &mut candidates);
+    }
+
     let mut seen: HashSet<PathBuf> = HashSet::new();
+    let mut checked_candidates: Vec<PathBuf> = Vec::new();
     let mut workspace_candidates: Vec<PathBuf> = Vec::new();
     for candidate in candidates {
-        if seen.insert(candidate.clone()) && is_workspace_root(&candidate) {
-            workspace_candidates.push(candidate);
+        if seen.insert(candidate.clone()) {
+            checked_candidates.push(candidate.clone());
+            if is_workspace_root(&candidate) {
+                workspace_candidates.push(candidate);
+            }
         }
+    }
+
+    if let Some(with_layout_and_venv) = workspace_candidates
+        .iter()
+        .find(|candidate| has_workspace_runtime_layout(candidate) && has_workspace_venv(candidate))
+    {
+        return Ok(with_layout_and_venv.clone());
+    }
+
+    if let Some(with_layout) = workspace_candidates
+        .iter()
+        .find(|candidate| has_workspace_runtime_layout(candidate))
+    {
+        return Ok(with_layout.clone());
     }
 
     if let Some(with_venv) = workspace_candidates
         .iter()
         .find(|candidate| has_workspace_venv(candidate))
     {
-        return Some(with_venv.clone());
+        return Ok(with_venv.clone());
     }
 
-    workspace_candidates.into_iter().next()
+    if let Some(first_candidate) = workspace_candidates.into_iter().next() {
+        return Ok(first_candidate);
+    }
+
+    let checked_paths = format_checked_paths(&checked_candidates);
+
+    Err(format!(
+        "Cannot resolve packaged backend workspace. Expected a root containing pyproject.toml and FAIRS/server/app.py.\nChecked paths:\n{checked_paths}"
+    ))
 }
 
 fn directory_is_writable(path: &Path) -> bool {
@@ -248,9 +300,9 @@ fn resolve_runtime_root(
         return Ok(runtime_root);
     }
 
+    let checked_paths = format_checked_paths(&[workspace_root.to_path_buf(), runtime_root.clone()]);
     Err(format!(
-        "Cannot access writable runtime directory at {}.",
-        runtime_root.display()
+        "Cannot access writable runtime directory.\nChecked paths:\n{checked_paths}"
     ))
 }
 
@@ -305,32 +357,32 @@ fn spawn_backend(app_handle: &tauri::AppHandle, state: &BackendChildState) -> Re
 
     #[cfg(target_os = "windows")]
     {
-        let workspace_root = find_workspace_root(app_handle).ok_or_else(|| {
-            String::from("Cannot resolve packaged backend workspace (missing pyproject.toml/FAIRS).")
-        })?;
+        let workspace_root = find_workspace_root(app_handle)?;
         let runtime_root = resolve_runtime_root(app_handle, &workspace_root)?;
         let project_dir = workspace_root.join("FAIRS");
         let env_path = project_dir.join("settings").join(".env");
         let backend_config = resolve_backend_launch_config(&env_path);
-        let uv_exe = workspace_root
-            .join("runtimes")
-            .join("uv")
-            .join("uv.exe");
-        let python_exe = workspace_root
-            .join("runtimes")
-            .join("python")
-            .join("python.exe");
-        let venv_dir = runtime_root.join(".venv");
-        let venv_python_exe = venv_dir.join("Scripts").join("python.exe");
-        let uv_cache_dir = runtime_root.join(".uv-cache");
+        let uv_exe = runtime_uv_exe(&workspace_root);
+        let python_exe = runtime_python_exe(&workspace_root);
+        let runtime_state_root = runtime_root.join("runtimes");
+        let venv_dir = runtime_state_root.join(".venv");
+        let venv_python_exe = runtime_venv_python(&runtime_root);
+        let uv_cache_dir = runtime_state_root.join(".uv-cache");
 
         if !uv_exe.is_file() {
-            return Err(format!("Bundled uv runtime not found at {}", uv_exe.display()));
+            let checked_paths = format_checked_paths(std::slice::from_ref(&uv_exe));
+            return Err(format!(
+                "Bundled uv runtime not found in resolved workspace runtime layout.\nWorkspace root: {}\nChecked paths:\n{}",
+                workspace_root.display(),
+                checked_paths
+            ));
         }
         if !python_exe.is_file() {
+            let checked_paths = format_checked_paths(std::slice::from_ref(&python_exe));
             return Err(format!(
-                "Bundled python runtime not found at {}",
-                python_exe.display()
+                "Bundled python runtime not found in resolved workspace runtime layout.\nWorkspace root: {}\nChecked paths:\n{}",
+                workspace_root.display(),
+                checked_paths
             ));
         }
 

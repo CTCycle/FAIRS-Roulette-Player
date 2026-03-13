@@ -1,7 +1,7 @@
 # Project-specific generated/runtime artifacts
 FAIRS/settings/.env
 runtimes/**
-runtimes/uv_cache/**
+runtimes/.uv-cache/**
 FAIRS/resources/logs/**
 FAIRS/resources/checkpoints/**
 FAIRS/client/node_modules/
@@ -18,7 +18,7 @@ release/windows/
 __pycache__/
 *.py[cod]
 *.egg-info/
-.venv/
+runtimes/.venv/
 venv/
 .pytest_cache/
 .mypy_cache/

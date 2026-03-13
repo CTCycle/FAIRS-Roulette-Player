@@ -17,7 +17,7 @@ set "SCRIPT_DIR=%~dp0"
 set "PROJECT_ROOT=%SCRIPT_DIR%.."
 set "FAIRS_DIR=%PROJECT_ROOT%\\FAIRS"
 set "PYTHON_EXE=%PROJECT_ROOT%\\runtimes\\python\\python.exe"
-set "VENV_PYTHON=%PROJECT_ROOT%\\.venv\\Scripts\\python.exe"
+set "VENV_PYTHON=%PROJECT_ROOT%\\runtimes\\.venv\\Scripts\\python.exe"
 set "NODEJS_DIR=%PROJECT_ROOT%\\runtimes\\nodejs"
 set "NPM_CMD=%NODEJS_DIR%\\npm.cmd"
 set "FRONTEND_DIR=%FAIRS_DIR%\\client"
@@ -85,11 +85,11 @@ echo [INFO] Frontend bind: !UI_HOST!:!UI_PORT!
 echo [INFO] APP_TEST_BACKEND_URL=!APP_TEST_BACKEND_URL!
 echo [INFO] APP_TEST_FRONTEND_URL=!APP_TEST_FRONTEND_URL!
 
-REM Check for Python (require uv-created .venv)
+REM Check for Python (require uv-created runtimes\.venv)
 if exist "%VENV_PYTHON%" (
     set "PYTHON_CMD=%VENV_PYTHON%"
 ) else (
-    echo [ERROR] .venv not found at "%VENV_PYTHON%".
+    echo [ERROR] Runtime virtual environment not found at "%VENV_PYTHON%".
     echo [ERROR] Run FAIRS\\start_on_windows.bat to create the environment.
     exit /b 1
 )
@@ -106,25 +106,25 @@ if exist "%NPM_CMD%" (
     set "NPM_RUN=npm"
 )
 
-REM Check for pytest/playwright in the existing .venv only (no installs here)
+REM Check for pytest/playwright in the existing runtimes\.venv only (no installs here)
 if /i "%OPTIONAL_DEPENDENCIES%"=="true" (
     "%PYTHON_CMD%" -c "import pytest" >nul 2>&1
     if %ERRORLEVEL% neq 0 (
-        echo [ERROR] pytest not installed in .venv.
+        echo [ERROR] pytest not installed in runtimes\\.venv.
         echo [ERROR] Set OPTIONAL_DEPENDENCIES=true and run FAIRS\\start_on_windows.bat.
         exit /b 1
     )
 
     "%PYTHON_CMD%" -c "import playwright" >nul 2>&1
     if %ERRORLEVEL% neq 0 (
-        echo [ERROR] playwright not installed in .venv.
+        echo [ERROR] playwright not installed in runtimes\\.venv.
         echo [ERROR] Set OPTIONAL_DEPENDENCIES=true and run FAIRS\\start_on_windows.bat.
         exit /b 1
     )
 
     "%PYTHON_CMD%" -c "import psutil" >nul 2>&1
     if %ERRORLEVEL% neq 0 (
-        echo [ERROR] psutil not installed in .venv.
+        echo [ERROR] psutil not installed in runtimes\\.venv.
         echo [ERROR] Set OPTIONAL_DEPENDENCIES=true and run FAIRS\\start_on_windows.bat.
         exit /b 1
     )
