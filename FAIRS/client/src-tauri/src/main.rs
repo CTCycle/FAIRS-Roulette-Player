@@ -26,6 +26,9 @@ struct BackendLaunchConfig {
     port: u16,
     reload: bool,
     install_extras: bool,
+    db_embedded: String,
+    mpl_backend: String,
+    keras_backend: String,
 }
 
 fn parse_dotenv_value(raw: &str) -> String {
@@ -53,6 +56,9 @@ fn resolve_backend_launch_config(env_path: &Path) -> BackendLaunchConfig {
         port: 8000u16,
         reload: false,
         install_extras: false,
+        db_embedded: String::from("true"),
+        mpl_backend: String::from("Agg"),
+        keras_backend: String::from("torch"),
     };
 
     let content = match fs::read_to_string(env_path) {
@@ -82,6 +88,12 @@ fn resolve_backend_launch_config(env_path: &Path) -> BackendLaunchConfig {
             config.reload = parse_boolish(&value);
         } else if key.eq_ignore_ascii_case("OPTIONAL_DEPENDENCIES") {
             config.install_extras = parse_boolish(&value);
+        } else if key.eq_ignore_ascii_case("DB_EMBEDDED") && !value.is_empty() {
+            config.db_embedded = value;
+        } else if key.eq_ignore_ascii_case("MPLBACKEND") && !value.is_empty() {
+            config.mpl_backend = value;
+        } else if key.eq_ignore_ascii_case("KERAS_BACKEND") && !value.is_empty() {
+            config.keras_backend = value;
         }
     }
 
@@ -345,6 +357,23 @@ fn run_command_with_timeout(
     }
 }
 
+fn python_module_available(python_exe: &Path, workspace_root: &Path, module: &str) -> bool {
+    let mut command = Command::new(python_exe);
+    configure_background_command(&mut command);
+    command
+        .args(["-c", &format!("import {module}")])
+        .current_dir(workspace_root)
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+
+    run_command_with_timeout(
+        &mut command,
+        Duration::from_secs(20),
+        "python module availability check",
+    )
+    .unwrap_or(false)
+}
+
 fn spawn_backend(app_handle: &tauri::AppHandle, state: &BackendChildState) -> Result<(), String> {
     #[cfg(not(target_os = "windows"))]
     {
@@ -405,7 +434,10 @@ fn spawn_backend(app_handle: &tauri::AppHandle, state: &BackendChildState) -> Re
         }
         sync_with_embedded_args.push(String::from("--frozen"));
 
-        if !venv_python_exe.is_file() {
+        let needs_sync = !venv_python_exe.is_file()
+            || !python_module_available(&venv_python_exe, &workspace_root, "uvicorn");
+
+        if needs_sync {
             fs::create_dir_all(&uv_cache_dir).map_err(|error| {
                 format!(
                     "Cannot create uv cache directory at {}: {error}",
@@ -469,6 +501,9 @@ fn spawn_backend(app_handle: &tauri::AppHandle, state: &BackendChildState) -> Re
         let backend_host = backend_config.host.clone();
         let backend_port = backend_config.port;
         let backend_port_str = backend_port.to_string();
+        let db_embedded = backend_config.db_embedded.clone();
+        let mpl_backend = backend_config.mpl_backend.clone();
+        let keras_backend = backend_config.keras_backend.clone();
         let mut child_command = Command::new(&venv_python_exe);
         configure_background_command(&mut child_command);
         child_command.arg("-m").arg("uvicorn");
@@ -487,6 +522,9 @@ fn spawn_backend(app_handle: &tauri::AppHandle, state: &BackendChildState) -> Re
         let child = child_command
             .current_dir(&workspace_root)
             .env("FAIRS_TAURI_MODE", "true")
+            .env("DB_EMBEDDED", db_embedded)
+            .env("MPLBACKEND", mpl_backend)
+            .env("KERAS_BACKEND", keras_backend)
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null())

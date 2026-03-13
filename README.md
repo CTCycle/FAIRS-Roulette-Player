@@ -73,6 +73,7 @@ Runtime behavior:
 - Tauri starts with `about:blank` and shows a startup screen immediately.
 - Rust resolves the packaged workspace, reuses an existing `runtimes/.venv` when available, otherwise runs `uv sync --frozen` into a controlled runtime root.
 - Runtime state is kept under `runtimes/.venv` and `runtimes/.uv-cache`.
+- When desktop `.env` is missing/incomplete, packaged backend startup applies safe defaults for `DB_EMBEDDED=true`, `MPLBACKEND=Agg`, and `KERAS_BACKEND=torch`.
 - The backend is started from the resolved `runtimes/.venv`, then the window redirects to `http://127.0.0.1:<FASTAPI_PORT>/`.
 - FastAPI serves the packaged SPA and exposes API routes under `/api`.
 
