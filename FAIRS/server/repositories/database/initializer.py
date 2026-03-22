@@ -3,22 +3,17 @@ from __future__ import annotations
 import os
 import urllib.parse
 import sqlalchemy
+from sqlalchemy import delete, func, select
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import sessionmaker
 
 from FAIRS.server.configurations import DatabaseSettings, server_settings
 from FAIRS.server.common.constants import DATABASE_FILENAME, RESOURCES_PATH
 from FAIRS.server.common.utils.logger import logger
 from FAIRS.server.repositories.database.postgres import PostgresRepository
-from FAIRS.server.repositories.queries.database import (
-    POSTGRES_DATABASE_EXISTS_QUERY,
-    ROULETTE_OUTCOMES_COUNT_QUERY,
-    ROULETTE_OUTCOMES_DELETE_QUERY,
-    ROULETTE_OUTCOMES_INSERT_QUERY,
-    build_create_database_query,
-)
 from FAIRS.server.repositories.database.sqlite import SQLiteRepository
 from FAIRS.server.repositories.database.utils import normalize_postgres_engine
-from FAIRS.server.repositories.schemas.models import Base
+from FAIRS.server.repositories.schemas.models import Base, RouletteOutcomes
 
 
 ROULETTE_POSITION_MAP: dict[int, int] = {
@@ -131,6 +126,48 @@ def build_postgres_url(settings: DatabaseSettings, database_name: str) -> str:
 
 
 # -----------------------------------------------------------------------------
+def escape_postgres_identifier(identifier: str) -> str:
+    return identifier.replace('"', '""')
+
+
+# -----------------------------------------------------------------------------
+def is_missing_postgres_database_error(
+    exc: SQLAlchemyError,
+    target_database: str,
+) -> bool:
+    original = getattr(exc, "orig", None)
+    sql_state = getattr(original, "sqlstate", None) or getattr(original, "pgcode", None)
+    if sql_state == "3D000":
+        return True
+    lowered = str(exc).lower()
+    return "does not exist" in lowered and target_database.lower() in lowered
+
+
+# -----------------------------------------------------------------------------
+def postgres_database_exists(
+    settings: DatabaseSettings,
+    target_database: str,
+    connect_args: dict[str, str | int],
+) -> bool:
+    probe_engine = sqlalchemy.create_engine(
+        build_postgres_url(settings, target_database),
+        echo=False,
+        future=True,
+        connect_args=connect_args,
+        pool_pre_ping=True,
+    )
+    try:
+        with probe_engine.connect():
+            return True
+    except SQLAlchemyError as exc:
+        if is_missing_postgres_database_error(exc, target_database):
+            return False
+        raise
+    finally:
+        probe_engine.dispose()
+
+
+# -----------------------------------------------------------------------------
 def initialize_sqlite_database(settings: DatabaseSettings) -> None:
     repository = SQLiteRepository(settings, initialize_schema=True)
     seed_roulette_outcomes(repository.engine)
@@ -178,17 +215,21 @@ def ensure_postgres_database(settings: DatabaseSettings) -> str:
         isolation_level="AUTOCOMMIT",
         pool_pre_ping=True,
     )
-
-    with admin_engine.connect() as conn:
-        exists = conn.execute(
-            POSTGRES_DATABASE_EXISTS_QUERY,
-            {"name": target_database},
-        ).scalar()
+    try:
+        exists = postgres_database_exists(settings, target_database, connect_args)
         if exists:
             logger.info("PostgreSQL database %s already exists", target_database)
         else:
-            conn.execute(build_create_database_query(target_database))
+            safe_database_name = escape_postgres_identifier(target_database)
+            create_database_stmt = (
+                f'CREATE DATABASE "{safe_database_name}" '
+                "WITH ENCODING 'UTF8' TEMPLATE template0"
+            )
+            with admin_engine.connect() as conn:
+                conn.exec_driver_sql(create_database_stmt)
             logger.info("Created PostgreSQL database %s", target_database)
+    finally:
+        admin_engine.dispose()
 
     normalized_settings = DatabaseSettings(
         embedded_database=False,
@@ -260,12 +301,17 @@ def seed_roulette_outcomes(engine: sqlalchemy.Engine) -> None:
     if not inspector.has_table("roulette_outcomes"):
         return
     rows = build_roulette_outcome_seed_rows()
-    with engine.begin() as conn:
-        current = conn.execute(ROULETTE_OUTCOMES_COUNT_QUERY).scalar() or 0
+    session_factory = sessionmaker(bind=engine, future=True)
+    session = session_factory()
+    try:
+        current = session.scalar(select(func.count()).select_from(RouletteOutcomes)) or 0
         if int(current) == len(rows):
             return
-        conn.execute(ROULETTE_OUTCOMES_DELETE_QUERY)
-        conn.execute(ROULETTE_OUTCOMES_INSERT_QUERY, rows)
+        session.execute(delete(RouletteOutcomes))
+        session.add_all([RouletteOutcomes(**row) for row in rows])
+        session.commit()
+    finally:
+        session.close()
     logger.info("Seeded roulette_outcomes table with %d rows", len(rows))
 
 
