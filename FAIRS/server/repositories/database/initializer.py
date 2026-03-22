@@ -178,10 +178,6 @@ def initialize_sqlite_database(settings: DatabaseSettings) -> None:
 def initialize_sqlite_database_if_missing(settings: DatabaseSettings) -> None:
     db_path = os.path.join(RESOURCES_PATH, DATABASE_FILENAME)
     if os.path.exists(db_path):
-        logger.info(
-            "SQLite database file already exists at %s. Skipping initialization.",
-            db_path,
-        )
         return
     initialize_sqlite_database(settings)
 
