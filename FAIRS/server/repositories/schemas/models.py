@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy import (
@@ -66,7 +67,11 @@ class Datasets(Base):
     dataset_id: Mapped[str] = mapped_column(String(32), primary_key=True)
     dataset_name: Mapped[str] = mapped_column(String, nullable=False)
     dataset_kind: Mapped[str] = mapped_column(String, nullable=False)
-    created_at: Mapped[Any] = mapped_column(DateTime, nullable=False, default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=func.now(),
+    )
     outcomes: Mapped[list[DatasetOutcomes]] = relationship(
         back_populates="dataset",
         cascade="all, delete-orphan",
@@ -129,8 +134,12 @@ class InferenceSessions(Base):
     )
     checkpoint_name: Mapped[str] = mapped_column(String, nullable=False)
     initial_capital: Mapped[int] = mapped_column(Integer, nullable=False)
-    started_at: Mapped[Any] = mapped_column(DateTime, nullable=False, default=func.now())
-    ended_at: Mapped[Any | None] = mapped_column(DateTime)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=func.now(),
+    )
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime)
     dataset: Mapped[Datasets] = relationship(back_populates="inference_sessions")
     steps: Mapped[list[InferenceSessionSteps]] = relationship(
         back_populates="session",
@@ -166,7 +175,11 @@ class InferenceSessionSteps(Base):
     )
     reward: Mapped[float | None] = mapped_column(Float)
     capital_after: Mapped[float] = mapped_column(Float, nullable=False)
-    recorded_at: Mapped[Any] = mapped_column(DateTime, nullable=False, default=func.now())
+    recorded_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=func.now(),
+    )
     session: Mapped[InferenceSessions] = relationship(back_populates="steps")
     observed_outcome: Mapped[RouletteOutcomes | None] = relationship(
         back_populates="inference_session_steps"
