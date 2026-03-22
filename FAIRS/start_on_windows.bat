@@ -6,6 +6,8 @@ REM == Configuration
 REM ============================================================================
 set "project_folder=%~dp0"
 set "root_folder=%project_folder%..\"
+set "root_folder_no_slash=%root_folder%"
+if "%root_folder_no_slash:~-1%"=="\" set "root_folder_no_slash=%root_folder_no_slash:~0,-1%"
 set "runtimes_dir=%root_folder%runtimes"
 set "settings_dir=%project_folder%settings"
 set "python_dir=%runtimes_dir%\python"
@@ -17,6 +19,10 @@ set "uv_dir=%runtimes_dir%\uv"
 set "uv_exe=%uv_dir%\uv.exe"
 set "uv_zip_path=%uv_dir%\uv.zip"
 set "UV_CACHE_DIR=%runtimes_dir%\.uv-cache"
+set "venv_dir=%runtimes_dir%\.venv"
+set "UV_PROJECT_ENVIRONMENT=%venv_dir%"
+set "runtime_uv_lock=%root_folder%runtimes\uv.lock"
+set "uv_lock_file=%root_folder%uv.lock"
 
 set "py_version=3.14.2"
 set "python_zip_filename=python-%py_version%-embed-amd64.zip"
@@ -37,10 +43,6 @@ set "npm_cmd=%nodejs_dir%\npm.cmd"
 set "env_marker_node=%nodejs_dir%\.is_installed"
 
 set "pyproject=%root_folder%pyproject.toml"
-set "venv_dir=%runtimes_dir%\.venv"
-set "UV_PROJECT_ENVIRONMENT=%venv_dir%"
-set "runtime_uv_lock=%runtimes_dir%\uv.lock"
-set "uv_lock_file=%root_folder%uv.lock"
 set "UVICORN_MODULE=FAIRS.server.app:app"
 set "FRONTEND_DIR=%project_folder%client"
 set "FRONTEND_DIST=%FRONTEND_DIR%\dist"
@@ -192,7 +194,7 @@ if /i "!RELOAD!"=="true" set "RELOAD_FLAG=--reload"
 
 REM Ensure the embeddable runtime is used (avoid picking up Conda/other Python DLLs)
 set "PYTHONHOME=%python_dir%"
-set "PYTHONPATH="
+set "PYTHONPATH=%root_folder%"
 set "PYTHONNOUSERSITE=1"
 
 REM ============================================================================
@@ -203,17 +205,19 @@ if not exist "%pyproject%" (
   echo [FATAL] Missing pyproject: "%pyproject%"
   goto error
 )
+
+pushd "%root_folder%" >nul
 if exist "%runtime_uv_lock%" (
-  echo [INFO] Using runtime lockfile "%runtime_uv_lock%" for uv sync.
+  echo [INFO] Using runtime lockfile from "%runtime_uv_lock%".
   copy /y "%runtime_uv_lock%" "%uv_lock_file%" >nul
   if errorlevel 1 (
     echo [WARN] Failed to copy runtime lockfile to "%uv_lock_file%". Continuing with existing root lockfile.
+  ) else (
+    echo [INFO] Runtime lockfile staged at "%uv_lock_file%".
   )
 ) else (
-  echo [INFO] Runtime lockfile not found at "%runtime_uv_lock%". uv sync will use "%uv_lock_file%" if present.
+  echo [INFO] Runtime lockfile not found at "%runtime_uv_lock%". uv sync will use the current root lockfile state.
 )
-
-pushd "%root_folder%" >nul
 set "uv_extras_flag="
 if /i "%INSTALL_EXTRAS%"=="true" set "uv_extras_flag=--all-extras"
 "%uv_exe%" sync --python "%python_exe%" %uv_extras_flag%
@@ -223,20 +227,30 @@ if not "%sync_ec%"=="0" (
   "%uv_exe%" sync %uv_extras_flag%
   set "sync_ec=%ERRORLEVEL%"
 )
+if "%sync_ec%"=="0" (
+  if exist "%uv_lock_file%" (
+    copy /y "%uv_lock_file%" "%runtime_uv_lock%" >nul
+    if errorlevel 1 (
+      echo [WARN] uv sync succeeded but failed to update runtime lockfile at "%runtime_uv_lock%".
+    ) else (
+      echo [INFO] Updated runtime lockfile at "%runtime_uv_lock%".
+    )
+  ) else (
+    echo [WARN] uv sync succeeded but "%uv_lock_file%" is missing, so runtime lockfile was not updated.
+  )
+)
 popd >nul
+if exist "%uv_lock_file%" (
+  del /q "%uv_lock_file%" >nul 2>&1
+  if exist "%uv_lock_file%" (
+    echo [WARN] Could not remove temporary root lockfile "%uv_lock_file%".
+  ) else (
+    echo [INFO] Removed temporary root lockfile "%uv_lock_file%".
+  )
+)
 if not "%sync_ec%"=="0" (
   echo [FATAL] uv sync failed with code %sync_ec%.
   goto error
-)
-if exist "%uv_lock_file%" (
-  copy /y "%uv_lock_file%" "%runtime_uv_lock%" >nul
-  if errorlevel 1 (
-    echo [WARN] Failed to update runtime lockfile at "%runtime_uv_lock%" from "%uv_lock_file%".
-  ) else (
-    echo [INFO] Updated runtime lockfile at "%runtime_uv_lock%".
-  )
-) else (
-  echo [WARN] Root lockfile "%uv_lock_file%" not found after sync; runtime lockfile was not updated.
 )
 
 > "%env_marker%" echo setup_completed
@@ -247,18 +261,6 @@ REM == Step 5: Prune uv cache
 REM ============================================================================
 echo [STEP 5/5] Pruning uv cache
 if exist "%UV_CACHE_DIR%" rd /s /q "%UV_CACHE_DIR%" || echo [WARN] Could not delete cache dir quickly.
-
-REM ============================================================================
-REM Start backend and frontend
-REM ============================================================================
-if not exist "%python_exe%" (
-  echo [FATAL] python.exe not found at "%python_exe%"
-  goto error
-)
-
-echo [RUN] Launching backend via uvicorn (!UVICORN_MODULE!)
-call :kill_port !FASTAPI_PORT!
-start "" /b "%uv_exe%" run --python "%python_exe%" python -m uvicorn %UVICORN_MODULE% --host !FASTAPI_HOST! --port !FASTAPI_PORT! !RELOAD_FLAG! --log-level info
 
 if not exist "%FRONTEND_DIR%\node_modules" (
   echo [STEP] Installing frontend dependencies...
@@ -289,6 +291,18 @@ if not exist "%FRONTEND_DIST%" (
 ) else (
   echo [INFO] Frontend build already present at "%FRONTEND_DIST%".
 )
+
+REM ============================================================================
+REM Start backend and frontend
+REM ============================================================================
+if not exist "%python_exe%" (
+  echo [FATAL] python.exe not found at "%python_exe%"
+  goto error
+)
+
+echo [RUN] Launching backend via uvicorn (!UVICORN_MODULE!)
+call :kill_port !FASTAPI_PORT!
+start "" /b /d "%root_folder_no_slash%" "%uv_exe%" run --no-sync --python "%python_exe%" python -m uvicorn %UVICORN_MODULE% --app-dir "%root_folder_no_slash%" --host !FASTAPI_HOST! --port !FASTAPI_PORT! !RELOAD_FLAG! --log-level info
 
 REM ============================================================================
 REM Wait for backend
@@ -332,6 +346,7 @@ REM ============================================================================
 REM Cleanup temp helpers
 REM ============================================================================
 :cleanup
+if exist "%uv_lock_file%" del /q "%uv_lock_file%" >nul 2>&1
 del /q "%TMPDL%" "%TMPEXP%" "%TMPTXT%" "%TMPFIND%" "%TMPVER%" >nul 2>&1
 endlocal & exit /b 0
 
