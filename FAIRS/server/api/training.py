@@ -7,8 +7,8 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
 
-from FAIRS.server.entities.training import ResumeConfig, TrainingConfig
-from FAIRS.server.entities.jobs import (
+from FAIRS.server.domain.training import ResumeConfig, TrainingConfig
+from FAIRS.server.domain.jobs import (
     JobCancelResponse,
     JobStartResponse,
     JobStatusResponse,

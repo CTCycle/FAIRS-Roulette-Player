@@ -7,7 +7,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
 
-from FAIRS.server.entities.inference import (
+from FAIRS.server.domain.inference import (
     InferenceBetUpdateRequest,
     InferenceNextResponse,
     InferenceShutdownResponse,
