@@ -4,7 +4,7 @@ from datetime import datetime
 
 import pandas as pd
 
-from FAIRS.server.entities.configuration import DatabaseSettings
+from FAIRS.server.domain.configuration import DatabaseSettings
 from FAIRS.server.repositories.database import sqlite as sqlite_module
 from FAIRS.server.repositories.database.initializer import seed_roulette_outcomes
 from FAIRS.server.repositories.database.sqlite import SQLiteRepository

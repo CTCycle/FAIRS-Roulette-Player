@@ -15,8 +15,8 @@ from FAIRS.server.repositories.database.sqlite import (
     normalize_table_name as normalize_sqlite_table_name,
 )
 from FAIRS.server.repositories.serialization.data import normalize_dataset_name
-from FAIRS.server.routes.training import build_checkpoint_path, normalize_checkpoint_name
-from FAIRS.server.routes.upload import (
+from FAIRS.server.api.training import build_checkpoint_path, normalize_checkpoint_name
+from FAIRS.server.api.upload import (
     normalize_csv_separator,
     normalize_filename,
     normalize_sheet_name,
