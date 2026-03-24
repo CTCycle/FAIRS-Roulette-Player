@@ -4,7 +4,7 @@ import os
 from typing import Any
 
 from FAIRS.server.configurations.base import ensure_mapping, load_configuration_data
-from FAIRS.server.entities.configuration import (
+from FAIRS.server.domain.configuration import (
     DatabaseSettings,
     DeviceSettings,
     JobsSettings,

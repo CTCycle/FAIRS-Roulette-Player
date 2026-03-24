@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from FAIRS.server.entities.configuration import (
+from FAIRS.server.domain.configuration import (
     DatabaseSettings,
     DeviceSettings,
     JobsSettings,
     ServerSettings,
 )
-from FAIRS.server.entities.training import TrainingConfig, ResumeConfig
-from FAIRS.server.entities.jobs import (
+from FAIRS.server.domain.training import TrainingConfig, ResumeConfig
+from FAIRS.server.domain.jobs import (
     JobState,
     JobStartResponse,
     JobStatusResponse,

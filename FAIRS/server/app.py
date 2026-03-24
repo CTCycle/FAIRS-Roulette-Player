@@ -19,10 +19,10 @@ from FAIRS.server.common.constants import (
 from FAIRS.server.repositories.database.initializer import (
     initialize_sqlite_on_startup_if_missing,
 )
-from FAIRS.server.routes.database import router as database_router
-from FAIRS.server.routes.inference import router as inference_router
-from FAIRS.server.routes.training import router as training_router
-from FAIRS.server.routes.upload import router as upload_router
+from FAIRS.server.api.database import router as database_router
+from FAIRS.server.api.inference import router as inference_router
+from FAIRS.server.api.training import router as training_router
+from FAIRS.server.api.upload import router as upload_router
 
 
 ###############################################################################
