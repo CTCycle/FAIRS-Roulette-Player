@@ -7,7 +7,7 @@ FAIRS uses a centralized job manager for long-running backend work. Training job
 - `FAIRS/server/services/jobs.py`
   - `JobManager`: tracks jobs, state, progress, and cancellation flags.
   - `job_manager`: singleton used by routes.
-- `FAIRS/server/entities/jobs.py`
+- `FAIRS/server/domain/jobs.py`
   - `JobState`: thread-safe mutable state for one job.
   - Response schemas: `JobStartResponse`, `JobStatusResponse`, `JobCancelResponse`.
 - `FAIRS/server/learning/training/worker.py`
