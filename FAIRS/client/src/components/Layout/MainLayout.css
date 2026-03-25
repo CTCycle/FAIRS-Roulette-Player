@@ -7,6 +7,12 @@
     background-color: var(--bg-primary);
 }
 
+.app-shell-top {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+}
+
 .app-shell-header {
     display: flex;
     align-items: center;
