@@ -7,8 +7,10 @@ import './MainLayout.css';
 const MainLayout: React.FC = () => {
     return (
         <div className="main-layout">
-            <HeaderBar />
-            <TopNavigation />
+            <div className="app-shell-top">
+                <HeaderBar />
+                <TopNavigation />
+            </div>
             <main className="content-area">
                 <Outlet />
             </main>
