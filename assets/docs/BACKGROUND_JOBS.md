@@ -1,66 +1,66 @@
 # Background Job Management
 
-FAIRS uses a centralized job manager for long-running backend work. Training jobs are coordinated by a thread-level manager and executed in a dedicated child process.
+FAIRS uses a centralized in-process job manager for long-running backend work. Training jobs are coordinated by a thread-level manager and execute heavy computation in a dedicated child process.
 
-## 1. Core components
+## 1. Core Components
 
 - `FAIRS/server/services/jobs.py`
-  - `JobManager`: tracks jobs, state, progress, and cancellation flags.
-  - `job_manager`: singleton used by routes.
+  - `JobManager`: tracks jobs, progress, status, results, and cancellation flags.
+  - `job_manager`: singleton used by API modules.
 - `FAIRS/server/domain/jobs.py`
-  - `JobState`: thread-safe mutable state for one job.
-  - Response schemas: `JobStartResponse`, `JobStatusResponse`, `JobCancelResponse`.
+  - `JobState`: thread-safe mutable state for a single job.
+  - API response models: `JobStartResponse`, `JobStatusResponse`, `JobCancelResponse`.
+- `FAIRS/server/api/training.py`
+  - Training endpoint orchestration and status projections.
+  - Training runners: `run_training_job`, `run_resume_training_job`.
 - `FAIRS/server/learning/training/worker.py`
-  - `ProcessWorker`: spawned process wrapper for heavy training workloads.
-  - Progress/result channels via multiprocessing queues.
+  - `ProcessWorker`: child process wrapper for training workloads.
 
-## 2. State model
+## 2. Job State Model
 
-Each job has:
+Each job tracks:
 
 - `job_id` (8-char UUID fragment)
-- `job_type` (for example, `training`)
+- `job_type` (for example `training`)
 - `status`: `pending | running | completed | failed | cancelled`
-- `progress` (0..100)
-- `result` (optional payload)
-- `error` (optional error string)
-- monotonic timestamps (`created_at`, `completed_at`)
+- `progress` (`0..100`)
+- `result` (optional JSON-serializable payload)
+- `error` (optional concise error string)
+- timestamps (`created_at`, `completed_at`) stored as monotonic values
 
-## 3. Execution model
+## 3. Execution Flow
 
-1. Route calls `job_manager.start_job(...)`.
-2. `JobManager` creates `JobState`, marks it `running`, and starts a daemon thread.
-3. For training, the thread runner (`run_training_job` / `run_resume_training_job`) launches a `ProcessWorker` child process.
-4. Worker process emits progress messages (`training_update`) through queue; route layer merges updates into job/result state.
-5. Completion updates final status (`completed`, `cancelled`, or `failed`).
+1. API module calls `job_manager.start_job(...)`.
+2. `JobManager` creates `JobState`, stores it, marks it `running`, and starts a daemon thread.
+3. Training runner starts `ProcessWorker` in a child process.
+4. Progress/result updates are merged into job state while worker runs.
+5. Final status is set to `completed`, `cancelled`, or `failed`.
 
-## 4. Cancellation semantics
+## 4. Cancellation Semantics
 
 Cancellation is cooperative with escalation:
 
 - API cancellation sets `stop_requested=True` via `job_manager.cancel_job(job_id)`.
-- Training route also signals the worker stop event (`worker.stop()`).
-- Monitor loop waits for graceful stop; if timeout is exceeded, it terminates the process tree.
-- Final job status remains `cancelled` unless a non-cancel failure occurs.
+- Training endpoint also signals process stop through `worker.stop()`.
+- Monitor loop waits for graceful stop, then force-terminates if timeout is exceeded.
+- Terminal state remains `cancelled` unless a separate non-cancel error occurs.
 
-## 5. API integration (current)
+## 5. API Integration (Current)
 
-Training job endpoints:
+Training lifecycle endpoints:
 
 - `POST /training/start`
 - `POST /training/resume`
+- `GET /training/status`
+- `POST /training/stop`
 - `GET /training/jobs/{job_id}`
 - `DELETE /training/jobs/{job_id}`
 
-Live UI polling endpoint:
+These endpoints are available under `/api/*`, and optionally also direct paths when `FAIRS_ALLOW_DIRECT_API_ROUTES=true`.
 
-- `GET /training/status`
+## 6. Pattern for New Background Jobs
 
-The frontend polls status with the server-provided `poll_interval`.
-
-## 6. Pattern for new background jobs
-
-Use this pattern for new long-running work:
+Use the same orchestration pattern:
 
 ```python
 job_id = job_manager.start_job(
@@ -70,9 +70,16 @@ job_id = job_manager.start_job(
 )
 ```
 
-Inside the runner:
+Inside `run_your_job`:
 
-- Periodically check `job_manager.should_stop(job_id)` (or a stop event).
-- Push progress via `job_manager.update_progress(job_id, progress)`.
-- Return a serializable result dict.
-- Raise exceptions to mark the job as `failed`.
+- Check cancellation periodically with `job_manager.should_stop(job_id)` (or equivalent stop event).
+- Push progress through `job_manager.update_progress(job_id, progress)`.
+- Return serializable dict payload for completion metadata.
+- Raise exceptions for deterministic `failed` states.
+
+## 7. Constraints and Recommendations
+
+- Keep heavy CPU/GPU work out of request-handling threads.
+- Keep returned `result` payloads compact and API-safe.
+- Prefer idempotent cancellation paths to avoid orphaned workers.
+- If job state schema changes, update `ARCHITECTURE.md`, tests, and API consumers together.

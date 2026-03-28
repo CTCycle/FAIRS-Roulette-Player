@@ -1,206 +1,74 @@
 # Engineering and Python Standards
 
-Mandatory standards for Python 3.12+ projects, covering backend services, FastAPI apps, and ML pipelines.
+Project-specific Python standards for FAIRS backend, scripts, and tests.
 
----
+## 1. Runtime Baseline
 
-## 1. Python version and scope
+- Target runtime: Python `3.14+` (matches `pyproject.toml` and launcher-managed runtime).
+- Package/dependency tooling: `uv`.
+- Virtual environment for local execution/tests: `runtimes/.venv`.
 
-- Target Python 3.12+
-- Applies to:
-  - Core libraries and services
-  - FastAPI backends
-  - ML and data pipelines
-  - Tests, unless stated otherwise
+Recommended invocation patterns from repo root:
 
----
+```powershell
+.\runtimes\.venv\Scripts\python.exe -m pytest tests\unit
+uv run python -m uvicorn FAIRS.server.app:app --host 127.0.0.1 --port 5000
+```
 
-## 2. Typing and correctness
+## 2. Typing and Validation
 
-### 2.1 Type rules
+- Type hints are required for public APIs and non-trivial internal logic.
+- Use built-in generics (`list`, `dict`, `tuple`) and `|` unions.
+- Prefer `collections.abc` for `Callable` and similar abstract collection types.
+- Use Pydantic/domain models for request/response contracts in API boundaries.
 
-1. Use PEP 695 type parameters when applicable
-2. Use built-in generics:
-   - `list`, `dict`, `tuple`
-   - Do not use `List`, `Dict`, `Tuple`
-3. Use `|` unions, not `Optional` or `Union`
-   - Example: `str | None`
-4. Type hint:
-   - All public APIs
-   - Non-trivial internal logic
-5. Import `Callable` from `collections.abc` only
+## 3. Imports and Module Layout
 
-### 2.2 Enforcement
+- Keep imports at module top level.
+- Avoid conditional imports unless absolutely required for platform/runtime guards.
+- Keep modules cohesive by feature/domain (`api`, `services`, `learning`, `repositories`, `configurations`).
+- Follow existing package structure before introducing new top-level folders.
 
-- Static typing is mandatory but not a test replacement
-- Enforce with mypy in CI
+## 4. Style and Readability
 
----
+- Follow PEP 8 and existing repository style.
+- Preserve existing section separator convention in backend modules where already used.
+- Use clear names and small single-purpose functions/classes.
+- Add comments only when they explain non-obvious behavior or constraints.
 
-## 3. Imports
+## 5. FastAPI Conventions
 
-1. Imports must be top-level only
-2. No conditional imports
-3. Always use `collections.abc.Callable`
-4. Use Keras 3.x directly, do not import TensorFlow via Keras
+- Register endpoint modules from `FAIRS/server/api` through `FAIRS/server/app.py`.
+- Keep endpoint modules focused on HTTP mapping and validation.
+- Move heavy business logic to services/learning/repositories layers.
+- Do not run CPU-heavy training work directly in request thread; use the job manager + worker pattern.
 
----
+## 6. Configuration and Environment
 
-## 4. Code style and formatting
+- Runtime configuration source of truth: `FAIRS/settings/.env` + `FAIRS/settings/configurations.json`.
+- Read environment through configuration/domain helpers, not scattered ad-hoc parsing.
+- Keep `.env` keys coherent with `PACKAGING_AND_RUNTIME_MODES.md` and README.
 
-### 4.1 Tooling
+## 7. Persistence and Data Access
 
-- Style: PEP 8
-- Formatter: Black or Ruff formatter
-- Linter: Ruff
-- Tests: pytest
+- Use repository/serializer abstractions under `FAIRS/server/repositories`.
+- Avoid embedding SQL/data-frame mutation logic directly in API modules.
+- Keep persistence models and serializers synchronized when schema changes.
 
-### 4.2 Explicit rules
+## 8. Testing Expectations
 
-1. Use `os` for paths, not `pathlib`
-2. Use `glob` only when justified
-3. No leading underscores on variables, methods, or attributes
-4. Use `self.name`, never `self._name`
-5. Module filenames must be single words
+- Test framework: `pytest`.
+- Unit tests under `tests/unit`, E2E/API flows under `tests/e2e`.
+- For behavior changes, add/adjust tests in the same change when practical.
+- Use deterministic inputs and stable assertions; avoid flaky timing dependencies.
 
----
+## 9. Quality Gates
 
-## 5. Comments, docstrings, separators
+Before shipping Python changes, run the smallest relevant checks first, then full scope as needed:
 
-### 5.1 Comments
+```powershell
+uv run pytest -q tests\unit
+uv run pytest -q tests\e2e
+```
 
-- Minimal, factual, and necessary only
-
-### 5.2 Docstrings
-
-- Written only when explicitly requested
-- Required sections:
-  1. Summary
-  2. Arguments
-  3. Returns
-
-### 5.3 Separators
-
-- Classes: 79 `#`
-- Functions and methods: `#` + 77 `-`
-- No separator above `__init__`
-
----
-
-## 6. Code structure and design
-
-### 6.1 Principles
-
-1. Single Responsibility Principle everywhere
-2. Group related logic into cohesive modules
-3. No nested class or function definitions
-4. Separate logic from execution
-5. Avoid over-abstraction
-6. Prefer dependency injection or inversion of control
-
-### 6.2 Object creation
-
-- Use Factory, Builder, or Prototype when construction is complex
-
----
-
-## 7. Architecture by system type
-
-### 7.1 Frontend and UI
-
-- MVC or MVVM
-- Clear separation of rendering, state, and logic
-- Thin controllers and views
-
-### 7.2 Backend services
-
-- Service Layer + Repository
-- Business logic in services or domain classes
-- Data access only via repositories or gateways
-
-### 7.3 ML and data pipelines
-
-- Pipeline, Factory, or Builder patterns
-- Preprocessing, training, evaluation must be:
-  - modular
-  - reproducible
-  - versioned
-
-### 7.4 Event-driven systems
-
-- Observer, Mediator, or Pub/Sub patterns
-
-### 7.5 Plugins and configuration
-
-- Strategy, Command, or Decorator patterns
-
-### 7.6 Distributed systems
-
-- CQRS, Saga, or Event Sourcing
-- Use only when complexity justifies it
-
----
-
-## 8. Testing
-
-### 8.1 General rules
-
-1. Arrange–Act–Assert
-2. Readable and isolated tests
-3. Mock dependencies for unit tests
-4. Cover normal, edge, and failure cases
-
-### 8.2 Test types
-
-- Unit
-- Integration
-- Contract
-- End-to-end
-
----
-
-## 9. FastAPI standards
-
-### 9.1 Application structure
-
-1. Split endpoints into routers
-2. Compose routers in the app
-3. Keep modules cohesive and scalable
-
-### 9.2 Dependency injection
-
-- Centralize auth, authorization, DB sessions, and request-scoped resources
-
-### 9.3 Validation and schemas
-
-- Use Pydantic models and type hints
-- Avoid manual validation
-- Let schemas drive OpenAPI generation
-
-### 9.4 Async usage
-
-1. Use `async` only with fully non-blocking stacks
-2. Never block inside async endpoints
-3. Use async-compatible libraries if async is chosen
-4. Prefer sync endpoints when async adds no value
-
-### 9.5 Background work
-
-1. Use `BackgroundTasks` for post-response work
-2. Do not run CPU-heavy tasks in request handlers
-3. Offload heavy workloads to workers or job queues
-
-### 9.6 Testing FastAPI apps
-
-1. Override dependencies in tests
-2. Use consistent app initialization
-3. Isolate shared state to avoid flaky tests
-
----
-
-## 10. Tooling summary
-
-- Formatter: Black or Ruff formatter
-- Linter: Ruff
-- Type checker: mypy
-- Test runner: pytest
+If tooling/config changes were made, also run lint/type checks used by project CI.
