@@ -1,28 +1,32 @@
-# HOW TO TEST (FAIRS)
+# How To Test (FAIRS)
 
-This document describes the current FAIRS testing strategy and commands.
+Current FAIRS test strategy and execution commands.
 
-## 1. Test stack
+## 1. Test Stack
 
-- Test runner: `pytest`
-- Browser/API E2E layer: `pytest-playwright`
+- Runner: `pytest`
+- Browser E2E: `pytest-playwright`
 - Language: Python
 
-FAIRS currently relies on Python-based unit + E2E tests. There is no separate TypeScript unit-test suite in this repository.
+There is currently no dedicated TypeScript unit/component test suite in this repository.
 
-## 2. Test suite structure
+## 2. Test Suite Structure
 
 ```text
 tests/
 ├── conftest.py
 ├── run_tests.bat
 ├── test_config.json
+├── scripts/
+│   └── ...
 ├── unit/
 │   ├── test_data_serializer.py
 │   ├── test_database_mode_env_override.py
 │   ├── test_fallback.py
 │   ├── test_hold.py
-│   └── test_sizer.py
+│   ├── test_security_hardening.py
+│   ├── test_sizer.py
+│   └── test_sqlite_repository_orm.py
 └── e2e/
     ├── test_app_flow.py
     ├── test_data_removal_api.py
@@ -33,29 +37,29 @@ tests/
     └── test_websocket.py
 ```
 
-## 3. Quick start (recommended)
+## 3. Recommended Command
 
-Run from repository root:
+From repository root:
 
 ```cmd
 tests\run_tests.bat
 ```
 
-What the script does:
+The script:
 
-1. Resolves host/port/runtime values from `FAIRS/settings/.env`.
-2. Verifies `runtimes/.venv` and required tools.
-3. Starts backend/frontend if not already running.
+1. Loads host/port/runtime values from `FAIRS/settings/.env`.
+2. Requires `runtimes/.venv` (created by `FAIRS/start_on_windows.bat`).
+3. Starts backend/frontend only when not already running.
 4. Runs `pytest tests -v --tb=short`.
-5. Stops only the servers started by the script.
+5. Stops only servers it started.
 
 ## 4. Prerequisites
 
 - Run `FAIRS\start_on_windows.bat` at least once.
-- If E2E dependencies are needed, set `OPTIONAL_DEPENDENCIES=true` in `FAIRS/settings/.env` and rerun launcher to install extras.
-- Ensure no conflicting processes are bound to your selected UI/API ports.
+- If Playwright/test extras are required, set `OPTIONAL_DEPENDENCIES=true` in `.env` and rerun launcher.
+- Ensure selected UI/API ports are not already occupied by unrelated processes.
 
-## 5. Manual test execution
+## 5. Manual Test Commands
 
 From repository root:
 
@@ -71,7 +75,7 @@ uv run pytest -q tests\e2e\test_training_api.py -k cancel
 uv run pytest -q tests\e2e\test_app_flow.py --headed
 ```
 
-## 6. Current API coverage
+## 6. API Coverage (Current)
 
 ### Data ingestion
 - `POST /data/upload`
@@ -101,17 +105,17 @@ uv run pytest -q tests\e2e\test_app_flow.py --headed
 - `POST /inference/sessions/{session_id}/rows/clear`
 - `POST /inference/context/clear`
 
-## 7. Writing new tests
+## 7. Writing New Tests
 
-- Unit tests: place under `tests/unit`.
-- E2E tests: place under `tests/e2e`.
-- Naming: `test_*.py`.
-- Keep Arrange-Act-Assert flow explicit.
-- Use `api_context` fixture for API calls and `page` fixture for UI checks.
-- Prefer deterministic inputs and short-running configs (especially training tests).
+- Place unit tests in `tests/unit`.
+- Place E2E/integration UI/API flows in `tests/e2e`.
+- Use `test_*.py` naming.
+- Keep Arrange-Act-Assert explicit.
+- Prefer deterministic data and short runtime configs.
+- Reuse fixtures from `tests/conftest.py` where possible.
 
-## 8. Common troubleshooting
+## 8. Common Troubleshooting
 
-- `422` responses on POST endpoints are often request-shape or missing field issues.
-- If Playwright tests fail before running, verify optional dependencies and browsers are installed in `runtimes/.venv`.
-- If E2E readiness fails, check `APP_TEST_BACKEND_URL` / `APP_TEST_FRONTEND_URL` derivation from `.env` values.
+- `422` responses usually indicate payload/query mismatch.
+- Playwright import/browser errors usually mean optional dependencies were not installed into `runtimes/.venv`.
+- Readiness failures often come from `.env` host/port mismatch versus expected test URLs.

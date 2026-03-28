@@ -1,54 +1,58 @@
 # FAIRS Architecture
 
-FAIRS is a FastAPI + React/Vite web application for roulette model training and inference workflows.
+FAIRS is a FastAPI + React/Vite application for roulette training and inference workflows, with optional Windows desktop packaging through Tauri.
 
-## 1. Repository layout
+## 1. Repository Layout
 
-- `FAIRS/server`: FastAPI backend, training/inference logic, database access.
-- `FAIRS/client`: React + TypeScript frontend built with Vite.
-- `FAIRS/settings`: Runtime configuration (`.env`, profile examples, `configurations.json`).
-- `FAIRS/resources`: Runtime data (`checkpoints`, `database`, `logs`).
-- `runtimes`: Portable Python/uv/Node.js runtimes provisioned by Windows scripts.
-- `release/tauri`: Desktop packaging scripts and output staging helpers.
-- `tests`: Python unit and E2E tests (pytest + pytest-playwright).
+- `FAIRS/server`: backend APIs, domain logic, training/inference orchestration, persistence.
+- `FAIRS/client`: React + TypeScript frontend (Vite).
+- `FAIRS/settings`: runtime configuration (`.env`, profile examples, `configurations.json`).
+- `FAIRS/resources`: runtime data (`checkpoints`, `database.db`, `logs`).
+- `runtimes`: portable Python/uv/Node runtimes and project virtualenv.
+- `release/tauri`: desktop build and export helpers.
+- `tests`: Python unit and E2E test suites.
 
-## 2. Runtime topology
+## 2. Runtime Topology
 
-### Local mode (default webapp)
+### Local webapp mode
 
-- Start with `FAIRS\start_on_windows.bat`.
-- Backend runs Uvicorn (`FAIRS.server.app:app`) on `FASTAPI_HOST:FASTAPI_PORT`.
-- Frontend runs Vite preview on `UI_HOST:UI_PORT`.
-- Frontend talks to backend through `/api` proxying.
+- Entry point: `FAIRS/start_on_windows.bat`.
+- Backend: `uvicorn FAIRS.server.app:app` on `FASTAPI_HOST:FASTAPI_PORT`.
+- Frontend: Vite preview on `UI_HOST:UI_PORT`.
+- Frontend calls backend through `/api/*`.
 
 ### Desktop packaged mode (Tauri)
 
-- Desktop artifacts are produced via `release\tauri\build_with_tauri.bat`.
-- Tauri launches a local backend from a packaged runtime root and then opens `http://127.0.0.1:<FASTAPI_PORT>/`.
-- FastAPI serves the packaged SPA and exposes API routes under `/api`.
+- Build helper: `release/tauri/build_with_tauri.bat`.
+- Tauri resolves/stages runtime workspace, ensures `runtimes/.venv`, then starts local Uvicorn.
+- Tauri sets `FAIRS_TAURI_MODE=true` for packaged runtime behavior.
+- Window opens `http://127.0.0.1:<FASTAPI_PORT>/` after backend readiness.
 
-## 3. Backend architecture
+## 3. Backend Architecture
 
 ### Entry point
 
-- `FAIRS/server/app.py` creates the FastAPI app and mounts routers:
-  - `/data` (`routes/upload.py`)
-  - `/training` (`routes/training.py`)
-  - `/database` (`routes/database.py`)
-  - `/inference` (`routes/inference.py`)
+- `FAIRS/server/app.py` creates FastAPI app and mounts routers from:
+  - `FAIRS/server/api/upload.py` (`/data`)
+  - `FAIRS/server/api/training.py` (`/training`)
+  - `FAIRS/server/api/database.py` (`/database`)
+  - `FAIRS/server/api/inference.py` (`/inference`)
+
+Routes are always exposed under `/api/*`. They are also exposed directly (without `/api`) when `FAIRS_ALLOW_DIRECT_API_ROUTES=true`.
 
 ### Layers
 
-1. Routes (`FAIRS/server/routes`): request validation, HTTP status mapping.
-2. Services (`FAIRS/server/services`): upload parsing/import and job orchestration.
-3. Learning (`FAIRS/server/learning`): DQN training, inference player, betting logic.
-4. Repositories (`FAIRS/server/repositories`): DB backends, queries, serialization helpers.
-5. Configurations (`FAIRS/server/configurations`): env + JSON settings resolution.
+1. API layer: `FAIRS/server/api` (request mapping, responses, HTTP status handling).
+2. Services layer: `FAIRS/server/services` (job manager, dataset import helpers).
+3. Domain layer: `FAIRS/server/domain` (request/response models and job/domain state).
+4. Learning layer: `FAIRS/server/learning` (training, inference, model artifacts).
+5. Persistence layer: `FAIRS/server/repositories` (database initialization, queries, serializers, schema models).
+6. Configuration layer: `FAIRS/server/configurations` (env + JSON settings resolution).
 
 ### API surface (current)
 
 - Data upload:
-  - `POST /data/upload?table=roulette_series|inference_context`
+  - `POST /data/upload`
 - Training:
   - `POST /training/start`
   - `POST /training/resume`
@@ -72,16 +76,16 @@ FAIRS is a FastAPI + React/Vite web application for roulette model training and 
   - `POST /inference/sessions/{session_id}/rows/clear`
   - `POST /inference/context/clear`
 
-## 4. Frontend architecture
+## 4. Frontend Architecture
 
-- Router setup in `FAIRS/client/src/App.tsx` with the shared shell rendered from `components/Layout/MainLayout.tsx`.
-- Main pages currently mounted:
-  - `/training` -> training dashboard, dataset upload/preview, checkpoint management.
-  - `/inference` -> interactive inference session and session history controls.
-- Shared app state lives in `FAIRS/client/src/context/AppStateContext.tsx`.
-- API access is fetch-based and routed through `/api/*`.
+- Root composition in `FAIRS/client/src/App.tsx`.
+- Global app state provider: `FAIRS/client/src/context/AppStateContext.tsx`.
+- Main layout shell: `FAIRS/client/src/components/Layout/MainLayout.tsx`.
+- Active pages:
+  - `/training` -> `pages/Training/TrainingPage.tsx`
+  - `/inference` -> `pages/Inference/InferencePage.tsx`
 
-## 5. Persistence model
+## 5. Persistence Model
 
 Primary tables:
 
@@ -91,10 +95,21 @@ Primary tables:
 - `inference_session_steps`
 - `roulette_outcomes`
 
-`DataSerializer` handles dataset normalization, import, listing, deletion, and inference session persistence.
+Main ORM definitions live in `FAIRS/server/repositories/schemas/models.py`.
+`DataSerializer` in `FAIRS/server/repositories/serialization/data.py` owns most dataset/session persistence workflows.
 
-## 6. Extension points
+## 6. Packaged SPA Behavior
 
-- New API domain: add route in `FAIRS/server/routes`, service in `FAIRS/server/services`, and serializer/query support in `FAIRS/server/repositories` as needed.
-- New training/inference behavior: extend `FAIRS/server/learning/*` and expose controls in frontend page components.
-- New UI page: register route in `FAIRS/client/src/App.tsx` and add navigation in `components/Layout/TopNavigation.tsx`.
+When `FAIRS_TAURI_MODE=true` and `FAIRS/client/dist` exists:
+
+- FastAPI serves SPA root at `/`.
+- `/assets` is served from `FAIRS/client/dist/assets`.
+- Unknown frontend paths fall back to `index.html`.
+- If packaged SPA is unavailable, `/` falls back to docs redirect when docs are enabled.
+
+## 7. Extension Points
+
+- New API domain: add module in `FAIRS/server/api`, wire it in `FAIRS/server/app.py`, then add service/repository support as needed.
+- New long-running workflow: integrate with `FAIRS/server/services/jobs.py` and follow `BACKGROUND_JOBS.md` patterns.
+- New frontend page: register route in `FAIRS/client/src/App.tsx` and update layout navigation.
+- New runtime mode/package behavior: update `PACKAGING_AND_RUNTIME_MODES.md` and README in the same change.
