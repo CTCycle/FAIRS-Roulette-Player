@@ -17,9 +17,9 @@
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    min-height: 76px;
-    padding: 1rem 1.5rem 0.85rem;
-    background-color: var(--bg-secondary);
+    min-height: 74px;
+    padding: 0.9rem 1.5rem 0.75rem;
+    background: linear-gradient(90deg, rgba(24, 36, 58, 0.95), rgba(17, 27, 46, 0.95));
     border-bottom: 1px solid var(--border-color);
     z-index: 10;
 }
@@ -46,7 +46,7 @@
 }
 
 .app-shell-title {
-    font-size: 1.1rem;
+    font-size: 1.04rem;
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -54,13 +54,14 @@
 }
 
 .app-shell-subtitle {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     color: var(--text-secondary);
 }
 
 .app-shell-nav {
-    padding: 0.55rem 1.5rem 0.7rem;
-    background-color: var(--bg-secondary);
+    padding: 0.45rem 1.5rem 0.6rem;
+    background: rgba(17, 27, 46, 0.88);
+    backdrop-filter: blur(6px);
     border-bottom: 1px solid var(--border-color);
 }
 
@@ -77,11 +78,11 @@
     align-items: center;
     justify-content: center;
     gap: 0.55rem;
-    min-height: 36px;
-    padding: 0.45rem 0.9rem;
+    min-height: 35px;
+    padding: 0.4rem 0.82rem;
     border-radius: var(--radius-md);
     color: var(--text-secondary);
-    font-size: 0.92rem;
+    font-size: 0.9rem;
     font-weight: 600;
     letter-spacing: 0.01em;
     transition: background-color 0.2s ease, color 0.2s ease;
@@ -94,7 +95,8 @@
 
 .top-nav-link.active {
     color: var(--primary-accent);
-    background-color: rgba(14, 165, 233, 0.1);
+    background-color: rgba(36, 166, 232, 0.15);
+    border: 1px solid rgba(36, 166, 232, 0.2);
 }
 
 .content-area {
