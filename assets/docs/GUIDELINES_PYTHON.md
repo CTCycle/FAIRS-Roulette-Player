@@ -1,5 +1,7 @@
 # Engineering and Python Standards
 
+Last updated: 2026-04-08
+
 Project-specific Python standards for FAIRS backend, scripts, and tests.
 
 ## 1. Runtime Baseline
@@ -45,7 +47,8 @@ uv run python -m uvicorn FAIRS.server.app:app --host 127.0.0.1 --port 5000
 
 ## 6. Configuration and Environment
 
-- Runtime configuration source of truth: `FAIRS/settings/.env` + `FAIRS/settings/configurations.json`.
+- Runtime/process configuration source of truth: `FAIRS/settings/.env`.
+- Backend database configuration source of truth: `FAIRS/settings/configurations.json`.
 - Read environment through configuration/domain helpers, not scattered ad-hoc parsing.
 - Keep `.env` keys coherent with `PACKAGING_AND_RUNTIME_MODES.md` and README.
 

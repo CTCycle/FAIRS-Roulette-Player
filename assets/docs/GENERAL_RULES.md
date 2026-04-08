@@ -1,19 +1,34 @@
+# Documentation Rules
+
+Last updated: 2026-04-08
+
 ## WEB SEARCH
 Use web search only when it materially improves accuracy (for example, external tool behavior or version changes). Prefer repository source of truth for project-specific facts.
 
 ## REQUIRED DOCUMENTATION REVIEW
-Before any task, review the relevant files in `assets/docs`:
+Before any task, review this file first, then only the minimum additional docs needed:
 
-- `GENERAL_RULES.md` (mandatory for every task)
-- `ARCHITECTURE.md` (system structure, modules, API surface)
-- `PACKAGING_AND_RUNTIME_MODES.md` (launcher, runtime profiles, desktop packaging)
-- `BACKGROUND_JOBS.md` (job lifecycle and cancellation model)
-- `GUIDELINES_PYTHON.md` (when editing Python)
-- `GUIDELINES_TYPESCRIPT.md` (when editing TypeScript/React)
-- `GUIDELINES_TESTS.md` (when adding/updating tests)
-- `README_WRITING.md` (when creating/updating README files)
+- `ARCHITECTURE.md`
+- `BACKGROUND_JOBS.md`
+- `GUIDELINES_PYTHON.md`
+- `GUIDELINES_TESTS.md`
+- `GUIDELINES_TYPESCRIPT.md`
+- `PACKAGING_AND_RUNTIME_MODES.md`
+- `USER_MANUAL.md`
 
-Read only the minimum subset needed for the task after this file.
+## COMPLETE DOCUMENTATION INVENTORY (`assets/docs`)
+The complete and exhaustive list of documentation files in this folder is:
+
+- `ARCHITECTURE.md`
+- `BACKGROUND_JOBS.md`
+- `GENERAL_RULES.md`
+- `GUIDELINES_PYTHON.md`
+- `GUIDELINES_TESTS.md`
+- `GUIDELINES_TYPESCRIPT.md`
+- `PACKAGING_AND_RUNTIME_MODES.md`
+- `USER_MANUAL.md`
+
+If a file is added, removed, or renamed in `assets/docs`, update this list in the same change.
 
 ## SKILLS REFERENCE
 When reusable workflows or specialized capabilities are needed, use the relevant skills from the skills repository.

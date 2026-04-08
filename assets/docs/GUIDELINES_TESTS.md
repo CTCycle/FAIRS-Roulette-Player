@@ -1,5 +1,7 @@
 # How To Test (FAIRS)
 
+Last updated: 2026-04-08
+
 Current FAIRS test strategy and execution commands.
 
 ## 1. Test Stack
