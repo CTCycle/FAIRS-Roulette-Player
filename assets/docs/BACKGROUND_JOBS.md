@@ -1,5 +1,7 @@
 # Background Job Management
 
+Last updated: 2026-04-08
+
 FAIRS uses a centralized in-process job manager for long-running backend work. Training jobs are coordinated by a thread-level manager and execute heavy computation in a dedicated child process.
 
 ## 1. Core Components

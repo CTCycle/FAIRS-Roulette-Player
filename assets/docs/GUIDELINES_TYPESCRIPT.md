@@ -1,5 +1,7 @@
 # TypeScript Guidelines (FAIRS Client)
 
+Last updated: 2026-04-08
+
 Project-specific standards for `FAIRS/client` (React 19 + TypeScript + Vite).
 
 ## 1. Baseline
