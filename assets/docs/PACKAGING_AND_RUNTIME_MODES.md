@@ -1,6 +1,6 @@
 # FAIRS Packaging and Runtime Modes
 
-Last updated: 2026-04-08
+Last updated: 2026-04-09
 
 ## 1. Runtime Strategy
 
@@ -17,7 +17,7 @@ Mode switching is configuration-driven:
 
 - `FAIRS/settings/.env.example`: runtime template.
 - `FAIRS/settings/.env`: active runtime values used by launcher/tests/frontend/Tauri startup.
-- `FAIRS/settings/configurations.json`: backend database + non-runtime defaults.
+- `FAIRS/settings/configurations.json`: backend technical defaults (`database`, `jobs`, `device`).
 
 Initialize runtime file (Windows):
 
@@ -39,10 +39,18 @@ copy /Y FAIRS\settings\.env.example FAIRS\settings\.env
 
 Note: `FAIRS_TAURI_MODE` is set by Tauri runtime at launch time and is not expected in `.env`.
 
-Database settings are JSON-only in `FAIRS/settings/configurations.json`:
-- `database.embedded_database`: SQLite/PostgreSQL switch.
-- External PostgreSQL settings: `engine`, `host`, `port`, `database_name`, `username`, `password`, `ssl`, `ssl_ca`.
-- DB tuning: `connect_timeout`, `insert_batch_size`.
+Technical backend settings can be overridden via environment variables when needed:
+- Database: `DATABASE_EMBEDDED_DATABASE`, `DATABASE_ENGINE`, `DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_DATABASE_NAME`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `DATABASE_SSL`, `DATABASE_SSL_CA`, `DATABASE_CONNECT_TIMEOUT`, `DATABASE_INSERT_BATCH_SIZE`.
+- Jobs: `JOBS_POLLING_INTERVAL`.
+- Device: `DEVICE_JIT_COMPILE`, `DEVICE_JIT_BACKEND`, `DEVICE_USE_MIXED_PRECISION`.
+
+Only the explicit keys above are supported for technical env overrides (legacy aliases are intentionally not used).
+
+Technical value resolution order:
+1. init kwargs (internal construction paths)
+2. environment variables (runtime keys + explicit technical override keys)
+3. `FAIRS/settings/configurations.json`
+4. file secrets
 
 ## 4. Local Mode
 

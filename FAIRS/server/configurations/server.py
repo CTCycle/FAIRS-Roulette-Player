@@ -2,7 +2,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from FAIRS.server.configurations.base import ensure_mapping, load_configuration_data
+from FAIRS.server.configurations.base import ensure_mapping
+from FAIRS.server.configurations.settings import (
+    JsonDatabaseSettings,
+    JsonDeviceSettings,
+    JsonJobsSettings,
+    get_app_settings,
+    get_server_settings,
+)
 from FAIRS.server.domain.configuration import (
     DatabaseSettings,
     DeviceSettings,
@@ -10,26 +17,12 @@ from FAIRS.server.domain.configuration import (
     ServerSettings,
 )
 
-from FAIRS.server.common.constants import (
-    CONFIGURATIONS_FILE,
-)
 
-from FAIRS.server.common.utils.types import (
-    coerce_bool,
-    coerce_float,
-    coerce_int,
-    coerce_str,
-    coerce_str_or_none,
-)
-
-
+###############################################################################
 def build_database_settings(payload: dict[str, Any] | Any) -> DatabaseSettings:
     data = ensure_mapping(payload)
-
-    embedded_raw = data.get("embedded_database")
-    embedded = coerce_bool(embedded_raw, True)
-    if embedded:
-        # External fields are ignored entirely when embedded DB is active
+    db = JsonDatabaseSettings.model_validate(data)
+    if db.embedded_database:
         return DatabaseSettings(
             embedded_database=True,
             engine=None,
@@ -40,65 +33,50 @@ def build_database_settings(payload: dict[str, Any] | Any) -> DatabaseSettings:
             password=None,
             ssl=False,
             ssl_ca=None,
-            connect_timeout=coerce_int(data.get("connect_timeout"), 10, minimum=1),
-            insert_batch_size=coerce_int(data.get("insert_batch_size"), 1000, minimum=1),
+            connect_timeout=db.connect_timeout,
+            insert_batch_size=db.insert_batch_size,
         )
 
-    # External DB mode
-    engine_value = coerce_str_or_none(data.get("engine")) or "postgres"
-    normalized_engine = engine_value.lower() if engine_value else None
     return DatabaseSettings(
         embedded_database=False,
-        engine=normalized_engine,
-        host=coerce_str_or_none(data.get("host")),
-        port=coerce_int(
-            data.get("port"),
-            5432,
-            minimum=1,
-            maximum=65535,
-        ),
-        database_name=coerce_str_or_none(data.get("database_name")),
-        username=coerce_str_or_none(data.get("username")),
-        password=coerce_str_or_none(data.get("password")),
-        ssl=coerce_bool(data.get("ssl"), False),
-        ssl_ca=coerce_str_or_none(data.get("ssl_ca")),
-        connect_timeout=coerce_int(data.get("connect_timeout"), 10, minimum=1),
-        insert_batch_size=coerce_int(data.get("insert_batch_size"), 1000, minimum=1),
+        engine=db.engine.strip().lower(),
+        host=db.host,
+        port=db.port,
+        database_name=db.database_name,
+        username=db.username,
+        password=db.password,
+        ssl=db.ssl,
+        ssl_ca=db.ssl_ca,
+        connect_timeout=db.connect_timeout,
+        insert_batch_size=db.insert_batch_size,
     )
 
 
-# -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 def build_jobs_settings(payload: dict[str, Any] | Any) -> JobsSettings:
     data = ensure_mapping(payload)
-    return JobsSettings(
-        polling_interval=coerce_float(
-            data.get("polling_interval"), 1.0, minimum=0.1, maximum=10.0
-        ),
-    )
+    jobs = JsonJobsSettings.model_validate(data)
+    return JobsSettings(polling_interval=jobs.polling_interval)
 
 
 # -----------------------------------------------------------------------------
 def build_device_settings(payload: dict[str, Any] | Any) -> DeviceSettings:
     data = ensure_mapping(payload)
+    device = JsonDeviceSettings.model_validate(data)
     return DeviceSettings(
-        jit_compile=coerce_bool(data.get("jit_compile"), False),
-        jit_backend=coerce_str(data.get("jit_backend"), "inductor"),
-        use_mixed_precision=coerce_bool(data.get("use_mixed_precision"), False),
+        jit_compile=device.jit_compile,
+        jit_backend=device.jit_backend,
+        use_mixed_precision=device.use_mixed_precision,
     )
 
 
 # -----------------------------------------------------------------------------
 def build_server_settings(data: dict[str, Any] | Any) -> ServerSettings:
     payload = ensure_mapping(data)
-    database_payload = ensure_mapping(payload.get("database"))
-    jobs_payload = ensure_mapping(payload.get("jobs"))
-    device_payload = ensure_mapping(payload.get("device"))
-
     return ServerSettings(
-        database=build_database_settings(database_payload),
-        jobs=build_jobs_settings(jobs_payload),
-        device=build_device_settings(device_payload),
+        database=build_database_settings(payload.get("database")),
+        jobs=build_jobs_settings(payload.get("jobs")),
+        device=build_device_settings(payload.get("device")),
     )
 
 
@@ -113,13 +91,6 @@ def get_poll_interval_seconds(
     return max(minimum, value)
 
 
-# [SERVER CONFIGURATION LOADER]
-###############################################################################
-def get_server_settings(config_path: str | None = None) -> ServerSettings:
-    path = config_path or CONFIGURATIONS_FILE
-    payload = load_configuration_data(path)
-
-    return build_server_settings(payload)
-
-
 server_settings = get_server_settings()
+app_settings = get_app_settings()
+
