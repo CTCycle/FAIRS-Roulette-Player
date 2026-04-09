@@ -5,8 +5,6 @@ import warnings
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-from FAIRS.server.common.utils.variables import env_variables  # noqa: F401
-
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -16,6 +14,7 @@ from FAIRS.server.common.constants import (
     FASTAPI_TITLE,
     FASTAPI_VERSION,
 )
+from FAIRS.server.configurations.server import app_settings
 from FAIRS.server.repositories.database.initializer import (
     initialize_sqlite_on_startup_if_missing,
 )
@@ -27,20 +26,17 @@ from FAIRS.server.api.upload import router as upload_router
 
 ###############################################################################
 def is_api_docs_enabled() -> bool:
-    raw = os.getenv("ENABLE_API_DOCS", "true").strip().lower()
-    return raw in {"1", "true", "yes", "on"}
+    return bool(app_settings.enable_api_docs)
 
 
 # -----------------------------------------------------------------------------
 def is_direct_api_routes_enabled() -> bool:
-    raw = os.getenv("FAIRS_ALLOW_DIRECT_API_ROUTES", "true").strip().lower()
-    return raw in {"1", "true", "yes", "on"}
+    return bool(app_settings.fairs_allow_direct_api_routes)
 
 
 # -----------------------------------------------------------------------------
 def tauri_mode_enabled() -> bool:
-    value = os.getenv("FAIRS_TAURI_MODE", "false").strip().lower()
-    return value in {"1", "true", "yes", "on"}
+    return bool(app_settings.fairs_tauri_mode)
 
 
 # -----------------------------------------------------------------------------

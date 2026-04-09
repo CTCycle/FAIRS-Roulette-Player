@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import pytest
+from pydantic import ValidationError
+
+from FAIRS.server.configurations.settings import JsonDatabaseSettings
 from FAIRS.server.configurations.server import build_database_settings
 
 
@@ -50,7 +54,7 @@ def test_database_settings_use_json_payload_for_external_postgres_mode() -> None
     assert settings.insert_batch_size == 250
 
 
-def test_database_settings_ignore_db_env_overrides(monkeypatch) -> None:
+def test_database_settings_accept_env_style_database_keys() -> None:
     payload = {
         "embedded_database": False,
         "engine": "postgres",
@@ -64,18 +68,6 @@ def test_database_settings_ignore_db_env_overrides(monkeypatch) -> None:
         "connect_timeout": 10,
         "insert_batch_size": 1000,
     }
-    monkeypatch.setenv("DB_EMBEDDED", "true")
-    monkeypatch.setenv("DB_ENGINE", "postgresql+psycopg")
-    monkeypatch.setenv("DB_HOST", "env-host")
-    monkeypatch.setenv("DB_PORT", "7000")
-    monkeypatch.setenv("DB_NAME", "env-db")
-    monkeypatch.setenv("DB_USER", "env-user")
-    monkeypatch.setenv("DB_PASSWORD", "env-pass")
-    monkeypatch.setenv("DB_SSL", "true")
-    monkeypatch.setenv("DB_SSL_CA", "/tmp/env-ca.pem")
-    monkeypatch.setenv("DB_CONNECT_TIMEOUT", "99")
-    monkeypatch.setenv("DB_INSERT_BATCH_SIZE", "9999")
-
     settings = build_database_settings(payload)
 
     assert settings.embedded_database is False
@@ -89,3 +81,16 @@ def test_database_settings_ignore_db_env_overrides(monkeypatch) -> None:
     assert settings.ssl_ca is None
     assert settings.connect_timeout == 10
     assert settings.insert_batch_size == 1000
+
+
+def test_database_validation_requires_external_fields() -> None:
+    with pytest.raises(
+        ValidationError, match="database.host, database.database_name, database.username"
+    ):
+        _ = JsonDatabaseSettings(
+            embedded_database=False,
+            engine="postgres",
+            host=None,
+            database_name=None,
+            username=None,
+        )

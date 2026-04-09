@@ -1,6 +1,6 @@
 # Engineering and Python Standards
 
-Last updated: 2026-04-08
+Last updated: 2026-04-09
 
 Project-specific Python standards for FAIRS backend, scripts, and tests.
 
@@ -48,8 +48,14 @@ uv run python -m uvicorn FAIRS.server.app:app --host 127.0.0.1 --port 5000
 ## 6. Configuration and Environment
 
 - Runtime/process configuration source of truth: `FAIRS/settings/.env`.
-- Backend database configuration source of truth: `FAIRS/settings/configurations.json`.
-- Read environment through configuration/domain helpers, not scattered ad-hoc parsing.
+- Backend technical defaults source of truth: `FAIRS/settings/configurations.json`.
+- Use `FAIRS.server.configurations.settings` (`AppSettings`/`get_app_settings`) and `FAIRS.server.configurations.server` (`get_server_settings`/`server_settings`) instead of ad-hoc `os.getenv`.
+- Environment bootstrap must happen through `FAIRS.server.configurations.bootstrap.ensure_environment_loaded`.
+- Settings source precedence must remain: init kwargs -> environment variables -> JSON configuration -> file secrets.
+- Technical env overrides must use explicit keys only:
+  - `DATABASE_EMBEDDED_DATABASE`, `DATABASE_ENGINE`, `DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_DATABASE_NAME`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `DATABASE_SSL`, `DATABASE_SSL_CA`, `DATABASE_CONNECT_TIMEOUT`, `DATABASE_INSERT_BATCH_SIZE`
+  - `JOBS_POLLING_INTERVAL`
+  - `DEVICE_JIT_COMPILE`, `DEVICE_JIT_BACKEND`, `DEVICE_USE_MIXED_PRECISION`
 - Keep `.env` keys coherent with `PACKAGING_AND_RUNTIME_MODES.md` and README.
 
 ## 7. Persistence and Data Access
