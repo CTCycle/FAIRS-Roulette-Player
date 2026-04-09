@@ -8,6 +8,7 @@ import {
 import type { DatasetUploadStateUpdates } from '../../../types/datasetUpload';
 import { useDatasetFileUpload } from '../../../components/datasetUpload/useDatasetFileUpload';
 import { UploadStatusMessage } from '../../../components/datasetUpload/UploadStatusMessage';
+import { DatasetFileDropzone } from '../../../components/datasetUpload/DatasetFileDropzone';
 
 interface DatasetUploadProps {
     files: FileMetadata[];
@@ -51,20 +52,13 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
                 {/* Top Row: Dropzone (Left) + Upload Button (Right) */}
                 <div className="dataset-v2-top">
                     <div className="dataset-v2-dropzone-wrapper">
-                        <div
+                        <DatasetFileDropzone
                             className="upload-area"
-                            onClick={() => fileInputRef.current?.click()}
+                            ariaLabel={selectedFile ? `Selected file ${selectedFile.name}` : 'Upload dataset file'}
+                            fileInputRef={fileInputRef}
+                            onFileChange={handleFileChange}
                             onDragOver={handleDragOver}
                             onDrop={handleDrop}
-                            role="button"
-                            tabIndex={0}
-                            onKeyDown={(event) => {
-                                if (event.key === 'Enter' || event.key === ' ') {
-                                    event.preventDefault();
-                                    fileInputRef.current?.click();
-                                }
-                            }}
-                            aria-label={selectedFile ? `Selected file ${selectedFile.name}` : 'Upload dataset file'}
                         >
                             <Upload className="upload-icon" />
                             <div className="upload-text">
@@ -73,14 +67,7 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
                             <div className="upload-hint">
                                 Supports CSV/XLSX
                             </div>
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                onChange={handleFileChange}
-                                className="hidden-file-input"
-                                accept=".csv,.xlsx,.xls"
-                            />
-                        </div>
+                        </DatasetFileDropzone>
 
                         {/* File Info + Clear Selection (Moved here to match width of dropzone) */}
                         <div className="dataset-v2-bottom dataset-v2-bottom-spaced">
