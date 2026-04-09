@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { useAppState } from '../../hooks/useAppState';
 import { GameSession } from '../../components/inference/GameSession';
 import type { GameConfig, SessionState, GameStep } from '../../types/inference';
@@ -8,21 +8,29 @@ const InferencePage: React.FC = () => {
     const { state, dispatch } = useAppState();
     const { gameConfig, setup, sessionState, history } = state.inference;
 
-    const handleSessionStateChange = (updates: Partial<SessionState>) => {
+    const handleSessionStateChange = useCallback((updates: Partial<SessionState>) => {
         dispatch({ type: 'SET_INFERENCE_SESSION_STATE', payload: updates });
-    };
+    }, [dispatch]);
 
-    const handleAddHistoryStep = (step: GameStep) => {
+    const handleAddHistoryStep = useCallback((step: GameStep) => {
         dispatch({ type: 'ADD_INFERENCE_HISTORY_STEP', payload: step });
-    };
+    }, [dispatch]);
 
-    const handleHistoryChange = (steps: GameStep[]) => {
+    const handleHistoryChange = useCallback((steps: GameStep[]) => {
         dispatch({ type: 'SET_INFERENCE_HISTORY', payload: steps });
-    };
+    }, [dispatch]);
 
-    const handleGameConfigChange = (config: GameConfig | null) => {
+    const handleGameConfigChange = useCallback((config: GameConfig | null) => {
         dispatch({ type: 'SET_INFERENCE_GAME_CONFIG', payload: config });
-    };
+    }, [dispatch]);
+
+    const handleSetupChange = useCallback((updates: Partial<typeof setup>) => {
+        dispatch({ type: 'SET_INFERENCE_SETUP', payload: updates });
+    }, [dispatch]);
+
+    const handleClearSession = useCallback(() => {
+        dispatch({ type: 'RESET_INFERENCE_SESSION' });
+    }, [dispatch]);
 
     return (
         <div className="inference-page page-shell">
@@ -39,14 +47,12 @@ const InferencePage: React.FC = () => {
                     setup={setup}
                     sessionState={sessionState}
                     history={history}
-                    onSetupChange={(updates) =>
-                        dispatch({ type: 'SET_INFERENCE_SETUP', payload: updates })
-                    }
+                    onSetupChange={handleSetupChange}
                     onSessionStateChange={handleSessionStateChange}
                     onAddHistoryStep={handleAddHistoryStep}
                     onHistoryChange={handleHistoryChange}
                     onGameConfigChange={handleGameConfigChange}
-                    onClearSession={() => dispatch({ type: 'RESET_INFERENCE_SESSION' })}
+                    onClearSession={handleClearSession}
                 />
             </div>
         </div>

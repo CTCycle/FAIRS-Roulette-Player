@@ -695,9 +695,7 @@ class TrainingEndpoint:
         history = session.get("history", {}) if isinstance(session, dict) else {}
 
         summary = {
-            "dataset_id": configuration.get("dataset_id")
-            or configuration.get("name")
-            or "",
+            "dataset_id": configuration.get("dataset_id") or "",
             "sample_size": configuration.get("sample_size"),
             "seed": configuration.get("seed"),
             "episodes": configuration.get("episodes") or session.get("total_episodes"),
