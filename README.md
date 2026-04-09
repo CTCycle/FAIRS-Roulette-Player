@@ -53,6 +53,26 @@ copy /Y FAIRS\settings\.env.example FAIRS\settings\.env
 
 Use `.env` to control host/port/runtime behavior and `configurations.json` for database mode/settings.
 
+### 3.1 Database Initialization
+
+Database backend selection is defined in `FAIRS/settings/configurations.json` (`database.embedded_database`).
+
+- `SQLite` (`embedded_database=true`):
+  - The application initializes the database automatically on startup only when `FAIRS/resources/database.db` is missing.
+  - Initialization creates schema objects and seeds required data.
+  - If `database.db` already exists, startup skips initialization.
+- `PostgreSQL` (`embedded_database=false`):
+  - The application does not initialize PostgreSQL automatically during startup.
+  - Initialization is manual via:
+
+```cmd
+FAIRS\setup_and_maintenance.bat
+```
+
+Select `Initialize database` to run `FAIRS/scripts/initialize_database.py`.
+
+`FAIRS/scripts/initialize_database.py` can also initialize SQLite when SQLite mode is selected, but this is normally unnecessary because SQLite initialization is already handled automatically by app startup.
+
 ## 4. Typical Workflow
 
 1. Start the app: `FAIRS\start_on_windows.bat`

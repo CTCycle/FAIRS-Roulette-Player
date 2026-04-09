@@ -6,7 +6,7 @@
     "port": 5432,
     "database_name": "FAIRS",
     "username": "postgres",
-    "password": "change_me",
+    "password": "",
     "ssl": false,
     "ssl_ca": null,
     "connect_timeout": 30,
