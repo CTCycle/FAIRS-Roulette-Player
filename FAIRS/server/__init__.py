@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from FAIRS.server.configurations.bootstrap import ensure_environment_loaded
+from FAIRS.server.configurations.environment import load_environment
 
 
-ensure_environment_loaded()
+load_environment()

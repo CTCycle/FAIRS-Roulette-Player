@@ -12,24 +12,22 @@ from FAIRS.server.common.utils.logger import logger
 
 
 @dataclass
-class EnvironmentBootstrapState:
+class _EnvironmentState:
     lock: Lock = field(default_factory=Lock)
-    bootstrapped: bool = False
+    loaded: bool = False
 
 
-# -----------------------------------------------------------------------------
 @lru_cache(maxsize=1)
-def _bootstrap_state() -> EnvironmentBootstrapState:
-    return EnvironmentBootstrapState()
+def _environment_state() -> _EnvironmentState:
+    return _EnvironmentState()
 
 
 ###############################################################################
-def ensure_environment_loaded(*, force: bool = False) -> Path | None:
-    state = _bootstrap_state()
-
+def load_environment(*, force: bool = False) -> Path | None:
+    state = _environment_state()
+    env_path = Path(ENV_FILE_PATH)
     with state.lock:
-        env_path = Path(ENV_FILE_PATH)
-        if state.bootstrapped and not force:
+        if state.loaded and not force:
             return env_path if env_path.exists() else None
 
         if env_path.exists():
@@ -37,12 +35,12 @@ def ensure_environment_loaded(*, force: bool = False) -> Path | None:
         else:
             logger.warning(".env file not found at: %s", env_path)
 
-        state.bootstrapped = True
+        state.loaded = True
         return env_path if env_path.exists() else None
 
 
 ###############################################################################
-def reset_environment_bootstrap_for_tests() -> None:
-    state = _bootstrap_state()
+def reset_environment_for_tests() -> None:
+    state = _environment_state()
     with state.lock:
-        state.bootstrapped = False
+        state.loaded = False

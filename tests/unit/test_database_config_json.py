@@ -3,18 +3,19 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from FAIRS.server.configurations.settings import JsonDatabaseSettings
-from FAIRS.server.configurations.server import build_database_settings
+from FAIRS.server.domain.configuration import JsonDatabaseSettings, JsonServerSettings
 
 
 def test_database_settings_use_json_payload_for_embedded_mode() -> None:
     payload = {
-        "embedded_database": True,
-        "connect_timeout": 25,
-        "insert_batch_size": 250,
+        "database": {
+            "embedded_database": True,
+            "connect_timeout": 25,
+            "insert_batch_size": 250,
+        }
     }
 
-    settings = build_database_settings(payload)
+    settings = JsonServerSettings.model_validate(payload).to_server_settings().database
 
     assert settings.embedded_database is True
     assert settings.engine is None
@@ -26,20 +27,22 @@ def test_database_settings_use_json_payload_for_embedded_mode() -> None:
 
 def test_database_settings_use_json_payload_for_external_postgres_mode() -> None:
     payload = {
-        "embedded_database": False,
-        "engine": "postgresql+psycopg",
-        "host": "json-host",
-        "port": 6543,
-        "database_name": "json-db",
-        "username": "json-user",
-        "password": "json-pass",
-        "ssl": True,
-        "ssl_ca": "/tmp/ca.pem",
-        "connect_timeout": 25,
-        "insert_batch_size": 250,
+        "database": {
+            "embedded_database": False,
+            "engine": "postgresql+psycopg",
+            "host": "json-host",
+            "port": 6543,
+            "database_name": "json-db",
+            "username": "json-user",
+            "password": "json-pass",
+            "ssl": True,
+            "ssl_ca": "/tmp/ca.pem",
+            "connect_timeout": 25,
+            "insert_batch_size": 250,
+        }
     }
 
-    settings = build_database_settings(payload)
+    settings = JsonServerSettings.model_validate(payload).to_server_settings().database
 
     assert settings.embedded_database is False
     assert settings.engine == "postgresql+psycopg"
@@ -56,19 +59,21 @@ def test_database_settings_use_json_payload_for_external_postgres_mode() -> None
 
 def test_database_settings_accept_env_style_database_keys() -> None:
     payload = {
-        "embedded_database": False,
-        "engine": "postgres",
-        "host": "json-host",
-        "port": 5432,
-        "database_name": "json-db",
-        "username": "json-user",
-        "password": "json-pass",
-        "ssl": False,
-        "ssl_ca": None,
-        "connect_timeout": 10,
-        "insert_batch_size": 1000,
+        "database": {
+            "embedded_database": False,
+            "engine": "postgres",
+            "host": "json-host",
+            "port": 5432,
+            "database_name": "json-db",
+            "username": "json-user",
+            "password": "json-pass",
+            "ssl": False,
+            "ssl_ca": None,
+            "connect_timeout": 10,
+            "insert_batch_size": 1000,
+        }
     }
-    settings = build_database_settings(payload)
+    settings = JsonServerSettings.model_validate(payload).to_server_settings().database
 
     assert settings.embedded_database is False
     assert settings.engine == "postgres"
