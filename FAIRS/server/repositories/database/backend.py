@@ -5,7 +5,8 @@ from typing import Any, Protocol
 
 import pandas as pd
 
-from FAIRS.server.configurations import DatabaseSettings, server_settings
+from FAIRS.server.configurations import DatabaseSettings
+from FAIRS.server.configurations.startup import get_server_settings
 from FAIRS.server.common.utils.logger import logger
 from FAIRS.server.repositories.database.postgres import PostgresRepository
 from FAIRS.server.repositories.database.sqlite import SQLiteRepository
@@ -54,7 +55,7 @@ BACKEND_FACTORIES: dict[str, BackendFactory] = {
 ###############################################################################
 class FAIRSDatabase:
     def __init__(self) -> None:
-        self.settings = server_settings.database
+        self.settings = get_server_settings().database
         self.backend = self._build_backend(self.settings.embedded_database)
 
     # -------------------------------------------------------------------------

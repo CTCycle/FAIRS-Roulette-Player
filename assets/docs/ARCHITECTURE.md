@@ -1,6 +1,6 @@
 # FAIRS Architecture
 
-Last updated: 2026-04-09
+Last updated: 2026-04-13
 
 FAIRS is a FastAPI + React/Vite application for roulette training and inference workflows, with optional Windows desktop packaging through Tauri.
 
@@ -51,23 +51,15 @@ When `FAIRS_ALLOW_DIRECT_API_ROUTES=true`, the same routes are also exposed with
 3. Domain layer: `FAIRS/server/domain` (request/response and shared domain state).
 4. Learning layer: `FAIRS/server/learning` (training/inference execution and artifacts).
 5. Persistence layer: `FAIRS/server/repositories` (DB initialization, schemas, serializers, queries).
-6. Configuration layer: `FAIRS/server/configurations` (`bootstrap.py`, `settings.py`, `server.py`).
+6. Configuration layer: `FAIRS/server/configurations` (`environment.py`, `management.py`, `startup.py`).
 
 ### Configuration system
 
-- Environment bootstrap happens at package import (`FAIRS/server/__init__.py`) through `ensure_environment_loaded()`.
-- Typed application settings are built via `pydantic_settings.BaseSettings` in `FAIRS/server/configurations/settings.py`.
-- Source order is deterministic:
-  1. init kwargs
-  2. environment variables (runtime keys + explicit technical override keys)
-  3. `FAIRS/settings/configurations.json`
-  4. file secrets
-- Runtime/process keys are read from environment (`FASTAPI_*`, `UI_*`, docs/reload/runtime toggles, ML backend vars).
-- Technical backend keys are read from JSON with optional env overrides:
-  - `DATABASE_*`
-  - `JOBS_*`
-  - `DEVICE_*`
-  - only documented explicit keys are supported (no legacy alias keys)
+- Environment bootstrap happens at package import (`FAIRS/server/__init__.py`) through `load_environment()`.
+- JSON technical settings are loaded and validated by `ConfigurationManager` in `FAIRS/server/configurations/management.py`.
+- Startup access is provided through cached helpers in `FAIRS/server/configurations/startup.py` (`get_configuration_manager`, `get_server_settings`).
+- Runtime/process keys are read from environment (`FASTAPI_*`, `UI_*`, docs/runtime toggles, ML backend vars).
+- Technical backend keys are read only from `FAIRS/settings/configurations.json` (`database`, `jobs`, `device`).
 
 ### API surface (current)
 

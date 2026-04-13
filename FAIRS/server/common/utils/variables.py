@@ -4,17 +4,17 @@ import os
 import warnings
 from typing import Any
 
-from FAIRS.server.configurations.bootstrap import ensure_environment_loaded
+from FAIRS.server.configurations.environment import load_environment
 
 
 class EnvironmentVariables:
     def __init__(self) -> None:
         warnings.warn(
-            "EnvironmentVariables is deprecated. Use FAIRS.server.configurations settings APIs.",
+            "EnvironmentVariables is deprecated. Use FAIRS.server.configurations startup APIs.",
             DeprecationWarning,
             stacklevel=2,
         )
-        ensure_environment_loaded()
+        load_environment()
 
     # -------------------------------------------------------------------------
     def get(self, key: str, default: str | None = None) -> str | None:

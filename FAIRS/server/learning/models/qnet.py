@@ -5,7 +5,7 @@ from typing import Any
 from keras import Model, layers, losses, metrics, optimizers
 from torch import compile as torch_compile
 
-from FAIRS.server.configurations import server_settings
+from FAIRS.server.configurations.startup import get_server_settings
 from FAIRS.server.common.constants import NUMBERS, STATES
 from FAIRS.server.learning.models.embeddings import RouletteEmbedding
 from FAIRS.server.learning.models.logits import AddNorm, BatchNormDense, QScoreNet
@@ -17,6 +17,7 @@ class FAIRSnet:
         self.perceptive_size = configuration.get("perceptive_field_size", 64)
         self.embedding_dims = configuration.get("embedding_dimensions", 200)
         self.neurons = configuration.get("qnet_neurons", 64)
+        server_settings = get_server_settings()
         # JIT settings come from server config, not the request
         self.jit_compile = server_settings.device.jit_compile
         self.jit_backend = server_settings.device.jit_backend
