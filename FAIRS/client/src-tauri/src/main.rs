@@ -26,7 +26,6 @@ struct BackendLaunchConfig {
     port: u16,
     reload: bool,
     install_extras: bool,
-    db_embedded: String,
     mpl_backend: String,
     keras_backend: String,
 }
@@ -56,7 +55,6 @@ fn resolve_backend_launch_config(env_path: &Path) -> BackendLaunchConfig {
         port: 8000u16,
         reload: false,
         install_extras: false,
-        db_embedded: String::from("true"),
         mpl_backend: String::from("Agg"),
         keras_backend: String::from("torch"),
     };
@@ -88,8 +86,6 @@ fn resolve_backend_launch_config(env_path: &Path) -> BackendLaunchConfig {
             config.reload = parse_boolish(&value);
         } else if key.eq_ignore_ascii_case("OPTIONAL_DEPENDENCIES") {
             config.install_extras = parse_boolish(&value);
-        } else if key.eq_ignore_ascii_case("DB_EMBEDDED") && !value.is_empty() {
-            config.db_embedded = value;
         } else if key.eq_ignore_ascii_case("MPLBACKEND") && !value.is_empty() {
             config.mpl_backend = value;
         } else if key.eq_ignore_ascii_case("KERAS_BACKEND") && !value.is_empty() {
@@ -501,7 +497,6 @@ fn spawn_backend(app_handle: &tauri::AppHandle, state: &BackendChildState) -> Re
         let backend_host = backend_config.host.clone();
         let backend_port = backend_config.port;
         let backend_port_str = backend_port.to_string();
-        let db_embedded = backend_config.db_embedded.clone();
         let mpl_backend = backend_config.mpl_backend.clone();
         let keras_backend = backend_config.keras_backend.clone();
         let mut child_command = Command::new(&venv_python_exe);
@@ -522,7 +517,6 @@ fn spawn_backend(app_handle: &tauri::AppHandle, state: &BackendChildState) -> Re
         let child = child_command
             .current_dir(&workspace_root)
             .env("FAIRS_TAURI_MODE", "true")
-            .env("DB_EMBEDDED", db_embedded)
             .env("MPLBACKEND", mpl_backend)
             .env("KERAS_BACKEND", keras_backend)
             .stdin(Stdio::null())

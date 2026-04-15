@@ -1,5 +1,7 @@
 # FAIRS Packaging and Runtime Modes
 
+Last updated: 2026-04-13
+
 ## 1. Runtime Strategy
 
 FAIRS uses a single active runtime profile file:
@@ -11,18 +13,16 @@ Mode switching is configuration-driven:
 - Local mode: launch with `FAIRS/start_on_windows.bat`.
 - Desktop packaged mode: build/run through Tauri packaging helpers.
 
-## 2. Runtime Profiles
+## 2. Runtime Configuration Files
 
-- `FAIRS/settings/.env.local.example`: local webapp profile reference.
-- `FAIRS/settings/.env.local.tauri.example`: desktop packaged profile reference.
-- `FAIRS/settings/.env`: active runtime values used by launcher/tests/backend.
-- `FAIRS/settings/configurations.json`: non-env defaults (for example job poll interval/device settings).
+- `FAIRS/settings/.env.example`: runtime template.
+- `FAIRS/settings/.env`: active runtime values used by launcher/tests/frontend/Tauri startup.
+- `FAIRS/settings/configurations.json`: backend technical defaults (`database`, `jobs`, `device`).
 
-Activate profile (Windows):
+Initialize runtime file (Windows):
 
 ```cmd
-copy /Y FAIRS\settings\.env.local.example FAIRS\settings\.env
-copy /Y FAIRS\settings\.env.local.tauri.example FAIRS\settings\.env
+copy /Y FAIRS\settings\.env.example FAIRS\settings\.env
 ```
 
 ## 3. Runtime Keys
@@ -31,18 +31,19 @@ copy /Y FAIRS\settings\.env.local.tauri.example FAIRS\settings\.env
 |---|---|
 | `FASTAPI_HOST`, `FASTAPI_PORT` | Backend bind host/port. |
 | `UI_HOST`, `UI_PORT` | Local frontend preview host/port. |
-| `VITE_API_BASE_URL` | Frontend API base path (`/api` expected). |
 | `ENABLE_API_DOCS` | Enables `/docs`, `/redoc`, OpenAPI routes. |
 | `FAIRS_ALLOW_DIRECT_API_ROUTES` | When `true`, API endpoints are exposed both direct and under `/api`. |
 | `RELOAD` | Enables Uvicorn reload in local mode. |
 | `OPTIONAL_DEPENDENCIES` | Installs optional extras (tests/playwright). |
-| `DB_EMBEDDED` | `true` for embedded SQLite, `false` for external DB mode. |
-| `DB_ENGINE`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | External DB connection settings. |
-| `DB_SSL`, `DB_SSL_CA` | External DB TLS controls. |
-| `DB_CONNECT_TIMEOUT`, `DB_INSERT_BATCH_SIZE` | DB runtime tuning. |
 | `MPLBACKEND`, `KERAS_BACKEND` | Plotting/ML backend runtime settings. |
 
 Note: `FAIRS_TAURI_MODE` is set by Tauri runtime at launch time and is not expected in `.env`.
+
+Technical value resolution order:
+1. `FAIRS/settings/configurations.json` (source of truth for `database`, `jobs`, `device`)
+2. explicit runtime reload through configuration manager APIs during tests/internal tooling
+
+Runtime/process env values are still loaded from `.env` and accessed as standard environment variables.
 
 ## 4. Local Mode
 
@@ -71,7 +72,7 @@ tests\run_tests.bat
 
 ### 5.2 Packaging entrypoint
 
-1. Activate packaged profile (`.env.local.tauri.example` -> `.env`).
+1. Ensure `FAIRS/settings/.env` has the desired runtime host/port/backends.
 2. Build through repository helper:
 
 ```cmd

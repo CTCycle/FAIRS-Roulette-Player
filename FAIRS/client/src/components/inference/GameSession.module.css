@@ -1,7 +1,7 @@
 .sessionContainer {
     display: grid;
-    grid-template-columns: 360px minmax(0, 1fr);
-    gap: var(--spacing-lg);
+    grid-template-columns: minmax(330px, 0.9fr) minmax(0, 1.6fr);
+    gap: 1rem;
     height: auto;
     min-height: 100%;
     align-items: stretch;
@@ -10,7 +10,7 @@
 .leftPanel {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-md);
+    gap: 0.85rem;
     min-width: 0;
     height: auto;
 }
@@ -23,10 +23,10 @@
 }
 
 .card {
-    background-color: var(--bg-secondary);
-    border-radius: var(--radius-md);
-    border: 1px solid var(--border-color);
-    padding: var(--spacing-md);
+    background-color: rgba(17, 27, 46, 0.9);
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(42, 58, 85, 0.85);
+    padding: 0.95rem;
     overflow: hidden;
 }
 
@@ -36,8 +36,8 @@
 
 .sectionTitle {
     color: var(--text-secondary);
-    font-size: 0.8rem;
-    font-weight: 600;
+    font-size: 0.77rem;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     margin-bottom: var(--spacing-xs);
@@ -60,7 +60,7 @@
 .tableInput {
     padding: var(--spacing-sm) var(--spacing-md);
     background-color: var(--bg-primary);
-    border: 1px solid var(--border-color);
+    border: 1px solid rgba(42, 58, 85, 0.95);
     border-radius: var(--radius-sm);
     color: var(--text-primary);
     font-size: 0.95rem;
@@ -83,7 +83,7 @@
 .datasetRow {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto auto;
-    gap: var(--spacing-sm);
+    gap: 0.45rem;
     align-items: stretch;
 }
 .uploadedFile {
@@ -125,7 +125,7 @@
 }
 
 .secondaryButton {
-    background-color: var(--bg-primary);
+    background-color: var(--surface-soft);
     color: var(--text-primary);
     padding: var(--spacing-sm) var(--spacing-md);
     border-radius: var(--radius-sm);
@@ -160,7 +160,7 @@
 }
 
 .ghostButton {
-    background-color: transparent;
+    background-color: rgba(15, 25, 44, 0.45);
     color: var(--text-secondary);
     padding: var(--spacing-sm) var(--spacing-md);
     border-radius: var(--radius-sm);
@@ -209,7 +209,7 @@
 
 .statLabel {
     color: var(--text-secondary);
-    font-size: 0.8rem;
+    font-size: 0.77rem;
 }
 
 .statValue {
@@ -223,10 +223,10 @@
 }
 
 .predictionCard {
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--primary-accent);
-    border-radius: var(--radius-md);
-    padding: var(--spacing-lg);
+    background-color: rgba(17, 27, 46, 0.9);
+    border: 1px solid rgba(36, 166, 232, 0.55);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
     text-align: center;
     display: flex;
     flex-direction: column;
@@ -235,7 +235,7 @@
     gap: var(--spacing-sm);
     box-shadow: var(--shadow-sm);
     flex: 0 0 auto;
-    min-height: 220px;
+    min-height: 190px;
 }
 
 .predictionTitle {
@@ -247,8 +247,9 @@
 
 .predictionValue {
     color: var(--text-primary);
-    font-size: 1.6rem;
+    font-size: 1.08rem;
     font-weight: 700;
+    line-height: 1.35;
 }
 
 .predictionDesc {
@@ -260,7 +261,7 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    min-height: 520px;
+    min-height: 500px;
 }
 
 .tableBody {
@@ -279,7 +280,7 @@
 }
 
 .tableTitle {
-    font-size: 1rem;
+    font-size: 0.98rem;
     color: var(--text-primary);
     display: flex;
     align-items: center;
@@ -307,7 +308,7 @@
     padding: var(--spacing-sm);
     color: var(--text-secondary);
     border-bottom: 1px solid var(--border-color);
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .historyTable td {
@@ -378,6 +379,18 @@
     text-align: center;
     padding: 2rem;
     color: var(--text-secondary);
+}
+
+.emptyStatePanel {
+    display: grid;
+    place-items: center;
+    min-height: 220px;
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-secondary);
+    border: 1px dashed var(--border-color);
+    border-radius: var(--radius-md);
+    background-color: rgba(15, 25, 44, 0.35);
 }
 
 @media (max-width: 1100px) {

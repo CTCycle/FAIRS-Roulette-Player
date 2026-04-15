@@ -9,6 +9,12 @@ import { isRecord, parseApiErrorDetail, parseDatasetId } from '../../utils/apiPa
 interface DatasetOption {
     dataset_id: string;
     dataset_name: string;
+    row_count: number | null;
+}
+
+interface CheckpointOptionMetadata {
+    datasetId: string;
+    perceptiveFieldSize: number | null;
 }
 
 interface GameSessionProps {
@@ -47,6 +53,13 @@ const maybeNumber = (value: unknown): number | undefined => {
     return parsed;
 };
 
+const maybePositiveInteger = (value: unknown): number | null => {
+    if (typeof value !== 'number' || !Number.isInteger(value) || value <= 0) {
+        return null;
+    }
+    return value;
+};
+
 const normalizePrediction = (value: unknown): PredictionResult => {
     const payload = isRecord(value) ? value : {};
     const action = maybeNumber(payload.action) ?? 0;
@@ -82,11 +95,13 @@ export const GameSession: React.FC<GameSessionProps> = ({
     onGameConfigChange,
     onClearSession,
 }) => {
+    const onSetupChangeRef = useRef(onSetupChange);
     const checkpoints = useCheckpointOptions({
         selectedCheckpoint: setup.checkpoint,
         onSelectCheckpoint: (nextCheckpoint) => onSetupChange({ checkpoint: nextCheckpoint }),
     });
     const [datasets, setDatasets] = useState<DatasetOption[]>([]);
+    const [checkpointMetadataMap, setCheckpointMetadataMap] = useState<Record<string, CheckpointOptionMetadata>>({});
     const [isUploading, setIsUploading] = useState(false);
     const [isStarting, setIsStarting] = useState(false);
     const [isStopping, setIsStopping] = useState(false);
@@ -111,33 +126,182 @@ export const GameSession: React.FC<GameSessionProps> = ({
     }, [setup]);
 
     useEffect(() => {
+        onSetupChangeRef.current = onSetupChange;
+    }, [onSetupChange]);
+
+    useEffect(() => {
         const loadDatasets = async () => {
             try {
-                const response = await fetch('/api/database/roulette-series/datasets');
-                if (!response.ok) {
-                    return;
+                const summaryResponse = await fetch('/api/database/roulette-series/datasets/summary');
+                let values: DatasetOption[] = [];
+
+                if (summaryResponse.ok) {
+                    const payload = await summaryResponse.json();
+                    values = Array.isArray(payload?.datasets)
+                        ? payload.datasets
+                            .filter((entry: unknown) => typeof entry === 'object' && entry !== null)
+                            .map((entry: { dataset_id?: unknown; dataset_name?: unknown; row_count?: unknown }) => ({
+                                dataset_id: parseDatasetId(entry.dataset_id),
+                                dataset_name: typeof entry.dataset_name === 'string' ? entry.dataset_name : '',
+                                row_count: typeof entry.row_count === 'number' ? entry.row_count : null,
+                            }))
+                            .filter((entry: DatasetOption) => entry.dataset_id.length > 0)
+                        : [];
+                } else {
+                    const response = await fetch('/api/database/roulette-series/datasets');
+                    if (!response.ok) {
+                        return;
+                    }
+                    const payload = await response.json();
+                    values = Array.isArray(payload?.datasets)
+                        ? payload.datasets
+                            .filter((entry: unknown) => typeof entry === 'object' && entry !== null)
+                            .map((entry: { dataset_id?: unknown; dataset_name?: unknown }) => ({
+                                dataset_id: parseDatasetId(entry.dataset_id),
+                                dataset_name: typeof entry.dataset_name === 'string' ? entry.dataset_name : '',
+                                row_count: null,
+                            }))
+                            .filter((entry: DatasetOption) => entry.dataset_id.length > 0)
+                        : [];
                 }
-                const payload = await response.json();
-                const values = Array.isArray(payload?.datasets)
-                    ? payload.datasets
-                        .filter((entry: unknown) => typeof entry === 'object' && entry !== null)
-                        .map((entry: { dataset_id?: unknown; dataset_name?: unknown }) => ({
-                            dataset_id: parseDatasetId(entry.dataset_id),
-                            dataset_name: typeof entry.dataset_name === 'string' ? entry.dataset_name : '',
-                        }))
-                        .filter((entry: DatasetOption) => entry.dataset_id.length > 0)
-                    : [];
                 setDatasets(values);
                 if (values.length > 0 && !latestSetupRef.current.selectedDataset) {
-                    onSetupChange({ selectedDataset: String(values[0].dataset_id), datasetSource: 'source' });
+                    onSetupChangeRef.current({
+                        selectedDataset: String(values[0].dataset_id),
+                        datasetSource: 'source',
+                    });
                 }
             } catch (err) {
                 console.error('Failed to load datasets:', err);
             }
         };
 
-        loadDatasets();
-    }, [onSetupChange]);
+        void loadDatasets();
+    }, []);
+
+    useEffect(() => {
+        if (checkpoints.length === 0) {
+            setCheckpointMetadataMap({});
+            return;
+        }
+
+        let mounted = true;
+
+        const loadCheckpointMetadata = async () => {
+            const entries = await Promise.all(
+                checkpoints.map(async (checkpoint) => {
+                    try {
+                        const response = await fetch(`/api/training/checkpoints/${encodeURIComponent(checkpoint)}/metadata`);
+                        if (!response.ok) {
+                            return [checkpoint, { datasetId: '', perceptiveFieldSize: null }] as const;
+                        }
+                        const payload = await response.json();
+                        const summary = isRecord(payload?.summary) ? payload.summary : {};
+                        return [checkpoint, {
+                            datasetId: parseDatasetId(summary.dataset_id),
+                            perceptiveFieldSize: maybePositiveInteger(summary.perceptive_field_size),
+                        }] as const;
+                    } catch {
+                        return [checkpoint, { datasetId: '', perceptiveFieldSize: null }] as const;
+                    }
+                }),
+            );
+
+            if (!mounted) {
+                return;
+            }
+
+            setCheckpointMetadataMap(Object.fromEntries(entries));
+        };
+
+        void loadCheckpointMetadata();
+
+        return () => {
+            mounted = false;
+        };
+    }, [checkpoints]);
+
+    const selectedCheckpointMetadata = setup.checkpoint
+        ? checkpointMetadataMap[setup.checkpoint]
+        : undefined;
+
+    const selectedDatasetIsCompatible = useMemo(() => {
+        if (setup.datasetSource === 'uploaded') {
+            return true;
+        }
+        if (!setup.selectedDataset) {
+            return false;
+        }
+        const dataset = datasets.find((entry) => entry.dataset_id === setup.selectedDataset);
+        if (!dataset) {
+            return false;
+        }
+        const requiredRows = selectedCheckpointMetadata?.perceptiveFieldSize;
+        return requiredRows === null
+            || requiredRows === undefined
+            || dataset.row_count === null
+            || dataset.row_count >= requiredRows;
+    }, [datasets, selectedCheckpointMetadata, setup.datasetSource, setup.selectedDataset]);
+
+    useEffect(() => {
+        if (datasets.length === 0 || checkpoints.length === 0 || setup.datasetSource === 'uploaded') {
+            return;
+        }
+
+        const getCompatibleDataset = (checkpointName: string): DatasetOption | undefined => {
+            const metadata = checkpointMetadataMap[checkpointName];
+            const preferredDataset = metadata?.datasetId
+                ? datasets.find((dataset) => dataset.dataset_id === metadata.datasetId)
+                : undefined;
+            const requiredRows = metadata?.perceptiveFieldSize;
+            const isCompatible = (dataset: DatasetOption) => (
+                requiredRows === null
+                || requiredRows === undefined
+                || dataset.row_count === null
+                || dataset.row_count >= requiredRows
+            );
+
+            if (preferredDataset && isCompatible(preferredDataset)) {
+                return preferredDataset;
+            }
+
+            return datasets.find(isCompatible);
+        };
+
+        const currentCheckpoint = checkpoints.includes(setup.checkpoint) ? setup.checkpoint : '';
+        const resolvedCheckpoint = currentCheckpoint || (
+            checkpoints.find((checkpoint) => Boolean(getCompatibleDataset(checkpoint)))
+            ?? checkpoints[0]
+        );
+        const compatibleDataset = getCompatibleDataset(resolvedCheckpoint);
+        const updates: Partial<InferenceSetupState> = {};
+
+        if (resolvedCheckpoint && resolvedCheckpoint !== setup.checkpoint) {
+            updates.checkpoint = resolvedCheckpoint;
+        }
+
+        if (!setup.selectedDataset || !selectedDatasetIsCompatible) {
+            if (compatibleDataset) {
+                updates.selectedDataset = compatibleDataset.dataset_id;
+            }
+        }
+
+        if ((updates.checkpoint || updates.selectedDataset) && setup.datasetSource !== 'source') {
+            updates.datasetSource = 'source';
+        }
+
+        if (Object.keys(updates).length > 0) {
+            onSetupChangeRef.current(updates);
+        }
+    }, [
+        checkpointMetadataMap,
+        checkpoints,
+        datasets,
+        selectedDatasetIsCompatible,
+        setup.checkpoint,
+        setup.datasetSource,
+        setup.selectedDataset,
+    ]);
 
     const updateBetAmount = async (value: number, forceSessionUpdate = false) => {
         onSetupChange({ betAmount: value });
@@ -286,6 +450,15 @@ export const GameSession: React.FC<GameSessionProps> = ({
         }
         if (!setup.checkpoint) {
             setError('Select a checkpoint first.');
+            return;
+        }
+        if (setup.datasetSource !== 'uploaded' && !selectedDatasetIsCompatible) {
+            const requiredRows = selectedCheckpointMetadata?.perceptiveFieldSize;
+            if (requiredRows) {
+                setError(`Selected dataset needs at least ${requiredRows} rows for this checkpoint.`);
+            } else {
+                setError('Selected dataset is not compatible with this checkpoint.');
+            }
             return;
         }
 
@@ -893,94 +1066,93 @@ export const GameSession: React.FC<GameSessionProps> = ({
                         <div className={styles.errorText} role="alert" aria-live="polite">{error}</div>
                     )}
                     <div className={styles.tableBody}>
-                        <table className={styles.historyTable}>
-                            <thead>
-                                <tr>
-                                    <th>Step</th>
-                                    <th>Prediction</th>
-                                    <th>Observed</th>
-                                    <th>Outcome</th>
-                                    <th>Capital</th>
-                                    <th className={styles.actionsHeader}>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {history.map((step, index) => {
-                                    const isLastRow = index === history.length - 1;
-                                    const canNext =
-                                        isLastRow &&
-                                        step.observed !== null &&
-                                        !step.isEditing &&
-                                        sessionActive &&
-                                        !isRecomputing;
-                                    const canModify = sessionActive && !isRecomputing;
-
-                                    return (
-                                        <tr key={`${step.step}-${index}`}>
-                                            <td>#{step.step}</td>
-                                            <td>{step.predictedActionDesc}</td>
-                                            <td>
-                                                <input
-                                                    type="text"
-                                                    className={styles.tableInput}
-                                                    value={step.observedInput}
-                                                    aria-label={`Observed value for step ${step.step}`}
-                                                    onChange={(e) => handleObservedChange(index, e.target.value)}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter') {
-                                                            handleModifyClick(index);
-                                                        }
-                                                    }}
-                                                    disabled={step.observed !== null && !step.isEditing}
-                                                />
-                                            </td>
-                                            <td className={step.outcome !== null && step.outcome >= 0 ? styles.outcomeWin : styles.outcomeLoss}>
-                                                {step.outcome === null ? '--' : `${step.outcome >= 0 ? '+' : ''}${step.outcome}`}
-                                            </td>
-                                            <td>{step.capitalAfter === null ? '--' : step.capitalAfter.toFixed(2)}</td>
-                                            <td className={styles.actionsCell}>
-                                                <div className={styles.actionsCellInner}>
-                                                    <button
-                                                        type="button"
-                                                        className={styles.iconButton}
-                                                        onClick={() => handleRemove(index)}
-                                                        disabled={!canModify}
-                                                        aria-label="Remove row"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        className={styles.iconButton}
-                                                        onClick={() => handleModifyClick(index)}
-                                                        disabled={!canModify}
-                                                        aria-label={step.observed === null || step.isEditing ? 'Confirm observed' : 'Modify observed'}
-                                                    >
-                                                        {step.observed === null || step.isEditing ? <Check size={16} /> : <Pencil size={16} />}
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        className={styles.iconButton}
-                                                        onClick={handleNextPrediction}
-                                                        disabled={!canNext}
-                                                        aria-label="Next prediction"
-                                                    >
-                                                        <Play size={16} />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                                {history.length === 0 && (
+                        {history.length === 0 ? (
+                            <div className={styles.emptyStatePanel}>
+                                No history yet. Start playing!
+                            </div>
+                        ) : (
+                            <table className={styles.historyTable}>
+                                <thead>
                                     <tr>
-                                        <td colSpan={6} className={styles.emptyState}>
-                                            No history yet. Start playing!
-                                        </td>
+                                        <th>Step</th>
+                                        <th>Prediction</th>
+                                        <th>Observed</th>
+                                        <th>Outcome</th>
+                                        <th>Capital</th>
+                                        <th className={styles.actionsHeader}>Actions</th>
                                     </tr>
-                                )}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {history.map((step, index) => {
+                                        const isLastRow = index === history.length - 1;
+                                        const canNext =
+                                            isLastRow &&
+                                            step.observed !== null &&
+                                            !step.isEditing &&
+                                            sessionActive &&
+                                            !isRecomputing;
+                                        const canModify = sessionActive && !isRecomputing;
+
+                                        return (
+                                            <tr key={`${step.step}-${index}`}>
+                                                <td>#{step.step}</td>
+                                                <td>{step.predictedActionDesc}</td>
+                                                <td>
+                                                    <input
+                                                        type="text"
+                                                        className={styles.tableInput}
+                                                        value={step.observedInput}
+                                                        aria-label={`Observed value for step ${step.step}`}
+                                                        onChange={(e) => handleObservedChange(index, e.target.value)}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter') {
+                                                                handleModifyClick(index);
+                                                            }
+                                                        }}
+                                                        disabled={step.observed !== null && !step.isEditing}
+                                                    />
+                                                </td>
+                                                <td className={step.outcome !== null && step.outcome >= 0 ? styles.outcomeWin : styles.outcomeLoss}>
+                                                    {step.outcome === null ? '--' : `${step.outcome >= 0 ? '+' : ''}${step.outcome}`}
+                                                </td>
+                                                <td>{step.capitalAfter === null ? '--' : step.capitalAfter.toFixed(2)}</td>
+                                                <td className={styles.actionsCell}>
+                                                    <div className={styles.actionsCellInner}>
+                                                        <button
+                                                            type="button"
+                                                            className={styles.iconButton}
+                                                            onClick={() => handleRemove(index)}
+                                                            disabled={!canModify}
+                                                            aria-label="Remove row"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            className={styles.iconButton}
+                                                            onClick={() => handleModifyClick(index)}
+                                                            disabled={!canModify}
+                                                            aria-label={step.observed === null || step.isEditing ? 'Confirm observed' : 'Modify observed'}
+                                                        >
+                                                            {step.observed === null || step.isEditing ? <Check size={16} /> : <Pencil size={16} />}
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            className={styles.iconButton}
+                                                            onClick={handleNextPrediction}
+                                                            disabled={!canNext}
+                                                            aria-label="Next prediction"
+                                                        >
+                                                            <Play size={16} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        )}
                     </div>
                 </div>
             </div>

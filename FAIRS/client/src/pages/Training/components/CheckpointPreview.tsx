@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Activity, Info, RefreshCw, Save, X } from 'lucide-react';
 import { useAppState } from '../../../hooks/useAppState';
 import { useWizardStep } from '../../../hooks/useWizardStep';
 import { WizardActions } from './WizardActions';
-import { parseDatasetId } from '../../../utils/apiParsers';
+import { parseApiErrorDetail, parseDatasetId } from '../../../utils/apiParsers';
 
 interface CheckpointMetadataResponse {
     checkpoint: string;
@@ -17,6 +18,14 @@ interface CheckpointPreviewProps {
 interface DatasetInfo {
     datasetId: string;
     datasetName: string;
+    rowCount: number | null;
+}
+
+interface CheckpointSummary {
+    dataset_id?: unknown;
+    perceptive_field_size?: unknown;
+    bet_amount?: unknown;
+    initial_capital?: unknown;
 }
 
 const RESUME_STEPS = ['Resume Configuration', 'Summary'] as const;
@@ -25,6 +34,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
     refreshKey = 0,
 }) => {
     const { state, dispatch } = useAppState();
+    const navigate = useNavigate();
     const { resumeConfig, isTraining } = state.training;
     const [checkpoints, setCheckpoints] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
@@ -38,7 +48,6 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
     const [datasetsLoading, setDatasetsLoading] = useState(false);
     const [datasetsError, setDatasetsError] = useState<string | null>(null);
     const [metadataCache, setMetadataCache] = useState<Record<string, CheckpointMetadataResponse>>({});
-    const [checkpointDatasetMap, setCheckpointDatasetMap] = useState<Record<string, string>>({});
 
     const [resumeWizardOpen, setResumeWizardOpen] = useState(false);
     const {
@@ -77,7 +86,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
         setDatasetsLoading(true);
         setDatasetsError(null);
         try {
-            const response = await fetch('/api/database/roulette-series/datasets');
+            const response = await fetch('/api/database/roulette-series/datasets/summary');
             if (!response.ok) {
                 throw new Error('Failed to load datasets');
             }
@@ -85,9 +94,10 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
             const datasetList = Array.isArray(payload?.datasets)
                 ? payload.datasets
                     .filter((entry: unknown) => typeof entry === 'object' && entry !== null)
-                    .map((entry: { dataset_id?: unknown; dataset_name?: unknown }) => ({
+                    .map((entry: { dataset_id?: unknown; dataset_name?: unknown; row_count?: unknown }) => ({
                         datasetId: parseDatasetId(entry.dataset_id),
                         datasetName: typeof entry.dataset_name === 'string' ? entry.dataset_name : '',
+                        rowCount: typeof entry.row_count === 'number' ? entry.row_count : null,
                     }))
                     .filter((entry: DatasetInfo) =>
                         entry.datasetId.trim().length > 0 && entry.datasetName.trim().length > 0
@@ -95,8 +105,29 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
                 : [];
             setDatasets(datasetList);
         } catch {
-            setDatasets([]);
-            setDatasetsError('Unable to load dataset names.');
+            try {
+                const fallbackResponse = await fetch('/api/database/roulette-series/datasets');
+                if (!fallbackResponse.ok) {
+                    throw new Error('Failed to load datasets');
+                }
+                const fallbackPayload = await fallbackResponse.json();
+                const fallbackList = Array.isArray(fallbackPayload?.datasets)
+                    ? fallbackPayload.datasets
+                        .filter((entry: unknown) => typeof entry === 'object' && entry !== null)
+                        .map((entry: { dataset_id?: unknown; dataset_name?: unknown }) => ({
+                            datasetId: parseDatasetId(entry.dataset_id),
+                            datasetName: typeof entry.dataset_name === 'string' ? entry.dataset_name : '',
+                            rowCount: null,
+                        }))
+                        .filter((entry: DatasetInfo) =>
+                            entry.datasetId.trim().length > 0 && entry.datasetName.trim().length > 0
+                        )
+                    : [];
+                setDatasets(fallbackList);
+            } catch {
+                setDatasets([]);
+                setDatasetsError('Unable to load dataset names.');
+            }
         } finally {
             setDatasetsLoading(false);
         }
@@ -112,7 +143,6 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
 
     const handleRefreshOverview = async () => {
         setMetadataCache({});
-        setCheckpointDatasetMap({});
         await Promise.all([loadCheckpoints(), loadDatasets()]);
     };
 
@@ -128,8 +158,8 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.detail || 'Failed to delete checkpoint');
+                const errorData = await response.json().catch(() => null);
+                throw new Error(parseApiErrorDetail(errorData, 'Failed to delete checkpoint'));
             }
 
             setCheckpoints((prev) => prev.filter((name) => name !== checkpointName));
@@ -142,8 +172,8 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
     const loadCheckpointMetadata = useCallback(async (checkpointName: string) => {
         const response = await fetch(`/api/training/checkpoints/${encodeURIComponent(checkpointName)}/metadata`);
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.detail || 'Failed to load checkpoint metadata');
+            const errorData = await response.json().catch(() => null);
+            throw new Error(parseApiErrorDetail(errorData, 'Failed to load checkpoint metadata'));
         }
         const payload = (await response.json()) as CheckpointMetadataResponse;
         return payload;
@@ -151,9 +181,6 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
 
     const cacheCheckpointMetadata = useCallback((checkpointName: string, payload: CheckpointMetadataResponse) => {
         setMetadataCache((prev) => ({ ...prev, [checkpointName]: payload }));
-        const summary = payload.summary || {};
-        const datasetId = parseDatasetId(summary.dataset_id);
-        setCheckpointDatasetMap((prev) => ({ ...prev, [checkpointName]: datasetId }));
     }, []);
 
     const prefetchCheckpointMetadata = useCallback(async (checkpointList: string[]) => {
@@ -236,8 +263,8 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
             });
 
             if (!response.ok) {
-                const errorPayload = await response.json();
-                setResumeWizardError(`Failed to resume training: ${errorPayload.detail || 'Unknown error'}`);
+                const errorPayload = await response.json().catch(() => null);
+                setResumeWizardError(`Failed to resume training: ${parseApiErrorDetail(errorPayload, 'Unknown error')}`);
                 return;
             }
 
@@ -250,6 +277,13 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
         }
     };
 
+    const parsePositiveNumber = (value: unknown): number | null => {
+        if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+            return null;
+        }
+        return value;
+    };
+
     const handleEvaluateCheckpoint = async (checkpointName: string) => {
         setNotice(null);
         try {
@@ -257,35 +291,49 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
             if (!metadataCache[checkpointName]) {
                 cacheCheckpointMetadata(checkpointName, payload);
             }
-            const summary = payload.summary || {};
-            const datasetId = parseDatasetId(summary.dataset_id);
-            const betAmount = typeof summary.bet_amount === 'number' ? summary.bet_amount : 1;
-            const initialCapital = typeof summary.initial_capital === 'number' ? summary.initial_capital : 100;
+            const summary = (payload.summary || {}) as CheckpointSummary;
+            const requiredRows = parsePositiveNumber(summary.perceptive_field_size);
+            const preferredDatasetId = parseDatasetId(summary.dataset_id);
+            const compatibleDatasets = datasets.filter((dataset) => (
+                requiredRows === null || dataset.rowCount === null || dataset.rowCount >= requiredRows
+            ));
+            const selectedDataset = (
+                compatibleDatasets.find((dataset) => dataset.datasetId === preferredDatasetId)
+                ?? compatibleDatasets[0]
+            );
 
-            if (!datasetId) {
-                setError('Checkpoint metadata does not include a dataset identifier.');
+            if (!selectedDataset) {
+                setError('No compatible dataset is available for this checkpoint.');
                 return;
             }
 
-            const response = await fetch('/api/inference/sessions/start', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
+            const betAmount = parsePositiveNumber(summary.bet_amount) ?? 1;
+            const initialCapital = parsePositiveNumber(summary.initial_capital) ?? 100;
+
+            dispatch({ type: 'RESET_INFERENCE_SESSION' });
+            dispatch({
+                type: 'SET_INFERENCE_SETUP',
+                payload: {
                     checkpoint: checkpointName,
-                    dataset_id: Number(datasetId),
-                    game_capital: Number(initialCapital),
-                    game_bet: Number(betAmount),
-                }),
+                    selectedDataset: selectedDataset.datasetId,
+                    datasetSource: 'source',
+                    uploadedDatasetName: null,
+                    datasetFileMetadata: null,
+                    initialCapital: Number(initialCapital),
+                    betAmount: Number(betAmount),
+                },
             });
-
-            if (!response.ok) {
-                const errorPayload = await response.json();
-                setError(`Failed to start evaluation: ${errorPayload.detail || 'Unknown error'}`);
-                return;
-            }
-
-            const result = await response.json();
-            setNotice(`Evaluation session started (session ${result.session_id}). Continue from the Inference page.`);
+            dispatch({
+                type: 'SET_INFERENCE_SESSION_STATE',
+                payload: {
+                    isActive: false,
+                    currentCapital: Number(initialCapital),
+                    currentBet: Number(betAmount),
+                    lastPrediction: null,
+                    totalSteps: 0,
+                },
+            });
+            navigate('/inference');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Unable to start evaluation.');
         }
@@ -358,11 +406,6 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
         });
     };
 
-    const availableDatasetSet = useMemo(
-        () => new Set(datasets.map((entry) => entry.datasetId)),
-        [datasets],
-    );
-
     const resumeSummaryRows = useMemo(() => {
         if (!resumeWizardCheckpoint) {
             return [];
@@ -398,11 +441,12 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
                 {!loading && !error && checkpoints.length === 0 && (
                     <div className="preview-empty">No checkpoints available</div>
                 )}
+                {!loading && !error && datasetsError && (
+                    <div className="preview-error">{datasetsError}</div>
+                )}
                 {!loading && !error && checkpoints.length > 0 && (
                     <div className="preview-list">
                         {checkpoints.map((name) => {
-                            const datasetId = checkpointDatasetMap[name];
-                            const canResume = datasetId && availableDatasetSet.has(datasetId);
                             return (
                                 <div key={name} className="preview-row">
                                     <span className="preview-row-name">{name}</span>
@@ -422,16 +466,14 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
                                         >
                                             <Activity size={16} />
                                         </button>
-                                        {canResume && (
-                                            <button
-                                                className="preview-row-icon preview-row-icon-resume"
-                                                onClick={() => openResumeWizard(name)}
-                                                title="Resume training from this checkpoint"
-                                                disabled={isTraining || datasetsLoading || Boolean(datasetsError)}
-                                            >
-                                                <RefreshCw size={16} />
-                                            </button>
-                                        )}
+                                        <button
+                                            className="preview-row-icon preview-row-icon-resume"
+                                            onClick={() => openResumeWizard(name)}
+                                            title="Resume training from this checkpoint"
+                                            disabled={isTraining}
+                                        >
+                                            <RefreshCw size={16} />
+                                        </button>
                                         <button
                                             className="preview-row-delete"
                                             onClick={() => handleDelete(name)}
@@ -472,7 +514,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
                                         <span className="preview-modal-label">{row.label}</span>
                                         <span className="preview-modal-value">
                                             {typeof row.value === 'number'
-                                                ? row.value.toLocaleString()
+                                                ? String(row.value)
                                                 : String(row.value)}
                                         </span>
                                     </div>
@@ -528,7 +570,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
                                             <span className="wizard-summary-label">{row.label}</span>
                                             <span className="wizard-summary-value">
                                                 {typeof row.value === 'number'
-                                                    ? row.value.toLocaleString()
+                                                    ? String(row.value)
                                                     : String(row.value)}
                                             </span>
                                         </div>

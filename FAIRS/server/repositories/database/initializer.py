@@ -7,7 +7,8 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 
-from FAIRS.server.configurations import DatabaseSettings, server_settings
+from FAIRS.server.configurations import DatabaseSettings
+from FAIRS.server.configurations.startup import get_server_settings
 from FAIRS.server.common.constants import DATABASE_FILENAME, RESOURCES_PATH
 from FAIRS.server.common.utils.logger import logger
 from FAIRS.server.repositories.database.postgres import PostgresRepository
@@ -184,7 +185,7 @@ def initialize_sqlite_database_if_missing(settings: DatabaseSettings) -> None:
 
 # -----------------------------------------------------------------------------
 def initialize_sqlite_on_startup_if_missing() -> None:
-    settings = server_settings.database
+    settings = get_server_settings().database
     if not settings.embedded_database:
         return
     initialize_sqlite_database_if_missing(settings)
@@ -250,7 +251,7 @@ def ensure_postgres_database(settings: DatabaseSettings) -> str:
 
 # -----------------------------------------------------------------------------
 def run_database_initialization() -> None:
-    settings = server_settings.database
+    settings = get_server_settings().database
     if settings.embedded_database:
         initialize_sqlite_database(settings)
         return

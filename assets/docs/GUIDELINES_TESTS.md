@@ -1,5 +1,7 @@
 # How To Test (FAIRS)
 
+Last updated: 2026-04-09
+
 Current FAIRS test strategy and execution commands.
 
 ## 1. Test Stack
@@ -21,9 +23,10 @@ tests/
 │   └── ...
 ├── unit/
 │   ├── test_data_serializer.py
-│   ├── test_database_mode_env_override.py
+│   ├── test_database_config_json.py
 │   ├── test_fallback.py
 │   ├── test_hold.py
+│   ├── test_settings_system.py
 │   ├── test_security_hardening.py
 │   ├── test_sizer.py
 │   └── test_sqlite_repository_orm.py
@@ -113,6 +116,10 @@ uv run pytest -q tests\e2e\test_app_flow.py --headed
 - Keep Arrange-Act-Assert explicit.
 - Prefer deterministic data and short runtime configs.
 - Reuse fixtures from `tests/conftest.py` where possible.
+- For configuration changes, cover:
+  - early `.env` bootstrap behavior (`ensure_environment_loaded`)
+  - settings precedence (env over JSON for explicit `DATABASE_*`, `JOBS_*`, `DEVICE_*`)
+  - fail-fast behavior for invalid/missing `configurations.json`
 
 ## 8. Common Troubleshooting
 

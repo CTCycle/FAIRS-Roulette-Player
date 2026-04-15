@@ -1,25 +1,39 @@
 from __future__ import annotations
 
 import os
-from dotenv import load_dotenv
+import warnings
+from typing import Any
 
-from FAIRS.server.common.constants import ENV_FILE_PATH
-from FAIRS.server.common.utils.logger import logger
+from FAIRS.server.configurations.environment import load_environment
 
 
-# [LOAD ENVIRONMENT VARIABLES]
-###############################################################################
 class EnvironmentVariables:
     def __init__(self) -> None:
-        self.env_path = ENV_FILE_PATH
-        if os.path.exists(self.env_path):
-            load_dotenv(dotenv_path=self.env_path, override=True)
-        else:
-            logger.error(f".env file not found at: {self.env_path}")
+        warnings.warn(
+            "EnvironmentVariables is deprecated. Use FAIRS.server.configurations startup APIs.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        load_environment()
 
     # -------------------------------------------------------------------------
     def get(self, key: str, default: str | None = None) -> str | None:
         return os.getenv(key, default)
 
 
-env_variables = EnvironmentVariables()
+class _EnvironmentVariablesProxy:
+    def __init__(self) -> None:
+        self._instance: EnvironmentVariables | None = None
+
+    # -------------------------------------------------------------------------
+    def _resolve(self) -> EnvironmentVariables:
+        if self._instance is None:
+            self._instance = EnvironmentVariables()
+        return self._instance
+
+    # -------------------------------------------------------------------------
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._resolve(), name)
+
+
+env_variables = _EnvironmentVariablesProxy()
