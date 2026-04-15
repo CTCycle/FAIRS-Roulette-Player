@@ -378,6 +378,10 @@ endlocal & exit /b 1
 :kill_port
 set "target_port=%~1"
 if not defined target_port goto :eof
+for /f "delims=" %%P in ('powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='SilentlyContinue'; Get-NetTCPConnection -State Listen -LocalPort %target_port% | Select-Object -ExpandProperty OwningProcess -Unique" 2^>nul') do (
+  echo %%P | findstr /R "^[0-9][0-9]*$" >nul
+  if !errorlevel! equ 0 taskkill /PID %%P /F >nul 2>&1
+)
 for /f "tokens=5" %%P in ('netstat -ano ^| findstr /R /C:":!target_port! .*LISTENING"') do (
   echo %%P | findstr /R "^[0-9][0-9]*$" >nul
   if !errorlevel! equ 0 taskkill /PID %%P /F >nul 2>&1
@@ -390,8 +394,8 @@ set "wait_seconds=%~2"
 if not defined wait_port exit /b 1
 if not defined wait_seconds set "wait_seconds=10"
 for /L %%I in (1,1,!wait_seconds!) do (
-  netstat -ano | findstr /R ":!wait_port! .*LISTENING" >nul
+  netstat -ano | findstr /R /C:":!wait_port! .*LISTENING" >nul
   if !errorlevel! neq 0 exit /b 0
-  timeout /t 1 /nobreak >nul
+  powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command "Start-Sleep -Seconds 1" >nul 2>&1
 )
 exit /b 1
