@@ -32,7 +32,7 @@ class TestNavigationFlow:
         page.wait_for_load_state("networkidle")
 
         # Try to find and click the Training link
-        training_link = page.get_by_text("Training", exact=False).first
+        training_link = page.get_by_role("link", name=re.compile("Training", re.IGNORECASE))
         expect(training_link).to_be_visible()
         training_link.click()
 
@@ -45,7 +45,7 @@ class TestNavigationFlow:
         page.wait_for_load_state("networkidle")
 
         # Try to find and click the Inference link
-        inference_link = page.get_by_text("Inference", exact=False).first
+        inference_link = page.get_by_role("link", name=re.compile("Inference", re.IGNORECASE))
         expect(inference_link).to_be_visible()
         inference_link.click()
 
@@ -61,14 +61,14 @@ class TestTrainingPage:
         page.goto(f"{base_url}/training")
         page.wait_for_load_state("networkidle")
 
-        expect(page.get_by_text("Training Dashboard", exact=False)).to_be_visible()
+        expect(page.get_by_role("heading", name=re.compile("Model Training Workspace", re.IGNORECASE))).to_be_visible()
         expect(page.get_by_text("Checkpoints", exact=False).first).to_be_visible()
 
     def test_training_page_shows_status(self, page: Page, base_url: str):
         """The Training page should display training status."""
         page.goto(f"{base_url}/training")
         page.wait_for_load_state("networkidle")
-        expect(page.get_by_text("Training Dashboard", exact=False)).to_be_visible()
+        expect(page.get_by_role("heading", name=re.compile("Model Training Workspace", re.IGNORECASE))).to_be_visible()
         expect(page.get_by_text("Checkpoints", exact=False).first).to_be_visible()
 
 
@@ -80,7 +80,7 @@ class TestInferencePage:
         page.goto(f"{base_url}/inference")
         page.wait_for_load_state("networkidle")
 
-        expect(page.get_by_text("Session History", exact=False)).to_be_visible()
+        expect(page.get_by_role("heading", name=re.compile("Session History", re.IGNORECASE))).to_be_visible()
         expect(page.get_by_text("AI Suggestion", exact=False)).to_be_visible()
 
     def test_inference_page_shows_checkpoint_selector(self, page: Page, base_url: str):
