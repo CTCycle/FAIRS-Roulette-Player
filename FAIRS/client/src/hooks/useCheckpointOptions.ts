@@ -28,10 +28,15 @@ export const useCheckpointOptions = ({
 }: UseCheckpointOptionsParams): string[] => {
     const [checkpoints, setCheckpoints] = useState<string[]>([]);
     const latestCheckpointRef = useRef(selectedCheckpoint);
+    const onSelectCheckpointRef = useRef(onSelectCheckpoint);
 
     useEffect(() => {
         latestCheckpointRef.current = selectedCheckpoint;
     }, [selectedCheckpoint]);
+
+    useEffect(() => {
+        onSelectCheckpointRef.current = onSelectCheckpoint;
+    }, [onSelectCheckpoint]);
 
     useEffect(() => {
         let mounted = true;
@@ -52,7 +57,7 @@ export const useCheckpointOptions = ({
                 setCheckpoints(normalized);
 
                 if (normalized.length > 0 && !latestCheckpointRef.current) {
-                    onSelectCheckpoint(normalized[0]);
+                    onSelectCheckpointRef.current(normalized[0]);
                 }
             } catch (error) {
                 console.error('Failed to load checkpoints:', error);
@@ -64,7 +69,7 @@ export const useCheckpointOptions = ({
         return () => {
             mounted = false;
         };
-    }, [onSelectCheckpoint]);
+    }, []);
 
     return checkpoints;
 };

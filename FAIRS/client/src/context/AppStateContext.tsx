@@ -1,6 +1,7 @@
 import React, { useReducer, type ReactNode } from 'react';
 import type { GameConfig, SessionState, GameStep } from '../types/inference';
 import { AppStateContext } from './AppStateStore';
+import type { DatasetUploadStatus } from '../utils/datasetUpload';
 
 // ============================================================================
 // State Interfaces
@@ -14,7 +15,7 @@ export interface FileMetadata {
 
 export interface DatasetUploadState {
     files: FileMetadata[];
-    uploadStatus: 'idle' | 'uploading' | 'success' | 'error';
+    uploadStatus: DatasetUploadStatus;
     uploadMessage: string;
 }
 

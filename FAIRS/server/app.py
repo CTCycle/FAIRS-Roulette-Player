@@ -5,8 +5,6 @@ import warnings
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-from FAIRS.server.common.utils.variables import env_variables  # noqa: F401
-
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -27,14 +25,14 @@ from FAIRS.server.api.upload import router as upload_router
 
 ###############################################################################
 def is_api_docs_enabled() -> bool:
-    raw = os.getenv("ENABLE_API_DOCS", "true").strip().lower()
-    return raw in {"1", "true", "yes", "on"}
+    value = os.getenv("ENABLE_API_DOCS", "true").strip().lower()
+    return value in {"1", "true", "yes", "on"}
 
 
 # -----------------------------------------------------------------------------
 def is_direct_api_routes_enabled() -> bool:
-    raw = os.getenv("FAIRS_ALLOW_DIRECT_API_ROUTES", "true").strip().lower()
-    return raw in {"1", "true", "yes", "on"}
+    value = os.getenv("FAIRS_ALLOW_DIRECT_API_ROUTES", "true").strip().lower()
+    return value in {"1", "true", "yes", "on"}
 
 
 # -----------------------------------------------------------------------------

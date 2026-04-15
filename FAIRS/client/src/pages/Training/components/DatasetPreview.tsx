@@ -3,9 +3,9 @@ import { Database, Play, RefreshCw, X } from 'lucide-react';
 import type { TrainingNewConfig } from '../../../context/AppStateContext';
 import { useAppState } from '../../../hooks/useAppState';
 import { useWizardStep } from '../../../hooks/useWizardStep';
-import { buildTrainingPayload } from './trainingPayload';
+import { buildTrainingPayload, validateTrainingConfig, validateTrainingStep } from './trainingPayload';
 import { WizardActions } from './WizardActions';
-import { parseDatasetId } from '../../../utils/apiParsers';
+import { parseApiErrorDetail, parseDatasetId } from '../../../utils/apiParsers';
 
 interface DatasetPreviewProps {
     refreshKey: number;
@@ -220,8 +220,9 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
             setWizardError('Training is already in progress.');
             return;
         }
-        if (!newConfig.useDataGen && !wizardDatasetId) {
-            setWizardError('Select a dataset to continue.');
+        const validationError = validateTrainingConfig(newConfig, wizardDatasetId ?? undefined);
+        if (validationError) {
+            setWizardError(validationError);
             return;
         }
 
@@ -237,8 +238,8 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
             });
 
             if (!response.ok) {
-                const errorPayload = await response.json();
-                setWizardError(`Failed to start training: ${errorPayload.detail || 'Unknown error'}`);
+                const errorPayload = await response.json().catch(() => null);
+                setWizardError(`Failed to start training: ${parseApiErrorDetail(errorPayload, 'Unknown error')}`);
                 return;
             }
 
@@ -249,6 +250,16 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
         } finally {
             setWizardSubmitting(false);
         }
+    };
+
+    const handleNextWizardStep = () => {
+        const validationError = validateTrainingStep(newConfig, wizardDatasetId ?? undefined, wizardStep);
+        if (validationError) {
+            setWizardError(validationError);
+            return;
+        }
+        setWizardError(null);
+        goToNextWizardStep();
     };
 
     const formatRowCount = (rowCount: number | null) => {
@@ -673,7 +684,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                                             <div key={row.label} className="wizard-summary-row">
                                                 <span className="wizard-summary-label">{row.label}</span>
                                                 <span className="wizard-summary-value">
-                                                    {typeof row.value === 'number' ? row.value.toLocaleString() : String(row.value)}
+                                                    {typeof row.value === 'number' ? String(row.value) : String(row.value)}
                                                 </span>
                                             </div>
                                         ))}
@@ -692,7 +703,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                             isSubmitting={wizardSubmitting}
                             onCancel={closeWizard}
                             onPrevious={goToPreviousWizardStep}
-                            onNext={goToNextWizardStep}
+                            onNext={handleNextWizardStep}
                             onConfirm={handleStartTraining}
                         />
                     </div>

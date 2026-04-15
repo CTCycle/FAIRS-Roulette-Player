@@ -13,8 +13,7 @@ from FAIRS.server.domain.jobs import (
     JobStartResponse,
     JobStatusResponse,
 )
-from FAIRS.server.configurations import server_settings
-from FAIRS.server.configurations.server import get_poll_interval_seconds
+from FAIRS.server.configurations.startup import get_poll_interval_seconds
 from FAIRS.server.common.constants import CHECKPOINT_PATH
 from FAIRS.server.services.jobs import JobManager, job_manager
 from FAIRS.server.common.utils.logger import logger
@@ -572,7 +571,7 @@ class TrainingEndpoint:
             },
         )
 
-        poll_interval = get_poll_interval_seconds(server_settings)
+        poll_interval = get_poll_interval_seconds()
 
         return {
             "status": "started",
@@ -635,7 +634,7 @@ class TrainingEndpoint:
             },
         )
 
-        poll_interval = get_poll_interval_seconds(server_settings)
+        poll_interval = get_poll_interval_seconds()
 
         return {
             "status": "started",
@@ -647,7 +646,7 @@ class TrainingEndpoint:
 
     # -------------------------------------------------------------------------
     def get_status(self) -> dict[str, Any]:
-        poll_interval = get_poll_interval_seconds(server_settings)
+        poll_interval = get_poll_interval_seconds()
         return {
             "job_id": self.training_state.current_job_id,
             "is_training": self.training_state.is_training,
@@ -695,9 +694,7 @@ class TrainingEndpoint:
         history = session.get("history", {}) if isinstance(session, dict) else {}
 
         summary = {
-            "dataset_id": configuration.get("dataset_id")
-            or configuration.get("name")
-            or "",
+            "dataset_id": configuration.get("dataset_id") or "",
             "sample_size": configuration.get("sample_size"),
             "seed": configuration.get("seed"),
             "episodes": configuration.get("episodes") or session.get("total_episodes"),
@@ -752,7 +749,7 @@ class TrainingEndpoint:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Job not found: {job_id}",
             )
-        poll_interval = get_poll_interval_seconds(server_settings)
+        poll_interval = get_poll_interval_seconds()
         return JobStatusResponse(**job_status, poll_interval=poll_interval)
 
     # -------------------------------------------------------------------------
