@@ -58,7 +58,7 @@ Training lifecycle endpoints:
 - `GET /training/jobs/{job_id}`
 - `DELETE /training/jobs/{job_id}`
 
-These endpoints are available under `/api/*`, and optionally also direct paths when `FAIRS_ALLOW_DIRECT_API_ROUTES=true`.
+These endpoints are available under `/api/*`.
 
 ## 6. Pattern for New Background Jobs
 

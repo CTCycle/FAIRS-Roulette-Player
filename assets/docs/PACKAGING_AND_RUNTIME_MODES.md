@@ -32,7 +32,6 @@ copy /Y FAIRS\settings\.env.example FAIRS\settings\.env
 | `FASTAPI_HOST`, `FASTAPI_PORT` | Backend bind host/port. |
 | `UI_HOST`, `UI_PORT` | Local frontend preview host/port. |
 | `ENABLE_API_DOCS` | Enables `/docs`, `/redoc`, OpenAPI routes. |
-| `FAIRS_ALLOW_DIRECT_API_ROUTES` | When `true`, API endpoints are exposed both direct and under `/api`. |
 | `RELOAD` | Enables Uvicorn reload in local mode. |
 | `OPTIONAL_DEPENDENCIES` | Installs optional extras (tests/playwright). |
 | `MPLBACKEND`, `KERAS_BACKEND` | Plotting/ML backend runtime settings. |

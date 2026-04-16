@@ -133,37 +133,20 @@ export const GameSession: React.FC<GameSessionProps> = ({
         const loadDatasets = async () => {
             try {
                 const summaryResponse = await fetch('/api/database/roulette-series/datasets/summary');
-                let values: DatasetOption[] = [];
-
-                if (summaryResponse.ok) {
-                    const payload = await summaryResponse.json();
-                    values = Array.isArray(payload?.datasets)
-                        ? payload.datasets
-                            .filter((entry: unknown) => typeof entry === 'object' && entry !== null)
-                            .map((entry: { dataset_id?: unknown; dataset_name?: unknown; row_count?: unknown }) => ({
-                                dataset_id: parseDatasetId(entry.dataset_id),
-                                dataset_name: typeof entry.dataset_name === 'string' ? entry.dataset_name : '',
-                                row_count: typeof entry.row_count === 'number' ? entry.row_count : null,
-                            }))
-                            .filter((entry: DatasetOption) => entry.dataset_id.length > 0)
-                        : [];
-                } else {
-                    const response = await fetch('/api/database/roulette-series/datasets');
-                    if (!response.ok) {
-                        return;
-                    }
-                    const payload = await response.json();
-                    values = Array.isArray(payload?.datasets)
-                        ? payload.datasets
-                            .filter((entry: unknown) => typeof entry === 'object' && entry !== null)
-                            .map((entry: { dataset_id?: unknown; dataset_name?: unknown }) => ({
-                                dataset_id: parseDatasetId(entry.dataset_id),
-                                dataset_name: typeof entry.dataset_name === 'string' ? entry.dataset_name : '',
-                                row_count: null,
-                            }))
-                            .filter((entry: DatasetOption) => entry.dataset_id.length > 0)
-                        : [];
+                if (!summaryResponse.ok) {
+                    return;
                 }
+                const payload = await summaryResponse.json();
+                const values: DatasetOption[] = Array.isArray(payload?.datasets)
+                    ? payload.datasets
+                        .filter((entry: unknown) => typeof entry === 'object' && entry !== null)
+                        .map((entry: { dataset_id?: unknown; dataset_name?: unknown; row_count?: unknown }) => ({
+                            dataset_id: parseDatasetId(entry.dataset_id),
+                            dataset_name: typeof entry.dataset_name === 'string' ? entry.dataset_name : '',
+                            row_count: typeof entry.row_count === 'number' ? entry.row_count : null,
+                        }))
+                        .filter((entry: DatasetOption) => entry.dataset_id.length > 0)
+                    : [];
                 setDatasets(values);
                 if (values.length > 0 && !latestSetupRef.current.selectedDataset) {
                     onSetupChangeRef.current({

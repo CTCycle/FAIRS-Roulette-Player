@@ -9,7 +9,7 @@ from playwright.sync_api import APIRequestContext
 
 
 def require_checkpoint(api_context: APIRequestContext) -> str:
-    response = api_context.get("/training/checkpoints")
+    response = api_context.get("/api/training/checkpoints")
     assert response.ok, f"Expected 200, got {response.status}: {response.text()}"
     checkpoints = response.json()
     if not checkpoints:
@@ -18,7 +18,7 @@ def require_checkpoint(api_context: APIRequestContext) -> str:
 
 
 def require_dataset_id(api_context: APIRequestContext) -> int:
-    response = api_context.get("/database/roulette-series/datasets")
+    response = api_context.get("/api/database/roulette-series/datasets")
     assert response.ok, f"Expected 200, got {response.status}: {response.text()}"
     datasets = response.json().get("datasets", [])
     if not datasets:
@@ -37,7 +37,7 @@ def start_inference_session(
     game_bet: int = 10,
 ) -> dict:
     response = api_context.post(
-        "/inference/sessions/start",
+        "/api/inference/sessions/start",
         data={
             "checkpoint": checkpoint,
             "dataset_id": dataset_id,
@@ -67,7 +67,7 @@ class TestInferenceEndpoints:
     ):
         """POST /inference/sessions/start with invalid checkpoint should return 404."""
         response = api_context.post(
-            "/inference/sessions/start",
+            "/api/inference/sessions/start",
             data={
                 "checkpoint": "non_existent_checkpoint_xyz",
                 "dataset_id": 999999,
@@ -85,7 +85,7 @@ class TestInferenceEndpoints:
         self, api_context: APIRequestContext
     ):
         """POST /inference/sessions/{invalid_id}/next should return 404."""
-        response = api_context.post("/inference/sessions/invalid_session_id_12345/next")
+        response = api_context.post("/api/inference/sessions/invalid_session_id_12345/next")
         assert response.status == 404
 
         data = response.json()
@@ -97,7 +97,7 @@ class TestInferenceEndpoints:
     ):
         """POST /inference/sessions/{invalid_id}/step should return 404."""
         response = api_context.post(
-            "/inference/sessions/invalid_session_id_12345/step",
+            "/api/inference/sessions/invalid_session_id_12345/step",
             data={
                 "extraction": 17,
             },
@@ -109,7 +109,7 @@ class TestInferenceEndpoints:
         POST /inference/sessions/{invalid_id}/shutdown should succeed (idempotent).
         Shutting down a non-existent session should not fail.
         """
-        response = api_context.post("/inference/sessions/any_session_id/shutdown")
+        response = api_context.post("/api/inference/sessions/any_session_id/shutdown")
         # The current implementation deletes from dict silently, so it returns 200
         assert response.ok
 
@@ -120,7 +120,7 @@ class TestInferenceEndpoints:
         self, api_context: APIRequestContext
     ):
         response = api_context.post(
-            "/inference/sessions/invalid_session_id_12345/bet",
+            "/api/inference/sessions/invalid_session_id_12345/bet",
             data={"bet_amount": 25},
         )
         assert response.status == 404
@@ -130,7 +130,7 @@ class TestInferenceEndpoints:
     def test_clear_rows_on_unknown_session_is_idempotent(
         self, api_context: APIRequestContext
     ):
-        response = api_context.post("/inference/sessions/non_existent/rows/clear")
+        response = api_context.post("/api/inference/sessions/non_existent/rows/clear")
         assert response.ok
         data = response.json()
         assert data.get("status") == "cleared"
@@ -168,7 +168,7 @@ class TestInferenceSessionFlow:
 
         try:
             # Get next prediction
-            next_response = api_context.post(f"/inference/sessions/{session_id}/next")
+            next_response = api_context.post(f"/api/inference/sessions/{session_id}/next")
             assert next_response.ok
             next_data = next_response.json()
             assert "prediction" in next_data
@@ -179,7 +179,7 @@ class TestInferenceSessionFlow:
 
             # Submit a step with a sample extraction
             step_response = api_context.post(
-                f"/inference/sessions/{session_id}/step",
+                f"/api/inference/sessions/{session_id}/step",
                 data={
                     "extraction": 17,
                 },
@@ -199,7 +199,7 @@ class TestInferenceSessionFlow:
         finally:
             # Always shutdown the session
             shutdown_response = api_context.post(
-                f"/inference/sessions/{session_id}/shutdown"
+                f"/api/inference/sessions/{session_id}/shutdown"
             )
             assert shutdown_response.ok
 
@@ -213,7 +213,7 @@ class TestInferenceSessionFlow:
 
         try:
             bet_response = api_context.post(
-                f"/inference/sessions/{session_id}/bet",
+                f"/api/inference/sessions/{session_id}/bet",
                 data={"bet_amount": 25},
             )
             assert bet_response.ok, (
@@ -224,7 +224,7 @@ class TestInferenceSessionFlow:
             assert bet_payload.get("bet_amount") == 25
 
             clear_rows_response = api_context.post(
-                f"/inference/sessions/{session_id}/rows/clear"
+                f"/api/inference/sessions/{session_id}/rows/clear"
             )
             assert clear_rows_response.ok, (
                 f"Expected 200, got {clear_rows_response.status}: {clear_rows_response.text()}"
@@ -233,7 +233,7 @@ class TestInferenceSessionFlow:
             assert clear_rows_payload.get("session_id") == session_id
             assert clear_rows_payload.get("status") == "cleared"
         finally:
-            api_context.post(f"/inference/sessions/{session_id}/shutdown")
+            api_context.post(f"/api/inference/sessions/{session_id}/shutdown")
 
     def test_clear_inference_context_removes_uploaded_inference_dataset(
         self, api_context: APIRequestContext
@@ -241,7 +241,7 @@ class TestInferenceSessionFlow:
         checkpoint_name = require_checkpoint(api_context)
         csv_content = b"outcome\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10"
         upload_response = api_context.post(
-            "/data/upload?table=inference_context&csv_separator=%2C",
+            "/api/data/upload?table=inference_context&csv_separator=%2C",
             multipart={
                 "file": {
                     "name": "test_inference_context_clear.csv",
@@ -257,7 +257,7 @@ class TestInferenceSessionFlow:
         dataset_id = upload_payload.get("dataset_id")
         assert isinstance(dataset_id, int) and dataset_id > 0
 
-        clear_response = api_context.post("/inference/context/clear")
+        clear_response = api_context.post("/api/inference/context/clear")
         assert clear_response.ok, (
             f"Expected 200, got {clear_response.status}: {clear_response.text()}"
         )
@@ -265,7 +265,7 @@ class TestInferenceSessionFlow:
         assert clear_payload.get("status") == "cleared"
 
         start_response = api_context.post(
-            "/inference/sessions/start",
+            "/api/inference/sessions/start",
             data={
                 "checkpoint": checkpoint_name,
                 "dataset_id": dataset_id,
@@ -277,3 +277,4 @@ class TestInferenceSessionFlow:
         start_payload = start_response.json()
         assert "detail" in start_payload
         assert "dataset" in str(start_payload["detail"]).lower()
+

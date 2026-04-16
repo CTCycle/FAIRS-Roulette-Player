@@ -82,30 +82,8 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                 : [];
             setDatasets(datasetList);
         } catch {
-            try {
-                const fallbackResponse = await fetch('/api/database/roulette-series/datasets');
-                if (!fallbackResponse.ok) {
-                    throw new Error('Failed to load datasets');
-                }
-                const fallbackData = await fallbackResponse.json();
-                const fallbackList = Array.isArray(fallbackData?.datasets)
-                    ? fallbackData.datasets
-                        .filter((entry: unknown) => typeof entry === 'object' && entry !== null)
-                        .map((entry: { dataset_id?: unknown; dataset_name?: unknown }) => ({
-                            datasetId: parseDatasetId(entry.dataset_id),
-                            name: typeof entry.dataset_name === 'string' ? entry.dataset_name : '',
-                            rowCount: null,
-                        }))
-                        .filter((entry: DatasetSummary) =>
-                            entry.datasetId.trim().length > 0 && entry.name.trim().length > 0
-                        )
-                    : [];
-                setDatasets(fallbackList);
-                setError(null);
-            } catch {
-                setError('Unable to load datasets.');
-                setDatasets([]);
-            }
+            setError('Unable to load datasets.');
+            setDatasets([]);
         } finally {
             setLoading(false);
         }

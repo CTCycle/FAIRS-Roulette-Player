@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from numbers import Integral
 from typing import Any, cast
 
 import pandas as pd
@@ -41,40 +42,37 @@ class DataSerializer:
 
     # -------------------------------------------------------------------------
     @staticmethod
-    def normalize_dataset_id(value: Any) -> int | None:
+    def require_dataset_id(value: Any) -> int:
         if isinstance(value, bool):
-            return None
-        if isinstance(value, int):
-            return value if value > 0 else None
-        if isinstance(value, float):
-            if not value.is_integer():
-                return None
-            candidate = int(value)
-            return candidate if candidate > 0 else None
-        if isinstance(value, str):
-            candidate = value.strip()
-            if not candidate.isdigit():
-                return None
-            resolved = int(candidate)
-            return resolved if resolved > 0 else None
-        return None
+            raise ValueError(f"Invalid dataset_id: {value}")
+        if isinstance(value, Integral):
+            resolved = int(value)
+            if resolved > 0:
+                return resolved
+        raise ValueError(f"Invalid dataset_id: {value}")
 
     # -------------------------------------------------------------------------
-    def to_storage_dataset_id(self, dataset_id: int | str) -> str:
-        resolved = self.normalize_dataset_id(dataset_id)
-        if resolved is None:
-            raise ValueError(f"Invalid dataset_id: {dataset_id}")
-        return str(resolved)
+    def coerce_dataset_id_from_storage(self, value: Any) -> int | None:
+        if isinstance(value, bool):
+            return None
+        if isinstance(value, Integral):
+            resolved = int(value)
+            return resolved if resolved > 0 else None
+        return None
 
     # -------------------------------------------------------------------------
     def next_dataset_id(self) -> int:
         frame = self.queries.load_table(DATASETS_TABLE)
         if frame.empty or "dataset_id" not in frame.columns:
             return 1
-        values = [
-            self.normalize_dataset_id(value) for value in frame["dataset_id"].tolist()
+        numeric_ids = [
+            value
+            for value in (
+                self.coerce_dataset_id_from_storage(raw)
+                for raw in frame["dataset_id"].tolist()
+            )
+            if value is not None
         ]
-        numeric_ids = [value for value in values if value is not None]
         if not numeric_ids:
             return 1
         return max(numeric_ids) + 1
@@ -93,31 +91,17 @@ class DataSerializer:
                 "dataset_kind": clean_kind,
             },
         )
-        legacy_dataset_ids: list[str] = []
         if not existing.empty and "dataset_id" in existing.columns:
             for resolved in existing["dataset_id"].tolist():
-                normalized = self.normalize_dataset_id(resolved)
+                normalized = self.coerce_dataset_id_from_storage(resolved)
                 if normalized is not None:
                     return normalized
-                legacy_id = str(resolved).strip()
-                if legacy_id:
-                    legacy_dataset_ids.append(legacy_id)
-
-        for legacy_dataset_id in legacy_dataset_ids:
-            self.queries.delete_table_rows(
-                INFERENCE_SESSIONS_TABLE,
-                {"dataset_id": legacy_dataset_id},
-            )
-            self.queries.delete_table_rows(
-                DATASETS_TABLE,
-                {"dataset_id": legacy_dataset_id},
-            )
 
         dataset_id = self.next_dataset_id()
         frame = pd.DataFrame(
             [
                 {
-                    "dataset_id": str(dataset_id),
+                    "dataset_id": dataset_id,
                     "dataset_name": clean_name,
                     "dataset_kind": clean_kind,
                     "created_at": datetime.now(),
@@ -129,9 +113,9 @@ class DataSerializer:
         return dataset_id
 
     # -------------------------------------------------------------------------
-    def load_dataset(self, dataset_id: int | str) -> dict[str, Any] | None:
+    def load_dataset(self, dataset_id: int) -> dict[str, Any] | None:
         try:
-            storage_dataset_id = self.to_storage_dataset_id(dataset_id)
+            storage_dataset_id = self.require_dataset_id(dataset_id)
         except ValueError:
             return None
         frame = self.queries.load_filtered_table(
@@ -141,7 +125,9 @@ class DataSerializer:
         if frame.empty:
             return None
         row = frame.iloc[0].to_dict()
-        normalized_dataset_id = self.normalize_dataset_id(row.get("dataset_id"))
+        normalized_dataset_id = self.coerce_dataset_id_from_storage(
+            row.get("dataset_id")
+        )
         if normalized_dataset_id is None:
             return None
         row["dataset_id"] = normalized_dataset_id
@@ -168,7 +154,9 @@ class DataSerializer:
         rows = frame.to_dict(orient="records")
         normalized_rows: list[dict[str, Any]] = []
         for row in rows:
-            normalized_dataset_id = self.normalize_dataset_id(row.get("dataset_id"))
+            normalized_dataset_id = self.coerce_dataset_id_from_storage(
+                row.get("dataset_id")
+            )
             if normalized_dataset_id is None:
                 continue
             normalized_row = {str(key): value for key, value in row.items()}
@@ -187,7 +175,9 @@ class DataSerializer:
         outcomes = self.queries.load_table(DATASET_OUTCOMES_TABLE)
         counts: dict[int, int] = {}
         if not outcomes.empty and "dataset_id" in outcomes.columns:
-            normalized_ids = outcomes["dataset_id"].apply(self.normalize_dataset_id)
+            normalized_ids = outcomes["dataset_id"].apply(
+                self.coerce_dataset_id_from_storage
+            )
             valid = outcomes.loc[normalized_ids.notna()].copy()
             if not valid.empty:
                 valid["dataset_id"] = normalized_ids.loc[normalized_ids.notna()].astype(
@@ -198,7 +188,7 @@ class DataSerializer:
 
         summaries: list[dict[str, Any]] = []
         for row in datasets:
-            dataset_id = self.normalize_dataset_id(row.get("dataset_id"))
+            dataset_id = self.coerce_dataset_id_from_storage(row.get("dataset_id"))
             if dataset_id is None:
                 continue
             summaries.append(
@@ -213,10 +203,8 @@ class DataSerializer:
         return summaries
 
     # -------------------------------------------------------------------------
-    def replace_dataset_outcomes(
-        self, dataset_id: int | str, outcomes: pd.DataFrame
-    ) -> int:
-        storage_dataset_id = self.to_storage_dataset_id(dataset_id)
+    def replace_dataset_outcomes(self, dataset_id: int, outcomes: pd.DataFrame) -> int:
+        storage_dataset_id = self.require_dataset_id(dataset_id)
         if outcomes.empty:
             return 0
 
@@ -244,8 +232,8 @@ class DataSerializer:
         }
 
     # -------------------------------------------------------------------------
-    def load_dataset_outcomes(self, dataset_id: int | str) -> pd.DataFrame:
-        storage_dataset_id = self.to_storage_dataset_id(dataset_id)
+    def load_dataset_outcomes(self, dataset_id: int) -> pd.DataFrame:
+        storage_dataset_id = self.require_dataset_id(dataset_id)
         frame = self.queries.load_filtered_table(
             DATASET_OUTCOMES_TABLE,
             {"dataset_id": storage_dataset_id},
@@ -269,7 +257,8 @@ class DataSerializer:
         dataset_ids = {
             dataset_id_value
             for dataset_id_value in (
-                self.normalize_dataset_id(row.get("dataset_id")) for row in training
+                self.coerce_dataset_id_from_storage(row.get("dataset_id"))
+                for row in training
             )
             if dataset_id_value is not None
         }
@@ -281,7 +270,7 @@ class DataSerializer:
             return frame
         if "dataset_id" not in frame.columns:
             return pd.DataFrame(columns=DATASET_OUTCOMES_COLUMNS)
-        normalized_ids = frame["dataset_id"].apply(self.normalize_dataset_id)
+        normalized_ids = frame["dataset_id"].apply(self.coerce_dataset_id_from_storage)
         filtered = frame.loc[normalized_ids.isin(dataset_ids)].copy()
         if filtered.empty:
             return filtered
@@ -300,8 +289,8 @@ class DataSerializer:
         return filtered
 
     # -------------------------------------------------------------------------
-    def delete_dataset(self, dataset_id: int | str) -> None:
-        storage_dataset_id = self.to_storage_dataset_id(dataset_id)
+    def delete_dataset(self, dataset_id: int) -> None:
+        storage_dataset_id = self.require_dataset_id(dataset_id)
         sessions = self.queries.load_filtered_table(
             INFERENCE_SESSIONS_TABLE,
             {"dataset_id": storage_dataset_id},
@@ -334,7 +323,7 @@ class DataSerializer:
                 self.clear_datasets(kind)
             return
         for row in self.list_datasets(dataset_kind=dataset_kind):
-            dataset_id = self.normalize_dataset_id(row.get("dataset_id"))
+            dataset_id = self.coerce_dataset_id_from_storage(row.get("dataset_id"))
             if dataset_id is not None:
                 self.delete_dataset(dataset_id)
 
@@ -343,11 +332,7 @@ class DataSerializer:
         resolved_row = {**row}
         dataset_id = resolved_row.get("dataset_id")
         if dataset_id is not None:
-            normalized_dataset_id = self.normalize_dataset_id(dataset_id)
-            if normalized_dataset_id is not None:
-                resolved_row["dataset_id"] = str(normalized_dataset_id)
-            else:
-                resolved_row["dataset_id"] = str(dataset_id)
+            resolved_row["dataset_id"] = self.require_dataset_id(dataset_id)
         for key in ("started_at", "ended_at"):
             if key in resolved_row:
                 resolved_row[key] = normalize_datetime_value(resolved_row.get(key))

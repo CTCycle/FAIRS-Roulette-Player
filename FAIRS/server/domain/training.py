@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 MAX_CHECKPOINT_NAME_LENGTH = 128
@@ -38,12 +38,7 @@ class TrainingConfig(BaseModel):
 
     # Agent parameters
     perceptive_field_size: int = Field(64, ge=1, le=1024)
-    qnet_neurons: int = Field(
-        64,
-        ge=1,
-        le=10000,
-        validation_alias=AliasChoices("qnet_neurons", "QNet_neurons"),
-    )
+    qnet_neurons: int = Field(64, ge=1, le=10000)
     embedding_dimensions: int = Field(200, ge=8)
     exploration_rate: float = Field(0.75, ge=0.0, le=1.0)
     exploration_rate_decay: float = Field(0.995, ge=0.0, le=1.0)

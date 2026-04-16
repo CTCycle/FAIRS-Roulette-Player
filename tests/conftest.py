@@ -22,18 +22,16 @@ def _build_base_url(
     return f"http://{host}:{port}"
 
 
-# Base URLs - prefer explicit app test URLs, then legacy vars, then host/port pairs.
+# Base URLs - prefer explicit app test URLs, then host/port pairs.
 UI_BASE_URL = (
     os.getenv("APP_TEST_FRONTEND_URL")
-    or os.getenv("UI_BASE_URL")
-    or os.getenv("UI_URL")
     or _build_base_url("UI_HOST", "UI_PORT", "127.0.0.1", "7861")
 )
 API_BASE_URL = (
     os.getenv("APP_TEST_BACKEND_URL")
-    or os.getenv("API_BASE_URL")
     or _build_base_url("FASTAPI_HOST", "FASTAPI_PORT", "127.0.0.1", "8000")
 )
+API_BASE_PATH = f"{API_BASE_URL}/api"
 
 
 @pytest.fixture(scope="session")
@@ -45,7 +43,7 @@ def base_url() -> str:
 @pytest.fixture(scope="session")
 def api_base_url() -> str:
     """Returns the base URL of the API."""
-    return API_BASE_URL
+    return API_BASE_PATH
 
 
 @pytest.fixture
@@ -54,6 +52,6 @@ def api_context(playwright):
     Creates an API request context for making direct HTTP calls.
     Useful for testing backend endpoints independently of the UI.
     """
-    context = playwright.request.new_context(base_url=API_BASE_URL)
+    context = playwright.request.new_context(base_url=API_BASE_PATH)
     yield context
     context.dispose()

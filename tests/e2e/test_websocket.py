@@ -8,7 +8,7 @@ class TestTrainingPolling:
     """Tests for polling-based training status."""
 
     def test_training_status_polling_payload(self, api_context):
-        response = api_context.get("/training/status")
+        response = api_context.get("/api/training/status")
         assert response.ok, f"Expected 200, got {response.status}"
 
         data = response.json()
@@ -21,3 +21,4 @@ class TestTrainingPolling:
         assert isinstance(data["history"], list)
         assert isinstance(data["poll_interval"], (int, float))
         assert float(data["poll_interval"]) > 0
+

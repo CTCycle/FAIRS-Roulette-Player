@@ -30,12 +30,6 @@ def is_api_docs_enabled() -> bool:
 
 
 # -----------------------------------------------------------------------------
-def is_direct_api_routes_enabled() -> bool:
-    value = os.getenv("FAIRS_ALLOW_DIRECT_API_ROUTES", "true").strip().lower()
-    return value in {"1", "true", "yes", "on"}
-
-
-# -----------------------------------------------------------------------------
 def tauri_mode_enabled() -> bool:
     value = os.getenv("FAIRS_TAURI_MODE", "false").strip().lower()
     return value in {"1", "true", "yes", "on"}
@@ -53,7 +47,6 @@ def packaged_client_available() -> bool:
 
 
 ENABLE_API_DOCS = is_api_docs_enabled()
-ALLOW_DIRECT_API_ROUTES = is_direct_api_routes_enabled()
 
 ###############################################################################
 app = FastAPI(
@@ -73,13 +66,7 @@ routers = [
 ]
 
 for router in routers:
-    app.include_router(
-        router,
-        prefix="/api",
-        include_in_schema=not ALLOW_DIRECT_API_ROUTES,
-    )
-    if ALLOW_DIRECT_API_ROUTES:
-        app.include_router(router)
+    app.include_router(router, prefix="/api")
 
 
 @app.on_event("startup")

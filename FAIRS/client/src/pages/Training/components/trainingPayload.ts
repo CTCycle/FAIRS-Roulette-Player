@@ -12,7 +12,7 @@ export const buildTrainingPayload = (
     return ({
     // Agent
     perceptive_field_size: Number(config.perceptiveField),
-    QNet_neurons: Number(config.numNeurons),
+    qnet_neurons: Number(config.numNeurons),
     embedding_dimensions: Number(config.embeddingDims),
     exploration_rate: Number(config.explorationRate),
     exploration_rate_decay: Number(config.explorationRateDecay),
