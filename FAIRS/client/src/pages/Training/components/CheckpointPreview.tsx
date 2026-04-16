@@ -105,29 +105,8 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
                 : [];
             setDatasets(datasetList);
         } catch {
-            try {
-                const fallbackResponse = await fetch('/api/database/roulette-series/datasets');
-                if (!fallbackResponse.ok) {
-                    throw new Error('Failed to load datasets');
-                }
-                const fallbackPayload = await fallbackResponse.json();
-                const fallbackList = Array.isArray(fallbackPayload?.datasets)
-                    ? fallbackPayload.datasets
-                        .filter((entry: unknown) => typeof entry === 'object' && entry !== null)
-                        .map((entry: { dataset_id?: unknown; dataset_name?: unknown }) => ({
-                            datasetId: parseDatasetId(entry.dataset_id),
-                            datasetName: typeof entry.dataset_name === 'string' ? entry.dataset_name : '',
-                            rowCount: null,
-                        }))
-                        .filter((entry: DatasetInfo) =>
-                            entry.datasetId.trim().length > 0 && entry.datasetName.trim().length > 0
-                        )
-                    : [];
-                setDatasets(fallbackList);
-            } catch {
-                setDatasets([]);
-                setDatasetsError('Unable to load dataset names.');
-            }
+            setDatasets([]);
+            setDatasetsError('Unable to load dataset names.');
         } finally {
             setDatasetsLoading(false);
         }

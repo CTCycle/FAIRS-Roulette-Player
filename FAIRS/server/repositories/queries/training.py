@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from numbers import Integral
+
 import pandas as pd
 
 from FAIRS.server.common.constants import (
@@ -20,18 +22,8 @@ class TrainingRepositoryQueries:
     def normalize_dataset_id(value: object) -> int | None:
         if isinstance(value, bool):
             return None
-        if isinstance(value, int):
-            return value if value > 0 else None
-        if isinstance(value, float):
-            if not value.is_integer():
-                return None
-            candidate = int(value)
-            return candidate if candidate > 0 else None
-        if isinstance(value, str):
-            candidate = value.strip()
-            if not candidate.isdigit():
-                return None
-            resolved = int(candidate)
+        if isinstance(value, Integral):
+            resolved = int(value)
             return resolved if resolved > 0 else None
         return None
 
@@ -40,18 +32,8 @@ class TrainingRepositoryQueries:
     def normalize_outcome_id(value: object) -> int | None:
         if isinstance(value, bool):
             return None
-        if isinstance(value, int):
-            return value if 0 <= value <= 36 else None
-        if isinstance(value, float):
-            if not value.is_integer():
-                return None
-            candidate = int(value)
-            return candidate if 0 <= candidate <= 36 else None
-        if isinstance(value, str):
-            candidate = value.strip()
-            if not candidate.isdigit():
-                return None
-            resolved = int(candidate)
+        if isinstance(value, Integral):
+            resolved = int(value)
             return resolved if 0 <= resolved <= 36 else None
         return None
 

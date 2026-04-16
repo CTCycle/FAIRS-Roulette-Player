@@ -40,13 +40,13 @@ def test_sqlite_repository_orm_load_filter_delete(tmp_path, monkeypatch) -> None
     repository = SQLiteRepository(build_sqlite_settings(), initialize_schema=True)
     rows = build_datasets_frame(
         {
-            "dataset_id": "1",
+            "dataset_id": 1,
             "dataset_name": "alpha",
             "dataset_kind": "training",
             "created_at": datetime(2026, 1, 1),
         },
         {
-            "dataset_id": "2",
+            "dataset_id": 2,
             "dataset_name": "beta",
             "dataset_kind": "inference",
             "created_at": datetime(2026, 1, 2),
@@ -61,10 +61,10 @@ def test_sqlite_repository_orm_load_filter_delete(tmp_path, monkeypatch) -> None
     assert len(training_rows) == 1
     assert str(training_rows.iloc[0]["dataset_name"]) == "alpha"
 
-    repository.delete_from_database("datasets", {"dataset_id": "1"})
+    repository.delete_from_database("datasets", {"dataset_id": 1})
     remaining = repository.load_from_database("datasets")
     assert len(remaining) == 1
-    assert str(remaining.iloc[0]["dataset_id"]) == "2"
+    assert int(remaining.iloc[0]["dataset_id"]) == 2
 
 
 # -----------------------------------------------------------------------------
@@ -79,7 +79,7 @@ def test_sqlite_repository_orm_upsert_uses_unique_constraints(
 
     first = build_datasets_frame(
         {
-            "dataset_id": "1",
+            "dataset_id": 1,
             "dataset_name": "roulette",
             "dataset_kind": "training",
             "created_at": datetime(2026, 1, 1),
@@ -87,7 +87,7 @@ def test_sqlite_repository_orm_upsert_uses_unique_constraints(
     )
     second = build_datasets_frame(
         {
-            "dataset_id": "99",
+            "dataset_id": 99,
             "dataset_name": "roulette",
             "dataset_kind": "training",
             "created_at": datetime(2026, 1, 3),
@@ -102,7 +102,7 @@ def test_sqlite_repository_orm_upsert_uses_unique_constraints(
         {"dataset_kind": "training", "dataset_name": "roulette"},
     )
     assert len(loaded) == 1
-    assert str(loaded.iloc[0]["dataset_id"]) == "99"
+    assert int(loaded.iloc[0]["dataset_id"]) == 99
 
 
 # -----------------------------------------------------------------------------

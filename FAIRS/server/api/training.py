@@ -529,22 +529,6 @@ class TrainingEndpoint:
                 configuration["checkpoint_name"] = None
         else:
             configuration["checkpoint_name"] = None
-        dataset_id = configuration.get("dataset_id")
-        if isinstance(dataset_id, bool):
-            configuration["dataset_id"] = None
-        elif isinstance(dataset_id, str):
-            trimmed_dataset_id = dataset_id.strip()
-            configuration["dataset_id"] = (
-                int(trimmed_dataset_id) if trimmed_dataset_id.isdigit() else None
-            )
-        elif isinstance(dataset_id, (int, float)):
-            resolved_dataset_id = int(dataset_id)
-            configuration["dataset_id"] = (
-                resolved_dataset_id if resolved_dataset_id > 0 else None
-            )
-        else:
-            configuration["dataset_id"] = None
-
         if not bool(
             configuration.get("use_data_generator", False)
         ) and not configuration.get("dataset_id"):
@@ -701,7 +685,7 @@ class TrainingEndpoint:
             "batch_size": configuration.get("batch_size"),
             "learning_rate": configuration.get("learning_rate"),
             "perceptive_field_size": configuration.get("perceptive_field_size"),
-            "neurons": configuration.get("QNet_neurons"),
+            "neurons": configuration.get("qnet_neurons"),
             "embedding_dimensions": configuration.get("embedding_dimensions"),
             "exploration_rate": configuration.get("exploration_rate"),
             "exploration_rate_decay": configuration.get("exploration_rate_decay"),
@@ -714,17 +698,6 @@ class TrainingEndpoint:
             "final_val_loss": get_last_history_value(history.get("val_loss")),
             "final_val_rmse": get_last_history_value(history.get("val_rmse")),
         }
-        raw_dataset_id = summary.get("dataset_id")
-        if isinstance(raw_dataset_id, str):
-            trimmed_dataset_id = raw_dataset_id.strip()
-            summary["dataset_id"] = (
-                int(trimmed_dataset_id)
-                if trimmed_dataset_id.isdigit()
-                else trimmed_dataset_id
-            )
-        elif isinstance(raw_dataset_id, (int, float)):
-            summary["dataset_id"] = int(raw_dataset_id)
-
         return {"checkpoint": checkpoint, "summary": summary}
 
     # -------------------------------------------------------------------------

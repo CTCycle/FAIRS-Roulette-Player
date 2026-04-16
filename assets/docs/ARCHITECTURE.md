@@ -42,7 +42,7 @@ FAIRS is a FastAPI + React/Vite application for roulette training and inference 
   - `FAIRS/server/api/inference.py`
 
 Routes are always exposed under `/api/*`.
-When `FAIRS_ALLOW_DIRECT_API_ROUTES=true`, the same routes are also exposed without `/api`.
+API routes are exposed under `/api/*`.
 
 ### Main layers
 

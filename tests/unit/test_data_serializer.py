@@ -24,12 +24,12 @@ def test_delete_dataset_removes_dependent_rows_before_dataset() -> None:
 
     queries.load_filtered_table.assert_called_once_with(
         INFERENCE_SESSIONS_TABLE,
-        {"dataset_id": "7"},
+        {"dataset_id": 7},
     )
     assert queries.delete_table_rows.call_args_list == [
         call(INFERENCE_SESSION_STEPS_TABLE, {"session_id": "session_a"}),
         call(INFERENCE_SESSION_STEPS_TABLE, {"session_id": "session_b"}),
-        call(INFERENCE_SESSIONS_TABLE, {"dataset_id": "7"}),
-        call(DATASET_OUTCOMES_TABLE, {"dataset_id": "7"}),
-        call(DATASETS_TABLE, {"dataset_id": "7"}),
+        call(INFERENCE_SESSIONS_TABLE, {"dataset_id": 7}),
+        call(DATASET_OUTCOMES_TABLE, {"dataset_id": 7}),
+        call(DATASETS_TABLE, {"dataset_id": 7}),
     ]
