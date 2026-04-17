@@ -45,6 +45,8 @@ If changes materially affect behavior, architecture, runtime, or usage:
 ### Code quality
 - Prefer clear naming, cohesive modules, and low coupling.
 - Optimize for readability, maintainability, and testability.
+- Do not introduce module-level mutable global variables or singleton state.
+- Prefer explicit dependency construction and parameter passing.
 
 ### Testing and automation
 - Keep CI checks green: formatting, linting, type checks, and tests.
