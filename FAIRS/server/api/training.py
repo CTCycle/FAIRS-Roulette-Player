@@ -15,7 +15,7 @@ from FAIRS.server.domain.jobs import (
 )
 from FAIRS.server.configurations.startup import get_poll_interval_seconds
 from FAIRS.server.common.constants import CHECKPOINT_PATH
-from FAIRS.server.services.jobs import JobManager, job_manager
+from FAIRS.server.services.jobs import JobManager, create_job_manager
 from FAIRS.server.common.utils.logger import logger
 from FAIRS.server.common.utils.trainingstats import (
     coerce_optional_finite_float,
@@ -30,7 +30,6 @@ from FAIRS.server.learning.training.worker import (
 )
 
 
-router = APIRouter(prefix="/training", tags=["training"])
 TRAINING_STATUSES = {
     "idle",
     "exploration",
@@ -202,11 +201,6 @@ class TrainingState:
         self.worker = None
         self.current_job_id = None
 
-
-training_state = TrainingState()
-
-
-###############################################################################
 def calculate_progress(stats: dict[str, Any]) -> float:
     epoch = stats.get("epoch", 0)
     total_epochs = stats.get("total_epochs", 0)
@@ -300,7 +294,12 @@ def get_last_history_value(values: Any) -> float | None:
 
 
 ###############################################################################
-def handle_training_progress(job_id: str, message: dict[str, Any]) -> None:
+def handle_training_progress(
+    job_manager: JobManager,
+    training_state: TrainingState,
+    job_id: str,
+    message: dict[str, Any],
+) -> None:
     if message.get("type") != "training_update":
         return
 
@@ -319,16 +318,23 @@ def handle_training_progress(job_id: str, message: dict[str, Any]) -> None:
 
 
 ###############################################################################
-def drain_worker_progress(job_id: str, worker: ProcessWorker) -> None:
+def drain_worker_progress(
+    job_manager: JobManager,
+    training_state: TrainingState,
+    job_id: str,
+    worker: ProcessWorker,
+) -> None:
     while True:
         message = worker.poll(timeout=0.0)
         if message is None:
             return
-        handle_training_progress(job_id, message)
+        handle_training_progress(job_manager, training_state, job_id, message)
 
 
 ###############################################################################
 def monitor_training_process(
+    job_manager: JobManager,
+    training_state: TrainingState,
     job_id: str,
     worker: ProcessWorker,
     stop_timeout_seconds: float,
@@ -346,11 +352,11 @@ def monitor_training_process(
                 break
         message = worker.poll(timeout=0.25)
         if message is not None:
-            handle_training_progress(job_id, message)
-            drain_worker_progress(job_id, worker)
+            handle_training_progress(job_manager, training_state, job_id, message)
+            drain_worker_progress(job_manager, training_state, job_id, worker)
 
     worker.join(timeout=5)
-    drain_worker_progress(job_id, worker)
+    drain_worker_progress(job_manager, training_state, job_id, worker)
 
     result_payload = worker.read_result()
     if result_payload is None:
@@ -367,6 +373,8 @@ def monitor_training_process(
 ###############################################################################
 def run_training_job(
     configuration: dict[str, Any],
+    job_manager: JobManager,
+    training_state: TrainingState,
     job_id: str,
 ) -> dict[str, Any]:
     worker = ProcessWorker()
@@ -378,8 +386,10 @@ def run_training_job(
         )
 
         result = monitor_training_process(
-            job_id,
-            worker,
+            job_manager=job_manager,
+            training_state=training_state,
+            job_id=job_id,
+            worker=worker,
             stop_timeout_seconds=5.0,
         )
         if job_manager.should_stop(job_id):
@@ -411,6 +421,8 @@ def run_training_job(
 def run_resume_training_job(
     checkpoint: str,
     additional_episodes: int,
+    job_manager: JobManager,
+    training_state: TrainingState,
     job_id: str,
 ) -> dict[str, Any]:
     worker = ProcessWorker()
@@ -425,8 +437,10 @@ def run_resume_training_job(
         )
 
         result = monitor_training_process(
-            job_id,
-            worker,
+            job_manager=job_manager,
+            training_state=training_state,
+            job_id=job_id,
+            worker=worker,
             stop_timeout_seconds=5.0,
         )
         if job_manager.should_stop(job_id):
@@ -540,7 +554,11 @@ class TrainingEndpoint:
         job_id = self.job_manager.start_job(
             job_type=self.JOB_TYPE,
             runner=run_training_job,
-            kwargs={"configuration": configuration},
+            kwargs={
+                "configuration": configuration,
+                "job_manager": self.job_manager,
+                "training_state": self.training_state,
+            },
         )
 
         total_epochs = int(configuration.get("episodes", 10))
@@ -601,6 +619,8 @@ class TrainingEndpoint:
             kwargs={
                 "checkpoint": checkpoint,
                 "additional_episodes": config.additional_episodes,
+                "job_manager": self.job_manager,
+                "training_state": self.training_state,
             },
         )
 
@@ -811,10 +831,16 @@ class TrainingEndpoint:
 
 
 ###############################################################################
-training_endpoint = TrainingEndpoint(
-    router=router,
-    job_manager=job_manager,
-    training_state=training_state,
-)
-training_endpoint.add_routes()
+def create_training_router() -> APIRouter:
+    router_instance = APIRouter(prefix="/training", tags=["training"])
+    training_endpoint = TrainingEndpoint(
+        router=router_instance,
+        job_manager=create_job_manager(),
+        training_state=TrainingState(),
+    )
+    training_endpoint.add_routes()
+    return router_instance
+
+
+router = create_training_router()
 

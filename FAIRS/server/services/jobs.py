@@ -168,4 +168,5 @@ class JobManager:
 
 
 ###############################################################################
-job_manager = JobManager()
+def create_job_manager() -> JobManager:
+    return JobManager()

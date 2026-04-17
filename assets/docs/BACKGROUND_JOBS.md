@@ -8,7 +8,7 @@ FAIRS uses a centralized in-process job manager for long-running backend work. T
 
 - `FAIRS/server/services/jobs.py`
   - `JobManager`: tracks jobs, progress, status, results, and cancellation flags.
-  - `job_manager`: singleton used by API modules.
+  - Use dependency construction (`create_job_manager`) and pass `JobManager` explicitly.
 - `FAIRS/server/domain/jobs.py`
   - `JobState`: thread-safe mutable state for a single job.
   - API response models: `JobStartResponse`, `JobStatusResponse`, `JobCancelResponse`.
