@@ -327,7 +327,8 @@ echo [FATAL] Backend did not become ready at !BACKEND_BASE_URL! (checked /api/he
 goto error
 :backend_ready_check
 
-echo [RUN] Launching frontendpushd "%FRONTEND_DIR%" >nul
+echo [RUN] Launching frontend
+pushd "%FRONTEND_DIR%" >nul
 call :kill_port !UI_PORT!
 start "" /b "%NPM_CMD%" run preview -- --host !UI_HOST! --port !UI_PORT! --strictPort
 popd >nul
