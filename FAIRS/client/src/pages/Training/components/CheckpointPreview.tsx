@@ -5,11 +5,13 @@ import { useAppState } from '../../../hooks/useAppState';
 import { useWizardStep } from '../../../hooks/useWizardStep';
 import { WizardActions } from './WizardActions';
 import { parseApiErrorDetail, parseDatasetId } from '../../../utils/apiParsers';
-
-interface CheckpointMetadataResponse {
-    checkpoint: string;
-    summary: Record<string, unknown>;
-}
+import {
+    parseCheckpointList,
+    parseCheckpointMetadataResponse,
+    parseDatasetSummaryItems,
+} from '../../../utils/frontendApiParsers';
+import type { CheckpointMetadataResponse } from '../../../types/frontendApi';
+import { WizardSummaryRows, type WizardSummaryRow } from '../../../components/wizard/WizardSummaryRows';
 
 interface CheckpointPreviewProps {
     refreshKey?: number;
@@ -72,7 +74,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
                 throw new Error('Failed to load checkpoints');
             }
             const data = await response.json();
-            const checkpointList = Array.isArray(data) ? data : [];
+            const checkpointList = parseCheckpointList(data);
             setCheckpoints(checkpointList);
         } catch {
             setError('Unable to load checkpoints.');
@@ -91,18 +93,15 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
                 throw new Error('Failed to load datasets');
             }
             const payload = await response.json();
-            const datasetList = Array.isArray(payload?.datasets)
-                ? payload.datasets
-                    .filter((entry: unknown) => typeof entry === 'object' && entry !== null)
-                    .map((entry: { dataset_id?: unknown; dataset_name?: unknown; row_count?: unknown }) => ({
-                        datasetId: parseDatasetId(entry.dataset_id),
-                        datasetName: typeof entry.dataset_name === 'string' ? entry.dataset_name : '',
-                        rowCount: typeof entry.row_count === 'number' ? entry.row_count : null,
-                    }))
-                    .filter((entry: DatasetInfo) =>
-                        entry.datasetId.trim().length > 0 && entry.datasetName.trim().length > 0
-                    )
-                : [];
+            const datasetList = parseDatasetSummaryItems(payload)
+                .map((entry) => ({
+                    datasetId: entry.datasetId,
+                    datasetName: entry.datasetName,
+                    rowCount: entry.rowCount,
+                }))
+                .filter((entry) =>
+                    entry.datasetId.trim().length > 0 && entry.datasetName.trim().length > 0
+                );
             setDatasets(datasetList);
         } catch {
             setDatasets([]);
@@ -154,8 +153,8 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
             const errorData = await response.json().catch(() => null);
             throw new Error(parseApiErrorDetail(errorData, 'Failed to load checkpoint metadata'));
         }
-        const payload = (await response.json()) as CheckpointMetadataResponse;
-        return payload;
+        const payload = await response.json();
+        return parseCheckpointMetadataResponse(payload);
     }, []);
 
     const cacheCheckpointMetadata = useCallback((checkpointName: string, payload: CheckpointMetadataResponse) => {
@@ -318,7 +317,20 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
         }
     };
 
-    const buildMetadataRows = (summary: Record<string, unknown>) => {
+    const normalizeSummaryValue = useCallback((value: unknown): WizardSummaryRow['value'] => {
+        if (
+            value === null
+            || value === undefined
+            || typeof value === 'string'
+            || typeof value === 'number'
+            || typeof value === 'boolean'
+        ) {
+            return value;
+        }
+        return String(value);
+    }, []);
+
+    const buildMetadataRows = useCallback((summary: Record<string, unknown>): WizardSummaryRow[] => {
         const rows = [
             { label: 'Dataset ID', key: 'dataset_id' },
             { label: 'Sample Size', key: 'sample_size' },
@@ -342,10 +354,10 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
         return rows
             .map((row) => ({
                 label: row.label,
-                value: summary[row.key],
+                value: normalizeSummaryValue(summary[row.key]),
             }))
             .filter((row) => row.value !== null && row.value !== undefined && row.value !== '');
-    };
+    }, [normalizeSummaryValue]);
 
     const openResumeWizard = async (checkpointName: string) => {
         if (isTraining) {
@@ -385,7 +397,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
         });
     };
 
-    const resumeSummaryRows = useMemo(() => {
+    const resumeSummaryRows = useMemo<WizardSummaryRow[]>(() => {
         if (!resumeWizardCheckpoint) {
             return [];
         }
@@ -395,7 +407,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
             ...buildMetadataRows(summary),
             { label: 'Additional Episodes', value: resumeConfig.numAdditionalEpisodes },
         ];
-    }, [metadataCache, resumeConfig.numAdditionalEpisodes, resumeWizardCheckpoint]);
+    }, [buildMetadataRows, metadataCache, resumeConfig.numAdditionalEpisodes, resumeWizardCheckpoint]);
 
     return (
         <div className="checkpoint-preview">
@@ -543,18 +555,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
                                 </div>
                             )}
                             {resumeWizardStep === 1 && (
-                                <div className="wizard-summary">
-                                    {resumeSummaryRows.map((row) => (
-                                        <div key={row.label} className="wizard-summary-row">
-                                            <span className="wizard-summary-label">{row.label}</span>
-                                            <span className="wizard-summary-value">
-                                                {typeof row.value === 'number'
-                                                    ? String(row.value)
-                                                    : String(row.value)}
-                                            </span>
-                                        </div>
-                                    ))}
-                                </div>
+                                <WizardSummaryRows rows={resumeSummaryRows} />
                             )}
                         </div>
                         {resumeWizardError && (

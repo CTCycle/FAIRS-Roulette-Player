@@ -5,7 +5,7 @@ import {
     type DatasetUploadStatus,
 } from '../../../utils/datasetUpload';
 import type { DatasetUploadStateUpdates } from '../../../types/datasetUpload';
-import { useDatasetFileUpload } from '../../../components/datasetUpload/useDatasetFileUpload';
+import { useDatasetFileUpload } from '../../../hooks/useDatasetFileUpload';
 import { UploadStatusMessage } from '../../../components/datasetUpload/UploadStatusMessage';
 import { DatasetFileDropzone } from '../../../components/datasetUpload/DatasetFileDropzone';
 

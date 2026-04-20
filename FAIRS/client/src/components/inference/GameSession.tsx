@@ -1,21 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import type { GameConfig, GameStep, PredictionResult, SessionState } from '../../types/inference';
 import type { InferenceSetupState } from '../../context/AppStateContext';
 import styles from './GameSession.module.css';
 import { Check, History, Pencil, Play, Square, Trash2 } from 'lucide-react';
-import { useCheckpointOptions } from '../../hooks/useCheckpointOptions';
-import { isRecord, parseApiErrorDetail, parseDatasetId } from '../../utils/apiParsers';
-
-interface DatasetOption {
-    dataset_id: string;
-    dataset_name: string;
-    row_count: number | null;
-}
-
-interface CheckpointOptionMetadata {
-    datasetId: string;
-    perceptiveFieldSize: number | null;
-}
+import { useInferenceSetupOptions } from '../../hooks/useInferenceSetupOptions';
+import { isRecord, parseApiErrorDetail } from '../../utils/apiParsers';
 
 interface GameSessionProps {
     config: GameConfig | null;
@@ -53,13 +42,6 @@ const maybeNumber = (value: unknown): number | undefined => {
     return parsed;
 };
 
-const maybePositiveInteger = (value: unknown): number | null => {
-    if (typeof value !== 'number' || !Number.isInteger(value) || value <= 0) {
-        return null;
-    }
-    return value;
-};
-
 const normalizePrediction = (value: unknown): PredictionResult => {
     const payload = isRecord(value) ? value : {};
     const action = maybeNumber(payload.action) ?? 0;
@@ -95,20 +77,21 @@ export const GameSession: React.FC<GameSessionProps> = ({
     onGameConfigChange,
     onClearSession,
 }) => {
-    const onSetupChangeRef = useRef(onSetupChange);
-    const checkpoints = useCheckpointOptions({
-        selectedCheckpoint: setup.checkpoint,
-        onSelectCheckpoint: (nextCheckpoint) => onSetupChange({ checkpoint: nextCheckpoint }),
+    const {
+        checkpoints,
+        datasets,
+        selectedCheckpointMetadata,
+        selectedDatasetIsCompatible,
+    } = useInferenceSetupOptions({
+        setup,
+        onSetupChange,
     });
-    const [datasets, setDatasets] = useState<DatasetOption[]>([]);
-    const [checkpointMetadataMap, setCheckpointMetadataMap] = useState<Record<string, CheckpointOptionMetadata>>({});
     const [isUploading, setIsUploading] = useState(false);
     const [isStarting, setIsStarting] = useState(false);
     const [isStopping, setIsStopping] = useState(false);
     const [isRecomputing, setIsRecomputing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const latestSetupRef = useRef(setup);
 
     const sessionActive = sessionState.isActive;
     const datasetLocked = sessionActive || setup.datasetSource === 'uploaded';
@@ -120,171 +103,6 @@ export const GameSession: React.FC<GameSessionProps> = ({
         }
         return setup.selectedDataset;
     }, [setup.datasetSource, setup.selectedDataset, setup.uploadedDatasetName]);
-
-    useEffect(() => {
-        latestSetupRef.current = setup;
-    }, [setup]);
-
-    useEffect(() => {
-        onSetupChangeRef.current = onSetupChange;
-    }, [onSetupChange]);
-
-    useEffect(() => {
-        const loadDatasets = async () => {
-            try {
-                const summaryResponse = await fetch('/api/database/roulette-series/datasets/summary');
-                if (!summaryResponse.ok) {
-                    return;
-                }
-                const payload = await summaryResponse.json();
-                const values: DatasetOption[] = Array.isArray(payload?.datasets)
-                    ? payload.datasets
-                        .filter((entry: unknown) => typeof entry === 'object' && entry !== null)
-                        .map((entry: { dataset_id?: unknown; dataset_name?: unknown; row_count?: unknown }) => ({
-                            dataset_id: parseDatasetId(entry.dataset_id),
-                            dataset_name: typeof entry.dataset_name === 'string' ? entry.dataset_name : '',
-                            row_count: typeof entry.row_count === 'number' ? entry.row_count : null,
-                        }))
-                        .filter((entry: DatasetOption) => entry.dataset_id.length > 0)
-                    : [];
-                setDatasets(values);
-                if (values.length > 0 && !latestSetupRef.current.selectedDataset) {
-                    onSetupChangeRef.current({
-                        selectedDataset: String(values[0].dataset_id),
-                        datasetSource: 'source',
-                    });
-                }
-            } catch (err) {
-                console.error('Failed to load datasets:', err);
-            }
-        };
-
-        void loadDatasets();
-    }, []);
-
-    useEffect(() => {
-        if (checkpoints.length === 0) {
-            setCheckpointMetadataMap({});
-            return;
-        }
-
-        let mounted = true;
-
-        const loadCheckpointMetadata = async () => {
-            const entries = await Promise.all(
-                checkpoints.map(async (checkpoint) => {
-                    try {
-                        const response = await fetch(`/api/training/checkpoints/${encodeURIComponent(checkpoint)}/metadata`);
-                        if (!response.ok) {
-                            return [checkpoint, { datasetId: '', perceptiveFieldSize: null }] as const;
-                        }
-                        const payload = await response.json();
-                        const summary = isRecord(payload?.summary) ? payload.summary : {};
-                        return [checkpoint, {
-                            datasetId: parseDatasetId(summary.dataset_id),
-                            perceptiveFieldSize: maybePositiveInteger(summary.perceptive_field_size),
-                        }] as const;
-                    } catch {
-                        return [checkpoint, { datasetId: '', perceptiveFieldSize: null }] as const;
-                    }
-                }),
-            );
-
-            if (!mounted) {
-                return;
-            }
-
-            setCheckpointMetadataMap(Object.fromEntries(entries));
-        };
-
-        void loadCheckpointMetadata();
-
-        return () => {
-            mounted = false;
-        };
-    }, [checkpoints]);
-
-    const selectedCheckpointMetadata = setup.checkpoint
-        ? checkpointMetadataMap[setup.checkpoint]
-        : undefined;
-
-    const selectedDatasetIsCompatible = useMemo(() => {
-        if (setup.datasetSource === 'uploaded') {
-            return true;
-        }
-        if (!setup.selectedDataset) {
-            return false;
-        }
-        const dataset = datasets.find((entry) => entry.dataset_id === setup.selectedDataset);
-        if (!dataset) {
-            return false;
-        }
-        const requiredRows = selectedCheckpointMetadata?.perceptiveFieldSize;
-        return requiredRows === null
-            || requiredRows === undefined
-            || dataset.row_count === null
-            || dataset.row_count >= requiredRows;
-    }, [datasets, selectedCheckpointMetadata, setup.datasetSource, setup.selectedDataset]);
-
-    useEffect(() => {
-        if (datasets.length === 0 || checkpoints.length === 0 || setup.datasetSource === 'uploaded') {
-            return;
-        }
-
-        const getCompatibleDataset = (checkpointName: string): DatasetOption | undefined => {
-            const metadata = checkpointMetadataMap[checkpointName];
-            const preferredDataset = metadata?.datasetId
-                ? datasets.find((dataset) => dataset.dataset_id === metadata.datasetId)
-                : undefined;
-            const requiredRows = metadata?.perceptiveFieldSize;
-            const isCompatible = (dataset: DatasetOption) => (
-                requiredRows === null
-                || requiredRows === undefined
-                || dataset.row_count === null
-                || dataset.row_count >= requiredRows
-            );
-
-            if (preferredDataset && isCompatible(preferredDataset)) {
-                return preferredDataset;
-            }
-
-            return datasets.find(isCompatible);
-        };
-
-        const currentCheckpoint = checkpoints.includes(setup.checkpoint) ? setup.checkpoint : '';
-        const resolvedCheckpoint = currentCheckpoint || (
-            checkpoints.find((checkpoint) => Boolean(getCompatibleDataset(checkpoint)))
-            ?? checkpoints[0]
-        );
-        const compatibleDataset = getCompatibleDataset(resolvedCheckpoint);
-        const updates: Partial<InferenceSetupState> = {};
-
-        if (resolvedCheckpoint && resolvedCheckpoint !== setup.checkpoint) {
-            updates.checkpoint = resolvedCheckpoint;
-        }
-
-        if (!setup.selectedDataset || !selectedDatasetIsCompatible) {
-            if (compatibleDataset) {
-                updates.selectedDataset = compatibleDataset.dataset_id;
-            }
-        }
-
-        if ((updates.checkpoint || updates.selectedDataset) && setup.datasetSource !== 'source') {
-            updates.datasetSource = 'source';
-        }
-
-        if (Object.keys(updates).length > 0) {
-            onSetupChangeRef.current(updates);
-        }
-    }, [
-        checkpointMetadataMap,
-        checkpoints,
-        datasets,
-        selectedDatasetIsCompatible,
-        setup.checkpoint,
-        setup.datasetSource,
-        setup.selectedDataset,
-    ]);
 
     const updateBetAmount = async (value: number, forceSessionUpdate = false) => {
         onSetupChange({ betAmount: value });

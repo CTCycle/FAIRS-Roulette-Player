@@ -5,7 +5,9 @@ import { useAppState } from '../../../hooks/useAppState';
 import { useWizardStep } from '../../../hooks/useWizardStep';
 import { buildTrainingPayload, validateTrainingConfig, validateTrainingStep } from './trainingPayload';
 import { WizardActions } from './WizardActions';
-import { parseApiErrorDetail, parseDatasetId } from '../../../utils/apiParsers';
+import { parseApiErrorDetail } from '../../../utils/apiParsers';
+import { parseDatasetSummaryItems } from '../../../utils/frontendApiParsers';
+import { WizardSummaryRows, type WizardSummaryRow } from '../../../components/wizard/WizardSummaryRows';
 
 interface DatasetPreviewProps {
     refreshKey: number;
@@ -68,18 +70,15 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                 throw new Error('Failed to load dataset summary');
             }
             const data = await response.json();
-            const datasetList = Array.isArray(data?.datasets)
-                ? data.datasets
-                    .filter((entry: unknown) => typeof entry === 'object' && entry !== null)
-                    .map((entry: { dataset_id?: unknown; dataset_name?: unknown; row_count?: unknown }) => ({
-                        datasetId: parseDatasetId(entry.dataset_id),
-                        name: typeof entry.dataset_name === 'string' ? entry.dataset_name : '',
-                        rowCount: typeof entry.row_count === 'number' ? entry.row_count : null,
-                    }))
-                    .filter((entry: DatasetSummary) =>
-                        entry.datasetId.trim().length > 0 && entry.name.trim().length > 0
-                    )
-                : [];
+            const datasetList = parseDatasetSummaryItems(data)
+                .map((entry) => ({
+                    datasetId: entry.datasetId,
+                    name: entry.datasetName,
+                    rowCount: entry.rowCount,
+                }))
+                .filter((entry) =>
+                    entry.datasetId.trim().length > 0 && entry.name.trim().length > 0
+                );
             setDatasets(datasetList);
         } catch {
             setError('Unable to load datasets.');
@@ -250,7 +249,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
     const sampleSizeValue = Number(newConfig.trainSampleSize);
     const validationValue = Number(newConfig.validationSize);
 
-    const summaryRows = useMemo(() => ([
+    const summaryRows = useMemo<WizardSummaryRow[]>(() => ([
         { label: 'Dataset', value: wizardDatasetLabel ?? '-' },
         { label: 'Checkpoint Name', value: newConfig.checkpointName.trim() || 'Auto-generated' },
         { label: 'Perceptive Field', value: newConfig.perceptiveField },
@@ -657,16 +656,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                                             placeholder="Optional (auto-generated if empty)"
                                         />
                                     </div>
-                                    <div className="wizard-summary">
-                                        {summaryRows.map((row) => (
-                                            <div key={row.label} className="wizard-summary-row">
-                                                <span className="wizard-summary-label">{row.label}</span>
-                                                <span className="wizard-summary-value">
-                                                    {typeof row.value === 'number' ? String(row.value) : String(row.value)}
-                                                </span>
-                                            </div>
-                                        ))}
-                                    </div>
+                                    <WizardSummaryRows rows={summaryRows} />
                                 </div>
                             )}
                         </div>
