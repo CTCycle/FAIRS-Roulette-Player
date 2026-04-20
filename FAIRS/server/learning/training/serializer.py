@@ -5,6 +5,8 @@ from typing import Any
 import pandas as pd
 
 from FAIRS.server.learning.training.generator import RouletteSyntheticGenerator
+from FAIRS.server.repositories.database.backend import FAIRSDatabase
+from FAIRS.server.repositories.queries.training import TrainingRepositoryQueries
 from FAIRS.server.repositories.serialization.model import ModelSerializer
 from FAIRS.server.repositories.serialization.training import TrainingDataSerializer
 from FAIRS.server.services.process import RouletteSeriesEncoder
@@ -14,7 +16,9 @@ from FAIRS.server.services.process import RouletteSeriesEncoder
 class DataSerializerExtension:
     def __init__(self) -> None:
         self.encoder = RouletteSeriesEncoder()
-        self.training_serializer = TrainingDataSerializer()
+        database = FAIRSDatabase()
+        queries = TrainingRepositoryQueries(database)
+        self.training_serializer = TrainingDataSerializer(queries)
 
     # -------------------------------------------------------------------------
     def generate_synthetic_dataset(self, configuration: dict[str, Any]) -> pd.DataFrame:

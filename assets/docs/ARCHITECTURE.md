@@ -1,6 +1,6 @@
 # FAIRS Architecture
 
-Last updated: 2026-04-13
+Last updated: 2026-04-20
 
 FAIRS is a FastAPI + React/Vite application for roulette training and inference workflows, with optional Windows desktop packaging through Tauri.
 
@@ -35,6 +35,7 @@ FAIRS is a FastAPI + React/Vite application for roulette training and inference 
 ### Entry point and route mounting
 
 - `FAIRS/server/app.py` creates the FastAPI app.
+- `app.py` uses a FastAPI lifespan initializer to construct shared runtime state on `app.state`.
 - Routers mounted from:
   - `FAIRS/server/api/upload.py`
   - `FAIRS/server/api/training.py`
@@ -46,12 +47,25 @@ API routes are exposed under `/api/*`.
 
 ### Main layers
 
-1. API layer: `FAIRS/server/api` (HTTP mapping and responses).
-2. Services layer: `FAIRS/server/services` (job manager and service orchestration).
+1. API layer: `FAIRS/server/api` (thin HTTP mapping, request parsing, response typing, exception mapping).
+2. Services layer: `FAIRS/server/services` (orchestration and business logic).
 3. Domain layer: `FAIRS/server/domain` (request/response and shared domain state).
 4. Learning layer: `FAIRS/server/learning` (training/inference execution and artifacts).
 5. Persistence layer: `FAIRS/server/repositories` (DB initialization, schemas, serializers, queries).
 6. Configuration layer: `FAIRS/server/configurations` (`environment.py`, `management.py`, `startup.py`).
+7. Common shared logic: `FAIRS/server/common` (checkpoint normalization/path safety, constants, utilities).
+
+### Dependency construction
+
+- Shared long-lived state is created once in app lifespan and stored on `app.state`:
+  - `FAIRSDatabase`
+  - `DataRepositoryQueries`
+  - `DataSerializer`
+  - `JobManager`
+  - `TrainingService`
+  - `InferenceService`
+- Stateless helpers are constructed per request when needed (for example `DatasetService` assembled from injected serializer + explicit collaborators).
+- Repository and serializer constructors use explicit injection; no module-level mutable singleton is used.
 
 ### Configuration system
 
@@ -88,6 +102,14 @@ API routes are exposed under `/api/*`.
   - `POST /inference/sessions/{session_id}/rows/clear`
   - `POST /inference/context/clear`
 
+Stable route contracts in these modules are declared with explicit `response_model` definitions in the domain layer.
+
+### Checkpoints
+
+- Checkpoint identifier normalization and path safety are centralized in `FAIRS/server/common/checkpoints.py`.
+- Checkpoint filesystem and metadata operations are centralized in `FAIRS/server/services/checkpoints.py`.
+- Training and inference paths reuse the same checkpoint component.
+
 ## 4. Frontend Architecture
 
 - Root composition: `FAIRS/client/src/App.tsx`.
@@ -109,6 +131,11 @@ Primary tables:
 
 Main ORM models are in `FAIRS/server/repositories/schemas/models.py`.
 Dataset/session persistence orchestration is primarily in `FAIRS/server/repositories/serialization/data.py`.
+
+Inference persistence semantics:
+
+- Clearing rows (`/inference/sessions/{session_id}/rows/clear`) removes only `inference_session_steps` rows for the session.
+- Full session deletion removes both `inference_session_steps` and `inference_sessions` rows.
 
 ## 6. Packaged SPA Behavior
 

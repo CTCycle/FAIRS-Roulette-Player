@@ -28,6 +28,7 @@ class RoulettePlayer:
         configuration: dict[str, Any],
         session_id: str,
         dataset_id: int,
+        serializer: DataSerializer,
         dataset_source: str | None = None,
         strategy_model: Model | None = None,
     ) -> None:
@@ -78,7 +79,7 @@ class RoulettePlayer:
             fallback_strategy_id=self.fixed_strategy_id,
         )
 
-        self.serializer = DataSerializer()
+        self.serializer = serializer
         self.context = self.serializer.load_dataset_outcomes(dataset_id)
 
     # -----------------------------------------------------------------------------

@@ -1,29 +1,11 @@
 from __future__ import annotations
 
-import os
-
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-
-MAX_CHECKPOINT_NAME_LENGTH = 128
-
-
-###############################################################################
-def normalize_checkpoint_identifier(value: str) -> str:
-    candidate = value.strip()
-    if not candidate:
-        raise ValueError("Checkpoint name cannot be empty.")
-    if len(candidate) > MAX_CHECKPOINT_NAME_LENGTH:
-        raise ValueError("Checkpoint name is too long.")
-    if candidate in {".", ".."}:
-        raise ValueError("Invalid checkpoint name.")
-    if any(ord(char) < 32 for char in candidate):
-        raise ValueError("Checkpoint name contains invalid control characters.")
-    if any(separator in candidate for separator in ("/", "\\", ":")):
-        raise ValueError("Invalid checkpoint name.")
-    if os.path.basename(candidate) != candidate:
-        raise ValueError("Invalid checkpoint name.")
-    return candidate
+from FAIRS.server.common.checkpoints import (
+    MAX_CHECKPOINT_NAME_LENGTH,
+    normalize_checkpoint_identifier,
+)
 
 
 ###############################################################################
@@ -110,3 +92,31 @@ class ResumeConfig(BaseModel):
     @classmethod
     def validate_checkpoint(cls, value: str) -> str:
         return normalize_checkpoint_identifier(value)
+
+
+###############################################################################
+class TrainingStatusResponse(BaseModel):
+    job_id: str | None
+    is_training: bool
+    latest_stats: dict[str, object]
+    history: list[dict[str, object]]
+    latest_env: dict[str, object]
+    poll_interval: float
+
+
+###############################################################################
+class TrainingStopResponse(BaseModel):
+    status: str
+    message: str
+
+
+###############################################################################
+class TrainingCheckpointMetadataResponse(BaseModel):
+    checkpoint: str
+    summary: dict[str, object]
+
+
+###############################################################################
+class TrainingCheckpointDeleteResponse(BaseModel):
+    status: str
+    message: str

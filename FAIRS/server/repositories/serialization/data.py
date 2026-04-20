@@ -37,8 +37,8 @@ def normalize_dataset_name(dataset_name: str) -> str:
 
 ###############################################################################
 class DataSerializer:
-    def __init__(self, queries: DataRepositoryQueries | None = None) -> None:
-        self.queries = queries or DataRepositoryQueries()
+    def __init__(self, queries: DataRepositoryQueries) -> None:
+        self.queries = queries
 
     # -------------------------------------------------------------------------
     @staticmethod
@@ -359,7 +359,15 @@ class DataSerializer:
         self.queries.upsert_table(frame, INFERENCE_SESSION_STEPS_TABLE)
 
     # -------------------------------------------------------------------------
+    def clear_inference_session_steps(self, session_id: str) -> None:
+        self.queries.delete_table_rows(
+            INFERENCE_SESSION_STEPS_TABLE,
+            {"session_id": session_id},
+        )
+
+    # -------------------------------------------------------------------------
     def delete_inference_session(self, session_id: str) -> None:
+        self.clear_inference_session_steps(session_id)
         self.queries.delete_table_rows(
             INFERENCE_SESSIONS_TABLE,
             {"session_id": session_id},

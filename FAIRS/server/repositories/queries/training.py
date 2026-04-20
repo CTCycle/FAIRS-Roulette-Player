@@ -9,12 +9,12 @@ from FAIRS.server.common.constants import (
     DATASET_OUTCOMES_TABLE,
     ROULETTE_OUTCOMES_TABLE,
 )
-from FAIRS.server.repositories.database.backend import FAIRSDatabase, database
+from FAIRS.server.repositories.database.backend import FAIRSDatabase
 
 
 ###############################################################################
 class TrainingRepositoryQueries:
-    def __init__(self, db: FAIRSDatabase = database) -> None:
+    def __init__(self, db: FAIRSDatabase) -> None:
         self.database = db
 
     # -------------------------------------------------------------------------

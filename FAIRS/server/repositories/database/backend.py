@@ -99,6 +99,3 @@ class FAIRSDatabase:
         self, table_name: str, conditions: dict[str, Any]
     ) -> pd.DataFrame:
         return self.backend.load_filtered(table_name, conditions)
-
-
-database = FAIRSDatabase()

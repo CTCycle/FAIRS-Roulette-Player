@@ -7,8 +7,6 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from FAIRS.server.repositories.serialization.data import DataSerializer
-
 
 ###############################################################################
 class DummyModel:
@@ -23,17 +21,18 @@ class EmptyLogitsModel:
         return np.zeros((1, 0), dtype=np.float32)
 
 
-def test_fallback_strategy_is_deterministic_when_model_disabled(monkeypatch) -> None:
+class DummySerializer:
+    def __init__(self, outcomes: list[int]) -> None:
+        self._frame = pd.DataFrame({"outcome": outcomes})
+
+    def load_dataset_outcomes(self, dataset_id: int) -> pd.DataFrame:  # noqa: ARG002
+        return self._frame
+
+
+def test_fallback_strategy_is_deterministic_when_model_disabled() -> None:
     os.environ.setdefault("KERAS_BACKEND", "torch")
     from FAIRS.server.learning.inference.player import RoulettePlayer
 
-    monkeypatch.setattr(
-        DataSerializer,
-        "load_dataset_outcomes",
-        lambda self, dataset_id: pd.DataFrame(  # noqa: ARG005
-            {"outcome": [1, 2, 3, 4, 5, 6, 7, 8]}
-        ),
-    )
     config = {
         "seed": 42,
         "perceptive_field_size": 4,
@@ -49,6 +48,7 @@ def test_fallback_strategy_is_deterministic_when_model_disabled(monkeypatch) -> 
         configuration=config,
         session_id="session",
         dataset_id=1,
+        serializer=DummySerializer([1, 2, 3, 4, 5, 6, 7, 8]),
     )
 
     prediction = player.predict_next()
@@ -59,17 +59,10 @@ def test_fallback_strategy_is_deterministic_when_model_disabled(monkeypatch) -> 
     assert prediction["current_bet_amount"] == 10
 
 
-def test_predict_next_raises_when_model_returns_empty_logits(monkeypatch) -> None:
+def test_predict_next_raises_when_model_returns_empty_logits() -> None:
     os.environ.setdefault("KERAS_BACKEND", "torch")
     from FAIRS.server.learning.inference.player import RoulettePlayer
 
-    monkeypatch.setattr(
-        DataSerializer,
-        "load_dataset_outcomes",
-        lambda self, dataset_id: pd.DataFrame(  # noqa: ARG005
-            {"outcome": [1, 2, 3, 4, 5, 6, 7, 8]}
-        ),
-    )
     config = {
         "seed": 42,
         "perceptive_field_size": 4,
@@ -82,20 +75,16 @@ def test_predict_next_raises_when_model_returns_empty_logits(monkeypatch) -> Non
         configuration=config,
         session_id="session",
         dataset_id=1,
+        serializer=DummySerializer([1, 2, 3, 4, 5, 6, 7, 8]),
     )
     with pytest.raises(ValueError, match="empty logits"):
         player.predict_next()
 
 
-def test_predict_next_requires_minimum_context_length(monkeypatch) -> None:
+def test_predict_next_requires_minimum_context_length() -> None:
     os.environ.setdefault("KERAS_BACKEND", "torch")
     from FAIRS.server.learning.inference.player import RoulettePlayer
 
-    monkeypatch.setattr(
-        DataSerializer,
-        "load_dataset_outcomes",
-        lambda self, dataset_id: pd.DataFrame({"outcome": [1, 2, 3]}),  # noqa: ARG005
-    )
     config = {
         "seed": 42,
         "perceptive_field_size": 8,
@@ -108,6 +97,7 @@ def test_predict_next_requires_minimum_context_length(monkeypatch) -> None:
         configuration=config,
         session_id="session",
         dataset_id=1,
+        serializer=DummySerializer([1, 2, 3]),
     )
     with pytest.raises(
         ValueError, match="at least the perceptive field size"
@@ -115,17 +105,10 @@ def test_predict_next_requires_minimum_context_length(monkeypatch) -> None:
         player.predict_next()
 
 
-def test_update_with_true_extraction_validates_input(monkeypatch) -> None:
+def test_update_with_true_extraction_validates_input() -> None:
     os.environ.setdefault("KERAS_BACKEND", "torch")
     from FAIRS.server.learning.inference.player import RoulettePlayer
 
-    monkeypatch.setattr(
-        DataSerializer,
-        "load_dataset_outcomes",
-        lambda self, dataset_id: pd.DataFrame(  # noqa: ARG005
-            {"outcome": [1, 2, 3, 4, 5, 6, 7, 8]}
-        ),
-    )
     config = {
         "seed": 42,
         "perceptive_field_size": 4,
@@ -138,6 +121,7 @@ def test_update_with_true_extraction_validates_input(monkeypatch) -> None:
         configuration=config,
         session_id="session",
         dataset_id=1,
+        serializer=DummySerializer([1, 2, 3, 4, 5, 6, 7, 8]),
     )
     player.predict_next()
 
