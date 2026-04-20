@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """Dynamic betting engine used by training and inference.
 
 Enable with `dynamic_betting_enabled=true` and strategy controls:
@@ -9,6 +7,8 @@ and `bet_enforce_capital`. In inference, suggestions can be auto-applied with
 `auto_apply_bet_suggestions`; otherwise user-selected bet remains authoritative.
 Rewards always use the currently applied bet via `BetsAndRewards.bet_amount`.
 """
+
+from __future__ import annotations
 
 from typing import Any
 

@@ -33,3 +33,27 @@ def test_delete_dataset_removes_dependent_rows_before_dataset() -> None:
         call(DATASET_OUTCOMES_TABLE, {"dataset_id": 7}),
         call(DATASETS_TABLE, {"dataset_id": 7}),
     ]
+
+
+def test_clear_inference_session_steps_deletes_only_steps_table() -> None:
+    queries = Mock()
+    serializer = DataSerializer(queries=queries)
+
+    serializer.clear_inference_session_steps("session_1")
+
+    queries.delete_table_rows.assert_called_once_with(
+        INFERENCE_SESSION_STEPS_TABLE,
+        {"session_id": "session_1"},
+    )
+
+
+def test_delete_inference_session_deletes_steps_and_header() -> None:
+    queries = Mock()
+    serializer = DataSerializer(queries=queries)
+
+    serializer.delete_inference_session("session_2")
+
+    assert queries.delete_table_rows.call_args_list == [
+        call(INFERENCE_SESSION_STEPS_TABLE, {"session_id": "session_2"}),
+        call(INFERENCE_SESSIONS_TABLE, {"session_id": "session_2"}),
+    ]
