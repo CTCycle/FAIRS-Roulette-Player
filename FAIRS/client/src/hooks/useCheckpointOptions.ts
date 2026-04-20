@@ -1,26 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
+import { parseCheckpointList } from '../utils/frontendApiParsers';
 
 interface UseCheckpointOptionsParams {
     selectedCheckpoint: string;
     onSelectCheckpoint: (checkpoint: string) => void;
 }
-
-const normalizeCheckpointList = (payload: unknown): string[] => {
-    if (!Array.isArray(payload)) {
-        return [];
-    }
-
-    return payload.flatMap((entry) => {
-        if (typeof entry === 'string') {
-            const trimmed = entry.trim();
-            return trimmed.length > 0 ? [trimmed] : [];
-        }
-        if (typeof entry === 'number' && Number.isFinite(entry)) {
-            return [String(entry)];
-        }
-        return [];
-    });
-};
 
 export const useCheckpointOptions = ({
     selectedCheckpoint,
@@ -53,7 +37,7 @@ export const useCheckpointOptions = ({
                     return;
                 }
 
-                const normalized = normalizeCheckpointList(data);
+                const normalized = parseCheckpointList(data);
                 setCheckpoints(normalized);
 
                 if (normalized.length > 0 && !latestCheckpointRef.current) {

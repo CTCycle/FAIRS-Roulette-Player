@@ -3,8 +3,8 @@ import type { ChangeEvent, DragEvent, RefObject } from 'react';
 import {
     isSupportedDatasetFile,
     uploadDatasetFile,
-} from '../../utils/datasetUpload';
-import type { DatasetUploadStateUpdates } from '../../types/datasetUpload';
+} from '../utils/datasetUpload';
+import type { DatasetUploadStateUpdates } from '../types/datasetUpload';
 
 interface UseDatasetFileUploadOptions {
     onStateChange: (updates: DatasetUploadStateUpdates) => void;
