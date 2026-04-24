@@ -40,27 +40,51 @@ interface TrainingDashboardProps {
     onTrainingEnd?: () => void;
 }
 
+const DEFAULT_STATS: TrainingStats = {
+    epoch: 0,
+    total_epochs: 0,
+    max_steps: 0,
+    time_step: 0,
+    loss: null,
+    rmse: null,
+    val_loss: null,
+    val_rmse: null,
+    reward: 0,
+    val_reward: null,
+    total_reward: 0,
+    capital: 0,
+    capital_gain: 0,
+    current_bet_amount: null,
+    current_strategy_id: null,
+    current_strategy_name: undefined,
+    status: 'idle',
+};
+
+const toFiniteNumber = (value: unknown, fallback: number) => {
+    const numeric = typeof value === 'number' ? value : Number(value);
+    return Number.isFinite(numeric) ? numeric : fallback;
+};
+
+const toFiniteNumberOrNull = (value: unknown): number | null => {
+    if (value === null || value === undefined || value === '') {
+        return null;
+    }
+    const numeric = typeof value === 'number' ? value : Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+};
+
+const normalizeOptionalMetric = (
+    candidate: Partial<TrainingStats>,
+    key: 'loss' | 'rmse' | 'val_loss' | 'val_rmse' | 'val_reward',
+    fallback: number | null,
+): number | null => (
+    Object.prototype.hasOwnProperty.call(candidate, key)
+        ? toFiniteNumberOrNull(candidate[key])
+        : fallback
+);
+
 export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, onTrainingStart, onTrainingEnd }) => {
-    const defaultStats: TrainingStats = {
-        epoch: 0,
-        total_epochs: 0,
-        max_steps: 0,
-        time_step: 0,
-        loss: null,
-        rmse: null,
-        val_loss: null,
-        val_rmse: null,
-        reward: 0,
-        val_reward: null,
-        total_reward: 0,
-        capital: 0,
-        capital_gain: 0,
-        current_bet_amount: null,
-        current_strategy_id: null,
-        current_strategy_name: undefined,
-        status: 'idle',
-    };
-    const [stats, setStats] = useState<TrainingStats>(defaultStats);
+    const [stats, setStats] = useState<TrainingStats>(DEFAULT_STATS);
     const [isConnected, setIsConnected] = useState(false);
     const [connectionError, setConnectionError] = useState<string | null>(null);
     const [historyPoints, setHistoryPoints] = useState<TrainingHistoryPoint[]>([]);
@@ -73,7 +97,7 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
     const onTrainingStartRef = useRef(onTrainingStart);
     const onTrainingEndRef = useRef(onTrainingEnd);
     const pollAbortRef = useRef<AbortController | null>(null);
-    const statsRef = useRef(defaultStats);
+    const statsRef = useRef(DEFAULT_STATS);
     const jobIdRef = useRef<string | null>(null);
 
     const maxHistoryPoints = 2000;
@@ -91,30 +115,6 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
             || value === 'training'
         )
     ), [trainingEndStatuses]);
-
-    const toFiniteNumber = useCallback((value: unknown, fallback: number) => {
-        const numeric = typeof value === 'number' ? value : Number(value);
-        return Number.isFinite(numeric) ? numeric : fallback;
-    }, []);
-
-    const toFiniteNumberOrNull = useCallback((value: unknown): number | null => {
-        if (value === null || value === undefined || value === '') {
-            return null;
-        }
-        const numeric = typeof value === 'number' ? value : Number(value);
-        return Number.isFinite(numeric) ? numeric : null;
-    }, []);
-
-    const normalizeOptionalMetric = useCallback((
-        candidate: Partial<TrainingStats>,
-        key: 'loss' | 'rmse' | 'val_loss' | 'val_rmse' | 'val_reward',
-        fallback: number | null,
-    ): number | null => {
-        if (!Object.prototype.hasOwnProperty.call(candidate, key)) {
-            return fallback;
-        }
-        return toFiniteNumberOrNull(candidate[key]);
-    }, [toFiniteNumberOrNull]);
 
     const normalizeStats = useCallback((value: unknown, fallback: TrainingStats): TrainingStats | null => {
         if (!value || typeof value !== 'object') {
@@ -149,7 +149,7 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
             status: validStatus(candidate.status) ? candidate.status : fallback.status,
             message: typeof candidate.message === 'string' ? candidate.message : fallback.message,
         };
-    }, [normalizeOptionalMetric, toFiniteNumber, toFiniteNumberOrNull, validStatus]);
+    }, [validStatus]);
 
     const isHistoryPoint = useCallback((point: unknown): point is TrainingHistoryPoint => {
         if (!point || typeof point !== 'object') {
