@@ -31,28 +31,37 @@ HISTORY_POINTS_PER_EPISODE = 20
 
 
 ###############################################################################
+def default_training_stats(
+    total_epochs: int = 0,
+    max_steps: int = 0,
+    status: str = "idle",
+) -> dict[str, Any]:
+    return {
+        "epoch": 0,
+        "total_epochs": total_epochs,
+        "max_steps": max_steps,
+        "time_step": 0,
+        "loss": None,
+        "rmse": None,
+        "val_loss": None,
+        "val_rmse": None,
+        "reward": 0,
+        "val_reward": None,
+        "total_reward": 0,
+        "capital": 0,
+        "capital_gain": 0.0,
+        "status": status,
+    }
+
+
+###############################################################################
 class TrainingState:
     def __init__(self) -> None:
         self.is_training = False
         self.current_job_id: str | None = None
         self.worker: ProcessWorker | None = None
         self.max_steps = 0
-        self.latest_stats: dict[str, Any] = {
-            "epoch": 0,
-            "total_epochs": 0,
-            "max_steps": 0,
-            "time_step": 0,
-            "loss": None,
-            "rmse": None,
-            "val_loss": None,
-            "val_rmse": None,
-            "reward": 0,
-            "val_reward": None,
-            "total_reward": 0,
-            "capital": 0,
-            "capital_gain": 0.0,
-            "status": "idle",
-        }
+        self.latest_stats = default_training_stats()
         self.history_points: list[dict[str, Any]] = []
         self.max_history_points = 2000
         self.history_bucket_size = 1.0
@@ -70,22 +79,7 @@ class TrainingState:
         self.is_training = True
         self.current_job_id = job_id
         self.max_steps = max_steps
-        self.latest_stats = {
-            "epoch": 0,
-            "total_epochs": total_epochs,
-            "max_steps": max_steps,
-            "time_step": 0,
-            "loss": None,
-            "rmse": None,
-            "val_loss": None,
-            "val_rmse": None,
-            "reward": 0,
-            "val_reward": None,
-            "total_reward": 0,
-            "capital": 0,
-            "capital_gain": 0.0,
-            "status": "exploration",
-        }
+        self.latest_stats = default_training_stats(total_epochs, max_steps, "exploration")
         self.history_points = []
         self.history_bucket_size = (
             max_steps / float(HISTORY_POINTS_PER_EPISODE) if max_steps > 0 else 1.0

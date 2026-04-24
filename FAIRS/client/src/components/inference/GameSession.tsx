@@ -180,9 +180,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
     };
 
     const handleUploadClick = () => {
-        if (fileInputRef.current) {
-            fileInputRef.current.click();
-        }
+        fileInputRef.current?.click();
     };
 
     const handleClearUpload = async () => {
@@ -192,9 +190,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
             datasetFileMetadata: null,
         });
         await clearInferenceContext();
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-        }
+        if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
     const startSession = async (
