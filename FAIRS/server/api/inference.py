@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from FAIRS.server.configurations.dependencies import get_inference_service
@@ -50,12 +52,11 @@ def _map_inference_exception(exc: Exception) -> HTTPException:
 ###############################################################################
 @router.post(
     "/sessions/start",
-    response_model=InferenceStartResponse,
     status_code=status.HTTP_200_OK,
 )
 def start_session(
     payload: InferenceStartRequest,
-    service: InferenceService = Depends(get_inference_service),
+    service: Annotated[InferenceService, Depends(get_inference_service)],
 ) -> InferenceStartResponse:
     try:
         return InferenceStartResponse.model_validate(service.start_session(payload))
@@ -66,12 +67,11 @@ def start_session(
 ###############################################################################
 @router.post(
     "/sessions/{session_id}/next",
-    response_model=InferenceNextResponse,
     status_code=status.HTTP_200_OK,
 )
 def next_prediction(
     session_id: str,
-    service: InferenceService = Depends(get_inference_service),
+    service: Annotated[InferenceService, Depends(get_inference_service)],
 ) -> InferenceNextResponse:
     try:
         return InferenceNextResponse.model_validate(service.next_prediction(session_id))
@@ -82,13 +82,12 @@ def next_prediction(
 ###############################################################################
 @router.post(
     "/sessions/{session_id}/step",
-    response_model=InferenceStepResponse,
     status_code=status.HTTP_200_OK,
 )
 def submit_step(
     session_id: str,
     payload: InferenceStepRequest,
-    service: InferenceService = Depends(get_inference_service),
+    service: Annotated[InferenceService, Depends(get_inference_service)],
 ) -> InferenceStepResponse:
     try:
         return InferenceStepResponse.model_validate(service.step_session(session_id, payload))
@@ -99,12 +98,11 @@ def submit_step(
 ###############################################################################
 @router.post(
     "/sessions/{session_id}/shutdown",
-    response_model=InferenceShutdownResponse,
     status_code=status.HTTP_200_OK,
 )
 def shutdown(
     session_id: str,
-    service: InferenceService = Depends(get_inference_service),
+    service: Annotated[InferenceService, Depends(get_inference_service)],
 ) -> InferenceShutdownResponse:
     return InferenceShutdownResponse.model_validate(service.shutdown_session(session_id))
 
@@ -112,13 +110,12 @@ def shutdown(
 ###############################################################################
 @router.post(
     "/sessions/{session_id}/bet",
-    response_model=InferenceBetUpdateResponse,
     status_code=status.HTTP_200_OK,
 )
 def update_bet_amount(
     session_id: str,
     payload: InferenceBetUpdateRequest,
-    service: InferenceService = Depends(get_inference_service),
+    service: Annotated[InferenceService, Depends(get_inference_service)],
 ) -> InferenceBetUpdateResponse:
     try:
         return InferenceBetUpdateResponse.model_validate(service.update_bet(session_id, payload))
@@ -129,12 +126,11 @@ def update_bet_amount(
 ###############################################################################
 @router.post(
     "/sessions/{session_id}/rows/clear",
-    response_model=InferenceRowsClearResponse,
     status_code=status.HTTP_200_OK,
 )
 def clear_session_rows(
     session_id: str,
-    service: InferenceService = Depends(get_inference_service),
+    service: Annotated[InferenceService, Depends(get_inference_service)],
 ) -> InferenceRowsClearResponse:
     return InferenceRowsClearResponse.model_validate(service.clear_session_rows(session_id))
 
@@ -142,10 +138,9 @@ def clear_session_rows(
 ###############################################################################
 @router.post(
     "/context/clear",
-    response_model=InferenceContextClearResponse,
     status_code=status.HTTP_200_OK,
 )
 def clear_inference_context(
-    service: InferenceService = Depends(get_inference_service),
+    service: Annotated[InferenceService, Depends(get_inference_service)],
 ) -> InferenceContextClearResponse:
     return InferenceContextClearResponse.model_validate(service.clear_context())
