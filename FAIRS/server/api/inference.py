@@ -4,6 +4,10 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from FAIRS.server.common.api_errors import (
+    ExceptionStatusMap,
+    http_exception_for_exception,
+)
 from FAIRS.server.configurations.dependencies import get_inference_service
 from FAIRS.server.domain.inference import (
     InferenceBetUpdateRequest,
@@ -21,37 +25,26 @@ from FAIRS.server.services.inference import InferenceService
 
 router = APIRouter(prefix="/inference", tags=["inference"])
 
+INFERENCE_EXCEPTION_STATUS: ExceptionStatusMap = (
+    (RuntimeError, status.HTTP_409_CONFLICT),
+    (ValueError, status.HTTP_400_BAD_REQUEST),
+    (FileNotFoundError, status.HTTP_404_NOT_FOUND),
+    (KeyError, status.HTTP_404_NOT_FOUND),
+)
+
 ###############################################################################
 def _map_inference_exception(exc: Exception) -> HTTPException:
-    if isinstance(exc, RuntimeError):
-        return HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=str(exc),
-        )
-    if isinstance(exc, ValueError):
-        return HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc),
-        )
-    if isinstance(exc, FileNotFoundError):
-        return HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        )
-    if isinstance(exc, KeyError):
-        return HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc).strip("'"),
-        )
-    return HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="Unable to process inference request.",
+    return http_exception_for_exception(
+        exc,
+        INFERENCE_EXCEPTION_STATUS,
+        default_detail="Unable to process inference request.",
     )
 
 
 ###############################################################################
 @router.post(
     "/sessions/start",
+    response_model=InferenceStartResponse,
     status_code=status.HTTP_200_OK,
 )
 def start_session(
@@ -67,6 +60,7 @@ def start_session(
 ###############################################################################
 @router.post(
     "/sessions/{session_id}/next",
+    response_model=InferenceNextResponse,
     status_code=status.HTTP_200_OK,
 )
 def next_prediction(
@@ -82,6 +76,7 @@ def next_prediction(
 ###############################################################################
 @router.post(
     "/sessions/{session_id}/step",
+    response_model=InferenceStepResponse,
     status_code=status.HTTP_200_OK,
 )
 def submit_step(
@@ -98,6 +93,7 @@ def submit_step(
 ###############################################################################
 @router.post(
     "/sessions/{session_id}/shutdown",
+    response_model=InferenceShutdownResponse,
     status_code=status.HTTP_200_OK,
 )
 def shutdown(
@@ -110,6 +106,7 @@ def shutdown(
 ###############################################################################
 @router.post(
     "/sessions/{session_id}/bet",
+    response_model=InferenceBetUpdateResponse,
     status_code=status.HTTP_200_OK,
 )
 def update_bet_amount(
@@ -126,6 +123,7 @@ def update_bet_amount(
 ###############################################################################
 @router.post(
     "/sessions/{session_id}/rows/clear",
+    response_model=InferenceRowsClearResponse,
     status_code=status.HTTP_200_OK,
 )
 def clear_session_rows(
@@ -138,6 +136,7 @@ def clear_session_rows(
 ###############################################################################
 @router.post(
     "/context/clear",
+    response_model=InferenceContextClearResponse,
     status_code=status.HTTP_200_OK,
 )
 def clear_inference_context(

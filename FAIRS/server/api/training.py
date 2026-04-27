@@ -2,6 +2,10 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from FAIRS.server.common.api_errors import (
+    ExceptionStatusMap,
+    http_exception_for_exception,
+)
 from FAIRS.server.configurations.dependencies import get_training_service
 from FAIRS.server.domain.jobs import JobCancelResponse, JobStartResponse, JobStatusResponse
 from FAIRS.server.domain.training import (
@@ -18,12 +22,16 @@ from FAIRS.server.services.training import TrainingService
 
 router = APIRouter(prefix="/training", tags=["training"])
 
+TRAINING_BAD_REQUEST_STATUS: ExceptionStatusMap = (
+    (ValueError, status.HTTP_400_BAD_REQUEST),
+)
 
 ###############################################################################
 def _to_bad_request(exc: Exception) -> HTTPException:
-    return HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        detail=str(exc),
+    return http_exception_for_exception(
+        exc,
+        TRAINING_BAD_REQUEST_STATUS,
+        default_detail=str(exc),
     )
 
 
