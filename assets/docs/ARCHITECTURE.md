@@ -1,6 +1,6 @@
 # ARCHITECTURE
 
-Last updated: 2026-04-24
+Last updated: 2026-04-27
 
 ## System Summary
 
@@ -43,6 +43,7 @@ The structure below is source-focused and excludes dependency/vendor/build-cache
 │  │  │  ├─ database.py
 │  │  │  └─ inference.py
 │  │  ├─ common/
+│  │  │  ├─ api_errors.py
 │  │  │  ├─ checkpoints.py
 │  │  │  ├─ constants.py
 │  │  │  └─ utils/
@@ -260,7 +261,8 @@ No WebSocket routes are currently implemented in `FAIRS/server/api`.
 - Dataset list/delete: `api/database.py` -> `DatasetService` -> `DataSerializer` -> repository queries/backend.
 
 ### Key module responsibilities
-- `FAIRS/server/app.py`: FastAPI app setup, dependency graph initialization in lifespan, router mounting, packaged SPA serving behavior.
+- `FAIRS/server/app.py`: FastAPI app factory and entry point, dependency graph initialization in lifespan, router mounting, packaged SPA serving behavior.
+- `FAIRS/server/common/api_errors.py`: shared HTTP exception mapping helpers used by endpoint modules.
 - `FAIRS/server/configurations/startup.py`: cached settings/config manager access.
 - `FAIRS/server/services/jobs.py`: in-process job registry and cancellation/progress management.
 - `FAIRS/server/services/training.py`: training state, worker lifecycle, progress projection, resume behavior.
