@@ -24,8 +24,11 @@ from FAIRS.server.api.inference import router as inference_router
 from FAIRS.server.api.training import router as training_router
 from FAIRS.server.api.upload import router as upload_router
 from FAIRS.server.services.checkpoints import CheckpointService
+from FAIRS.server.services.datasets import DatasetService
+from FAIRS.server.services.importer import DatasetImportService
 from FAIRS.server.services.inference import InferenceService
 from FAIRS.server.services.jobs import create_job_manager
+from FAIRS.server.services.loader import TabularFileLoader
 from FAIRS.server.services.training import TrainingService
 
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -71,6 +74,11 @@ async def app_lifespan(application: FastAPI):
     application.state.database = database
     application.state.data_queries = queries
     application.state.data_serializer = serializer
+    application.state.dataset_service = DatasetService(
+        serializer=serializer,
+        importer=DatasetImportService(serializer=serializer),
+        loader=TabularFileLoader(),
+    )
     application.state.job_manager = job_manager
     application.state.training_service = TrainingService(
         job_manager=job_manager,
@@ -104,7 +112,6 @@ routers = [
 for router in routers:
     app.include_router(router, prefix="/api")
 
-
 if packaged_client_available():
     client_dist_path = get_client_dist_path()
     assets_path = os.path.join(client_dist_path, "assets")
@@ -122,9 +129,7 @@ if packaged_client_available():
         if os.path.isfile(requested_path):
             return FileResponse(requested_path)
         return FileResponse(os.path.join(client_dist_path, "index.html"))
-
 else:
-
     @app.get("/", response_model=None)
     def redirect_to_docs() -> RedirectResponse | dict[str, str]:
         if ENABLE_API_DOCS:

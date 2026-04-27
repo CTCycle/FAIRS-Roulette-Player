@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, RootModel, field_validator
 
 from FAIRS.server.common.checkpoints import (
     MAX_CHECKPOINT_NAME_LENGTH,
@@ -108,6 +108,11 @@ class TrainingStatusResponse(BaseModel):
 class TrainingStopResponse(BaseModel):
     status: str
     message: str
+
+
+###############################################################################
+class TrainingCheckpointListResponse(RootModel[list[str]]):
+    pass
 
 
 ###############################################################################

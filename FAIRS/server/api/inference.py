@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from FAIRS.server.configurations.dependencies import get_inference_service
@@ -19,9 +17,7 @@ from FAIRS.server.domain.inference import (
 )
 from FAIRS.server.services.inference import InferenceService
 
-
 router = APIRouter(prefix="/inference", tags=["inference"])
-
 
 ###############################################################################
 def _map_inference_exception(exc: Exception) -> HTTPException:
@@ -60,9 +56,9 @@ def _map_inference_exception(exc: Exception) -> HTTPException:
 def start_session(
     payload: InferenceStartRequest,
     service: InferenceService = Depends(get_inference_service),
-) -> dict[str, Any]:
+) -> InferenceStartResponse:
     try:
-        return service.start_session(payload)
+        return InferenceStartResponse.model_validate(service.start_session(payload))
     except Exception as exc:
         raise _map_inference_exception(exc) from exc
 
@@ -76,9 +72,9 @@ def start_session(
 def next_prediction(
     session_id: str,
     service: InferenceService = Depends(get_inference_service),
-) -> dict[str, Any]:
+) -> InferenceNextResponse:
     try:
-        return service.next_prediction(session_id)
+        return InferenceNextResponse.model_validate(service.next_prediction(session_id))
     except Exception as exc:
         raise _map_inference_exception(exc) from exc
 
@@ -93,9 +89,9 @@ def submit_step(
     session_id: str,
     payload: InferenceStepRequest,
     service: InferenceService = Depends(get_inference_service),
-) -> dict[str, Any]:
+) -> InferenceStepResponse:
     try:
-        return service.step_session(session_id, payload)
+        return InferenceStepResponse.model_validate(service.step_session(session_id, payload))
     except Exception as exc:
         raise _map_inference_exception(exc) from exc
 
@@ -109,8 +105,8 @@ def submit_step(
 def shutdown(
     session_id: str,
     service: InferenceService = Depends(get_inference_service),
-) -> dict[str, Any]:
-    return service.shutdown_session(session_id)
+) -> InferenceShutdownResponse:
+    return InferenceShutdownResponse.model_validate(service.shutdown_session(session_id))
 
 
 ###############################################################################
@@ -123,9 +119,9 @@ def update_bet_amount(
     session_id: str,
     payload: InferenceBetUpdateRequest,
     service: InferenceService = Depends(get_inference_service),
-) -> dict[str, Any]:
+) -> InferenceBetUpdateResponse:
     try:
-        return service.update_bet(session_id, payload)
+        return InferenceBetUpdateResponse.model_validate(service.update_bet(session_id, payload))
     except Exception as exc:
         raise _map_inference_exception(exc) from exc
 
@@ -139,8 +135,8 @@ def update_bet_amount(
 def clear_session_rows(
     session_id: str,
     service: InferenceService = Depends(get_inference_service),
-) -> dict[str, Any]:
-    return service.clear_session_rows(session_id)
+) -> InferenceRowsClearResponse:
+    return InferenceRowsClearResponse.model_validate(service.clear_session_rows(session_id))
 
 
 ###############################################################################
@@ -151,5 +147,5 @@ def clear_session_rows(
 )
 def clear_inference_context(
     service: InferenceService = Depends(get_inference_service),
-) -> dict[str, str]:
-    return service.clear_context()
+) -> InferenceContextClearResponse:
+    return InferenceContextClearResponse.model_validate(service.clear_context())

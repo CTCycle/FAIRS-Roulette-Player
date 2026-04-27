@@ -2,23 +2,12 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 
-from FAIRS.server.configurations.dependencies import get_data_serializer
+from FAIRS.server.configurations.dependencies import get_dataset_service
 from FAIRS.server.domain.upload import DatasetTable, UploadRequest, UploadResponse
 from FAIRS.server.services.datasets import DatasetService
-from FAIRS.server.services.importer import DatasetImportService
-from FAIRS.server.services.loader import TabularFileLoader
 
 
 router = APIRouter(prefix="/data", tags=["data"])
-
-
-###############################################################################
-def build_dataset_service(serializer: object) -> DatasetService:
-    return DatasetService(
-        serializer=serializer,
-        importer=DatasetImportService(serializer=serializer),
-        loader=TabularFileLoader(),
-    )
 
 
 ###############################################################################
@@ -32,9 +21,8 @@ async def upload(
     table: DatasetTable = Query(...),
     csv_separator: str = Query(";", min_length=1, max_length=1),
     sheet_name: str | int = Query(0),
-    serializer: object = Depends(get_data_serializer),
+    service: DatasetService = Depends(get_dataset_service),
 ) -> UploadResponse:
-    service = build_dataset_service(serializer)
     request = UploadRequest(
         table=table,
         csv_separator=csv_separator,
