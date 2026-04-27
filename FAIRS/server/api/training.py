@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from typing import Any
-
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from FAIRS.server.configurations.dependencies import get_training_service
 from FAIRS.server.domain.jobs import JobCancelResponse, JobStartResponse, JobStatusResponse
 from FAIRS.server.domain.training import (
+    TrainingCheckpointListResponse,
     ResumeConfig,
     TrainingCheckpointDeleteResponse,
     TrainingCheckpointMetadataResponse,
@@ -37,9 +36,9 @@ def _to_bad_request(exc: Exception) -> HTTPException:
 def start_training(
     config: TrainingConfig,
     service: TrainingService = Depends(get_training_service),
-) -> dict[str, Any]:
+) -> JobStartResponse:
     try:
-        return service.start_training(config)
+        return JobStartResponse.model_validate(service.start_training(config))
     except FileExistsError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -63,9 +62,9 @@ def start_training(
 def resume_training(
     config: ResumeConfig,
     service: TrainingService = Depends(get_training_service),
-) -> dict[str, Any]:
+) -> JobStartResponse:
     try:
-        return service.resume_training(config)
+        return JobStartResponse.model_validate(service.resume_training(config))
     except RuntimeError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -91,8 +90,10 @@ def resume_training(
     response_model=TrainingStatusResponse,
     status_code=status.HTTP_200_OK,
 )
-def get_status(service: TrainingService = Depends(get_training_service)) -> dict[str, Any]:
-    return service.get_status()
+def get_status(
+    service: TrainingService = Depends(get_training_service),
+) -> TrainingStatusResponse:
+    return TrainingStatusResponse.model_validate(service.get_status())
 
 
 ###############################################################################
@@ -103,9 +104,9 @@ def get_status(service: TrainingService = Depends(get_training_service)) -> dict
 )
 def stop_training(
     service: TrainingService = Depends(get_training_service),
-) -> dict[str, Any]:
+) -> TrainingStopResponse:
     try:
-        return service.stop()
+        return TrainingStopResponse.model_validate(service.stop())
     except ValueError as exc:
         raise _to_bad_request(exc) from exc
 
@@ -113,12 +114,13 @@ def stop_training(
 ###############################################################################
 @router.get(
     "/checkpoints",
+    response_model=TrainingCheckpointListResponse,
     status_code=status.HTTP_200_OK,
 )
 def get_checkpoints(
     service: TrainingService = Depends(get_training_service),
-) -> list[str]:
-    return service.checkpoint_service.list_checkpoints()
+) -> TrainingCheckpointListResponse:
+    return TrainingCheckpointListResponse(service.list_checkpoints())
 
 
 ###############################################################################
@@ -130,9 +132,11 @@ def get_checkpoints(
 def get_checkpoint_metadata(
     checkpoint: str,
     service: TrainingService = Depends(get_training_service),
-) -> dict[str, Any]:
+) -> TrainingCheckpointMetadataResponse:
     try:
-        return service.checkpoint_service.get_metadata(checkpoint)
+        return TrainingCheckpointMetadataResponse.model_validate(
+            service.get_checkpoint_metadata(checkpoint)
+        )
     except ValueError as exc:
         raise _to_bad_request(exc) from exc
     except FileNotFoundError as exc:
@@ -151,10 +155,11 @@ def get_checkpoint_metadata(
 def delete_checkpoint(
     checkpoint: str,
     service: TrainingService = Depends(get_training_service),
-) -> dict[str, str]:
+) -> TrainingCheckpointDeleteResponse:
     try:
-        service.checkpoint_service.delete_checkpoint(checkpoint)
-        return {"status": "success", "message": f"Checkpoint {checkpoint} deleted"}
+        return TrainingCheckpointDeleteResponse.model_validate(
+            service.delete_checkpoint(checkpoint)
+        )
     except ValueError as exc:
         raise _to_bad_request(exc) from exc
     except FileNotFoundError as exc:
@@ -173,9 +178,9 @@ def delete_checkpoint(
 def get_training_job_status(
     job_id: str,
     service: TrainingService = Depends(get_training_service),
-) -> dict[str, Any]:
+) -> JobStatusResponse:
     try:
-        return service.get_job(job_id)
+        return JobStatusResponse.model_validate(service.get_job(job_id))
     except KeyError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -192,9 +197,9 @@ def get_training_job_status(
 def cancel_training_job(
     job_id: str,
     service: TrainingService = Depends(get_training_service),
-) -> dict[str, Any]:
+) -> JobCancelResponse:
     try:
-        return service.delete_job(job_id)
+        return JobCancelResponse.model_validate(service.delete_job(job_id))
     except KeyError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

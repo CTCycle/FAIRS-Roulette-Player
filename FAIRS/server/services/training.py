@@ -504,6 +504,19 @@ class TrainingService:
         return {"status": "stopping", "message": "Training stop requested"}
 
     # -------------------------------------------------------------------------
+    def list_checkpoints(self) -> list[str]:
+        return self.checkpoint_service.list_checkpoints()
+
+    # -------------------------------------------------------------------------
+    def get_checkpoint_metadata(self, checkpoint: str) -> dict[str, Any]:
+        return self.checkpoint_service.get_metadata(checkpoint)
+
+    # -------------------------------------------------------------------------
+    def delete_checkpoint(self, checkpoint: str) -> dict[str, str]:
+        self.checkpoint_service.delete_checkpoint(checkpoint)
+        return {"status": "success", "message": f"Checkpoint {checkpoint} deleted"}
+
+    # -------------------------------------------------------------------------
     def get_job(self, job_id: str) -> dict[str, Any]:
         job_status = self.job_manager.get_job_status(job_id)
         if job_status is None:
