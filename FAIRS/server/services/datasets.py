@@ -22,7 +22,8 @@ MAX_EXCEL_SHEET_NAME_LENGTH = 128
 def normalize_filename(filename: str | None) -> str:
     if filename is None:
         raise ValueError("Missing filename.")
-    cleaned = os.path.basename(filename).strip()
+    # Normalize both Unix and Windows separators before taking basename.
+    cleaned = os.path.basename(filename.replace("\\", "/")).strip()
     if not cleaned:
         raise ValueError("Missing filename.")
     if len(cleaned) > MAX_FILENAME_LENGTH:
