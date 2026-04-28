@@ -3,7 +3,7 @@
 [![Python](https://img.shields.io/badge/Python-%3E%3D3.14-3776AB?logo=python&logoColor=white)](./pyproject.toml)
 [![Node.js](https://img.shields.io/badge/Node.js-22.12.0-339933?logo=node.js&logoColor=white)](./FAIRS/start_on_windows.bat)
 [![License](https://img.shields.io/badge/License-View-blue.svg)](./LICENSE)
-[![CI](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml/badge.svg)](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml)
+[![CI](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml)
 
 ## 1. Project Overview
 FAIRS is a research web application for roulette training and inference experiments. It includes:
