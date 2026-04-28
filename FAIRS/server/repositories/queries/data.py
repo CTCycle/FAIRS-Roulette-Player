@@ -4,12 +4,12 @@ from typing import Any
 
 import pandas as pd
 
-from FAIRS.server.repositories.database.backend import FAIRSDatabase, database
+from FAIRS.server.repositories.database.backend import FAIRSDatabase
 
 
 ###############################################################################
 class DataRepositoryQueries:
-    def __init__(self, db: FAIRSDatabase = database) -> None:
+    def __init__(self, db: FAIRSDatabase) -> None:
         self.database = db
 
     # -------------------------------------------------------------------------

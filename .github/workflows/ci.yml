@@ -8,12 +8,19 @@ on:
   pull_request:
 
 jobs:
-  python-sanity:
+  backend-validation:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-      - name: Python sanity check
-        run: python -c "import sys; print('python', sys.version)"
+          python-version: "3.14"
+      - name: Install dependencies
+        run: uv pip install -e .[test]
+      - name: Ruff
+        run: uv run ruff check FAIRS/server tests
+      - name: Unit tests
+        run: uv run pytest -q tests/unit
+      - name: OpenAPI check
+        run: uv run python -c "from FAIRS.server.app import app; app.openapi()"

@@ -1,127 +1,309 @@
-# FAIRS Architecture
+# ARCHITECTURE
 
-Last updated: 2026-04-13
+Last updated: 2026-04-27
 
-FAIRS is a FastAPI + React/Vite application for roulette training and inference workflows, with optional Windows desktop packaging through Tauri.
+## System Summary
 
-## 1. Repository Layout
+FAIRS is a multi-runtime application with:
+- FastAPI backend in `FAIRS/server`
+- React + TypeScript frontend in `FAIRS/client/src`
+- Optional Windows desktop wrapper (Tauri + Rust) in `FAIRS/client/src-tauri`
 
-- `FAIRS/server`: backend APIs, job orchestration, training/inference domain logic, persistence.
-- `FAIRS/client`: React + TypeScript frontend (Vite).
-- `FAIRS/settings`: runtime/process config (`.env`, `.env.example`) and backend JSON config (`configurations.json`).
-- `FAIRS/resources`: runtime data (`checkpoints`, `database`, `logs`).
-- `runtimes`: portable Python/uv/Node runtimes and project virtualenv (`runtimes/.venv`).
-- `release/tauri`: desktop build/export scripts.
-- `tests`: Python unit and E2E/API suites.
+The backend is the system of record for API, training orchestration, inference sessions, and persistence.
 
-## 2. Runtime Topology
+## Directory and File Structure
 
-### Local web mode
+The structure below is source-focused and excludes dependency/vendor/build-cache folders such as `node_modules`, `dist`, `target`, and `__pycache__`.
 
-- Entry point: `FAIRS/start_on_windows.bat`.
-- Backend: `uvicorn FAIRS.server.app:app` on `FASTAPI_HOST:FASTAPI_PORT`.
-- Frontend: Vite preview on `UI_HOST:UI_PORT`.
-- Frontend communicates with backend through `/api/*`.
+```text
+.
+├─ pyproject.toml
+├─ uv.lock
+├─ README.md
+├─ FAIRS/
+│  ├─ start_on_windows.bat
+│  ├─ setup_and_maintenance.bat
+│  ├─ scripts/
+│  │  └─ initialize_database.py
+│  ├─ settings/
+│  │  ├─ .env
+│  │  ├─ .env.example
+│  │  └─ configurations.json
+│  ├─ resources/
+│  │  ├─ database.db
+│  │  ├─ checkpoints/
+│  │  └─ logs/
+│  ├─ server/
+│  │  ├─ __init__.py
+│  │  ├─ app.py
+│  │  ├─ api/
+│  │  │  ├─ __init__.py
+│  │  │  ├─ upload.py
+│  │  │  ├─ training.py
+│  │  │  ├─ database.py
+│  │  │  └─ inference.py
+│  │  ├─ common/
+│  │  │  ├─ api_errors.py
+│  │  │  ├─ checkpoints.py
+│  │  │  ├─ constants.py
+│  │  │  └─ utils/
+│  │  │     ├─ __init__.py
+│  │  │     ├─ logger.py
+│  │  │     ├─ trainingstats.py
+│  │  │     └─ types.py
+│  │  ├─ configurations/
+│  │  │  ├─ __init__.py
+│  │  │  ├─ dependencies.py
+│  │  │  ├─ environment.py
+│  │  │  ├─ management.py
+│  │  │  └─ startup.py
+│  │  ├─ domain/
+│  │  │  ├─ __init__.py
+│  │  │  ├─ configuration.py
+│  │  │  ├─ database.py
+│  │  │  ├─ inference.py
+│  │  │  ├─ jobs.py
+│  │  │  ├─ training.py
+│  │  │  └─ upload.py
+│  │  ├─ learning/
+│  │  │  ├─ __init__.py
+│  │  │  ├─ betting/
+│  │  │  │  ├─ __init__.py
+│  │  │  │  ├─ hold.py
+│  │  │  │  ├─ sizer.py
+│  │  │  │  └─ types.py
+│  │  │  ├─ inference/
+│  │  │  │  ├─ __init__.py
+│  │  │  │  └─ player.py
+│  │  │  ├─ models/
+│  │  │  │  ├─ __init__.py
+│  │  │  │  ├─ embeddings.py
+│  │  │  │  ├─ logits.py
+│  │  │  │  ├─ qnet.py
+│  │  │  │  └─ strategy.py
+│  │  │  └─ training/
+│  │  │     ├─ __init__.py
+│  │  │     ├─ agents.py
+│  │  │     ├─ device.py
+│  │  │     ├─ environment.py
+│  │  │     ├─ fitting.py
+│  │  │     ├─ generator.py
+│  │  │     ├─ serializer.py
+│  │  │     └─ worker.py
+│  │  ├─ repositories/
+│  │  │  ├─ __init__.py
+│  │  │  ├─ database/
+│  │  │  │  ├─ __init__.py
+│  │  │  │  ├─ backend.py
+│  │  │  │  ├─ initializer.py
+│  │  │  │  ├─ postgres.py
+│  │  │  │  ├─ sqlite.py
+│  │  │  │  └─ utils.py
+│  │  │  ├─ queries/
+│  │  │  │  ├─ __init__.py
+│  │  │  │  ├─ data.py
+│  │  │  │  └─ training.py
+│  │  │  ├─ schemas/
+│  │  │  │  ├─ __init__.py
+│  │  │  │  └─ models.py
+│  │  │  └─ serialization/
+│  │  │     ├─ __init__.py
+│  │  │     ├─ data.py
+│  │  │     ├─ model.py
+│  │  │     └─ training.py
+│  │  └─ services/
+│  │     ├─ __init__.py
+│  │     ├─ checkpoints.py
+│  │     ├─ datasets.py
+│  │     ├─ importer.py
+│  │     ├─ inference.py
+│  │     ├─ jobs.py
+│  │     ├─ loader.py
+│  │     ├─ process.py
+│  │     └─ training.py
+│  ├─ client/
+│  │  ├─ package.json
+│  │  ├─ vite.config.ts
+│  │  ├─ index.html
+│  │  ├─ public/
+│  │  │  ├─ favicon.png
+│  │  │  └─ roulette_wheel.png
+│  │  ├─ src/
+│  │  │  ├─ main.tsx
+│  │  │  ├─ App.tsx
+│  │  │  ├─ assets/react.svg
+│  │  │  ├─ styles/global.css
+│  │  │  ├─ context/
+│  │  │  │  ├─ AppStateContext.tsx
+│  │  │  │  └─ AppStateStore.ts
+│  │  │  ├─ hooks/
+│  │  │  │  ├─ useAppState.ts
+│  │  │  │  ├─ useCheckpointOptions.ts
+│  │  │  │  ├─ useDatasetFileUpload.ts
+│  │  │  │  ├─ useDatasetUploadState.ts
+│  │  │  │  ├─ useInferenceSetupOptions.ts
+│  │  │  │  ├─ useKeyboardActivation.ts
+│  │  │  │  └─ useWizardStep.ts
+│  │  │  ├─ components/
+│  │  │  │  ├─ Layout/
+│  │  │  │  │  ├─ HeaderBar.tsx
+│  │  │  │  │  ├─ MainLayout.tsx
+│  │  │  │  │  ├─ MainLayout.css
+│  │  │  │  │  └─ TopNavigation.tsx
+│  │  │  │  ├─ datasetUpload/
+│  │  │  │  │  ├─ DatasetFileDropzone.tsx
+│  │  │  │  │  └─ UploadStatusMessage.tsx
+│  │  │  │  ├─ inference/
+│  │  │  │  │  ├─ GameSession.tsx
+│  │  │  │  │  └─ GameSession.module.css
+│  │  │  │  └─ wizard/WizardSummaryRows.tsx
+│  │  │  ├─ pages/
+│  │  │  │  ├─ Inference/
+│  │  │  │  │  ├─ InferencePage.tsx
+│  │  │  │  │  └─ InferencePage.css
+│  │  │  │  └─ Training/
+│  │  │  │     ├─ TrainingPage.tsx
+│  │  │  │     ├─ Training.css
+│  │  │  │     └─ components/
+│  │  │  │        ├─ CheckpointPreview.tsx
+│  │  │  │        ├─ DatasetPreview.tsx
+│  │  │  │        ├─ DatasetUpload.tsx
+│  │  │  │        ├─ TrainingDashboard.tsx
+│  │  │  │        ├─ TrainingLossChart.tsx
+│  │  │  │        ├─ TrainingMetricCard.tsx
+│  │  │  │        ├─ TrainingMetricsChart.tsx
+│  │  │  │        ├─ trainingPayload.ts
+│  │  │  │        └─ WizardActions.tsx
+│  │  │  ├─ types/
+│  │  │  │  ├─ datasetUpload.ts
+│  │  │  │  ├─ frontendApi.ts
+│  │  │  │  └─ inference.ts
+│  │  │  └─ utils/
+│  │  │     ├─ apiParsers.ts
+│  │  │     ├─ datasetUpload.ts
+│  │  │     └─ frontendApiParsers.ts
+│  │  └─ src-tauri/
+│  │     ├─ Cargo.toml
+│  │     ├─ build.rs
+│  │     ├─ tauri.conf.json
+│  │     ├─ capabilities/default.json
+│  │     ├─ icons/...
+│  │     └─ src/main.rs
+├─ release/
+│  └─ tauri/
+│     ├─ build_with_tauri.bat
+│     └─ scripts/
+└─ tests/
+   ├─ conftest.py
+   ├─ run_tests.bat
+   ├─ test_config.json
+   ├─ unit/
+   └─ e2e/
+```
 
-### Desktop packaged mode (Tauri)
+## Application Entry Points
 
-- Build helper: `release/tauri/build_with_tauri.bat`.
-- Tauri resolves packaged workspace/runtime, ensures `runtimes/.venv`, then starts local Uvicorn.
-- Tauri injects `FAIRS_TAURI_MODE=true` for packaged behavior.
-- Window opens `http://127.0.0.1:<FASTAPI_PORT>/` after backend readiness.
+- Backend app entry: `FAIRS/server/app.py` (`app = FastAPI(...)`).
+- Backend process launch (local): `FAIRS/start_on_windows.bat` (`python -m uvicorn FAIRS.server.app:app`).
+- Backend process launch (desktop runtime): `FAIRS/client/src-tauri/src/main.rs` spawns `uvicorn` using runtime `.venv`.
+- Frontend entry: `FAIRS/client/src/main.tsx`.
+- Frontend route composition: `FAIRS/client/src/App.tsx`.
+- Desktop shell entry: `FAIRS/client/src-tauri/src/main.rs`.
 
-## 3. Backend Architecture
+## API Endpoints
 
-### Entry point and route mounting
+All backend routers are mounted with prefix `/api`.
 
-- `FAIRS/server/app.py` creates the FastAPI app.
-- Routers mounted from:
-  - `FAIRS/server/api/upload.py`
-  - `FAIRS/server/api/training.py`
-  - `FAIRS/server/api/database.py`
-  - `FAIRS/server/api/inference.py`
+### Upload
+- `POST /api/data/upload`
 
-Routes are always exposed under `/api/*`.
-When `FAIRS_ALLOW_DIRECT_API_ROUTES=true`, the same routes are also exposed without `/api`.
+### Training
+- `POST /api/training/start`
+- `POST /api/training/resume`
+- `GET /api/training/status`
+- `POST /api/training/stop`
+- `GET /api/training/checkpoints`
+- `GET /api/training/checkpoints/{checkpoint}/metadata`
+- `DELETE /api/training/checkpoints/{checkpoint}`
+- `GET /api/training/jobs/{job_id}`
+- `DELETE /api/training/jobs/{job_id}`
 
-### Main layers
+### Database
+- `GET /api/database/roulette-series/datasets`
+- `GET /api/database/roulette-series/datasets/summary`
+- `DELETE /api/database/roulette-series/datasets/{dataset_id}`
 
-1. API layer: `FAIRS/server/api` (HTTP mapping and responses).
-2. Services layer: `FAIRS/server/services` (job manager and service orchestration).
-3. Domain layer: `FAIRS/server/domain` (request/response and shared domain state).
-4. Learning layer: `FAIRS/server/learning` (training/inference execution and artifacts).
-5. Persistence layer: `FAIRS/server/repositories` (DB initialization, schemas, serializers, queries).
-6. Configuration layer: `FAIRS/server/configurations` (`environment.py`, `management.py`, `startup.py`).
+### Inference
+- `POST /api/inference/sessions/start`
+- `POST /api/inference/sessions/{session_id}/next`
+- `POST /api/inference/sessions/{session_id}/step`
+- `POST /api/inference/sessions/{session_id}/shutdown`
+- `POST /api/inference/sessions/{session_id}/bet`
+- `POST /api/inference/sessions/{session_id}/rows/clear`
+- `POST /api/inference/context/clear`
 
-### Configuration system
+No WebSocket routes are currently implemented in `FAIRS/server/api`.
 
-- Environment bootstrap happens at package import (`FAIRS/server/__init__.py`) through `load_environment()`.
-- JSON technical settings are loaded and validated by `ConfigurationManager` in `FAIRS/server/configurations/management.py`.
-- Startup access is provided through cached helpers in `FAIRS/server/configurations/startup.py` (`get_configuration_manager`, `get_server_settings`).
-- Runtime/process keys are read from environment (`FASTAPI_*`, `UI_*`, docs/runtime toggles, ML backend vars).
-- Technical backend keys are read only from `FAIRS/settings/configurations.json` (`database`, `jobs`, `device`).
+## Layered Architecture and Responsibilities
 
-### API surface (current)
+### Backend flow
+- Endpoint layer: `FAIRS/server/api/*` validates/marshals HTTP payloads and maps exceptions to status codes.
+- Service layer: `FAIRS/server/services/*` orchestrates jobs, training/inference workflows, dataset import, and checkpoint lifecycle.
+- Domain layer: `FAIRS/server/domain/*` defines Pydantic/domain contracts for requests/responses/settings.
+- Repository query/serialization layer: `FAIRS/server/repositories/queries/*` and `FAIRS/server/repositories/serialization/*` provide persistence operations and dataframe-to-table transforms.
+- Database backend layer: `FAIRS/server/repositories/database/*` abstracts SQLite/PostgreSQL engines and CRUD operations.
+- ML execution layer: `FAIRS/server/learning/*` executes training and inference model logic.
 
-- Data upload:
-  - `POST /data/upload`
-- Training:
-  - `POST /training/start`
-  - `POST /training/resume`
-  - `GET /training/status`
-  - `POST /training/stop`
-  - `GET /training/checkpoints`
-  - `GET /training/checkpoints/{checkpoint}/metadata`
-  - `DELETE /training/checkpoints/{checkpoint}`
-  - `GET /training/jobs/{job_id}`
-  - `DELETE /training/jobs/{job_id}`
-- Database:
-  - `GET /database/roulette-series/datasets`
-  - `GET /database/roulette-series/datasets/summary`
-  - `DELETE /database/roulette-series/datasets/{dataset_id}`
-- Inference:
-  - `POST /inference/sessions/start`
-  - `POST /inference/sessions/{session_id}/next`
-  - `POST /inference/sessions/{session_id}/step`
-  - `POST /inference/sessions/{session_id}/bet`
-  - `POST /inference/sessions/{session_id}/shutdown`
-  - `POST /inference/sessions/{session_id}/rows/clear`
-  - `POST /inference/context/clear`
+### Typical endpoint-to-repository chains
+- Dataset upload: `api/upload.py` -> `DatasetService` -> `DatasetImportService` -> `DataSerializer` -> `DataRepositoryQueries` -> `FAIRSDatabase` backend.
+- Training start/resume: `api/training.py` -> `TrainingService` -> `JobManager` + `ProcessWorker` -> learning training modules + checkpoint serializer.
+- Inference session: `api/inference.py` -> `InferenceService` -> `RoulettePlayer` + `CheckpointService` + `DataSerializer` persistence.
+- Dataset list/delete: `api/database.py` -> `DatasetService` -> `DataSerializer` -> repository queries/backend.
 
-## 4. Frontend Architecture
+### Key module responsibilities
+- `FAIRS/server/app.py`: FastAPI app factory and entry point, dependency graph initialization in lifespan, router mounting, packaged SPA serving behavior.
+- `FAIRS/server/common/api_errors.py`: shared HTTP exception mapping helpers used by endpoint modules.
+- `FAIRS/server/configurations/startup.py`: cached settings/config manager access.
+- `FAIRS/server/services/jobs.py`: in-process job registry and cancellation/progress management.
+- `FAIRS/server/services/training.py`: training state, worker lifecycle, progress projection, resume behavior.
+- `FAIRS/server/services/inference.py`: session state machine and session-step persistence.
+- `FAIRS/server/services/checkpoints.py`: checkpoint path normalization, metadata, list/delete/resolve.
+- `FAIRS/server/repositories/schemas/models.py`: SQLAlchemy schema definitions and constraints.
+- `FAIRS/server/repositories/database/initializer.py`: SQLite auto-init and PostgreSQL initialization/seed logic.
 
-- Root composition: `FAIRS/client/src/App.tsx`.
-- Shared app state provider: `FAIRS/client/src/context/AppStateContext.tsx`.
-- Main shell layout: `FAIRS/client/src/components/Layout/MainLayout.tsx`.
-- Routes:
-  - `/training` -> `pages/Training/TrainingPage.tsx`
-  - `/inference` -> `pages/Inference/InferencePage.tsx`
+## Data Persistence
 
-## 5. Persistence Model
+### Backends
+- SQLite when `database.embedded_database = true` in `FAIRS/settings/configurations.json`.
+- PostgreSQL when `embedded_database = false` (engine/host/credentials from `configurations.json`).
 
-Primary tables:
-
+### Core tables
+- `roulette_outcomes`
 - `datasets`
 - `dataset_outcomes`
 - `inference_sessions`
 - `inference_session_steps`
-- `roulette_outcomes`
 
-Main ORM models are in `FAIRS/server/repositories/schemas/models.py`.
-Dataset/session persistence orchestration is primarily in `FAIRS/server/repositories/serialization/data.py`.
+### Data storage surfaces
+- Relational data: `FAIRS/resources/database.db` (SQLite mode) or PostgreSQL database.
+- Model checkpoints: `FAIRS/resources/checkpoints/<checkpoint_id>/...`.
+- Runtime logs: `FAIRS/resources/logs/*.log`.
 
-## 6. Packaged SPA Behavior
+## Async vs Sync Behavior and Constraints
 
-When `FAIRS_TAURI_MODE=true` and `FAIRS/client/dist` exists:
+- Most FastAPI handlers are synchronous (`def`) and execute quick orchestration.
+- File upload handler is asynchronous (`async def upload`) only for non-blocking `UploadFile.read()`.
+- Long-running training does not run in request threads:
+  - `JobManager` uses a background thread per job.
+  - heavy training runs in a separate process (`ProcessWorker`) managed by `TrainingService`.
+- Inference operations are synchronous and stateful in-memory per session (`InferenceState`).
+- No async database driver/event loop concurrency model is currently used; persistence uses SQLAlchemy with synchronous engines.
 
-- FastAPI serves SPA root at `/`.
-- `/assets` is served from `FAIRS/client/dist/assets`.
-- Unknown frontend paths fall back to `index.html`.
-- If packaged SPA is unavailable, `/` falls back to docs redirect (when docs are enabled) or an `{\"status\":\"ok\"}` response.
+## Frontend Architecture
 
-## 7. Extension Points
-
-- New API domain: add module under `FAIRS/server/api`, wire it in `FAIRS/server/app.py`, then add service/repository support.
-- New background workflow: integrate with `FAIRS/server/services/jobs.py` and keep behavior aligned with `BACKGROUND_JOBS.md`.
-- New frontend page: add route in `FAIRS/client/src/App.tsx` and update navigation/layout.
-- Runtime or packaging behavior changes: update this file, `PACKAGING_AND_RUNTIME_MODES.md`, and `README.md` in the same change.
+- Global state: reducer-based context in `AppStateContext.tsx`.
+- Route shell: `MainLayout` with two primary routes:
+  - `/training`
+  - `/inference`
+- API calls are feature-local in hooks/components and target `/api/*`.
+- Styling model is token-driven (`src/styles/global.css`) with page/component CSS modules and stylesheets.

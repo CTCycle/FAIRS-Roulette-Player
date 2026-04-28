@@ -64,7 +64,7 @@ class RouletteOutcomes(Base):
 ###############################################################################
 class Datasets(Base):
     __tablename__ = "datasets"
-    dataset_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    dataset_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     dataset_name: Mapped[str] = mapped_column(String, nullable=False)
     dataset_kind: Mapped[str] = mapped_column(String, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
@@ -93,8 +93,8 @@ class Datasets(Base):
 class DatasetOutcomes(Base):
     __tablename__ = "dataset_outcomes"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    dataset_id: Mapped[str] = mapped_column(
-        String(32),
+    dataset_id: Mapped[int] = mapped_column(
+        Integer,
         ForeignKey("datasets.dataset_id", ondelete="CASCADE"),
         nullable=False,
     )
@@ -127,8 +127,8 @@ class DatasetOutcomes(Base):
 class InferenceSessions(Base):
     __tablename__ = "inference_sessions"
     session_id: Mapped[str] = mapped_column(String(32), primary_key=True)
-    dataset_id: Mapped[str] = mapped_column(
-        String(32),
+    dataset_id: Mapped[int] = mapped_column(
+        Integer,
         ForeignKey("datasets.dataset_id"),
         nullable=False,
     )
