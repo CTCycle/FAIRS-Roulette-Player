@@ -2,25 +2,12 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from FAIRS.server.common.checkpoints import (
+    MAX_CHECKPOINT_NAME_LENGTH,
+    normalize_checkpoint_identifier,
+)
 
-MAX_CHECKPOINT_NAME_LENGTH = 128
 MAX_SESSION_ID_LENGTH = 64
-
-
-###############################################################################
-def normalize_checkpoint_identifier(value: str) -> str:
-    candidate = value.strip()
-    if not candidate:
-        raise ValueError("Checkpoint name cannot be empty.")
-    if len(candidate) > MAX_CHECKPOINT_NAME_LENGTH:
-        raise ValueError("Checkpoint name is too long.")
-    if candidate in {".", ".."}:
-        raise ValueError("Invalid checkpoint name.")
-    if any(ord(char) < 32 for char in candidate):
-        raise ValueError("Checkpoint name contains invalid control characters.")
-    if any(separator in candidate for separator in ("/", "\\", ":")):
-        raise ValueError("Invalid checkpoint name.")
-    return candidate
 
 
 ###############################################################################
@@ -133,4 +120,21 @@ class InferenceBetUpdateRequest(BaseModel):
 ###############################################################################
 class InferenceShutdownResponse(BaseModel):
     session_id: str
+    status: str
+
+
+###############################################################################
+class InferenceBetUpdateResponse(BaseModel):
+    session_id: str
+    bet_amount: int
+
+
+###############################################################################
+class InferenceRowsClearResponse(BaseModel):
+    session_id: str
+    status: str
+
+
+###############################################################################
+class InferenceContextClearResponse(BaseModel):
     status: str

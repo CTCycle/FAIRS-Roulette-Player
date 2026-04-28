@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "FAIRS"
-version = "2.0"
+version = "2.3.0"
 requires-python = ">=3.14"
 
 dependencies = [
@@ -36,6 +36,9 @@ test = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["FAIRS"] 
+
+[tool.ruff]
+exclude = ["FAIRS/client/src-tauri/target"]
 
 [[tool.uv.index]]
 name = "pytorch-cu130"

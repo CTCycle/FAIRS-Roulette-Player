@@ -7,8 +7,8 @@ from FAIRS.server.repositories.queries.training import TrainingRepositoryQueries
 
 ###############################################################################
 class TrainingDataSerializer:
-    def __init__(self, queries: TrainingRepositoryQueries | None = None) -> None:
-        self.queries = queries or TrainingRepositoryQueries()
+    def __init__(self, queries: TrainingRepositoryQueries) -> None:
+        self.queries = queries
 
     # -------------------------------------------------------------------------
     def load_training_series(

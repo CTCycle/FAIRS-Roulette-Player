@@ -19,7 +19,7 @@ CONFIGURATIONS_FILE = join(SETTING_PATH, "configurations.json")
 ###############################################################################
 FASTAPI_TITLE = "FAIRS Roulette Backend"
 FASTAPI_DESCRIPTION = "FastAPI backend"
-FASTAPI_VERSION = "1.0.0"
+FASTAPI_VERSION = "2.3.0"
 
 # [ENDPOINS]
 ###############################################################################

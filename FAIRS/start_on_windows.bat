@@ -311,23 +311,19 @@ if errorlevel 1 (
 )
 if not exist "%LOG_DIR%" md "%LOG_DIR%" >nul 2>&1
 if exist "%BACKEND_BOOT_LOG%" del /q "%BACKEND_BOOT_LOG%" >nul 2>&1
-start "" /b /d "%root_folder_no_slash%" cmd /c ""%uv_exe%" run --no-sync --python "%python_exe%" python -m uvicorn %UVICORN_MODULE% --app-dir "%root_folder_no_slash%" --host !FASTAPI_HOST! --port !FASTAPI_PORT! !RELOAD_FLAG! --log-level info >> "%BACKEND_BOOT_LOG%" 2>&1"
+start "" /b "%uv_exe%" run --no-sync --python "%python_exe%" python -m uvicorn %UVICORN_MODULE% --app-dir "%root_folder_no_slash%" --host !FASTAPI_HOST! --port !FASTAPI_PORT! !RELOAD_FLAG! --log-level info >> "%BACKEND_BOOT_LOG%" 2>&1
 
 REM ============================================================================
 REM Wait for backend
 REM ============================================================================
-echo [WAIT] Waiting for backend to be ready on port !FASTAPI_PORT!...
-for /L %%i in (1,1,30) do (
-  powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ^
-    "$ErrorActionPreference='SilentlyContinue'; try { $r=Invoke-WebRequest -UseBasicParsing -Uri 'http://!FASTAPI_HOST!:!FASTAPI_PORT!/' -Method GET -TimeoutSec 2; if ($r.StatusCode -ge 200 -and $r.StatusCode -lt 500) { exit 0 } else { exit 1 } } catch { exit 1 }" >nul 2>&1
+set "BACKEND_BASE_URL=http://!FASTAPI_HOST!:!FASTAPI_PORT!"
+echo [WAIT] Waiting for backend readiness at !BACKEND_BASE_URL!...
+for /L %%i in (1,1,60) do (
+  powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command "$base='!BACKEND_BASE_URL!'; $paths=@('/api/health','/health','/docs','/'); foreach ($p in $paths) { try { $r = Invoke-WebRequest -UseBasicParsing -Uri ($base + $p) -TimeoutSec 2; if ($r.StatusCode -ge 200 -and $r.StatusCode -lt 300) { exit 0 } } catch {} }; exit 1" >nul 2>&1
   if !errorlevel! equ 0 goto :backend_ready_check
-  timeout /t 1 /nobreak >nul
+  timeout /t 1 /nobreak >nul 2>&1
 )
-echo [FATAL] Timed out waiting for backend readiness on !FASTAPI_HOST!:!FASTAPI_PORT!.
-if exist "%BACKEND_BOOT_LOG%" (
-  echo [INFO] Last backend log lines:
-  powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command "Get-Content -LiteralPath '%BACKEND_BOOT_LOG%' -Tail 40" 2>nul
-)
+echo [FATAL] Backend did not become ready at !BACKEND_BASE_URL! (checked /api/health, /health, /docs, /).
 goto error
 :backend_ready_check
 

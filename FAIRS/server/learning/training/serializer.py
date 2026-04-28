@@ -5,6 +5,8 @@ from typing import Any
 import pandas as pd
 
 from FAIRS.server.learning.training.generator import RouletteSyntheticGenerator
+from FAIRS.server.repositories.database.backend import FAIRSDatabase
+from FAIRS.server.repositories.queries.training import TrainingRepositoryQueries
 from FAIRS.server.repositories.serialization.model import ModelSerializer
 from FAIRS.server.repositories.serialization.training import TrainingDataSerializer
 from FAIRS.server.services.process import RouletteSeriesEncoder
@@ -14,7 +16,9 @@ from FAIRS.server.services.process import RouletteSeriesEncoder
 class DataSerializerExtension:
     def __init__(self) -> None:
         self.encoder = RouletteSeriesEncoder()
-        self.training_serializer = TrainingDataSerializer()
+        database = FAIRSDatabase()
+        queries = TrainingRepositoryQueries(database)
+        self.training_serializer = TrainingDataSerializer(queries)
 
     # -------------------------------------------------------------------------
     def generate_synthetic_dataset(self, configuration: dict[str, Any]) -> pd.DataFrame:
@@ -35,15 +39,7 @@ class DataSerializerExtension:
         seed = configuration.get("seed", 42)
         sample_size = configuration.get("sample_size", 1.0)
         dataset_id = configuration.get("dataset_id")
-        if isinstance(dataset_id, bool):
-            dataset_id = None
-        elif isinstance(dataset_id, str):
-            trimmed = dataset_id.strip()
-            dataset_id = int(trimmed) if trimmed.isdigit() else None
-        elif isinstance(dataset_id, (int, float)):
-            candidate = int(dataset_id)
-            dataset_id = candidate if candidate > 0 else None
-        else:
+        if not isinstance(dataset_id, int) or isinstance(dataset_id, bool):
             dataset_id = None
         dataset = self.load_roulette_dataset(sample_size, seed, dataset_id)
         if "outcome" in dataset.columns and "extraction" not in dataset.columns:

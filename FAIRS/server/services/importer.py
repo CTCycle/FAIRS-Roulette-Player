@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Literal
-
 import pandas as pd
 
 from FAIRS.server.common.constants import (
@@ -9,18 +7,14 @@ from FAIRS.server.common.constants import (
     DATASET_OUTCOMES_WRITE_COLUMNS,
     ROULETTE_SERIES_TABLE,
 )
+from FAIRS.server.domain.upload import DatasetTable
 from FAIRS.server.repositories.serialization.data import DataSerializer
-
-DatasetTable = Literal[
-    "roulette_series",
-    "inference_context",
-]
 
 
 ###############################################################################
 class DatasetImportService:
-    def __init__(self) -> None:
-        self.serializer = DataSerializer()
+    def __init__(self, serializer: DataSerializer) -> None:
+        self.serializer = serializer
 
     # -------------------------------------------------------------------------
     def normalize(

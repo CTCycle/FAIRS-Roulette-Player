@@ -175,7 +175,6 @@ def initialize_sqlite_database(settings: DatabaseSettings) -> None:
     logger.info("Initialized SQLite database at %s", repository.db_path)
 
 
-# -----------------------------------------------------------------------------
 def initialize_sqlite_database_if_missing(settings: DatabaseSettings) -> None:
     db_path = os.path.join(RESOURCES_PATH, DATABASE_FILENAME)
     if os.path.exists(db_path):

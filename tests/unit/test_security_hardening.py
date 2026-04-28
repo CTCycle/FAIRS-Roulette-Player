@@ -14,9 +14,12 @@ from FAIRS.server.repositories.database.postgres import (
 from FAIRS.server.repositories.database.sqlite import (
     normalize_table_name as normalize_sqlite_table_name,
 )
+from FAIRS.server.common.checkpoints import (
+    normalize_checkpoint_identifier,
+    resolve_checkpoint_path,
+)
 from FAIRS.server.repositories.serialization.data import normalize_dataset_name
-from FAIRS.server.api.training import build_checkpoint_path, normalize_checkpoint_name
-from FAIRS.server.api.upload import (
+from FAIRS.server.services.datasets import (
     normalize_csv_separator,
     normalize_filename,
     normalize_sheet_name,
@@ -26,14 +29,14 @@ from FAIRS.server.api.upload import (
 def test_checkpoint_name_validation_rejects_path_traversal_patterns() -> None:
     for candidate in ("", ".", "..", "../x", "..\\x", "x/y", "C:temp", "bad\x00name"):
         with pytest.raises(ValueError):
-            normalize_checkpoint_name(candidate)
+            normalize_checkpoint_identifier(candidate)
 
-    assert normalize_checkpoint_name("checkpoint_01") == "checkpoint_01"
+    assert normalize_checkpoint_identifier("checkpoint_01") == "checkpoint_01"
 
 
 def test_checkpoint_path_builder_stays_under_checkpoint_root() -> None:
     checkpoint_root = os.path.realpath(CHECKPOINT_PATH)
-    resolved = build_checkpoint_path("safe-checkpoint")
+    resolved = resolve_checkpoint_path("safe-checkpoint")
 
     assert os.path.commonpath([checkpoint_root, resolved]) == checkpoint_root
     assert resolved == os.path.realpath(os.path.join(checkpoint_root, "safe-checkpoint"))
