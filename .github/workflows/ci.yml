@@ -17,10 +17,10 @@ jobs:
         with:
           python-version: "3.14"
       - name: Install dependencies
-        run: uv pip install -e .[test]
+        run: uv sync --extra test
       - name: Ruff
-        run: uv run ruff check FAIRS/server tests
+        run: uv run --extra test ruff check FAIRS/server tests
       - name: Unit tests
-        run: uv run pytest -q tests/unit
+        run: uv run --extra test pytest -q tests/unit
       - name: OpenAPI check
-        run: uv run python -c "from FAIRS.server.app import app; app.openapi()"
+        run: uv run --extra test python -c "from FAIRS.server.app import app; app.openapi()"
