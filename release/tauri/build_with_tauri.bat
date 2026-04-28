@@ -84,13 +84,20 @@ pushd "%client_dir%" >nul
 if exist "package-lock.json" (
   echo [CMD] "%npm_cmd%" ci --foreground-scripts
   call "%npm_cmd%" ci --foreground-scripts
+  set "npm_install_exit=!ERRORLEVEL!"
 ) else (
   echo [CMD] "%npm_cmd%" install --foreground-scripts
   call "%npm_cmd%" install --foreground-scripts
+  set "npm_install_exit=!ERRORLEVEL!"
 )
-if errorlevel 1 (
+if not "!npm_install_exit!"=="0" (
   popd >nul
   echo [FATAL] npm dependency installation failed.
+  if exist "%client_dir%\node_modules\@esbuild\win32-x64\esbuild.exe" (
+    echo [HINT] A locked esbuild binary was detected at:
+    echo        %client_dir%\node_modules\@esbuild\win32-x64\esbuild.exe
+    echo [HINT] Close processes that may lock it ^(dev server/editor/antivirus^), then retry.
+  )
   goto build_error
 )
 
@@ -172,7 +179,7 @@ call :make_junction "%bundle_source_dir%\scripts" "%project_folder%scripts" || e
 call :make_junction "%bundle_source_dir%\settings" "%project_folder%settings" || exit /b 1
 call :make_junction "%bundle_source_dir%\client\dist" "%client_dir%\dist" || exit /b 1
 call :make_junction "%bundle_source_dir%\resources\checkpoints" "%project_folder%resources\checkpoints" || exit /b 1
-call :make_junction "%bundle_source_dir%\resources\logs" "%project_folder%resources\logs" || exit /b 1
+md "%bundle_source_dir%\resources\logs" >nul 2>&1
 call :make_junction "%bundle_source_dir%\runtimes\python" "%runtime_root%\python" || exit /b 1
 call :make_junction "%bundle_source_dir%\runtimes\uv" "%runtime_root%\uv" || exit /b 1
 call :make_junction "%bundle_source_dir%\runtimes\nodejs" "%runtime_root%\nodejs" || exit /b 1
