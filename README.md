@@ -123,13 +123,16 @@ Detailed operational guidance is available in:
 ## 9. Screenshots
 ### Training Workspace
 Overview of dataset upload, dataset selection, and checkpoint management:
+
 ![Training overview](assets/figures/training-page.png)
 
 Synthetic generator wizard (step configuration for training setup):
+
 ![Training wizard detail](assets/figures/training-wizard-detail.png)
 
 ### Inference Workspace
 Inference controls with checkpoint/dataset pairing and live session panel:
+
 ![Inference overview](assets/figures/inference-overview.png)
 
 ## 10. License
