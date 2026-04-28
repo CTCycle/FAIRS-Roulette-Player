@@ -82,6 +82,21 @@ $requiredPortableRuntimeFiles = @(
   "runtimes\nodejs\npm.cmd"
 )
 
+# Ensure required runtime files exist in the release payload by staging from root runtimes if needed.
+foreach ($entry in $requiredPortableRuntimeFiles) {
+  $sourcePath = Join-Path $releaseDir $entry
+  if (-not (Test-Path $sourcePath)) {
+    $fallbackPath = Join-Path $repoRoot $entry
+    if (Test-Path $fallbackPath) {
+      $destinationDir = Split-Path -Parent $sourcePath
+      if (-not (Test-Path $destinationDir)) {
+        New-Item -ItemType Directory -Path $destinationDir -Force | Out-Null
+      }
+      Copy-Item -Path $fallbackPath -Destination $sourcePath -Force
+    }
+  }
+}
+
 foreach ($entry in $requiredPortableRuntimeFiles) {
   $sourcePath = Join-Path $releaseDir $entry
   if (-not (Test-Path $sourcePath)) {
