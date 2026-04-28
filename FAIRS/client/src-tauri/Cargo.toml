@@ -1,6 +1,6 @@
 [package]
 name = "fairs-desktop"
-version = "1.0.0"
+version = "2.3.0"
 description = "FAIRS desktop shell"
 authors = ["FAIRS"]
 edition = "2021"
