@@ -82,7 +82,7 @@ if exist "%PYTHON_EXE%" (
 )
 
 set "UV_EXTRAS="
-if /i "%OPTIONAL_DEPENDENCIES%"=="true" set "UV_EXTRAS=--all-extras"
+if /i "%OPTIONAL_DEPENDENCIES%"=="true" set "UV_EXTRAS=--all-extras --extra test"
 
 echo [STEP 1/4] Sync Python env in app\server
 pushd "%SERVER_DIR%" >nul
@@ -147,3 +147,4 @@ start "" /b /d "%CLIENT_DIR%" "%NPM_RUN%" run preview -- --host %UI_HOST% --port
 start "" "http://%UI_HOST%:%UI_PORT%"
 echo [SUCCESS] Services started.
 exit /b 0
+
