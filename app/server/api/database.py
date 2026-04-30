@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Path, status
 
-from FAIRS.server.configurations.dependencies import get_dataset_service
-from FAIRS.server.domain.database import (
+from server.configurations.dependencies import get_dataset_service
+from server.domain.database import (
     DatasetDeleteResponse,
     DatasetListResponse,
     DatasetSummaryResponse,
 )
-from FAIRS.server.services.datasets import DatasetService
+from server.services.datasets import DatasetService
 
 
 router = APIRouter(prefix="/database", tags=["database"])

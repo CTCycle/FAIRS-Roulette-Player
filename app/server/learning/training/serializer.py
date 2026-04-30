@@ -4,12 +4,12 @@ from typing import Any
 
 import pandas as pd
 
-from FAIRS.server.learning.training.generator import RouletteSyntheticGenerator
-from FAIRS.server.repositories.database.backend import FAIRSDatabase
-from FAIRS.server.repositories.queries.training import TrainingRepositoryQueries
-from FAIRS.server.repositories.serialization.model import ModelSerializer
-from FAIRS.server.repositories.serialization.training import TrainingDataSerializer
-from FAIRS.server.services.process import RouletteSeriesEncoder
+from server.learning.training.generator import RouletteSyntheticGenerator
+from server.repositories.database.backend import FAIRSDatabase
+from server.repositories.queries.training import TrainingRepositoryQueries
+from server.repositories.serialization.model import ModelSerializer
+from server.repositories.serialization.training import TrainingDataSerializer
+from server.services.process import RouletteSeriesEncoder
 
 
 ###############################################################################

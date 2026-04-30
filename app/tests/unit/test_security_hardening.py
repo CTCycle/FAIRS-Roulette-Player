@@ -7,19 +7,19 @@ import pytest
 
 os.environ.setdefault("KERAS_BACKEND", "torch")
 
-from FAIRS.server.common.constants import CHECKPOINT_PATH
-from FAIRS.server.repositories.database.postgres import (
+from server.common.constants import CHECKPOINT_PATH
+from server.repositories.database.postgres import (
     normalize_table_name as normalize_postgres_table_name,
 )
-from FAIRS.server.repositories.database.sqlite import (
+from server.repositories.database.sqlite import (
     normalize_table_name as normalize_sqlite_table_name,
 )
-from FAIRS.server.common.checkpoints import (
+from server.common.checkpoints import (
     normalize_checkpoint_identifier,
     resolve_checkpoint_path,
 )
-from FAIRS.server.repositories.serialization.data import normalize_dataset_name
-from FAIRS.server.services.datasets import (
+from server.repositories.serialization.data import normalize_dataset_name
+from server.services.datasets import (
     normalize_csv_separator,
     normalize_filename,
     normalize_sheet_name,

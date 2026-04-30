@@ -5,8 +5,8 @@ from unittest.mock import Mock
 import pandas as pd
 import pytest
 
-from FAIRS.server.domain.upload import UploadRequest
-from FAIRS.server.services.datasets import DatasetService
+from server.domain.upload import UploadRequest
+from server.services.datasets import DatasetService
 
 
 def build_dataset_service() -> tuple[DatasetService, Mock, Mock, Mock]:

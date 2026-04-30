@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from FAIRS.server.domain.configuration import JsonDatabaseSettings, JsonServerSettings
+from server.domain.configuration import JsonDatabaseSettings, JsonServerSettings
 
 
 def test_database_settings_use_json_payload_for_embedded_mode() -> None:

@@ -19,7 +19,7 @@ FAIRS is a research web application for roulette training and inference experime
 Run from repository root:
 
 ```cmd
-FAIRS\start_on_windows.bat
+start_on_windows.bat
 ```
 
 The launcher prepares local runtimes/dependencies and starts backend + frontend.
@@ -30,7 +30,7 @@ Prerequisites:
 2. Local runtimes already prepared at least once:
 
 ```cmd
-FAIRS\start_on_windows.bat
+start_on_windows.bat
 ```
 
 Build desktop artifacts:
@@ -46,24 +46,24 @@ Build output:
 ## 3. Configuration
 
 Runtime profile files:
-- Template: `FAIRS/settings/.env.example`
-- Active profile: `FAIRS/settings/.env`
-- Database settings: `FAIRS/settings/configurations.json`
+- Template: `settings/.env.example`
+- Active profile: `settings/.env`
+- Database settings: `settings/configurations.json`
 
 Initialize `.env` once:
 
 ```cmd
-copy /Y FAIRS\settings\.env.example FAIRS\settings\.env
+copy /Y settings\.env.example settings\.env
 ```
 
 Use `.env` to control host/port/runtime behavior and `configurations.json` for database mode/settings.
 
 ### 3.1 Database Initialization
 
-Database backend selection is defined in `FAIRS/settings/configurations.json` (`database.embedded_database`).
+Database backend selection is defined in `settings/configurations.json` (`database.embedded_database`).
 
 - `SQLite` (`embedded_database=true`):
-  - The application initializes the database automatically on startup only when `FAIRS/resources/database.db` is missing.
+  - The application initializes the database automatically on startup only when `app/resources/database.db` is missing.
   - Initialization creates schema objects and seeds required data.
   - If `database.db` already exists, startup skips initialization.
 - `PostgreSQL` (`embedded_database=false`):
@@ -71,16 +71,16 @@ Database backend selection is defined in `FAIRS/settings/configurations.json` (`
   - Initialization is manual via:
 
 ```cmd
-FAIRS\setup_and_maintenance.bat
+setup_and_maintenance.bat
 ```
 
-Select `Initialize database` to run `FAIRS/scripts/initialize_database.py`.
+Select `Initialize database` to run `app/scripts/initialize_database.py`.
 
-`FAIRS/scripts/initialize_database.py` can also initialize SQLite when SQLite mode is selected, but this is normally unnecessary because SQLite initialization is already handled automatically by app startup.
+`app/scripts/initialize_database.py` can also initialize SQLite when SQLite mode is selected, but this is normally unnecessary because SQLite initialization is already handled automatically by app startup.
 
 ## 4. Typical Workflow
 
-1. Start the app: `FAIRS\start_on_windows.bat`
+1. Start the app: `start_on_windows.bat`
 2. Open the UI and upload or generate dataset data.
 3. Run training and manage checkpoints.
 4. Start inference sessions using a selected checkpoint.
@@ -91,27 +91,27 @@ Select `Initialize database` to run `FAIRS/scripts/initialize_database.py`.
 Run full automated tests:
 
 ```cmd
-tests\run_tests.bat
+run_tests.bat
 ```
 
 Optional direct pytest commands:
 
 ```cmd
-uv run pytest -q tests\unit
-uv run pytest -q tests\e2e
+uv run pytest -q app/tests/unit
+uv run pytest -q app/tests/e2e
 ```
 
 ## 6. Setup and Maintenance
 Use:
 
 ```cmd
-FAIRS\setup_and_maintenance.bat
+setup_and_maintenance.bat
 ```
 
 Available maintenance actions include log cleanup, local uninstall/runtime cleanup, desktop build artifact cleanup, and database initialization.
 
 ## 7. Resources
-- Application data and artifacts: `FAIRS/resources`
+- Application data and artifacts: `app/resources`
 - Launcher-managed runtimes and environment: `runtimes`
 
 ## 8. User Documentation

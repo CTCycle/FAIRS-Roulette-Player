@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from FAIRS.server.learning.models.embeddings import RouletteEmbedding
-from FAIRS.server.learning.models.logits import (
+from server.learning.models.embeddings import RouletteEmbedding
+from server.learning.models.logits import (
     AddNorm,
     QScoreNet,
     BatchNormDense,
 )
-from FAIRS.server.learning.models.qnet import FAIRSnet
-from FAIRS.server.learning.models.strategy import StrategyNet
+from server.learning.models.qnet import FAIRSnet
+from server.learning.models.strategy import StrategyNet
 
 __all__ = [
     "RouletteEmbedding",

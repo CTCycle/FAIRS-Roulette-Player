@@ -4,12 +4,12 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from FAIRS.server.common.api_errors import (
+from server.common.api_errors import (
     ExceptionStatusMap,
     http_exception_for_exception,
 )
-from FAIRS.server.configurations.dependencies import get_inference_service
-from FAIRS.server.domain.inference import (
+from server.configurations.dependencies import get_inference_service
+from server.domain.inference import (
     InferenceBetUpdateRequest,
     InferenceBetUpdateResponse,
     InferenceContextClearResponse,
@@ -21,7 +21,7 @@ from FAIRS.server.domain.inference import (
     InferenceStepRequest,
     InferenceStepResponse,
 )
-from FAIRS.server.services.inference import InferenceService
+from server.services.inference import InferenceService
 
 router = APIRouter(prefix="/inference", tags=["inference"])
 

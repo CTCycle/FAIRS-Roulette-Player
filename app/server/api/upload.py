@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 
-from FAIRS.server.configurations.dependencies import get_dataset_service
-from FAIRS.server.domain.upload import DatasetTable, UploadRequest, UploadResponse
-from FAIRS.server.services.datasets import DatasetService
+from server.configurations.dependencies import get_dataset_service
+from server.domain.upload import DatasetTable, UploadRequest, UploadResponse
+from server.services.datasets import DatasetService
 
 
 router = APIRouter(prefix="/data", tags=["data"])

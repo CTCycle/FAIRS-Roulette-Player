@@ -1,0 +1,1949 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FAIRS Roulette Backend",
+    "description": "FastAPI backend",
+    "version": "2.3.0"
+  },
+  "paths": {
+    "/api/data/upload": {
+      "post": {
+        "tags": [
+          "data"
+        ],
+        "summary": "Upload",
+        "operationId": "upload_api_data_upload_post",
+        "parameters": [
+          {
+            "name": "table",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "roulette_series",
+                "inference_context"
+              ],
+              "type": "string",
+              "title": "Table"
+            }
+          },
+          {
+            "name": "csv_separator",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1,
+              "default": ";",
+              "title": "Csv Separator"
+            }
+          },
+          {
+            "name": "sheet_name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "default": 0,
+              "title": "Sheet Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_api_data_upload_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/training/start": {
+      "post": {
+        "tags": [
+          "training"
+        ],
+        "summary": "Start Training",
+        "operationId": "start_training_api_training_start_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrainingConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStartResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/training/resume": {
+      "post": {
+        "tags": [
+          "training"
+        ],
+        "summary": "Resume Training",
+        "operationId": "resume_training_api_training_resume_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResumeConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStartResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/training/status": {
+      "get": {
+        "tags": [
+          "training"
+        ],
+        "summary": "Get Status",
+        "operationId": "get_status_api_training_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrainingStatusResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/training/stop": {
+      "post": {
+        "tags": [
+          "training"
+        ],
+        "summary": "Stop Training",
+        "operationId": "stop_training_api_training_stop_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrainingStopResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/training/checkpoints": {
+      "get": {
+        "tags": [
+          "training"
+        ],
+        "summary": "Get Checkpoints",
+        "operationId": "get_checkpoints_api_training_checkpoints_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrainingCheckpointListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/training/checkpoints/{checkpoint}/metadata": {
+      "get": {
+        "tags": [
+          "training"
+        ],
+        "summary": "Get Checkpoint Metadata",
+        "operationId": "get_checkpoint_metadata_api_training_checkpoints__checkpoint__metadata_get",
+        "parameters": [
+          {
+            "name": "checkpoint",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Checkpoint"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrainingCheckpointMetadataResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/training/checkpoints/{checkpoint}": {
+      "delete": {
+        "tags": [
+          "training"
+        ],
+        "summary": "Delete Checkpoint",
+        "operationId": "delete_checkpoint_api_training_checkpoints__checkpoint__delete",
+        "parameters": [
+          {
+            "name": "checkpoint",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Checkpoint"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrainingCheckpointDeleteResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/training/jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "training"
+        ],
+        "summary": "Get Training Job Status",
+        "operationId": "get_training_job_status_api_training_jobs__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "training"
+        ],
+        "summary": "Cancel Training Job",
+        "operationId": "cancel_training_job_api_training_jobs__job_id__delete",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobCancelResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/database/roulette-series/datasets": {
+      "get": {
+        "tags": [
+          "database"
+        ],
+        "summary": "List Roulette Datasets",
+        "operationId": "list_roulette_datasets_api_database_roulette_series_datasets_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/database/roulette-series/datasets/summary": {
+      "get": {
+        "tags": [
+          "database"
+        ],
+        "summary": "List Roulette Datasets Summary",
+        "operationId": "list_roulette_datasets_summary_api_database_roulette_series_datasets_summary_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetSummaryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/database/roulette-series/datasets/{dataset_id}": {
+      "delete": {
+        "tags": [
+          "database"
+        ],
+        "summary": "Delete Roulette Dataset",
+        "operationId": "delete_roulette_dataset_api_database_roulette_series_datasets__dataset_id__delete",
+        "parameters": [
+          {
+            "name": "dataset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "title": "Dataset Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetDeleteResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/inference/sessions/start": {
+      "post": {
+        "tags": [
+          "inference"
+        ],
+        "summary": "Start Session",
+        "operationId": "start_session_api_inference_sessions_start_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InferenceStartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InferenceStartResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/inference/sessions/{session_id}/next": {
+      "post": {
+        "tags": [
+          "inference"
+        ],
+        "summary": "Next Prediction",
+        "operationId": "next_prediction_api_inference_sessions__session_id__next_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InferenceNextResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/inference/sessions/{session_id}/step": {
+      "post": {
+        "tags": [
+          "inference"
+        ],
+        "summary": "Submit Step",
+        "operationId": "submit_step_api_inference_sessions__session_id__step_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InferenceStepRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InferenceStepResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/inference/sessions/{session_id}/shutdown": {
+      "post": {
+        "tags": [
+          "inference"
+        ],
+        "summary": "Shutdown",
+        "operationId": "shutdown_api_inference_sessions__session_id__shutdown_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InferenceShutdownResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/inference/sessions/{session_id}/bet": {
+      "post": {
+        "tags": [
+          "inference"
+        ],
+        "summary": "Update Bet Amount",
+        "operationId": "update_bet_amount_api_inference_sessions__session_id__bet_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InferenceBetUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InferenceBetUpdateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/inference/sessions/{session_id}/rows/clear": {
+      "post": {
+        "tags": [
+          "inference"
+        ],
+        "summary": "Clear Session Rows",
+        "operationId": "clear_session_rows_api_inference_sessions__session_id__rows_clear_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InferenceRowsClearResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/inference/context/clear": {
+      "post": {
+        "tags": [
+          "inference"
+        ],
+        "summary": "Clear Inference Context",
+        "operationId": "clear_inference_context_api_inference_context_clear_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InferenceContextClearResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "summary": "Redirect To Docs",
+        "operationId": "redirect_to_docs__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Body_upload_api_data_upload_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_api_data_upload_post"
+      },
+      "DatasetDeleteResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "dataset_id": {
+            "type": "integer",
+            "title": "Dataset Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "dataset_id"
+        ],
+        "title": "DatasetDeleteResponse"
+      },
+      "DatasetListResponse": {
+        "properties": {
+          "datasets": {
+            "items": {
+              "$ref": "#/components/schemas/DatasetRecord"
+            },
+            "type": "array",
+            "title": "Datasets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "datasets"
+        ],
+        "title": "DatasetListResponse"
+      },
+      "DatasetRecord": {
+        "properties": {
+          "dataset_id": {
+            "type": "integer",
+            "title": "Dataset Id"
+          },
+          "dataset_name": {
+            "type": "string",
+            "title": "Dataset Name"
+          },
+          "dataset_kind": {
+            "type": "string",
+            "title": "Dataset Kind"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dataset_id",
+          "dataset_name",
+          "dataset_kind"
+        ],
+        "title": "DatasetRecord"
+      },
+      "DatasetSummaryRecord": {
+        "properties": {
+          "dataset_id": {
+            "type": "integer",
+            "title": "Dataset Id"
+          },
+          "dataset_name": {
+            "type": "string",
+            "title": "Dataset Name"
+          },
+          "dataset_kind": {
+            "type": "string",
+            "title": "Dataset Kind"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "row_count": {
+            "type": "integer",
+            "title": "Row Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dataset_id",
+          "dataset_name",
+          "dataset_kind",
+          "row_count"
+        ],
+        "title": "DatasetSummaryRecord"
+      },
+      "DatasetSummaryResponse": {
+        "properties": {
+          "datasets": {
+            "items": {
+              "$ref": "#/components/schemas/DatasetSummaryRecord"
+            },
+            "type": "array",
+            "title": "Datasets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "datasets"
+        ],
+        "title": "DatasetSummaryResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "InferenceBetUpdateRequest": {
+        "properties": {
+          "bet_amount": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Bet Amount"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "bet_amount"
+        ],
+        "title": "InferenceBetUpdateRequest"
+      },
+      "InferenceBetUpdateResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "bet_amount": {
+            "type": "integer",
+            "title": "Bet Amount"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "bet_amount"
+        ],
+        "title": "InferenceBetUpdateResponse"
+      },
+      "InferenceContextClearResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "InferenceContextClearResponse"
+      },
+      "InferenceNextResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "prediction": {
+            "$ref": "#/components/schemas/PredictionResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "prediction"
+        ],
+        "title": "InferenceNextResponse"
+      },
+      "InferenceRowsClearResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "status"
+        ],
+        "title": "InferenceRowsClearResponse"
+      },
+      "InferenceShutdownResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "status"
+        ],
+        "title": "InferenceShutdownResponse"
+      },
+      "InferenceStartRequest": {
+        "properties": {
+          "checkpoint": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Checkpoint"
+          },
+          "dataset_id": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Dataset Id"
+          },
+          "dataset_source": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(source|uploaded)$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Source"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          },
+          "game_capital": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Game Capital",
+            "default": 100
+          },
+          "game_bet": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Game Bet",
+            "default": 1
+          },
+          "dynamic_betting_enabled": {
+            "type": "boolean",
+            "title": "Dynamic Betting Enabled",
+            "default": false
+          },
+          "bet_strategy_model_enabled": {
+            "type": "boolean",
+            "title": "Bet Strategy Model Enabled",
+            "default": false
+          },
+          "bet_strategy_fixed_id": {
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 0.0,
+            "title": "Bet Strategy Fixed Id",
+            "default": 0
+          },
+          "strategy_hold_steps": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Strategy Hold Steps",
+            "default": 1
+          },
+          "bet_unit": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bet Unit"
+          },
+          "bet_max": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bet Max"
+          },
+          "bet_enforce_capital": {
+            "type": "boolean",
+            "title": "Bet Enforce Capital",
+            "default": true
+          },
+          "auto_apply_bet_suggestions": {
+            "type": "boolean",
+            "title": "Auto Apply Bet Suggestions",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "checkpoint",
+          "dataset_id"
+        ],
+        "title": "InferenceStartRequest"
+      },
+      "InferenceStartResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "checkpoint": {
+            "type": "string",
+            "title": "Checkpoint"
+          },
+          "game_capital": {
+            "type": "integer",
+            "title": "Game Capital"
+          },
+          "game_bet": {
+            "type": "integer",
+            "title": "Game Bet"
+          },
+          "current_capital": {
+            "type": "integer",
+            "title": "Current Capital"
+          },
+          "prediction": {
+            "$ref": "#/components/schemas/PredictionResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "checkpoint",
+          "game_capital",
+          "game_bet",
+          "current_capital",
+          "prediction"
+        ],
+        "title": "InferenceStartResponse"
+      },
+      "InferenceStepRequest": {
+        "properties": {
+          "extraction": {
+            "type": "integer",
+            "maximum": 36.0,
+            "minimum": 0.0,
+            "title": "Extraction"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "extraction"
+        ],
+        "title": "InferenceStepRequest"
+      },
+      "InferenceStepResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "step": {
+            "type": "integer",
+            "title": "Step"
+          },
+          "real_extraction": {
+            "type": "integer",
+            "title": "Real Extraction"
+          },
+          "predicted_action": {
+            "type": "integer",
+            "title": "Predicted Action"
+          },
+          "predicted_action_desc": {
+            "type": "string",
+            "title": "Predicted Action Desc"
+          },
+          "reward": {
+            "type": "integer",
+            "title": "Reward"
+          },
+          "capital_after": {
+            "type": "integer",
+            "title": "Capital After"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "step",
+          "real_extraction",
+          "predicted_action",
+          "predicted_action_desc",
+          "reward",
+          "capital_after"
+        ],
+        "title": "InferenceStepResponse"
+      },
+      "JobCancelResponse": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "success",
+          "message"
+        ],
+        "title": "JobCancelResponse"
+      },
+      "JobStartResponse": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "job_type": {
+            "type": "string",
+            "title": "Job Type"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "poll_interval": {
+            "type": "number",
+            "title": "Poll Interval",
+            "default": 1.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "job_type",
+          "status",
+          "message"
+        ],
+        "title": "JobStartResponse"
+      },
+      "JobStatusResponse": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "job_type": {
+            "type": "string",
+            "title": "Job Type"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "progress": {
+            "type": "number",
+            "title": "Progress"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "poll_interval": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Poll Interval"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "job_type",
+          "status",
+          "progress"
+        ],
+        "title": "JobStatusResponse"
+      },
+      "PredictionResponse": {
+        "properties": {
+          "action": {
+            "type": "integer",
+            "title": "Action"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "bet_strategy_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bet Strategy Id"
+          },
+          "bet_strategy_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bet Strategy Name"
+          },
+          "suggested_bet_amount": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggested Bet Amount"
+          },
+          "current_bet_amount": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Bet Amount"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action",
+          "description"
+        ],
+        "title": "PredictionResponse"
+      },
+      "ResumeConfig": {
+        "properties": {
+          "checkpoint": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Checkpoint"
+          },
+          "additional_episodes": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Additional Episodes",
+            "default": 10
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "checkpoint"
+        ],
+        "title": "ResumeConfig",
+        "description": "Configuration for resuming a training session from a checkpoint."
+      },
+      "TrainingCheckpointDeleteResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "message"
+        ],
+        "title": "TrainingCheckpointDeleteResponse"
+      },
+      "TrainingCheckpointListResponse": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array",
+        "title": "TrainingCheckpointListResponse"
+      },
+      "TrainingCheckpointMetadataResponse": {
+        "properties": {
+          "checkpoint": {
+            "type": "string",
+            "title": "Checkpoint"
+          },
+          "summary": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "checkpoint",
+          "summary"
+        ],
+        "title": "TrainingCheckpointMetadataResponse"
+      },
+      "TrainingConfig": {
+        "properties": {
+          "perceptive_field_size": {
+            "type": "integer",
+            "maximum": 1024.0,
+            "minimum": 1.0,
+            "title": "Perceptive Field Size",
+            "default": 64
+          },
+          "qnet_neurons": {
+            "type": "integer",
+            "maximum": 10000.0,
+            "minimum": 1.0,
+            "title": "Qnet Neurons",
+            "default": 64
+          },
+          "embedding_dimensions": {
+            "type": "integer",
+            "minimum": 8.0,
+            "title": "Embedding Dimensions",
+            "default": 200
+          },
+          "exploration_rate": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Exploration Rate",
+            "default": 0.75
+          },
+          "exploration_rate_decay": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Exploration Rate Decay",
+            "default": 0.995
+          },
+          "minimum_exploration_rate": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Minimum Exploration Rate",
+            "default": 0.1
+          },
+          "discount_rate": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Discount Rate",
+            "default": 0.5
+          },
+          "model_update_frequency": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Model Update Frequency",
+            "default": 10
+          },
+          "bet_amount": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Bet Amount",
+            "default": 10
+          },
+          "initial_capital": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Initial Capital",
+            "default": 1000
+          },
+          "dynamic_betting_enabled": {
+            "type": "boolean",
+            "title": "Dynamic Betting Enabled",
+            "default": false
+          },
+          "bet_strategy_model_enabled": {
+            "type": "boolean",
+            "title": "Bet Strategy Model Enabled",
+            "default": false
+          },
+          "bet_strategy_fixed_id": {
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 0.0,
+            "title": "Bet Strategy Fixed Id",
+            "default": 0
+          },
+          "strategy_hold_steps": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Strategy Hold Steps",
+            "default": 1
+          },
+          "bet_unit": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bet Unit"
+          },
+          "bet_max": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bet Max"
+          },
+          "bet_enforce_capital": {
+            "type": "boolean",
+            "title": "Bet Enforce Capital",
+            "default": true
+          },
+          "dataset_id": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          },
+          "use_data_generator": {
+            "type": "boolean",
+            "title": "Use Data Generator",
+            "default": false
+          },
+          "num_generated_samples": {
+            "type": "integer",
+            "minimum": 100.0,
+            "title": "Num Generated Samples",
+            "default": 10000
+          },
+          "sample_size": {
+            "type": "number",
+            "maximum": 1.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Sample Size",
+            "default": 1.0
+          },
+          "validation_size": {
+            "type": "number",
+            "exclusiveMaximum": 1.0,
+            "minimum": 0.0,
+            "title": "Validation Size",
+            "default": 0.2
+          },
+          "seed": {
+            "type": "integer",
+            "title": "Seed",
+            "default": 42
+          },
+          "episodes": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Episodes",
+            "default": 10
+          },
+          "max_steps_episode": {
+            "type": "integer",
+            "minimum": 100.0,
+            "title": "Max Steps Episode",
+            "default": 2000
+          },
+          "batch_size": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Batch Size",
+            "default": 32
+          },
+          "learning_rate": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Learning Rate",
+            "default": 0.0001
+          },
+          "max_memory_size": {
+            "type": "integer",
+            "minimum": 100.0,
+            "title": "Max Memory Size",
+            "default": 10000
+          },
+          "replay_buffer_size": {
+            "type": "integer",
+            "minimum": 100.0,
+            "title": "Replay Buffer Size",
+            "default": 1000
+          },
+          "training_seed": {
+            "type": "integer",
+            "title": "Training Seed",
+            "default": 42
+          },
+          "checkpoint_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checkpoint Name"
+          },
+          "use_device_gpu": {
+            "type": "boolean",
+            "title": "Use Device Gpu",
+            "default": false
+          },
+          "device_id": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Device Id",
+            "default": 0
+          },
+          "use_mixed_precision": {
+            "type": "boolean",
+            "title": "Use Mixed Precision",
+            "default": false
+          },
+          "jit_compile": {
+            "type": "boolean",
+            "title": "Jit Compile",
+            "default": false
+          },
+          "jit_backend": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Jit Backend",
+            "default": "inductor"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "TrainingConfig",
+        "description": "Configuration for starting a new training session."
+      },
+      "TrainingStatusResponse": {
+        "properties": {
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "is_training": {
+            "type": "boolean",
+            "title": "Is Training"
+          },
+          "latest_stats": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Latest Stats"
+          },
+          "history": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "History"
+          },
+          "latest_env": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Latest Env"
+          },
+          "poll_interval": {
+            "type": "number",
+            "title": "Poll Interval"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "is_training",
+          "latest_stats",
+          "history",
+          "latest_env",
+          "poll_interval"
+        ],
+        "title": "TrainingStatusResponse"
+      },
+      "TrainingStopResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "message"
+        ],
+        "title": "TrainingStopResponse"
+      },
+      "UploadResponse": {
+        "properties": {
+          "table": {
+            "type": "string",
+            "enum": [
+              "roulette_series",
+              "inference_context"
+            ],
+            "title": "Table"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "rows_imported": {
+            "type": "integer",
+            "title": "Rows Imported"
+          },
+          "dataset_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          },
+          "dataset_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Name"
+          },
+          "dataset_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Kind"
+          },
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Columns"
+          }
+        },
+        "type": "object",
+        "required": [
+          "table",
+          "filename",
+          "rows_imported",
+          "dataset_id",
+          "dataset_name",
+          "dataset_kind",
+          "columns"
+        ],
+        "title": "UploadResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

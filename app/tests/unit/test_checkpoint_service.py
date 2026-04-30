@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from FAIRS.server.common import checkpoints as checkpoint_common
-from FAIRS.server.services.checkpoints import CheckpointService
+from server.common import checkpoints as checkpoint_common
+from server.services.checkpoints import CheckpointService
 
 
 class DummyModelSerializer:

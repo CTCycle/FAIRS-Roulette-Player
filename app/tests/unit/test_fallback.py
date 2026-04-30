@@ -31,7 +31,7 @@ class DummySerializer:
 
 def test_fallback_strategy_is_deterministic_when_model_disabled() -> None:
     os.environ.setdefault("KERAS_BACKEND", "torch")
-    from FAIRS.server.learning.inference.player import RoulettePlayer
+    from server.learning.inference.player import RoulettePlayer
 
     config = {
         "seed": 42,
@@ -61,7 +61,7 @@ def test_fallback_strategy_is_deterministic_when_model_disabled() -> None:
 
 def test_predict_next_raises_when_model_returns_empty_logits() -> None:
     os.environ.setdefault("KERAS_BACKEND", "torch")
-    from FAIRS.server.learning.inference.player import RoulettePlayer
+    from server.learning.inference.player import RoulettePlayer
 
     config = {
         "seed": 42,
@@ -83,7 +83,7 @@ def test_predict_next_raises_when_model_returns_empty_logits() -> None:
 
 def test_predict_next_requires_minimum_context_length() -> None:
     os.environ.setdefault("KERAS_BACKEND", "torch")
-    from FAIRS.server.learning.inference.player import RoulettePlayer
+    from server.learning.inference.player import RoulettePlayer
 
     config = {
         "seed": 42,
@@ -107,7 +107,7 @@ def test_predict_next_requires_minimum_context_length() -> None:
 
 def test_update_with_true_extraction_validates_input() -> None:
     os.environ.setdefault("KERAS_BACKEND", "torch")
-    from FAIRS.server.learning.inference.player import RoulettePlayer
+    from server.learning.inference.player import RoulettePlayer
 
     config = {
         "seed": 42,

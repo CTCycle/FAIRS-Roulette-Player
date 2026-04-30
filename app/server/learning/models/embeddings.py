@@ -5,7 +5,7 @@ from typing import Any
 import keras
 from keras import layers
 
-from FAIRS.server.common.constants import PAD_VALUE
+from server.common.constants import PAD_VALUE
 
 
 ###############################################################################

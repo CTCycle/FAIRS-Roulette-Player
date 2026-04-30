@@ -6,7 +6,7 @@ from typing import Any, cast
 
 import pandas as pd
 
-from FAIRS.server.common.constants import (
+from server.common.constants import (
     DATASETS_COLUMNS,
     DATASETS_TABLE,
     DATASET_OUTCOMES_COLUMNS,
@@ -17,8 +17,8 @@ from FAIRS.server.common.constants import (
     INFERENCE_SESSION_STEPS_COLUMNS,
     INFERENCE_SESSION_STEPS_TABLE,
 )
-from FAIRS.server.repositories.database.utils import normalize_datetime_value
-from FAIRS.server.repositories.queries.data import DataRepositoryQueries
+from server.repositories.database.utils import normalize_datetime_value
+from server.repositories.queries.data import DataRepositoryQueries
 
 MAX_DATASET_NAME_LENGTH = 128
 

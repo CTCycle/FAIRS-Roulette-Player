@@ -12,12 +12,12 @@ from typing import Any
 
 from collections.abc import Callable
 
-from FAIRS.server.common.utils.logger import logger
-from FAIRS.server.learning.training.device import DeviceConfig
-from FAIRS.server.learning.training.fitting import DQNTraining
-from FAIRS.server.learning.models.qnet import FAIRSnet
-from FAIRS.server.learning.models.strategy import StrategyNet
-from FAIRS.server.learning.training.serializer import (
+from server.common.utils.logger import logger
+from server.learning.training.device import DeviceConfig
+from server.learning.training.fitting import DQNTraining
+from server.learning.models.qnet import FAIRSnet
+from server.learning.models.strategy import StrategyNet
+from server.learning.training.serializer import (
     DataSerializerExtension,
     ModelSerializer,
 )

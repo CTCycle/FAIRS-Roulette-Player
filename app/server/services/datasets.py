@@ -2,15 +2,15 @@ from __future__ import annotations
 
 import os
 
-from FAIRS.server.domain.database import (
+from server.domain.database import (
     DatasetDeleteResponse,
     DatasetListResponse,
     DatasetSummaryResponse,
 )
-from FAIRS.server.domain.upload import UploadRequest, UploadResponse
-from FAIRS.server.repositories.serialization.data import DataSerializer
-from FAIRS.server.services.importer import DatasetImportService
-from FAIRS.server.services.loader import TabularFileLoader
+from server.domain.upload import UploadRequest, UploadResponse
+from server.repositories.serialization.data import DataSerializer
+from server.services.importer import DatasetImportService
+from server.services.loader import TabularFileLoader
 
 ALLOWED_CSV_SEPARATORS = {",", ";", "\t", "|"}
 MAX_UPLOAD_SIZE_BYTES = 25 * 1024 * 1024
