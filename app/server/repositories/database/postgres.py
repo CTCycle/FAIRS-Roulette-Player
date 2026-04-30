@@ -7,12 +7,12 @@ import sqlalchemy
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
 
-from FAIRS.server.configurations import DatabaseSettings
-from FAIRS.server.repositories.database.common import (
+from server.configurations import DatabaseSettings
+from server.repositories.database.common import (
     SQLAlchemyRepositoryBase,
     normalize_table_name as normalize_table_name,
 )
-from FAIRS.server.repositories.database.utils import normalize_postgres_engine
+from server.repositories.database.utils import normalize_postgres_engine
 
 
 ###############################################################################

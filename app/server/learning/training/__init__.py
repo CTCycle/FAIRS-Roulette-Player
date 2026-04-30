@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from FAIRS.server.learning.training.device import DeviceConfig
-from FAIRS.server.learning.training.generator import RouletteSyntheticGenerator
-from FAIRS.server.learning.training.serializer import ModelSerializer
-from FAIRS.server.learning.training.environment import (
+from server.learning.training.device import DeviceConfig
+from server.learning.training.generator import RouletteSyntheticGenerator
+from server.learning.training.serializer import ModelSerializer
+from server.learning.training.environment import (
     BetsAndRewards,
     RouletteEnvironment,
 )
-from FAIRS.server.learning.training.agents import DQNAgent
-from FAIRS.server.learning.training.fitting import DQNTraining
+from server.learning.training.agents import DQNAgent
+from server.learning.training.fitting import DQNTraining
 
 __all__ = [
     "DeviceConfig",

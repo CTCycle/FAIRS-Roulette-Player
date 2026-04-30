@@ -4,8 +4,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from FAIRS.server.domain.training import ResumeConfig, TrainingConfig
-from FAIRS.server.services.training import TrainingService
+from server.domain.training import ResumeConfig, TrainingConfig
+from server.services.training import TrainingService
 
 
 def build_service() -> tuple[TrainingService, Mock, Mock]:

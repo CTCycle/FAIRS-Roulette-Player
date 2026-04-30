@@ -9,9 +9,9 @@ from typing import Any
 import numpy as np
 from keras import Model
 
-from FAIRS.server.common.constants import PAD_VALUE, STATES
-from FAIRS.server.learning.betting.types import STRATEGY_COUNT
-from FAIRS.server.learning.training.environment import RouletteEnvironment
+from server.common.constants import PAD_VALUE, STATES
+from server.learning.betting.types import STRATEGY_COUNT
+from server.learning.training.environment import RouletteEnvironment
 
 
 ###############################################################################

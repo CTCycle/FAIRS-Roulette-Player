@@ -6,9 +6,9 @@ import pandas as pd
 from sqlalchemy import UniqueConstraint, and_, delete, inspect, or_, select, tuple_
 from sqlalchemy.orm import Session, sessionmaker
 
-from FAIRS.server.common.utils.logger import logger
-from FAIRS.server.repositories.database.utils import coerce_value_for_sql_column
-from FAIRS.server.repositories.schemas.models import Base, get_model_class_for_table
+from server.common.utils.logger import logger
+from server.repositories.database.utils import coerce_value_for_sql_column
+from server.repositories.schemas.models import Base, get_model_class_for_table
 
 ALLOWED_TABLE_NAMES = frozenset(Base.metadata.tables.keys())
 

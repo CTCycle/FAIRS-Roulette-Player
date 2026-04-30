@@ -4,11 +4,11 @@ import os
 import shutil
 from typing import Any
 
-from FAIRS.server.common.checkpoints import (
+from server.common.checkpoints import (
     normalize_checkpoint_identifier,
     resolve_checkpoint_path,
 )
-from FAIRS.server.repositories.serialization.model import ModelSerializer
+from server.repositories.serialization.model import ModelSerializer
 
 
 ###############################################################################

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from FAIRS.server.common.checkpoints import (
+from server.common.checkpoints import (
     MAX_CHECKPOINT_NAME_LENGTH,
     normalize_checkpoint_identifier,
 )

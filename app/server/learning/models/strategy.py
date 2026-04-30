@@ -4,10 +4,10 @@ from typing import Any
 
 from keras import Model, layers, losses, metrics, optimizers
 
-from FAIRS.server.common.constants import NUMBERS
-from FAIRS.server.learning.betting.types import STRATEGY_COUNT
-from FAIRS.server.learning.models.embeddings import RouletteEmbedding
-from FAIRS.server.learning.models.logits import AddNorm, BatchNormDense, QScoreNet
+from server.common.constants import NUMBERS
+from server.learning.betting.types import STRATEGY_COUNT
+from server.learning.models.embeddings import RouletteEmbedding
+from server.learning.models.logits import AddNorm, BatchNormDense, QScoreNet
 
 
 ###############################################################################

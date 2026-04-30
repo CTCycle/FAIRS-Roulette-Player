@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import pandas as pd
 
-from FAIRS.server.common.constants import (
+from server.common.constants import (
     INFERENCE_CONTEXT_TABLE,
     DATASET_OUTCOMES_WRITE_COLUMNS,
     ROULETTE_SERIES_TABLE,
 )
-from FAIRS.server.domain.upload import DatasetTable
-from FAIRS.server.repositories.serialization.data import DataSerializer
+from server.domain.upload import DatasetTable
+from server.repositories.serialization.data import DataSerializer
 
 
 ###############################################################################

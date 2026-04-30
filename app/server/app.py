@@ -8,28 +8,28 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from FAIRS.server.common.constants import (
+from server.common.constants import (
     FASTAPI_DESCRIPTION,
     FASTAPI_TITLE,
     FASTAPI_VERSION,
 )
-from FAIRS.server.repositories.database.initializer import (
+from server.repositories.database.initializer import (
     initialize_sqlite_on_startup_if_missing,
 )
-from FAIRS.server.repositories.database.backend import FAIRSDatabase
-from FAIRS.server.repositories.queries.data import DataRepositoryQueries
-from FAIRS.server.repositories.serialization.data import DataSerializer
-from FAIRS.server.api.database import router as database_router
-from FAIRS.server.api.inference import router as inference_router
-from FAIRS.server.api.training import router as training_router
-from FAIRS.server.api.upload import router as upload_router
-from FAIRS.server.services.checkpoints import CheckpointService
-from FAIRS.server.services.datasets import DatasetService
-from FAIRS.server.services.importer import DatasetImportService
-from FAIRS.server.services.inference import InferenceService
-from FAIRS.server.services.jobs import create_job_manager
-from FAIRS.server.services.loader import TabularFileLoader
-from FAIRS.server.services.training import TrainingService
+from server.repositories.database.backend import FAIRSDatabase
+from server.repositories.queries.data import DataRepositoryQueries
+from server.repositories.serialization.data import DataSerializer
+from server.api.database import router as database_router
+from server.api.inference import router as inference_router
+from server.api.training import router as training_router
+from server.api.upload import router as upload_router
+from server.services.checkpoints import CheckpointService
+from server.services.datasets import DatasetService
+from server.services.importer import DatasetImportService
+from server.services.inference import InferenceService
+from server.services.jobs import create_job_manager
+from server.services.loader import TabularFileLoader
+from server.services.training import TrainingService
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 

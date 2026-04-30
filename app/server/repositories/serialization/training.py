@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from FAIRS.server.repositories.queries.training import TrainingRepositoryQueries
+from server.repositories.queries.training import TrainingRepositoryQueries
 
 
 ###############################################################################

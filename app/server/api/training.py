@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from FAIRS.server.common.api_errors import (
+from server.common.api_errors import (
     ExceptionStatusMap,
     http_exception_for_exception,
 )
-from FAIRS.server.configurations.dependencies import get_training_service
-from FAIRS.server.domain.jobs import JobCancelResponse, JobStartResponse, JobStatusResponse
-from FAIRS.server.domain.training import (
+from server.configurations.dependencies import get_training_service
+from server.domain.jobs import JobCancelResponse, JobStartResponse, JobStatusResponse
+from server.domain.training import (
     TrainingCheckpointListResponse,
     ResumeConfig,
     TrainingCheckpointDeleteResponse,
@@ -17,7 +17,7 @@ from FAIRS.server.domain.training import (
     TrainingStatusResponse,
     TrainingStopResponse,
 )
-from FAIRS.server.services.training import TrainingService
+from server.services.training import TrainingService
 
 
 router = APIRouter(prefix="/training", tags=["training"])

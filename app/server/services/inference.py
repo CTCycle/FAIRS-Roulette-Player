@@ -5,15 +5,15 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from FAIRS.server.domain.inference import (
+from server.domain.inference import (
     InferenceBetUpdateRequest,
     InferenceStartRequest,
     InferenceStepRequest,
 )
-from FAIRS.server.learning.inference.player import RoulettePlayer
-from FAIRS.server.learning.training.device import DeviceConfig
-from FAIRS.server.repositories.serialization.data import DataSerializer
-from FAIRS.server.services.checkpoints import CheckpointService
+from server.learning.inference.player import RoulettePlayer
+from server.learning.training.device import DeviceConfig
+from server.repositories.serialization.data import DataSerializer
+from server.services.checkpoints import CheckpointService
 
 
 ###############################################################################

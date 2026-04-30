@@ -4,12 +4,12 @@ from unittest.mock import Mock
 
 import pytest
 
-from FAIRS.server.domain.inference import (
+from server.domain.inference import (
     InferenceBetUpdateRequest,
     InferenceStartRequest,
     InferenceStepRequest,
 )
-from FAIRS.server.services.inference import InferenceService
+from server.services.inference import InferenceService
 
 
 class FakePlayer:
@@ -49,8 +49,8 @@ def build_service(monkeypatch) -> tuple[InferenceService, Mock]:
     )
     checkpoint_service.model_serializer.load_strategy_model.return_value = None
 
-    monkeypatch.setattr("FAIRS.server.services.inference.RoulettePlayer", FakePlayer)
-    monkeypatch.setattr("FAIRS.server.services.inference.DeviceConfig", FakeDeviceConfig)
+    monkeypatch.setattr("server.services.inference.RoulettePlayer", FakePlayer)
+    monkeypatch.setattr("server.services.inference.DeviceConfig", FakeDeviceConfig)
 
     service = InferenceService(serializer=serializer, checkpoint_service=checkpoint_service)
     return service, serializer

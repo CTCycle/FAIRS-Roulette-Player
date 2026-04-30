@@ -4,12 +4,12 @@ from numbers import Integral
 
 import pandas as pd
 
-from FAIRS.server.common.constants import (
+from server.common.constants import (
     DATASETS_TABLE,
     DATASET_OUTCOMES_TABLE,
     ROULETTE_OUTCOMES_TABLE,
 )
-from FAIRS.server.repositories.database.backend import FAIRSDatabase
+from server.repositories.database.backend import FAIRSDatabase
 
 
 ###############################################################################

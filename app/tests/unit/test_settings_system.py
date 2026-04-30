@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from FAIRS.server.configurations import environment, startup
+from server.configurations import environment, startup
 
 
 ###############################################################################
@@ -107,7 +107,7 @@ def test_server_package_import_loads_environment_early(
     monkeypatch.setattr(environment, "ENV_FILE_PATH", str(env_path))
     monkeypatch.setenv("KERAS_BACKEND", "tensorflow")
 
-    import FAIRS.server as server_package
+    import server as server_package
 
     importlib.reload(server_package)
 

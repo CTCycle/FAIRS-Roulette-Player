@@ -169,8 +169,8 @@ fn render_startup_error(app_handle: &tauri::AppHandle, message: &str) {
 }
 
 fn is_workspace_root(candidate: &Path) -> bool {
-    candidate.join("pyproject.toml").is_file()
-        && candidate.join("FAIRS").join("server").join("app.py").is_file()
+    candidate.join("app").join("server").join("pyproject.toml").is_file()
+        && candidate.join("app").join("server").join("app.py").is_file()
 }
 
 fn has_workspace_venv(candidate: &Path) -> bool {
@@ -190,10 +190,7 @@ fn runtime_python_exe(root: &Path) -> PathBuf {
 }
 
 fn runtime_venv_python(root: &Path) -> PathBuf {
-    root.join("runtimes")
-        .join(".venv")
-        .join("Scripts")
-        .join("python.exe")
+    root.join("app").join("server").join(".venv").join("Scripts").join("python.exe")
 }
 
 fn format_checked_paths(paths: &[PathBuf]) -> String {
@@ -273,7 +270,7 @@ fn find_workspace_root(app_handle: &tauri::AppHandle) -> Result<PathBuf, String>
     let checked_paths = format_checked_paths(&checked_candidates);
 
     Err(format!(
-        "Cannot resolve packaged backend workspace. Expected a root containing pyproject.toml and FAIRS/server/app.py.\nChecked paths:\n{checked_paths}"
+        "Cannot resolve packaged backend workspace. Expected a root containing app/server/pyproject.toml and app/server/app.py.\nChecked paths:\n{checked_paths}"
     ))
 }
 
@@ -358,7 +355,7 @@ fn python_module_available(python_exe: &Path, workspace_root: &Path, module: &st
     configure_background_command(&mut command);
     command
         .args(["-c", &format!("import {module}")])
-        .current_dir(workspace_root)
+        .current_dir(workspace_root.join("app").join("server"))
         .stdout(Stdio::null())
         .stderr(Stdio::null());
 
@@ -384,13 +381,13 @@ fn spawn_backend(app_handle: &tauri::AppHandle, state: &BackendChildState) -> Re
     {
         let workspace_root = find_workspace_root(app_handle)?;
         let runtime_root = resolve_runtime_root(app_handle, &workspace_root)?;
-        let project_dir = workspace_root.join("FAIRS");
-        let env_path = project_dir.join("settings").join(".env");
+        let project_dir = workspace_root.join("app");
+        let env_path = workspace_root.join("settings").join(".env");
         let backend_config = resolve_backend_launch_config(&env_path);
         let uv_exe = runtime_uv_exe(&workspace_root);
         let python_exe = runtime_python_exe(&workspace_root);
         let runtime_state_root = runtime_root.join("runtimes");
-        let venv_dir = runtime_state_root.join(".venv");
+        let venv_dir = runtime_root.join("app").join("server").join(".venv");
         let venv_python_exe = runtime_venv_python(&runtime_root);
         let uv_cache_dir = runtime_state_root.join(".uv-cache");
 
@@ -450,7 +447,7 @@ fn spawn_backend(app_handle: &tauri::AppHandle, state: &BackendChildState) -> Re
             configure_background_command(&mut embedded_sync_command);
             embedded_sync_command
                 .args(sync_with_embedded_args.iter().map(|s| s.as_str()))
-                .current_dir(&workspace_root)
+                .current_dir(workspace_root.join("app").join("server"))
                 .env("UV_PROJECT_ENVIRONMENT", &venv_dir_str)
                 .env("UV_CACHE_DIR", &uv_cache_dir_str)
                 .stdout(Stdio::null())
@@ -467,7 +464,7 @@ fn spawn_backend(app_handle: &tauri::AppHandle, state: &BackendChildState) -> Re
                 configure_background_command(&mut fallback_sync_command);
                 fallback_sync_command
                     .args(sync_args.iter().map(|s| s.as_str()))
-                    .current_dir(&workspace_root)
+                    .current_dir(workspace_root.join("app").join("server"))
                     .env("UV_PROJECT_ENVIRONMENT", &venv_dir_str)
                     .env("UV_CACHE_DIR", &uv_cache_dir_str)
                     .stdout(Stdio::null())
@@ -503,7 +500,7 @@ fn spawn_backend(app_handle: &tauri::AppHandle, state: &BackendChildState) -> Re
         configure_background_command(&mut child_command);
         child_command.arg("-m").arg("uvicorn");
         child_command
-            .arg("FAIRS.server.app:app")
+            .arg("server.app:app")
             .arg("--host")
             .arg(&backend_host)
             .arg("--port")
@@ -515,7 +512,7 @@ fn spawn_backend(app_handle: &tauri::AppHandle, state: &BackendChildState) -> Re
         }
 
         let child = child_command
-            .current_dir(&workspace_root)
+            .current_dir(workspace_root.join("app").join("server"))
             .env("FAIRS_TAURI_MODE", "true")
             .env("MPLBACKEND", mpl_backend)
             .env("KERAS_BACKEND", keras_backend)

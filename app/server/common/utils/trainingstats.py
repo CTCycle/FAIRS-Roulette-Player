@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 from typing import Any
 
-from FAIRS.server.common.utils.types import coerce_finite_int
+from server.common.utils.types import coerce_finite_int
 
 TRAINING_METRIC_KEYS = (
     "loss",
