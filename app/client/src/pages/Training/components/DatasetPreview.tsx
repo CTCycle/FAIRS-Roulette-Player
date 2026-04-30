@@ -1,0 +1,683 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import { Database, Play, RefreshCw, X } from 'lucide-react';
+import type { TrainingNewConfig } from '../../../context/AppStateContext';
+import { useAppState } from '../../../hooks/useAppState';
+import { useWizardStep } from '../../../hooks/useWizardStep';
+import { buildTrainingPayload, validateTrainingConfig, validateTrainingStep } from './trainingPayload';
+import { WizardActions } from './WizardActions';
+import { parseApiErrorDetail } from '../../../utils/apiParsers';
+import { parseDatasetSummaryItems } from '../../../utils/frontendApiParsers';
+import { WizardSummaryRows, type WizardSummaryRow } from '../../../components/wizard/WizardSummaryRows';
+
+interface DatasetPreviewProps {
+    refreshKey: number;
+    onDelete?: () => void;
+}
+
+interface DatasetSummary {
+    datasetId: string;
+    name: string;
+    rowCount: number | null;
+}
+
+const WIZARD_STEPS = [
+    'Agent Configuration',
+    'Environment & Memory',
+    'Bet Strategy Policy',
+    'Dataset Configuration',
+    'Session & Compute',
+    'Summary',
+] as const;
+
+const BET_STRATEGY_OPTIONS = [
+    { id: 0, name: 'Keep' },
+    { id: 1, name: 'Martingale' },
+    { id: 2, name: 'Reverse' },
+    { id: 3, name: "D'Alembert" },
+    { id: 4, name: 'Fibonacci' },
+] as const;
+
+export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
+    refreshKey,
+    onDelete,
+}) => {
+    const { state, dispatch } = useAppState();
+    const { newConfig, isTraining } = state.training;
+    const [datasets, setDatasets] = useState<DatasetSummary[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const [wizardOpen, setWizardOpen] = useState(false);
+    const {
+        step: wizardStep,
+        isFirstStep: isFirstWizardStep,
+        isLastStep: isLastWizardStep,
+        goToPreviousStep: goToPreviousWizardStep,
+        goToNextStep: goToNextWizardStep,
+        resetStep: resetWizardStep,
+    } = useWizardStep({ totalSteps: WIZARD_STEPS.length });
+    const [wizardDatasetId, setWizardDatasetId] = useState<string | null>(null);
+    const [wizardDatasetLabel, setWizardDatasetLabel] = useState<string | null>(null);
+    const [wizardError, setWizardError] = useState<string | null>(null);
+    const [wizardSubmitting, setWizardSubmitting] = useState(false);
+
+    const loadDatasets = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await fetch('/api/database/roulette-series/datasets/summary');
+            if (!response.ok) {
+                throw new Error('Failed to load dataset summary');
+            }
+            const data = await response.json();
+            const datasetList = parseDatasetSummaryItems(data)
+                .map((entry) => ({
+                    datasetId: entry.datasetId,
+                    name: entry.datasetName,
+                    rowCount: entry.rowCount,
+                }))
+                .filter((entry) =>
+                    entry.datasetId.trim().length > 0 && entry.name.trim().length > 0
+                );
+            setDatasets(datasetList);
+        } catch {
+            setError('Unable to load datasets.');
+            setDatasets([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        void loadDatasets();
+    }, [refreshKey]);
+
+    const updateNewConfig = (updates: Partial<TrainingNewConfig>) => {
+        dispatch({ type: 'SET_TRAINING_NEW_CONFIG', payload: updates });
+    };
+
+    const isTrainingNewConfigKey = (value: string): value is keyof TrainingNewConfig => {
+        return Object.prototype.hasOwnProperty.call(newConfig, value);
+    };
+
+    const updateNewConfigField = <K extends keyof TrainingNewConfig>(
+        name: K,
+        value: TrainingNewConfig[K],
+    ) => {
+        const payload: Pick<TrainingNewConfig, K> = { [name]: value } as Pick<TrainingNewConfig, K>;
+        updateNewConfig(payload);
+    };
+
+    const handleInputChange = (
+        event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+    ) => {
+        const target = event.target;
+        if (!isTrainingNewConfigKey(target.name)) {
+            return;
+        }
+
+        const key = target.name;
+        const currentValue = newConfig[key];
+
+        if (target instanceof HTMLInputElement && target.type === 'checkbox') {
+            if (typeof currentValue === 'boolean') {
+                updateNewConfigField(key, target.checked as TrainingNewConfig[typeof key]);
+            }
+            return;
+        }
+
+        if (typeof currentValue === 'number') {
+            updateNewConfigField(key, Number(target.value) as TrainingNewConfig[typeof key]);
+            return;
+        }
+
+        updateNewConfigField(key, target.value as TrainingNewConfig[typeof key]);
+    };
+
+    const handleNumberChange = (name: keyof TrainingNewConfig, value: number) => {
+        if (typeof newConfig[name] === 'number') {
+            updateNewConfigField(name, value as TrainingNewConfig[typeof name]);
+        }
+    };
+
+    const handleDelete = async (datasetId: string) => {
+        try {
+            const response = await fetch(`/api/database/roulette-series/datasets/${encodeURIComponent(datasetId)}`, {
+                method: 'DELETE',
+            });
+            if (!response.ok) {
+                throw new Error('Failed to delete dataset');
+            }
+            await loadDatasets();
+            onDelete?.();
+        } catch {
+            setError('Failed to delete dataset.');
+        }
+    };
+
+    const handleRefreshDatasets = async () => {
+        await loadDatasets();
+    };
+
+    const openWizard = (
+        datasetId: string | null,
+        datasetLabel: string,
+        isGenerator = false,
+    ) => {
+        if (isTraining) {
+            setError('Training is already in progress.');
+            return;
+        }
+        setError(null);
+        setWizardDatasetId(datasetId);
+        setWizardDatasetLabel(datasetLabel);
+        resetWizardStep();
+        setWizardError(null);
+        setWizardOpen(true);
+        if (isGenerator) {
+            updateNewConfig({ useDataGen: true });
+        } else {
+            updateNewConfig({ useDataGen: false });
+        }
+    };
+
+    const closeWizard = () => {
+        if (wizardSubmitting) {
+            return;
+        }
+        setWizardOpen(false);
+        setWizardDatasetId(null);
+        setWizardDatasetLabel(null);
+        resetWizardStep();
+        setWizardError(null);
+    };
+
+    const handleStartTraining = async () => {
+        if (isTraining) {
+            setWizardError('Training is already in progress.');
+            return;
+        }
+        const validationError = validateTrainingConfig(newConfig, wizardDatasetId ?? undefined);
+        if (validationError) {
+            setWizardError(validationError);
+            return;
+        }
+
+        const config = buildTrainingPayload(newConfig, wizardDatasetId ?? undefined);
+        setWizardSubmitting(true);
+        setWizardError(null);
+
+        try {
+            const response = await fetch('/api/training/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(config),
+            });
+
+            if (!response.ok) {
+                const errorPayload = await response.json().catch(() => null);
+                setWizardError(`Failed to start training: ${parseApiErrorDetail(errorPayload, 'Unknown error')}`);
+                return;
+            }
+
+            dispatch({ type: 'SET_TRAINING_IS_TRAINING', payload: true });
+            closeWizard();
+        } catch {
+            setWizardError('Failed to connect to training server');
+        } finally {
+            setWizardSubmitting(false);
+        }
+    };
+
+    const handleNextWizardStep = () => {
+        const validationError = validateTrainingStep(newConfig, wizardDatasetId ?? undefined, wizardStep);
+        if (validationError) {
+            setWizardError(validationError);
+            return;
+        }
+        setWizardError(null);
+        goToNextWizardStep();
+    };
+
+    const formatRowCount = (rowCount: number | null) => {
+        if (rowCount === null) {
+            return 'Rows: --';
+        }
+        return `${rowCount.toLocaleString()} rows`;
+    };
+
+    const sampleSizeValue = Number(newConfig.trainSampleSize);
+    const validationValue = Number(newConfig.validationSize);
+
+    const summaryRows = useMemo<WizardSummaryRow[]>(() => ([
+        { label: 'Dataset', value: wizardDatasetLabel ?? '-' },
+        { label: 'Checkpoint Name', value: newConfig.checkpointName.trim() || 'Auto-generated' },
+        { label: 'Perceptive Field', value: newConfig.perceptiveField },
+        { label: 'QNet Neurons', value: newConfig.numNeurons },
+        { label: 'Embedding Dims', value: newConfig.embeddingDims },
+        { label: 'Update Freq', value: newConfig.modelUpdateFreq },
+        { label: 'Explore Rate', value: newConfig.explorationRate },
+        { label: 'Decay', value: newConfig.explorationRateDecay },
+        { label: 'Min Explore Rate', value: newConfig.minExplorationRate },
+        { label: 'Discount Rate', value: newConfig.discountRate },
+        { label: 'Bet Amount', value: newConfig.betAmount },
+        { label: 'Initial Capital', value: newConfig.initialCapital },
+        { label: 'Max Memory', value: newConfig.maxMemorySize },
+        { label: 'Replay Buffer', value: newConfig.replayBufferSize },
+        { label: 'Dynamic Betting', value: newConfig.dynamicBettingEnabled ? 'Enabled' : 'Disabled' },
+        { label: 'Strategy Model', value: newConfig.betStrategyModelEnabled ? 'Enabled' : 'Disabled' },
+        {
+            label: 'Fixed Strategy',
+            value: BET_STRATEGY_OPTIONS.find((option) => option.id === Number(newConfig.betStrategyFixedId))?.name ?? 'Keep',
+        },
+        { label: 'Strategy Hold Steps', value: newConfig.strategyHoldSteps },
+        { label: 'Bet Unit', value: newConfig.betUnitEnabled ? newConfig.betUnit : 'Default (base bet)' },
+        { label: 'Bet Max', value: newConfig.betMaxEnabled ? newConfig.betMax : 'Auto' },
+        { label: 'Cap By Capital', value: newConfig.betEnforceCapital ? 'Yes' : 'No' },
+        { label: 'Sample Size', value: sampleSizeValue },
+        { label: 'Validation Split', value: validationValue },
+        { label: 'Split Seed', value: newConfig.splitSeed },
+        { label: 'Episodes', value: newConfig.episodes },
+        { label: 'Max Steps', value: newConfig.maxStepsEpisode },
+        { label: 'Batch Size', value: newConfig.batchSize },
+        { label: 'Learning Rate', value: newConfig.learningRate },
+        { label: 'Training Seed', value: newConfig.trainingSeed },
+        { label: 'Use GPU', value: newConfig.deviceGPU ? 'Yes' : 'No' },
+        { label: 'Mixed Precision', value: newConfig.useMixedPrecision ? 'Yes' : 'No' },
+    ]), [
+        newConfig,
+        sampleSizeValue,
+        validationValue,
+        wizardDatasetLabel,
+    ]);
+
+    return (
+        <div className="dataset-preview">
+            <div className="preview-header">
+                <Database size={18} />
+                <span>Available Datasets</span>
+                <div className="preview-header-actions">
+                    <button
+                        className="preview-row-icon preview-header-refresh"
+                        onClick={handleRefreshDatasets}
+                        title="Refresh datasets"
+                        disabled={loading}
+                    >
+                        <RefreshCw size={16} />
+                    </button>
+                    <button
+                        className="use-generator-btn"
+                        onClick={() => openWizard(null, 'Synthetic Data', true)}
+                        title="Start training with synthetic data generator"
+                        disabled={isTraining}
+                    >
+                        <Play size={16} />
+                        Use generator
+                    </button>
+                </div>
+            </div>
+            <div className="preview-content">
+                {loading && <div className="preview-loading">Loading...</div>}
+                {error && <div className="preview-error">{error}</div>}
+                {!loading && !error && datasets.length === 0 && (
+                    <div className="preview-empty">No datasets available</div>
+                )}
+                {!loading && !error && datasets.length > 0 && (
+                    <div className="preview-list">
+                        {datasets.slice(0, 6).map((dataset) => (
+                            <div key={dataset.datasetId} className="preview-row">
+                                <span className="preview-row-name">{dataset.name}</span>
+                                <span className="preview-row-spacer" />
+                                <span className="preview-row-count">{formatRowCount(dataset.rowCount)}</span>
+                                <button
+                                    className="preview-row-icon preview-row-icon-start"
+                                    onClick={() => openWizard(dataset.datasetId, dataset.name)}
+                                    title="Configure training with this dataset"
+                                    disabled={isTraining}
+                                >
+                                    <Play size={16} />
+                                </button>
+                                <button
+                                    className="preview-row-delete"
+                                    onClick={() => handleDelete(dataset.datasetId)}
+                                    title="Remove dataset"
+                                >
+                                    <X size={16} />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {wizardOpen && (
+                <div className="wizard-modal-overlay">
+                    <div
+                        className="wizard-modal"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="new-training-wizard-title"
+                    >
+                        <div className="wizard-modal-header">
+                            <div id="new-training-wizard-title" className="wizard-modal-title">
+                                <Play size={18} />
+                                New Training Wizard
+                            </div>
+                            <button className="wizard-modal-close" onClick={closeWizard} title="Close">
+                                <X size={16} />
+                            </button>
+                        </div>
+                        <div className="wizard-modal-subtitle">
+                            <span>{newConfig.useDataGen ? 'Mode: Synthetic Generator' : `Dataset: ${wizardDatasetLabel}`}</span>
+                            <span>{`Step ${wizardStep + 1} of ${WIZARD_STEPS.length}`}</span>
+                        </div>
+                        <div className="wizard-step-title">
+                            {wizardStep === 3 && newConfig.useDataGen ? 'Generator Parameters' : WIZARD_STEPS[wizardStep]}
+                        </div>
+                        <div className="wizard-step-content">
+                            {wizardStep === 0 && (
+                                <div className="wizard-grid wizard-grid-2x4">
+                                    <div className="form-group">
+                                        <label className="form-label">Perceptive Field</label>
+                                        <input type="number" name="perceptiveField" value={newConfig.perceptiveField} onChange={handleInputChange} className="form-input" max="1024" />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">QNet Neurons</label>
+                                        <input type="number" name="numNeurons" value={newConfig.numNeurons} onChange={handleInputChange} className="form-input" max="10000" />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Embedding Dims</label>
+                                        <input type="number" name="embeddingDims" value={newConfig.embeddingDims} onChange={handleInputChange} className="form-input" step="8" max="9999" />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Update Freq</label>
+                                        <input type="number" name="modelUpdateFreq" value={newConfig.modelUpdateFreq} onChange={handleInputChange} className="form-input" max="1000" />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Explore Rate</label>
+                                        <input type="number" name="explorationRate" value={newConfig.explorationRate} onChange={handleInputChange} className="form-input" step="0.01" max="1.0" />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Decay</label>
+                                        <input type="number" name="explorationRateDecay" value={newConfig.explorationRateDecay} onChange={handleInputChange} className="form-input" step="0.001" max="1.0" />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Min Explore Rate</label>
+                                        <input type="number" name="minExplorationRate" value={newConfig.minExplorationRate} onChange={handleInputChange} className="form-input" step="0.01" max="1.0" />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Discount Rate</label>
+                                        <input type="number" name="discountRate" value={newConfig.discountRate} onChange={handleInputChange} className="form-input" step="0.01" max="1.0" />
+                                    </div>
+                                </div>
+                            )}
+
+                            {wizardStep === 1 && (
+                                <div className="wizard-grid wizard-grid-2x2">
+                                    <div className="form-group">
+                                        <label className="form-label">Bet Amount</label>
+                                        <input type="number" name="betAmount" value={newConfig.betAmount} onChange={handleInputChange} className="form-input" min="1" />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Initial Capital</label>
+                                        <input type="number" name="initialCapital" value={newConfig.initialCapital} onChange={handleInputChange} className="form-input" min="1" />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Max Memory</label>
+                                        <input type="number" name="maxMemorySize" value={newConfig.maxMemorySize} onChange={handleInputChange} className="form-input" min="100" />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Replay Buffer</label>
+                                        <input type="number" name="replayBufferSize" value={newConfig.replayBufferSize} onChange={handleInputChange} className="form-input" min="100" />
+                                    </div>
+                                </div>
+                            )}
+
+                            {wizardStep === 2 && (
+                                <div className="wizard-stack">
+                                    <div className="wizard-topic-panel">
+                                        <div className="wizard-topic-title">Strategy Selection</div>
+                                        <div className="wizard-grid wizard-grid-2x2">
+                                            <label className="wizard-inline-toggle">
+                                                <input
+                                                    type="checkbox"
+                                                    name="dynamicBettingEnabled"
+                                                    checked={newConfig.dynamicBettingEnabled}
+                                                    onChange={handleInputChange}
+                                                />
+                                                <span>Enable dynamic bet sizing</span>
+                                            </label>
+                                            <label className="wizard-inline-toggle">
+                                                <input
+                                                    type="checkbox"
+                                                    name="betStrategyModelEnabled"
+                                                    checked={newConfig.betStrategyModelEnabled}
+                                                    onChange={handleInputChange}
+                                                    disabled={!newConfig.dynamicBettingEnabled}
+                                                />
+                                                <span>Use strategy model (5 actions)</span>
+                                            </label>
+                                            <div className="form-group">
+                                                <label className="form-label">Fallback Strategy</label>
+                                                <select
+                                                    name="betStrategyFixedId"
+                                                    value={newConfig.betStrategyFixedId}
+                                                    onChange={(event) => handleNumberChange('betStrategyFixedId', Number(event.target.value))}
+                                                    className="form-select"
+                                                    disabled={!newConfig.dynamicBettingEnabled || newConfig.betStrategyModelEnabled}
+                                                >
+                                                    {BET_STRATEGY_OPTIONS.map((option) => (
+                                                        <option key={option.id} value={option.id}>
+                                                            {option.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">Strategy Hold Steps</label>
+                                                <input
+                                                    type="number"
+                                                    name="strategyHoldSteps"
+                                                    value={newConfig.strategyHoldSteps}
+                                                    onChange={(event) => handleNumberChange('strategyHoldSteps', Number(event.target.value))}
+                                                    className="form-input"
+                                                    min="1"
+                                                    disabled={!newConfig.dynamicBettingEnabled}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="wizard-topic-panel">
+                                        <div className="wizard-topic-title">Bet Limits & Progression</div>
+                                        <div className="wizard-grid wizard-grid-2x2">
+                                            <label className="wizard-inline-toggle wizard-inline-toggle-span">
+                                                <input
+                                                    type="checkbox"
+                                                    name="betEnforceCapital"
+                                                    checked={newConfig.betEnforceCapital}
+                                                    onChange={handleInputChange}
+                                                    disabled={!newConfig.dynamicBettingEnabled}
+                                                />
+                                                <span>Clamp bet by current capital</span>
+                                            </label>
+                                            <div className="wizard-optional-field">
+                                                <label className="wizard-inline-toggle">
+                                                    <input
+                                                        type="checkbox"
+                                                        name="betUnitEnabled"
+                                                        checked={newConfig.betUnitEnabled}
+                                                        onChange={handleInputChange}
+                                                        disabled={!newConfig.dynamicBettingEnabled}
+                                                    />
+                                                    <span>Override bet unit</span>
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    name="betUnit"
+                                                    value={newConfig.betUnit}
+                                                    onChange={(event) => handleNumberChange('betUnit', Number(event.target.value))}
+                                                    className="form-input"
+                                                    min="1"
+                                                    disabled={!newConfig.dynamicBettingEnabled || !newConfig.betUnitEnabled}
+                                                />
+                                            </div>
+                                            <div className="wizard-optional-field wizard-inline-toggle-span">
+                                                <label className="wizard-inline-toggle">
+                                                    <input
+                                                        type="checkbox"
+                                                        name="betMaxEnabled"
+                                                        checked={newConfig.betMaxEnabled}
+                                                        onChange={handleInputChange}
+                                                        disabled={!newConfig.dynamicBettingEnabled}
+                                                    />
+                                                    <span>Override max bet</span>
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    name="betMax"
+                                                    value={newConfig.betMax}
+                                                    onChange={(event) => handleNumberChange('betMax', Number(event.target.value))}
+                                                    className="form-input"
+                                                    min="1"
+                                                    disabled={!newConfig.dynamicBettingEnabled || !newConfig.betMaxEnabled}
+                                                />
+                                            </div>
+                                        </div>
+                                        <p className="form-hint">
+                                            Rewards use the currently applied bet. Disable dynamic betting to keep fixed `Bet Amount`.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {wizardStep === 3 && (
+                                <div className="wizard-stack">
+                                    {!newConfig.useDataGen ? (
+                                        <>
+                                            <div className="form-group">
+                                                <label className="form-label">Sample Size</label>
+                                                <div className="wizard-slider">
+                                                    <input
+                                                        type="range"
+                                                        min="0.01"
+                                                        max="1"
+                                                        step="0.01"
+                                                        value={sampleSizeValue}
+                                                        onChange={(event) => handleNumberChange('trainSampleSize', Number(event.target.value))}
+                                                    />
+                                                    <span>{sampleSizeValue.toFixed(2)}</span>
+                                                </div>
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">Validation Split</label>
+                                                <div className="wizard-slider">
+                                                    <input
+                                                        type="range"
+                                                        min="0"
+                                                        max="0.99"
+                                                        step="0.01"
+                                                        value={validationValue}
+                                                        onChange={(event) => handleNumberChange('validationSize', Number(event.target.value))}
+                                                    />
+                                                    <span>{validationValue.toFixed(2)}</span>
+                                                </div>
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">Split Seed</label>
+                                                <input type="number" name="splitSeed" value={newConfig.splitSeed} onChange={handleInputChange} className="form-input" />
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="form-group">
+                                            <label className="form-label">Number of elements to be generated</label>
+                                            <input
+                                                type="number"
+                                                name="numGeneratedSamples"
+                                                value={newConfig.numGeneratedSamples}
+                                                onChange={handleInputChange}
+                                                className="form-input"
+                                                min="100"
+                                            />
+                                            <p className="form-hint form-hint-compact">
+                                                The synthetic generator will produce this many roulette extraction samples for training.
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {wizardStep === 4 && (
+                                <div className="wizard-session-compute">
+                                    <div className="wizard-grid wizard-grid-2x2">
+                                        <div className="form-group">
+                                            <label className="form-label">Episodes</label>
+                                            <input type="number" name="episodes" value={newConfig.episodes} onChange={handleInputChange} className="form-input" min="1" />
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="form-label">Max Steps</label>
+                                            <input type="number" name="maxStepsEpisode" value={newConfig.maxStepsEpisode} onChange={handleInputChange} className="form-input" min="100" />
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="form-label">Batch Size</label>
+                                            <input type="number" name="batchSize" value={newConfig.batchSize} onChange={handleInputChange} className="form-input" min="1" />
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="form-label">Learning Rate</label>
+                                            <input type="number" name="learningRate" value={newConfig.learningRate} onChange={handleInputChange} className="form-input" step="0.0001" min="0" />
+                                        </div>
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Training Seed</label>
+                                        <input type="number" name="trainingSeed" value={newConfig.trainingSeed} onChange={handleInputChange} className="form-input" />
+                                    </div>
+                                    <div className="wizard-checkboxes">
+                                        <label className="checkbox-visual">
+                                            <input type="checkbox" name="deviceGPU" checked={newConfig.deviceGPU} onChange={handleInputChange} />
+                                            <span>Use GPU</span>
+                                        </label>
+                                        <label className="checkbox-visual">
+                                            <input type="checkbox" name="useMixedPrecision" checked={newConfig.useMixedPrecision} onChange={handleInputChange} />
+                                            <span>Mixed Precision</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            )}
+
+                            {wizardStep === 5 && (
+                                <div className="wizard-stack">
+                                    <div className="form-group">
+                                        <label className="form-label">Checkpoint name</label>
+                                        <input
+                                            type="text"
+                                            name="checkpointName"
+                                            value={newConfig.checkpointName}
+                                            onChange={handleInputChange}
+                                            className="form-input"
+                                            placeholder="Optional (auto-generated if empty)"
+                                        />
+                                    </div>
+                                    <WizardSummaryRows rows={summaryRows} />
+                                </div>
+                            )}
+                        </div>
+
+                        {wizardError && (
+                            <div className="wizard-error">{wizardError}</div>
+                        )}
+
+                        <WizardActions
+                            isFirstStep={isFirstWizardStep}
+                            isLastStep={isLastWizardStep}
+                            isSubmitting={wizardSubmitting}
+                            onCancel={closeWizard}
+                            onPrevious={goToPreviousWizardStep}
+                            onNext={handleNextWizardStep}
+                            onConfirm={handleStartTraining}
+                        />
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+

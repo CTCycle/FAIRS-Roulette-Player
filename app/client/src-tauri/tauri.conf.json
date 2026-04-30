@@ -1,0 +1,51 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "FAIRS Desktop",
+  "version": "2.3.1",
+  "identifier": "com.fairs.desktop",
+  "build": {
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist",
+    "devUrl": "about:blank"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "FAIRS Desktop",
+        "url": "about:blank",
+        "width": 1440,
+        "height": 920,
+        "center": true,
+        "resizable": true
+      }
+    ],
+    "withGlobalTauri": false
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": {
+      "r/pyproject.toml": "pyproject.toml",
+      "r/uv.lock": "uv.lock",
+      "r/server": "FAIRS/server",
+      "r/scripts": "FAIRS/scripts",
+      "r/settings": "FAIRS/settings",
+      "r/client/dist": "FAIRS/client/dist",
+      "r/resources/checkpoints": "FAIRS/resources/checkpoints",
+      "r/resources/database.db": "FAIRS/resources/database.db",
+      "r/resources/logs": "FAIRS/resources/logs",
+      "r/runtimes/uv.lock": "runtimes/uv.lock",
+      "r/runtimes/nodejs": "runtimes/nodejs",
+      "r/runtimes/python": "runtimes/python",
+      "r/runtimes/uv": "runtimes/uv"
+    }
+  }
+}
