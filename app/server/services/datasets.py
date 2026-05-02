@@ -2,15 +2,15 @@ from __future__ import annotations
 
 import os
 
-from FAIRS.server.domain.database import (
+from server.domain.datasets import (
     DatasetDeleteResponse,
     DatasetListResponse,
     DatasetSummaryResponse,
 )
-from FAIRS.server.domain.upload import UploadRequest, UploadResponse
-from FAIRS.server.repositories.serialization.data import DataSerializer
-from FAIRS.server.services.importer import DatasetImportService
-from FAIRS.server.services.loader import TabularFileLoader
+from server.domain.upload import UploadRequest, UploadResponse
+from server.repositories.serialization.data import DataSerializer
+from server.services.importer import DatasetImportService
+from server.services.loader import TabularFileLoader
 
 ALLOWED_CSV_SEPARATORS = {",", ";", "\t", "|"}
 MAX_UPLOAD_SIZE_BYTES = 25 * 1024 * 1024
@@ -98,18 +98,15 @@ class DatasetService:
             sheet_name=sheet_name,
         )
 
-        dataset_name = None
-        if request.table in {"roulette_series", "inference_context"}:
-            base_name = os.path.splitext(normalized_filename)[0].strip()
-            dataset_name = base_name if base_name else "dataset"
+        base_name = os.path.splitext(normalized_filename)[0].strip()
+        dataset_name = base_name if base_name else "dataset"
 
         imported = self.importer.import_dataframe(
             dataframe,
-            request.table,
+            request.dataset_kind,
             dataset_name=dataset_name,
         )
         return UploadResponse(
-            table=request.table,
             filename=normalized_filename,
             rows_imported=int(imported.get("rows_imported", 0)),
             dataset_id=imported.get("dataset_id"),

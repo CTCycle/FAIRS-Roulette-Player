@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from FAIRS.server.learning.betting.types import STRATEGY_KEEP, normalize_strategy_id
+from server.learning.betting.types import STRATEGY_KEEP, normalize_strategy_id
 
 
 ###############################################################################

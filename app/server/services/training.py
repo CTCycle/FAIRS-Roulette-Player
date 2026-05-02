@@ -3,21 +3,21 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from FAIRS.server.common.checkpoints import normalize_checkpoint_identifier
-from FAIRS.server.common.utils.trainingstats import (
+from server.common.checkpoints import normalize_checkpoint_identifier
+from server.common.utils.trainingstats import (
     coerce_optional_finite_float,
     sanitize_training_stats,
 )
-from FAIRS.server.common.utils.types import coerce_finite_float, coerce_finite_int
-from FAIRS.server.configurations.startup import get_poll_interval_seconds
-from FAIRS.server.domain.training import ResumeConfig, TrainingConfig
-from FAIRS.server.learning.training.worker import (
+from server.common.utils.types import coerce_finite_float, coerce_finite_int
+from server.configurations.startup import get_poll_interval_seconds
+from server.domain.training import ResumeConfig, TrainingConfig
+from server.learning.training.worker import (
     ProcessWorker,
     run_resume_training_process,
     run_training_process,
 )
-from FAIRS.server.services.checkpoints import CheckpointService
-from FAIRS.server.services.jobs import JobManager
+from server.services.checkpoints import CheckpointService
+from server.services.jobs import JobManager
 
 TRAINING_STATUSES = {
     "idle",

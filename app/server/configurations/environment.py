@@ -7,8 +7,8 @@ from threading import Lock
 
 from dotenv import load_dotenv
 
-from FAIRS.server.common.constants import ENV_FILE_PATH
-from FAIRS.server.common.utils.logger import logger
+from server.common.constants import ENV_FILE_PATH
+from server.common.utils.logger import logger
 
 
 @dataclass

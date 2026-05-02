@@ -10,15 +10,15 @@ import pandas as pd
 from PIL import Image, ImageDraw, ImageFont
 from gymnasium import spaces
 
-from FAIRS.server.common.constants import NUMBERS, PAD_VALUE, STATES
-from FAIRS.server.learning.betting.hold import StrategyHold
-from FAIRS.server.learning.betting.sizer import BetSizer
-from FAIRS.server.learning.betting.types import (
+from server.common.constants import NUMBERS, PAD_VALUE, STATES
+from server.learning.betting.hold import StrategyHold
+from server.learning.betting.sizer import BetSizer
+from server.learning.betting.types import (
     STRATEGY_KEEP,
     normalize_strategy_id,
     strategy_name,
 )
-from FAIRS.server.services.process import RouletteSeriesEncoder
+from server.services.process import RouletteSeriesEncoder
 
 
 ###############################################################################

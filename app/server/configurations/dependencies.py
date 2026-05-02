@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from fastapi import Request
 
-from FAIRS.server.repositories.serialization.data import DataSerializer
-from FAIRS.server.services.datasets import DatasetService
-from FAIRS.server.services.inference import InferenceService
-from FAIRS.server.services.training import TrainingService
+from server.repositories.serialization.data import DataSerializer
+from server.services.datasets import DatasetService
+from server.services.inference import InferenceService
+from server.services.training import TrainingService
 
 
 ###############################################################################

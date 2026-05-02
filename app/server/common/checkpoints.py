@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 
-from FAIRS.server.common.constants import CHECKPOINT_PATH
+from server.common.constants import CHECKPOINT_PATH
 
 MAX_CHECKPOINT_NAME_LENGTH = 128
 CHECKPOINT_EMPTY_MESSAGE_TEXT = "Checkpoint name cannot be empty."

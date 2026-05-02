@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from FAIRS.server.learning.betting.hold import StrategyHold
-from FAIRS.server.learning.betting.sizer import BetSizer
-from FAIRS.server.learning.betting.types import (
+from server.learning.betting.hold import StrategyHold
+from server.learning.betting.sizer import BetSizer
+from server.learning.betting.types import (
     BET_OUTCOME_LOSS,
     BET_OUTCOME_NEUTRAL,
     BET_OUTCOME_WIN,

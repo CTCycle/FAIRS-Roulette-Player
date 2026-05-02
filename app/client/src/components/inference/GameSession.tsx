@@ -131,7 +131,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
         const formData = new FormData();
         formData.append('file', file);
 
-        const response = await fetch('/api/data/upload?table=inference_context', {
+        const response = await fetch('/api/data/upload?dataset_kind=inference', {
             method: 'POST',
             body: formData,
         });

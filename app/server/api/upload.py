@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 
-from FAIRS.server.configurations.dependencies import get_dataset_service
-from FAIRS.server.domain.upload import DatasetTable, UploadRequest, UploadResponse
-from FAIRS.server.services.datasets import DatasetService
+from server.configurations.dependencies import get_dataset_service
+from server.domain.upload import DatasetKind, UploadRequest, UploadResponse
+from server.services.datasets import DatasetService
 
 
 router = APIRouter(prefix="/data", tags=["data"])
@@ -18,13 +18,13 @@ router = APIRouter(prefix="/data", tags=["data"])
 )
 async def upload(
     file: UploadFile = File(...),
-    table: DatasetTable = Query(...),
+    dataset_kind: DatasetKind = Query(...),
     csv_separator: str = Query(";", min_length=1, max_length=1),
     sheet_name: str | int = Query(0),
     service: DatasetService = Depends(get_dataset_service),
 ) -> UploadResponse:
     request = UploadRequest(
-        table=table,
+        dataset_kind=dataset_kind,
         csv_separator=csv_separator,
         sheet_name=sheet_name,
     )

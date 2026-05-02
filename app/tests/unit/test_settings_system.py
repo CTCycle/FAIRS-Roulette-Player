@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from FAIRS.server.configurations import environment, startup
+from server.configurations import environment, startup
 
 
 ###############################################################################
@@ -107,7 +107,7 @@ def test_server_package_import_loads_environment_early(
     monkeypatch.setattr(environment, "ENV_FILE_PATH", str(env_path))
     monkeypatch.setenv("KERAS_BACKEND", "tensorflow")
 
-    import FAIRS.server as server_package
+    import server as server_package
 
     importlib.reload(server_package)
 
@@ -145,8 +145,8 @@ def test_technical_env_overrides_are_not_applied(
     _write_env(
         env_path,
         [
-            "DATABASE_USER=legacy-user",
-            "DATABASE_NAME=legacy-name",
+            "DATABASE_USER=env-user",
+            "DATABASE_NAME=env-name",
         ],
     )
     monkeypatch.setattr(environment, "ENV_FILE_PATH", str(env_path))

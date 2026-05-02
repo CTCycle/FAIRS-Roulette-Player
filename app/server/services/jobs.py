@@ -8,8 +8,8 @@ from typing import Any
 
 from collections.abc import Callable
 
-from FAIRS.server.common.utils.logger import logger
-from FAIRS.server.domain.jobs import JobState
+from server.common.utils.logger import logger
+from server.domain.jobs import JobState
 
 
 ###############################################################################

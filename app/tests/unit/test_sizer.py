@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from FAIRS.server.learning.betting.sizer import BetSizer
-from FAIRS.server.learning.betting.types import (
+from server.learning.betting.sizer import BetSizer
+from server.learning.betting.types import (
     STRATEGY_DALEMBERT,
     STRATEGY_FIBONACCI,
     STRATEGY_KEEP,
