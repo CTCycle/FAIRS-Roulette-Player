@@ -13,20 +13,20 @@ import pandas as pd
 from keras import Model
 from keras.utils import set_random_seed
 
-from FAIRS.server.configurations.startup import get_poll_interval_seconds
-from FAIRS.server.common.utils.logger import logger
-from FAIRS.server.common.utils.trainingstats import (
+from server.configurations.startup import get_poll_interval_seconds
+from server.common.utils.logger import logger
+from server.common.utils.trainingstats import (
     coerce_optional_finite_float,
     sanitize_training_stats,
 )
-from FAIRS.server.common.utils.types import coerce_finite_float, coerce_finite_int
-from FAIRS.server.learning.betting.types import (
+from server.common.utils.types import coerce_finite_float, coerce_finite_int
+from server.learning.betting.types import (
     STRATEGY_KEEP,
     normalize_strategy_id,
     strategy_name,
 )
-from FAIRS.server.learning.training.agents import DQNAgent, StrategyAgent
-from FAIRS.server.learning.training.environment import RouletteEnvironment
+from server.learning.training.agents import DQNAgent, StrategyAgent
+from server.learning.training.environment import RouletteEnvironment
 
 HISTORY_POINTS_PER_EPISODE = 20
 

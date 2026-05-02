@@ -3,7 +3,7 @@ setlocal enabledelayedexpansion
 
 set "script_dir=%~dp0"
 for %%I in ("%script_dir%..\..") do set "repo_root=%%~fI"
-set "project_folder=%repo_root%\FAIRS\"
+set "project_folder=%repo_root%\app\"
 set "client_dir=%project_folder%client"
 set "tauri_dir=%client_dir%\src-tauri"
 set "bundle_source_dir=%tauri_dir%\r"
@@ -12,7 +12,7 @@ set "release_export_dir=%repo_root%\release\windows"
 set "runtime_root=%repo_root%\runtimes"
 set "runtime_python_exe=%runtime_root%\python\python.exe"
 set "runtime_uv_exe=%runtime_root%\uv\uv.exe"
-set "runtime_uv_lock=%runtime_root%\uv.lock"
+set "backend_uv_lock=%project_folder%server\uv.lock"
 set "runtime_node_dir=%runtime_root%\nodejs"
 set "node_cmd=%runtime_node_dir%\node.exe"
 set "npm_cmd=%runtime_node_dir%\npm.cmd"
@@ -25,7 +25,7 @@ call :require_file "%runtime_python_exe%" "embedded Python runtime" || goto buil
 call :require_file "%runtime_uv_exe%" "embedded uv runtime" || goto build_error
 call :require_file "%node_cmd%" "embedded Node.js runtime" || goto build_error
 call :require_file "%npm_cmd%" "embedded npm runtime" || goto build_error
-call :require_file "%runtime_uv_lock%" "runtime backend lockfile runtimes\\uv.lock" || goto build_error
+call :require_file "%backend_uv_lock%" "backend lockfile app\\server\\uv.lock" || goto build_error
 
 echo [CHECK] Preparing short Tauri bundle sources...
 call :prepare_bundle_sources || goto build_error
@@ -137,7 +137,7 @@ if exist "%~1" (
   exit /b 0
 )
 echo [FATAL] Missing %~2 at "%~1"
-echo         Run FAIRS\start_on_windows.bat first to install the portable runtimes.
+echo         Run start_on_windows.bat first to install the portable runtimes.
 exit /b 1
 
 :prepare_bundle_sources
@@ -152,19 +152,14 @@ md "%bundle_source_dir%\resources" >nul 2>&1
 md "%bundle_source_dir%\client" >nul 2>&1
 md "%bundle_source_dir%\runtimes" >nul 2>&1
 
-copy /y "%repo_root%\pyproject.toml" "%bundle_source_dir%\pyproject.toml" >nul
+copy /y "%project_folder%server\pyproject.toml" "%bundle_source_dir%\pyproject.toml" >nul
 if errorlevel 1 (
   echo [FATAL] Failed to stage pyproject.toml for Tauri bundling.
   exit /b 1
 )
-copy /y "%runtime_uv_lock%" "%bundle_source_dir%\uv.lock" >nul
+copy /y "%backend_uv_lock%" "%bundle_source_dir%\uv.lock" >nul
 if errorlevel 1 (
-  echo [FATAL] Failed to stage runtime lockfile from "%runtime_uv_lock%" to "%bundle_source_dir%\uv.lock".
-  exit /b 1
-)
-copy /y "%runtime_uv_lock%" "%bundle_source_dir%\runtimes\uv.lock" >nul
-if errorlevel 1 (
-  echo [FATAL] Failed to stage runtime lockfile at "%bundle_source_dir%\runtimes\uv.lock".
+  echo [FATAL] Failed to stage backend lockfile from "%backend_uv_lock%" to "%bundle_source_dir%\uv.lock".
   exit /b 1
 )
 
@@ -176,7 +171,7 @@ if exist "%project_folder%resources\database.db" (
 
 call :make_junction "%bundle_source_dir%\server" "%project_folder%server" || exit /b 1
 call :make_junction "%bundle_source_dir%\scripts" "%project_folder%scripts" || exit /b 1
-call :make_junction "%bundle_source_dir%\settings" "%project_folder%settings" || exit /b 1
+call :make_junction "%bundle_source_dir%\settings" "%repo_root%\settings" || exit /b 1
 call :make_junction "%bundle_source_dir%\client\dist" "%client_dir%\dist" || exit /b 1
 call :make_junction "%bundle_source_dir%\resources\checkpoints" "%project_folder%resources\checkpoints" || exit /b 1
 md "%bundle_source_dir%\resources\logs" >nul 2>&1

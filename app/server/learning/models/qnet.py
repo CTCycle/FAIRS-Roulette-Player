@@ -5,10 +5,10 @@ from typing import Any
 from keras import Model, layers, losses, metrics, optimizers
 from torch import compile as torch_compile
 
-from FAIRS.server.configurations.startup import get_server_settings
-from FAIRS.server.common.constants import NUMBERS, STATES
-from FAIRS.server.learning.models.embeddings import RouletteEmbedding
-from FAIRS.server.learning.models.logits import AddNorm, BatchNormDense, QScoreNet
+from server.configurations.startup import get_server_settings
+from server.common.constants import NUMBERS, STATES
+from server.learning.models.embeddings import RouletteEmbedding
+from server.learning.models.logits import AddNorm, BatchNormDense, QScoreNet
 
 
 ###############################################################################

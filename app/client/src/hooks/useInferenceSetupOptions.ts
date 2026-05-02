@@ -51,7 +51,7 @@ export const useInferenceSetupOptions = ({
     useEffect(() => {
         const loadDatasets = async () => {
             try {
-                const summaryResponse = await fetch('/api/database/roulette-series/datasets/summary');
+            const summaryResponse = await fetch('/api/datasets/training/summary');
                 if (!summaryResponse.ok) {
                     return;
                 }

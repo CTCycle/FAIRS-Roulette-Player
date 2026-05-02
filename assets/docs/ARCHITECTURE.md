@@ -228,10 +228,10 @@ All backend routers are mounted with prefix `/api`.
 - `GET /api/training/jobs/{job_id}`
 - `DELETE /api/training/jobs/{job_id}`
 
-### Database
-- `GET /api/database/roulette-series/datasets`
-- `GET /api/database/roulette-series/datasets/summary`
-- `DELETE /api/database/roulette-series/datasets/{dataset_id}`
+### Datasets
+- `GET /api/datasets/training`
+- `GET /api/datasets/training/summary`
+- `DELETE /api/datasets/training/{dataset_id}`
 
 ### Inference
 - `POST /api/inference/sessions/start`
@@ -258,7 +258,7 @@ No WebSocket routes are currently implemented in `FAIRS/server/api`.
 - Dataset upload: `api/upload.py` -> `DatasetService` -> `DatasetImportService` -> `DataSerializer` -> `DataRepositoryQueries` -> `FAIRSDatabase` backend.
 - Training start/resume: `api/training.py` -> `TrainingService` -> `JobManager` + `ProcessWorker` -> learning training modules + checkpoint serializer.
 - Inference session: `api/inference.py` -> `InferenceService` -> `RoulettePlayer` + `CheckpointService` + `DataSerializer` persistence.
-- Dataset list/delete: `api/database.py` -> `DatasetService` -> `DataSerializer` -> repository queries/backend.
+- Dataset list/delete: `api/datasets.py` -> `DatasetService` -> `DataSerializer` -> repository queries/backend.
 
 ### Key module responsibilities
 - `FAIRS/server/app.py`: FastAPI app factory and entry point, dependency graph initialization in lifespan, router mounting, packaged SPA serving behavior.

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from FAIRS.server.learning.betting.types import (
+from server.learning.betting.types import (
     BET_OUTCOME_LOSS,
     BET_OUTCOME_NEUTRAL,
     BET_OUTCOME_WIN,

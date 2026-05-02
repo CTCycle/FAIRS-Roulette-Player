@@ -4,13 +4,13 @@ from unittest.mock import Mock, call
 
 import pandas as pd
 
-from FAIRS.server.common.constants import (
+from server.common.constants import (
     DATASETS_TABLE,
     DATASET_OUTCOMES_TABLE,
     INFERENCE_SESSIONS_TABLE,
     INFERENCE_SESSION_STEPS_TABLE,
 )
-from FAIRS.server.repositories.serialization.data import DataSerializer
+from server.repositories.serialization.data import DataSerializer
 
 
 def test_delete_dataset_removes_dependent_rows_before_dataset() -> None:

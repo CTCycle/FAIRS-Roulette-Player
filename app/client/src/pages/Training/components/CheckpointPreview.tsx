@@ -88,7 +88,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
         setDatasetsLoading(true);
         setDatasetsError(null);
         try {
-            const response = await fetch('/api/database/roulette-series/datasets/summary');
+            const response = await fetch('/api/datasets/training/summary');
             if (!response.ok) {
                 throw new Error('Failed to load datasets');
             }

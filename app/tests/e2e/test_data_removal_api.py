@@ -9,12 +9,12 @@ DATASET_NAME = "e2e_dataset_delete"
 
 
 class TestDatasetRemoval:
-    """Tests for dataset deletion via /database/roulette-series/datasets."""
+    """Tests for dataset deletion via /datasets/training."""
 
     def test_delete_dataset_after_upload(self, api_context: APIRequestContext):
         csv_content = b"idx,outcome\n0,0\n1,12\n2,24\n3,36\n4,5"
         upload_response = api_context.post(
-            "/api/data/upload?table=roulette_series&csv_separator=%2C",
+            "/api/data/upload?dataset_kind=training&csv_separator=%2C",
             multipart={
                 "file": {
                     "name": f"{DATASET_NAME}.csv",
@@ -27,7 +27,7 @@ class TestDatasetRemoval:
             f"Expected 200, got {upload_response.status}: {upload_response.text()}"
         )
 
-        summary_response = api_context.get("/api/database/roulette-series/datasets/summary")
+        summary_response = api_context.get("/api/datasets/training/summary")
         assert summary_response.ok
         summary = summary_response.json()
         datasets = summary.get("datasets", [])
@@ -40,7 +40,7 @@ class TestDatasetRemoval:
         assert isinstance(dataset_id, int) and dataset_id > 0
 
         delete_response = api_context.delete(
-            f"/api/database/roulette-series/datasets/{dataset_id}"
+            f"/api/datasets/training/{dataset_id}"
         )
         assert delete_response.ok
         delete_payload = delete_response.json()
@@ -48,7 +48,7 @@ class TestDatasetRemoval:
         assert delete_payload.get("dataset_id") == dataset_id
 
         summary_after_response = api_context.get(
-            "/api/database/roulette-series/datasets/summary"
+            "/api/datasets/training/summary"
         )
         assert summary_after_response.ok
         summary_after = summary_after_response.json()

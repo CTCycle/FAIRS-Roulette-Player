@@ -5,11 +5,11 @@ from typing import Any, Protocol
 
 import pandas as pd
 
-from FAIRS.server.configurations import DatabaseSettings
-from FAIRS.server.configurations.startup import get_server_settings
-from FAIRS.server.common.utils.logger import logger
-from FAIRS.server.repositories.database.postgres import PostgresRepository
-from FAIRS.server.repositories.database.sqlite import SQLiteRepository
+from server.configurations import DatabaseSettings
+from server.configurations.startup import get_server_settings
+from server.common.utils.logger import logger
+from server.repositories.database.postgres import PostgresRepository
+from server.repositories.database.sqlite import SQLiteRepository
 
 
 ###############################################################################

@@ -9,9 +9,9 @@ from typing import Any
 from keras import Model
 from keras.models import load_model
 
-from FAIRS.server.learning import models as custom_layers_registry  # noqa: F401
-from FAIRS.server.common.constants import CHECKPOINT_PATH
-from FAIRS.server.common.utils.logger import logger
+from server.learning import models as custom_layers_registry  # noqa: F401
+from server.common.constants import CHECKPOINT_PATH
+from server.common.utils.logger import logger
 
 
 ###############################################################################

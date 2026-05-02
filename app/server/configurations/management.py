@@ -5,8 +5,8 @@ from pathlib import Path
 from threading import RLock
 from typing import Any
 
-from FAIRS.server.common.constants import CONFIGURATIONS_FILE
-from FAIRS.server.domain.configuration import JsonServerSettings, ServerSettings
+from server.common.constants import CONFIGURATIONS_FILE
+from server.domain.configuration import JsonServerSettings, ServerSettings
 
 
 ###############################################################################

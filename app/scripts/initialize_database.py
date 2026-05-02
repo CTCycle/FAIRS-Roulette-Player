@@ -4,9 +4,9 @@ from dataclasses import asdict
 import json
 import time
 
-from FAIRS.server.configurations.startup import get_server_settings
-from FAIRS.server.repositories.database.initializer import initialize_database
-from FAIRS.server.common.utils.logger import logger
+from server.configurations.startup import get_server_settings
+from server.repositories.database.initializer import initialize_database
+from server.common.utils.logger import logger
 
 
 ###############################################################################

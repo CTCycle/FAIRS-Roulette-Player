@@ -191,8 +191,8 @@ if not exist "%client_dir%\node_modules" (
   )
   set "npm_ec=%ERRORLEVEL%"
   popd >nul
-  if not "%npm_ec%"=="0" (
-    echo [FATAL] Frontend dependency install failed with code %npm_ec%.
+  if not "!npm_ec!"=="0" (
+    echo [FATAL] Frontend dependency install failed with code !npm_ec!.
     goto install_error
   )
 )
@@ -203,8 +203,8 @@ if not exist "%frontend_dist%" (
   call "%npm_cmd%" run build
   set "npm_build_ec=%ERRORLEVEL%"
   popd >nul
-  if not "%npm_build_ec%"=="0" (
-    echo [FATAL] Frontend build failed with code %npm_build_ec%.
+  if not "!npm_build_ec!"=="0" (
+    echo [FATAL] Frontend build failed with code !npm_build_ec!.
     goto install_error
   )
 ) else (
@@ -367,3 +367,4 @@ exit /b 0
 
 :exit
 endlocal
+

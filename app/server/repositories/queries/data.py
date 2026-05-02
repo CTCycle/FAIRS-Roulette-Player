@@ -4,7 +4,7 @@ from typing import Any
 
 import pandas as pd
 
-from FAIRS.server.repositories.database.backend import FAIRSDatabase
+from server.repositories.database.backend import FAIRSDatabase
 
 
 ###############################################################################

@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from FAIRS.server.common.constants import CONFIGURATIONS_FILE
-from FAIRS.server.configurations.environment import load_environment
-from FAIRS.server.configurations.management import ConfigurationManager
-from FAIRS.server.domain.configuration import ServerSettings
+from server.common.constants import CONFIGURATIONS_FILE
+from server.configurations.environment import load_environment
+from server.configurations.management import ConfigurationManager
+from server.domain.configuration import ServerSettings
 
 
 ###############################################################################

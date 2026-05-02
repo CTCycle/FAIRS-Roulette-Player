@@ -8,13 +8,13 @@ from sqlalchemy import event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
 
-from FAIRS.server.common.constants import DATABASE_FILENAME, RESOURCES_PATH
-from FAIRS.server.configurations import DatabaseSettings
-from FAIRS.server.repositories.database.common import (
+from server.common.constants import DATABASE_FILENAME, RESOURCES_PATH
+from server.configurations import DatabaseSettings
+from server.repositories.database.common import (
     SQLAlchemyRepositoryBase,
     normalize_table_name as normalize_table_name,
 )
-from FAIRS.server.repositories.schemas.models import Base
+from server.repositories.schemas.models import Base
 
 SQLITE_FOREIGN_KEYS_PRAGMA = "PRAGMA foreign_keys=ON"
 

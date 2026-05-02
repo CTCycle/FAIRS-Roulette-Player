@@ -2,21 +2,21 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Path, status
 
-from FAIRS.server.configurations.dependencies import get_dataset_service
-from FAIRS.server.domain.database import (
+from server.configurations.dependencies import get_dataset_service
+from server.domain.datasets import (
     DatasetDeleteResponse,
     DatasetListResponse,
     DatasetSummaryResponse,
 )
-from FAIRS.server.services.datasets import DatasetService
+from server.services.datasets import DatasetService
 
 
-router = APIRouter(prefix="/database", tags=["database"])
+router = APIRouter(prefix="/datasets", tags=["datasets"])
 
 
 ###############################################################################
 @router.get(
-    "/roulette-series/datasets",
+    "/training",
     response_model=DatasetListResponse,
     status_code=status.HTTP_200_OK,
 )
@@ -28,7 +28,7 @@ def list_roulette_datasets(
 
 ###############################################################################
 @router.get(
-    "/roulette-series/datasets/summary",
+    "/training/summary",
     response_model=DatasetSummaryResponse,
     status_code=status.HTTP_200_OK,
 )
@@ -40,7 +40,7 @@ def list_roulette_datasets_summary(
 
 ###############################################################################
 @router.delete(
-    "/roulette-series/datasets/{dataset_id}",
+    "/training/{dataset_id}",
     response_model=DatasetDeleteResponse,
     status_code=status.HTTP_200_OK,
 )

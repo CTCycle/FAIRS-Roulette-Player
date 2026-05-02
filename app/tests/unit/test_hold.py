@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from FAIRS.server.learning.betting.hold import StrategyHold
+from server.learning.betting.hold import StrategyHold
 
 
 def test_hold_persists_strategy_for_configured_steps() -> None:

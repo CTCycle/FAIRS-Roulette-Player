@@ -7,14 +7,14 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 
-from FAIRS.server.configurations import DatabaseSettings
-from FAIRS.server.configurations.startup import get_server_settings
-from FAIRS.server.common.constants import DATABASE_FILENAME, RESOURCES_PATH
-from FAIRS.server.common.utils.logger import logger
-from FAIRS.server.repositories.database.postgres import PostgresRepository
-from FAIRS.server.repositories.database.sqlite import SQLiteRepository
-from FAIRS.server.repositories.database.utils import normalize_postgres_engine
-from FAIRS.server.repositories.schemas.models import Base, RouletteOutcomes
+from server.configurations import DatabaseSettings
+from server.configurations.startup import get_server_settings
+from server.common.constants import DATABASE_FILENAME, RESOURCES_PATH
+from server.common.utils.logger import logger
+from server.repositories.database.postgres import PostgresRepository
+from server.repositories.database.sqlite import SQLiteRepository
+from server.repositories.database.utils import normalize_postgres_engine
+from server.repositories.schemas.models import Base, RouletteOutcomes
 
 
 ROULETTE_POSITION_MAP: dict[int, int] = {
