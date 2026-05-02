@@ -19,7 +19,7 @@ from server.repositories.database.initializer import (
 from server.repositories.database.backend import FAIRSDatabase
 from server.repositories.queries.data import DataRepositoryQueries
 from server.repositories.serialization.data import DataSerializer
-from server.api.database import router as database_router
+from server.api.datasets import router as datasets_router
 from server.api.inference import router as inference_router
 from server.api.training import router as training_router
 from server.api.upload import router as upload_router
@@ -115,7 +115,7 @@ def include_api_routers(application: FastAPI) -> None:
     for router in (
         upload_router,
         training_router,
-        database_router,
+        datasets_router,
         inference_router,
     ):
         application.include_router(router, prefix="/api")

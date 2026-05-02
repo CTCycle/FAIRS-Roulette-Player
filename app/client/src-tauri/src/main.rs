@@ -411,12 +411,6 @@ fn spawn_backend(app_handle: &tauri::AppHandle, state: &BackendChildState) -> Re
         let python_exe_str = python_exe.to_string_lossy().to_string();
         let uv_cache_dir_str = uv_cache_dir.to_string_lossy().to_string();
         let venv_dir_str = venv_dir.to_string_lossy().to_string();
-        let mut sync_args = vec![String::from("sync")];
-        if backend_config.install_extras {
-            sync_args.push(String::from("--all-extras"));
-        }
-        sync_args.push(String::from("--frozen"));
-
         let mut sync_with_embedded_args = vec![
             String::from("sync"),
             String::from("--python"),
@@ -460,25 +454,7 @@ fn spawn_backend(app_handle: &tauri::AppHandle, state: &BackendChildState) -> Re
             )?;
 
             if !embedded_sync_ok {
-                let mut fallback_sync_command = Command::new(&uv_exe);
-                configure_background_command(&mut fallback_sync_command);
-                fallback_sync_command
-                    .args(sync_args.iter().map(|s| s.as_str()))
-                    .current_dir(workspace_root.join("app").join("server"))
-                    .env("UV_PROJECT_ENVIRONMENT", &venv_dir_str)
-                    .env("UV_CACHE_DIR", &uv_cache_dir_str)
-                    .stdout(Stdio::null())
-                    .stderr(Stdio::null());
-
-                let fallback_sync_ok = run_command_with_timeout(
-                    &mut fallback_sync_command,
-                    Duration::from_secs(15 * 60),
-                    "uv sync fallback",
-                )?;
-
-                if !fallback_sync_ok {
-                    return Err(String::from("uv sync failed for packaged runtime."));
-                }
+                return Err(String::from("uv sync failed for packaged runtime."));
             }
 
             if !venv_python_exe.is_file() {

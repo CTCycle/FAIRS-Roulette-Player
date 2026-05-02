@@ -30,7 +30,7 @@ def test_import_upload_normalizes_filename_separator_and_sheet_name() -> None:
     response = service.import_upload(
         content=b"idx,outcome\n0,1\n",
         filename=r"..\sample.csv",
-        request=UploadRequest(table="roulette_series", csv_separator=",", sheet_name=0),
+        request=UploadRequest(dataset_kind="training", csv_separator=",", sheet_name=0),
     )
 
     assert response.filename == "sample.csv"
@@ -45,7 +45,7 @@ def test_import_upload_rejects_oversized_payload() -> None:
         service.import_upload(
             content=b"x" * (25 * 1024 * 1024 + 1),
             filename="big.csv",
-            request=UploadRequest(table="roulette_series"),
+            request=UploadRequest(dataset_kind="training"),
         )
 
 

@@ -2,12 +2,8 @@ from __future__ import annotations
 
 import pandas as pd
 
-from server.common.constants import (
-    INFERENCE_CONTEXT_TABLE,
-    DATASET_OUTCOMES_WRITE_COLUMNS,
-    ROULETTE_SERIES_TABLE,
-)
-from server.domain.upload import DatasetTable
+from server.common.constants import DATASET_OUTCOMES_WRITE_COLUMNS
+from server.domain.upload import DatasetKind
 from server.repositories.serialization.data import DataSerializer
 
 
@@ -20,18 +16,18 @@ class DatasetImportService:
     def normalize(
         self,
         dataframe: pd.DataFrame,
-        table: DatasetTable,
+        dataset_kind: DatasetKind,
     ) -> tuple[pd.DataFrame, str]:
         if dataframe.empty:
-            return dataframe, "training"
+            return dataframe, dataset_kind
 
-        if table == ROULETTE_SERIES_TABLE:
+        if dataset_kind == "training":
             return self.normalize_training_dataset(dataframe), "training"
 
-        if table == INFERENCE_CONTEXT_TABLE:
+        if dataset_kind == "inference":
             return self.normalize_inference_dataset(dataframe), "inference"
 
-        raise ValueError(f"Unsupported table: {table}")
+        raise ValueError(f"Unsupported dataset kind: {dataset_kind}")
 
     # -------------------------------------------------------------------------
     def normalize_training_dataset(
@@ -101,10 +97,10 @@ class DatasetImportService:
     def import_dataframe(
         self,
         dataframe: pd.DataFrame,
-        table: DatasetTable,
+        dataset_kind: DatasetKind,
         dataset_name: str | None = None,
     ) -> dict[str, object]:
-        normalized, dataset_kind = self.normalize(dataframe, table)
+        normalized, dataset_kind = self.normalize(dataframe, dataset_kind)
         if dataset_name is not None and dataset_name.strip():
             clean_name = dataset_name.strip()
         else:

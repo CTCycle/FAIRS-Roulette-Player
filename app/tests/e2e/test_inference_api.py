@@ -18,7 +18,7 @@ def require_checkpoint(api_context: APIRequestContext) -> str:
 
 
 def require_dataset_id(api_context: APIRequestContext) -> int:
-    response = api_context.get("/api/database/roulette-series/datasets")
+    response = api_context.get("/api/datasets/training")
     assert response.ok, f"Expected 200, got {response.status}: {response.text()}"
     datasets = response.json().get("datasets", [])
     if not datasets:
@@ -241,7 +241,7 @@ class TestInferenceSessionFlow:
         checkpoint_name = require_checkpoint(api_context)
         csv_content = b"outcome\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10"
         upload_response = api_context.post(
-            "/api/data/upload?table=inference_context&csv_separator=%2C",
+            "/api/data/upload?dataset_kind=inference&csv_separator=%2C",
             multipart={
                 "file": {
                     "name": "test_inference_context_clear.csv",

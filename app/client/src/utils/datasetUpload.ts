@@ -1,6 +1,6 @@
 export type DatasetUploadStatus = 'idle' | 'uploading' | 'success' | 'error';
 
-const DATASET_UPLOAD_ENDPOINT = '/api/data/upload?table=roulette_series';
+const DATASET_UPLOAD_ENDPOINT = '/api/data/upload?dataset_kind=training';
 
 const isObjectRecord = (value: unknown): value is Record<string, unknown> => (
     typeof value === 'object' && value !== null

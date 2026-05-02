@@ -65,7 +65,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch('/api/database/roulette-series/datasets/summary');
+            const response = await fetch('/api/datasets/training/summary');
             if (!response.ok) {
                 throw new Error('Failed to load dataset summary');
             }
@@ -142,7 +142,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
 
     const handleDelete = async (datasetId: string) => {
         try {
-            const response = await fetch(`/api/database/roulette-series/datasets/${encodeURIComponent(datasetId)}`, {
+            const response = await fetch(`/api/datasets/training/${encodeURIComponent(datasetId)}`, {
                 method: 'DELETE',
             });
             if (!response.ok) {

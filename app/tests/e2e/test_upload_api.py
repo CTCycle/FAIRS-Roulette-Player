@@ -9,7 +9,7 @@ from playwright.sync_api import APIRequestContext
 def load_dataset_summary_entry(
     api_context: APIRequestContext, dataset_id: int
 ) -> dict | None:
-    response = api_context.get("/api/database/roulette-series/datasets/summary")
+    response = api_context.get("/api/datasets/training/summary")
     assert response.ok, f"Expected 200, got {response.status}: {response.text()}"
     datasets = response.json().get("datasets", [])
     return next(
@@ -23,19 +23,19 @@ class TestDataUploadEndpoint:
 
     def test_upload_without_file_returns_422(self, api_context: APIRequestContext):
         """POST /data/upload without a file should return 422 (validation error)."""
-        response = api_context.post("/api/data/upload?table=roulette_series")
+        response = api_context.post("/api/data/upload?dataset_kind=training")
         # FastAPI returns 422 for missing required fields
         assert response.status == 422
 
-    def test_upload_with_invalid_table_returns_422(
+    def test_upload_with_invalid_dataset_kind_returns_422(
         self, api_context: APIRequestContext
     ):
-        """POST /data/upload with an invalid table name should return 422."""
+        """POST /data/upload with an invalid dataset kind should return 422."""
         # Create a minimal CSV in memory
         csv_content = b"extraction\n1\n2\n3"
 
         response = api_context.post(
-            "/api/data/upload?table=INVALID_TABLE_NAME",
+            "/api/data/upload?dataset_kind=INVALID_DATASET_KIND",
             multipart={
                 "file": {
                     "name": "test.csv",
@@ -44,15 +44,15 @@ class TestDataUploadEndpoint:
                 }
             },
         )
-        # Invalid table enum value should fail validation
+        # Invalid dataset kind enum value should fail validation
         assert response.status == 422
 
-    def test_upload_valid_csv_to_roulette_series(self, api_context: APIRequestContext):
+    def test_upload_valid_csv_to_training_dataset(self, api_context: APIRequestContext):
         """POST /data/upload with valid CSV should import data successfully."""
         csv_content = b"draw_index,observed_outcome\n0,0\n1,15\n2,32\n3,7\n4,21"
 
         response = api_context.post(
-            "/api/data/upload?table=roulette_series&csv_separator=%2C",  # URL-encoded comma
+            "/api/data/upload?dataset_kind=training&csv_separator=%2C",  # URL-encoded comma
             multipart={
                 "file": {
                     "name": "test_extractions.csv",
@@ -67,13 +67,11 @@ class TestDataUploadEndpoint:
 
         data = response.json()
         assert "rows_imported" in data
-        assert "table" in data
         assert "dataset_id" in data
         assert "dataset_name" in data
         assert "filename" in data
         assert "dataset_kind" in data
         assert "columns" in data
-        assert data["table"] == "roulette_series"
         assert data["filename"] == "test_extractions.csv"
         assert data["dataset_name"] == "test_extractions"
         assert data["dataset_kind"] == "training"
@@ -85,7 +83,7 @@ class TestDataUploadEndpoint:
     def test_upload_empty_file_returns_400(self, api_context: APIRequestContext):
         """POST /data/upload with empty content should return 400."""
         response = api_context.post(
-            "/api/data/upload?table=roulette_series",
+            "/api/data/upload?dataset_kind=training",
             multipart={
                 "file": {
                     "name": "empty.csv",
@@ -106,7 +104,7 @@ class TestDataUploadEdgeCases:
         # Note: Creating a real XLSX in tests is complex; this test verifies
         # the endpoint accepts the format but may fail on parsing
         response = api_context.post(
-            "/api/data/upload?table=roulette_series&sheet_name=0",
+            "/api/data/upload?dataset_kind=training&sheet_name=0",
             multipart={
                 "file": {
                     "name": "test.xlsx",
@@ -126,7 +124,7 @@ class TestDataUploadEdgeCases:
         csv_content = b"index;value\n0;0\n1;32\n2;15"
 
         response = api_context.post(
-            "/api/data/upload?table=roulette_series&csv_separator=%3B",  # URL-encoded semicolon
+            "/api/data/upload?dataset_kind=training&csv_separator=%3B",  # URL-encoded semicolon
             multipart={
                 "file": {
                     "name": "test_semicolon.csv",
@@ -147,7 +145,7 @@ class TestDataUploadEdgeCases:
         """POST /data/upload should discard invalid outcomes and enrich valid rows."""
         dataset_name = "test_invalid_outcomes_cleanup"
         existing_response = api_context.get(
-            "/api/database/roulette-series/datasets/summary"
+            "/api/datasets/training/summary"
         )
         if existing_response.ok:
             existing = existing_response.json().get("datasets", [])
@@ -157,14 +155,14 @@ class TestDataUploadEdgeCases:
             )
             if match and match.get("dataset_id"):
                 api_context.delete(
-                    f"/api/database/roulette-series/datasets/{match['dataset_id']}"
+                    f"/api/datasets/training/{match['dataset_id']}"
                 )
         csv_content = (
             b"spin,result\n10,5\n11,37\n12,-1\n13,0\n14,36\n15,abc\n16,7.2\n17,7\n"
         )
 
         response = api_context.post(
-            "/api/data/upload?table=roulette_series&csv_separator=%2C",
+            "/api/data/upload?dataset_kind=training&csv_separator=%2C",
             multipart={
                 "file": {
                     "name": f"{dataset_name}.csv",
