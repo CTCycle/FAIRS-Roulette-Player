@@ -122,18 +122,18 @@ Detailed operational guidance is available in:
 
 ## 9. Screenshots
 ### Training Workspace
-Desktop overview of dataset upload, dataset selection, and checkpoint management.
+Desktop view of dataset upload, dataset selection, checkpoint panels, and the live training monitor.
 
-![Training overview](assets/figures/training-page-v2.3.1.png)
+![Training overview](assets/figures/training-page-v2.4.0.png)
 
 Mobile rendering of the training workspace for narrow viewports.
 
-![Training mobile workspace](assets/figures/training-mobile-v2.3.1.png)
+![Training mobile workspace](assets/figures/training-mobile-v2.4.0.png)
 
 ### Inference Workspace
-Inference controls for checkpoint/dataset pairing and session playback.
+Inference controls for checkpoint and dataset pairing with session playback history.
 
-![Inference overview](assets/figures/inference-page-v2.3.1.png)
+![Inference overview](assets/figures/inference-page-v2.4.0.png)
 
 ## 10. License
 This project is licensed under the MIT License. See `LICENSE` for details.

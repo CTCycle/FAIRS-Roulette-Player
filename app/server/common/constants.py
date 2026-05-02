@@ -38,10 +38,6 @@ DATASET_OUTCOMES_TABLE = "dataset_outcomes"
 INFERENCE_SESSIONS_TABLE = "inference_sessions"
 INFERENCE_SESSION_STEPS_TABLE = "inference_session_steps"
 
-# Upload aliases kept for route query semantics
-ROULETTE_SERIES_TABLE = "roulette_series"
-INFERENCE_CONTEXT_TABLE = "inference_context"
-
 # [DATABASE COLUMNS]
 ###############################################################################
 ROULETTE_OUTCOMES_COLUMNS = [

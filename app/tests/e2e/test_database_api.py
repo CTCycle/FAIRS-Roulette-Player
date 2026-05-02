@@ -1,5 +1,5 @@
 """
-E2E tests for dataset listing APIs under /database/roulette-series.
+E2E tests for dataset listing APIs under /datasets/training.
 """
 
 from playwright.sync_api import APIRequestContext
@@ -9,7 +9,7 @@ DATASET_NAME = "e2e_dataset_for_listing"
 
 
 def ensure_dataset_for_listing(api_context: APIRequestContext) -> None:
-    summary_response = api_context.get("/api/database/roulette-series/datasets/summary")
+    summary_response = api_context.get("/api/datasets/training/summary")
     assert summary_response.ok
     summary_payload = summary_response.json()
     datasets = summary_payload.get("datasets", [])
@@ -22,7 +22,7 @@ def ensure_dataset_for_listing(api_context: APIRequestContext) -> None:
 
     csv_content = b"idx,outcome\n0,0\n1,14\n2,28\n3,7\n4,22"
     upload_response = api_context.post(
-        "/api/data/upload?table=roulette_series&csv_separator=%2C",
+        "/api/data/upload?dataset_kind=training&csv_separator=%2C",
         multipart={
             "file": {
                 "name": f"{DATASET_NAME}.csv",
@@ -37,11 +37,11 @@ def ensure_dataset_for_listing(api_context: APIRequestContext) -> None:
 
 
 class TestRouletteDatasetsEndpoints:
-    """Tests for /database/roulette-series/datasets endpoints."""
+    """Tests for /datasets/training endpoints."""
 
     def test_list_roulette_datasets(self, api_context: APIRequestContext):
         ensure_dataset_for_listing(api_context)
-        response = api_context.get("/api/database/roulette-series/datasets")
+        response = api_context.get("/api/datasets/training")
         assert response.ok, f"Expected 200, got {response.status}"
 
         data = response.json()
@@ -57,7 +57,7 @@ class TestRouletteDatasetsEndpoints:
 
     def test_list_roulette_datasets_summary(self, api_context: APIRequestContext):
         ensure_dataset_for_listing(api_context)
-        response = api_context.get("/api/database/roulette-series/datasets/summary")
+        response = api_context.get("/api/datasets/training/summary")
         assert response.ok, f"Expected 200, got {response.status}"
 
         data = response.json()

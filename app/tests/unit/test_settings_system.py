@@ -145,8 +145,8 @@ def test_technical_env_overrides_are_not_applied(
     _write_env(
         env_path,
         [
-            "DATABASE_USER=legacy-user",
-            "DATABASE_NAME=legacy-name",
+            "DATABASE_USER=env-user",
+            "DATABASE_NAME=env-name",
         ],
     )
     monkeypatch.setattr(environment, "ENV_FILE_PATH", str(env_path))
