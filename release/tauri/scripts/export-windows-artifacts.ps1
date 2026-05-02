@@ -62,10 +62,9 @@ foreach ($file in $portableExeCandidates) {
 }
 
 $requiredPortableEntries = @(
-  "FAIRS",
+  "app",
   "runtimes",
-  "pyproject.toml",
-  "uv.lock"
+  "settings"
 )
 
 foreach ($entry in $requiredPortableEntries) {
@@ -105,10 +104,9 @@ foreach ($entry in $requiredPortableRuntimeFiles) {
 }
 
 $portableResourceEntries = @(
-  "FAIRS",
+  "app",
   "runtimes",
-  "pyproject.toml",
-  "uv.lock",
+  "settings",
   "resources",
   "_up_"
 )
