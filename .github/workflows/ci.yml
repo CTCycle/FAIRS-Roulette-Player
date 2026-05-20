@@ -10,6 +10,8 @@ on:
 jobs:
   backend-validation:
     runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: app
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
@@ -17,10 +19,11 @@ jobs:
         with:
           python-version: "3.14"
       - name: Install dependencies
+        working-directory: app/server
         run: uv sync --extra test
       - name: Ruff
-        run: uv run --extra test ruff check FAIRS/server tests
+        run: uv --project app/server run ruff check app/server app/tests
       - name: Unit tests
-        run: uv run --extra test pytest -q tests/unit
+        run: uv --project app/server run pytest -q app/tests/unit
       - name: OpenAPI check
-        run: uv run --extra test python -c "from FAIRS.server.app import app; app.openapi()"
+        run: uv --project app/server run python -c "from server.app import app; app.openapi()"
