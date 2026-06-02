@@ -1,6 +1,6 @@
 # RUNTIME_MODES
 
-Last updated: 2026-04-24
+Last updated: 2026-06-02
 
 This document reflects only runtime modes and execution paths currently implemented in the repository.
 
@@ -117,6 +117,7 @@ Menu options:
 - Local script launches frontend preview and opens browser URL from `UI_HOST:UI_PORT`.
 - Desktop runtime launches only the Tauri window and routes it to backend root (`http://<FASTAPI_HOST>:<FASTAPI_PORT>/`) once ready.
 - Desktop runtime may place writable runtime state in a per-user app data directory when workspace root is not writable.
+- Desktop startup now fails fast when `FAIRS_TAURI_MODE=true` but `app/client/dist/index.html` is missing.
 
 ### API docs exposure
 
@@ -128,11 +129,21 @@ Menu options:
 - If `embedded_database=true`, SQLite auto-initializes on startup only when `FAIRS/resources/database.db` is missing.
 - If `embedded_database=false`, PostgreSQL initialization is manual via maintenance script (`Initialize database`).
 
+### Backend entrypoint behavior
+
+- `app/server/app.py` runs startup in this order:
+  - resolve effective settings
+  - initialize the configured database backend
+  - run runtime pre-flight validation
+  - compose backend services into `app.state`
+- The backend serves the built frontend from `app/client/dist` whenever that build exists.
+- If no built frontend is available, the backend root falls back to `/docs` when API docs are enabled.
+
 ## Interoperability
 
 - Frontend always communicates with backend through `/api/*`.
 - Vite dev/preview proxies `/api` to backend host/port from `.env`.
-- In desktop mode, FastAPI can serve packaged SPA assets from `FAIRS/client/dist` when `FAIRS_TAURI_MODE=true`.
+- FastAPI can serve the built SPA from `app/client/dist` in both desktop and backend-served web modes when the build is present.
 - Training and inference share persisted datasets/checkpoints through shared backend services and repositories.
 
 ## Limitations and Constraints

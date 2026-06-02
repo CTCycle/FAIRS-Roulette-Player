@@ -2,33 +2,43 @@ from __future__ import annotations
 
 import os
 import warnings
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from server.common.constants import (
+    CLIENT_ASSETS_PATH,
+    CLIENT_DIST_PATH,
+    CLIENT_INDEX_FILE_PATH,
+    FASTAPI_API_PREFIX,
+    FASTAPI_ASSETS_ENDPOINT,
     FASTAPI_DESCRIPTION,
+    FASTAPI_DOCS_ENDPOINT,
+    FASTAPI_ROOT_ENDPOINT,
+    FASTAPI_SPA_FALLBACK_ENDPOINT,
     FASTAPI_TITLE,
     FASTAPI_VERSION,
 )
-from server.repositories.database.initializer import (
-    initialize_sqlite_on_startup_if_missing,
-)
-from server.repositories.database.backend import FAIRSDatabase
-from server.repositories.queries.data import DataRepositoryQueries
-from server.repositories.serialization.data import DataSerializer
 from server.api.datasets import router as datasets_router
 from server.api.inference import router as inference_router
 from server.api.training import router as training_router
 from server.api.upload import router as upload_router
+from server.configurations import get_server_settings
+from server.repositories.database.backend import FAIRSDatabase
+from server.repositories.database.initializer import initialize_database
+from server.repositories.queries.data import DataRepositoryQueries
+from server.repositories.serialization.data import DataSerializer
 from server.services.checkpoints import CheckpointService
 from server.services.datasets import DatasetService
 from server.services.importer import DatasetImportService
 from server.services.inference import InferenceService
 from server.services.jobs import create_job_manager
 from server.services.loader import TabularFileLoader
+from server.services.startup_validation import run_startup_validations
 from server.services.training import TrainingService
 
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -40,27 +50,51 @@ def is_api_docs_enabled() -> bool:
     return value in {"1", "true", "yes", "on"}
 
 
-# -----------------------------------------------------------------------------
-def tauri_mode_enabled() -> bool:
-    value = os.getenv("FAIRS_TAURI_MODE", "false").strip().lower()
-    return value in {"1", "true", "yes", "on"}
-
-
-# -----------------------------------------------------------------------------
-def get_client_dist_path() -> str:
-    project_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    return os.path.join(project_path, "client", "dist")
-
-
-# -----------------------------------------------------------------------------
-def packaged_client_available() -> bool:
-    return tauri_mode_enabled() and os.path.isdir(get_client_dist_path())
+###############################################################################
+def _client_build_available() -> bool:
+    return os.path.isfile(CLIENT_INDEX_FILE_PATH)
 
 
 ###############################################################################
+def _resolve_client_file(full_path: str) -> Path | None:
+    client_root = Path(CLIENT_DIST_PATH).resolve()
+    requested_path = (client_root / full_path).resolve()
+
+    if not requested_path.is_relative_to(client_root):
+        return None
+
+    if requested_path.is_file():
+        return requested_path
+
+    return None
+
+
+###############################################################################
+def serve_client_root() -> FileResponse:
+    return FileResponse(CLIENT_INDEX_FILE_PATH)
+
+
+###############################################################################
+def serve_client_path(full_path: str) -> FileResponse:
+    client_file = _resolve_client_file(full_path)
+    if client_file is not None:
+        return FileResponse(client_file)
+    return FileResponse(CLIENT_INDEX_FILE_PATH)
+
+
+###############################################################################
+def redirect_root_to_docs() -> RedirectResponse | dict[str, str]:
+    if is_api_docs_enabled():
+        return RedirectResponse(FASTAPI_DOCS_ENDPOINT)
+    return {"status": "ok"}
+
+
 @asynccontextmanager
-async def app_lifespan(application: FastAPI):
-    initialize_sqlite_on_startup_if_missing()
+async def app_lifespan(application: FastAPI) -> AsyncIterator[None]:
+    settings = get_server_settings()
+
+    initialize_database(settings.database)
+    run_startup_validations(settings)
 
     database = FAIRSDatabase()
     queries = DataRepositoryQueries(database)
@@ -90,27 +124,6 @@ async def app_lifespan(application: FastAPI):
 
 
 ###############################################################################
-def serve_spa_root() -> FileResponse:
-    return FileResponse(os.path.join(get_client_dist_path(), "index.html"))
-
-
-# -----------------------------------------------------------------------------
-def serve_spa_entrypoint(full_path: str) -> FileResponse:
-    client_dist_path = get_client_dist_path()
-    requested_path = os.path.join(client_dist_path, full_path)
-    if os.path.isfile(requested_path):
-        return FileResponse(requested_path)
-    return FileResponse(os.path.join(client_dist_path, "index.html"))
-
-
-# -----------------------------------------------------------------------------
-def redirect_to_docs() -> RedirectResponse | dict[str, str]:
-    if is_api_docs_enabled():
-        return RedirectResponse(url="/docs")
-    return {"status": "ok"}
-
-
-# -----------------------------------------------------------------------------
 def include_api_routers(application: FastAPI) -> None:
     for router in (
         upload_router,
@@ -118,40 +131,37 @@ def include_api_routers(application: FastAPI) -> None:
         datasets_router,
         inference_router,
     ):
-        application.include_router(router, prefix="/api")
+        application.include_router(router, prefix=FASTAPI_API_PREFIX)
 
 
-# -----------------------------------------------------------------------------
 def configure_client_routes(application: FastAPI) -> None:
-    if packaged_client_available():
-        client_dist_path = get_client_dist_path()
-        assets_path = os.path.join(client_dist_path, "assets")
-
-        if os.path.isdir(assets_path):
+    if _client_build_available():
+        if os.path.isdir(CLIENT_ASSETS_PATH):
             application.mount(
-                "/assets",
-                StaticFiles(directory=assets_path),
+                FASTAPI_ASSETS_ENDPOINT,
+                StaticFiles(directory=CLIENT_ASSETS_PATH),
                 name="spa-assets",
             )
 
         application.add_api_route(
-            "/",
-            serve_spa_root,
+            FASTAPI_ROOT_ENDPOINT,
+            serve_client_root,
             methods=["GET"],
             include_in_schema=False,
         )
         application.add_api_route(
-            "/{full_path:path}",
-            serve_spa_entrypoint,
+            FASTAPI_SPA_FALLBACK_ENDPOINT,
+            serve_client_path,
             methods=["GET"],
             include_in_schema=False,
         )
         return
 
     application.add_api_route(
-        "/",
-        redirect_to_docs,
+        FASTAPI_ROOT_ENDPOINT,
+        redirect_root_to_docs,
         methods=["GET"],
+        include_in_schema=False,
         response_model=None,
     )
 
