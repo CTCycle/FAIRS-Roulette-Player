@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import os
 from typing import Any
+from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -44,8 +46,9 @@ class ServerSettings:
 
 
 ###############################################################################
-class JsonDatabaseSettings(BaseModel):
+class EnvDatabaseSettings(BaseModel):
     embedded_database: bool = True
+    database_url: str | None = None
     engine: str = "postgres"
     host: str | None = None
     port: int = Field(default=5432, ge=1, le=65535)
@@ -58,6 +61,7 @@ class JsonDatabaseSettings(BaseModel):
     insert_batch_size: int = Field(default=1000, ge=1)
 
     @field_validator(
+        "database_url",
         "host",
         "database_name",
         "username",
@@ -78,8 +82,48 @@ class JsonDatabaseSettings(BaseModel):
         text = str(value).strip() if value is not None else ""
         return text or "postgres"
 
+    @classmethod
+    def from_environment(cls) -> "EnvDatabaseSettings":
+        raw: dict[str, Any] = {}
+        env_to_field = {
+            "EMBEDDED_DATABASE": "embedded_database",
+            "DATABASE_URL": "database_url",
+            "DATABASE_ENGINE": "engine",
+            "DATABASE_HOST": "host",
+            "DATABASE_PORT": "port",
+            "DATABASE_NAME": "database_name",
+            "DATABASE_USERNAME": "username",
+            "DATABASE_PASSWORD": "password",
+            "DATABASE_SSL": "ssl",
+            "DATABASE_SSL_CA": "ssl_ca",
+            "DATABASE_CONNECT_TIMEOUT": "connect_timeout",
+            "DATABASE_INSERT_BATCH_SIZE": "insert_batch_size",
+        }
+        for env_name, field_name in env_to_field.items():
+            value = os.getenv(env_name)
+            if value is not None:
+                raw[field_name] = value
+
+        database_url = raw.get("database_url")
+        if isinstance(database_url, str) and database_url.strip():
+            parsed = urlparse(database_url)
+            if parsed.scheme:
+                raw.setdefault("engine", parsed.scheme)
+            if parsed.hostname:
+                raw.setdefault("host", parsed.hostname)
+            if parsed.port is not None:
+                raw.setdefault("port", parsed.port)
+            if parsed.path and parsed.path != "/":
+                raw.setdefault("database_name", parsed.path.lstrip("/"))
+            if parsed.username:
+                raw.setdefault("username", parsed.username)
+            if parsed.password is not None:
+                raw.setdefault("password", parsed.password)
+
+        return cls.model_validate(raw)
+
     @model_validator(mode="after")
-    def validate_external_database_requirements(self) -> "JsonDatabaseSettings":
+    def validate_external_database_requirements(self) -> "EnvDatabaseSettings":
         if self.embedded_database:
             return self
 
@@ -119,13 +163,12 @@ class JsonDeviceSettings(BaseModel):
 
 ###############################################################################
 class JsonServerSettings(BaseModel):
-    database: JsonDatabaseSettings = Field(default_factory=JsonDatabaseSettings)
     jobs: JsonJobsSettings = Field(default_factory=JsonJobsSettings)
     device: JsonDeviceSettings = Field(default_factory=JsonDeviceSettings)
 
     # -------------------------------------------------------------------------
     def to_server_settings(self) -> ServerSettings:
-        db = self.database
+        db = EnvDatabaseSettings.from_environment()
         if db.embedded_database:
             database_settings = DatabaseSettings(
                 embedded_database=True,
@@ -167,8 +210,9 @@ class JsonServerSettings(BaseModel):
 
     # -------------------------------------------------------------------------
     def to_blocks(self) -> dict[str, dict[str, Any]]:
+        database = EnvDatabaseSettings.from_environment()
         return {
-            "database": self.database.model_dump(),
+            "database": database.model_dump(),
             "jobs": self.jobs.model_dump(),
             "device": self.device.model_dump(),
         }

@@ -1,6 +1,6 @@
 # CODING_RULES
 
-Last updated: 2026-04-24
+Last updated: 2026-06-02
 
 This file is the consolidated coding standard for this repository.
 
@@ -53,7 +53,7 @@ This file is the consolidated coding standard for this repository.
 
 - Route data access through repository serializers/queries instead of direct DB logic in API modules.
 - Keep schema, serializer, and API contracts synchronized in the same change.
-- Runtime process flags come from `.env`; technical backend settings come from `FAIRS/settings/configurations.json`.
+- Runtime process flags and database settings come from `.env`; non-database backend settings come from `FAIRS/settings/configurations.json`.
 
 ### Quality tooling
 
