@@ -1,6 +1,6 @@
 # ARCHITECTURE
 
-Last updated: 2026-04-27
+Last updated: 2026-06-02
 
 ## System Summary
 
@@ -274,8 +274,8 @@ No WebSocket routes are currently implemented in `FAIRS/server/api`.
 ## Data Persistence
 
 ### Backends
-- SQLite when `database.embedded_database = true` in `FAIRS/settings/configurations.json`.
-- PostgreSQL when `embedded_database = false` (engine/host/credentials from `configurations.json`).
+- SQLite when `EMBEDDED_DATABASE=true` in `FAIRS/settings/.env`.
+- PostgreSQL when `EMBEDDED_DATABASE=false` (database URL, host, port, and credentials from `.env`).
 
 ### Core tables
 - `roulette_outcomes`

@@ -95,6 +95,18 @@ Menu options:
 - `ENABLE_API_DOCS`
 - `RELOAD`
 - `OPTIONAL_DEPENDENCIES`
+- `EMBEDDED_DATABASE`
+- `DATABASE_URL`
+- `DATABASE_ENGINE`
+- `DATABASE_HOST`
+- `DATABASE_PORT`
+- `DATABASE_NAME`
+- `DATABASE_USERNAME`
+- `DATABASE_PASSWORD`
+- `DATABASE_SSL`
+- `DATABASE_SSL_CA`
+- `DATABASE_CONNECT_TIMEOUT`
+- `DATABASE_INSERT_BATCH_SIZE`
 - `MPLBACKEND`
 - `KERAS_BACKEND`
 
@@ -106,7 +118,6 @@ Menu options:
 ### Technical backend settings
 
 `FAIRS/settings/configurations.json` controls:
-- `database` (embedded SQLite vs PostgreSQL settings)
 - `jobs.polling_interval`
 - `device` options (JIT/mixed precision defaults)
 
@@ -126,8 +137,8 @@ Menu options:
 
 ### Database behavior
 
-- If `embedded_database=true`, SQLite auto-initializes on startup only when `FAIRS/resources/database.db` is missing.
-- If `embedded_database=false`, PostgreSQL initialization is manual via maintenance script (`Initialize database`).
+- If `EMBEDDED_DATABASE=true`, SQLite auto-initializes on startup only when `FAIRS/resources/database.db` is missing.
+- If `EMBEDDED_DATABASE=false`, PostgreSQL initialization is manual via maintenance script (`Initialize database`).
 
 ### Backend entrypoint behavior
 

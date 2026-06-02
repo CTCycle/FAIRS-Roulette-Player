@@ -48,7 +48,7 @@ Build output:
 Runtime profile files:
 - Template: `settings/.env.example`
 - Active profile: `settings/.env`
-- Database settings: `settings/configurations.json`
+- Non-database backend settings: `settings/configurations.json`
 
 Initialize `.env` once:
 
@@ -56,17 +56,17 @@ Initialize `.env` once:
 copy /Y settings\.env.example settings\.env
 ```
 
-Use `.env` to control host/port/runtime behavior and `configurations.json` for database mode/settings.
+Use `.env` for runtime variables and all database settings; use `configurations.json` for non-database backend settings such as job polling and device defaults.
 
 ### 3.1 Database Initialization
 
-Database backend selection is defined in `settings/configurations.json` (`database.embedded_database`).
+Database backend selection is defined in `settings/.env` (`EMBEDDED_DATABASE`).
 
-- `SQLite` (`embedded_database=true`):
+- `SQLite` (`EMBEDDED_DATABASE=true`):
   - The application initializes the database automatically on startup only when `app/resources/database.db` is missing.
   - Initialization creates schema objects and seeds required data.
   - If `database.db` already exists, startup skips initialization.
-- `PostgreSQL` (`embedded_database=false`):
+- `PostgreSQL` (`EMBEDDED_DATABASE=false`):
   - The application does not initialize PostgreSQL automatically during startup.
   - Initialization is manual via:
 
