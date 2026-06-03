@@ -1,7 +1,7 @@
 # FAIRS: Fabulous Automated Intelligent Roulette System
 [![Release](https://img.shields.io/github/v/release/CTCycle/FAIRS-Roulette-Player?display_name=tag)](https://github.com/CTCycle/FAIRS-Roulette-Player/releases)
-[![Python](https://img.shields.io/badge/Python-%3E%3D3.14-3776AB?logo=python&logoColor=white)](./pyproject.toml)
-[![Node.js](https://img.shields.io/badge/Node.js-22.12.0-339933?logo=node.js&logoColor=white)](./FAIRS/start_on_windows.bat)
+[![Python](https://img.shields.io/badge/Python-%3E%3D3.14-3776AB?logo=python&logoColor=white)](./app/server/pyproject.toml)
+[![Node.js](https://img.shields.io/badge/Node.js-22.12.0-339933?logo=node.js&logoColor=white)](./start_on_windows.bat)
 [![License](https://img.shields.io/badge/License-View-blue.svg)](./LICENSE)
 [![CI](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml)
 
@@ -48,7 +48,7 @@ Build output:
 Runtime profile files:
 - Template: `settings/.env.example`
 - Active profile: `settings/.env`
-- Database settings: `settings/configurations.json`
+- Non-database backend settings: `settings/configurations.json`
 
 Initialize `.env` once:
 
@@ -56,17 +56,17 @@ Initialize `.env` once:
 copy /Y settings\.env.example settings\.env
 ```
 
-Use `.env` to control host/port/runtime behavior and `configurations.json` for database mode/settings.
+Use `.env` for runtime variables and all database settings; use `configurations.json` for non-database backend settings such as job polling and device defaults.
 
 ### 3.1 Database Initialization
 
-Database backend selection is defined in `settings/configurations.json` (`database.embedded_database`).
+Database backend selection is defined in `settings/.env` (`EMBEDDED_DATABASE`).
 
-- `SQLite` (`embedded_database=true`):
+- `SQLite` (`EMBEDDED_DATABASE=true`):
   - The application initializes the database automatically on startup only when `app/resources/database.db` is missing.
   - Initialization creates schema objects and seeds required data.
   - If `database.db` already exists, startup skips initialization.
-- `PostgreSQL` (`embedded_database=false`):
+- `PostgreSQL` (`EMBEDDED_DATABASE=false`):
   - The application does not initialize PostgreSQL automatically during startup.
   - Initialization is manual via:
 
@@ -91,7 +91,7 @@ Select `Initialize database` to run `app/scripts/initialize_database.py`.
 Run full automated tests:
 
 ```cmd
-run_tests.bat
+app\tests\run_tests.bat
 ```
 
 Optional direct pytest commands:
@@ -116,9 +116,13 @@ Available maintenance actions include log cleanup, local uninstall/runtime clean
 
 ## 8. User Documentation
 Detailed operational guidance is available in:
-- `assets/docs/USER_MANUAL.md`
-- `assets/docs/PACKAGING_AND_RUNTIME_MODES.md`
-- `assets/docs/ARCHITECTURE.md`
+- `assets/docs/project_overview.md`
+- `assets/docs/operations/quick_start.md`
+- `assets/docs/operations/workflows.md`
+- `assets/docs/operations/troubleshooting.md`
+- `assets/docs/runtime/startup.md`
+- `assets/docs/runtime/deployment.md`
+- `assets/docs/architecture/system_overview.md`
 
 ## 9. Screenshots
 ### Training Workspace
@@ -126,7 +130,7 @@ Desktop view of dataset upload, dataset selection, checkpoint panels, and the li
 
 ![Training overview](assets/figures/training-page-v2.4.0.png)
 
-Mobile rendering of the training workspace for narrow viewports.
+Mobile rendering of the training workspace with the same controls stacked for a narrow viewport.
 
 ![Training mobile workspace](assets/figures/training-mobile-v2.4.0.png)
 

@@ -9,12 +9,29 @@ import pytest
 
 from server.configurations import environment, startup
 
+DATABASE_ENV_KEYS = (
+    "EMBEDDED_DATABASE",
+    "DATABASE_URL",
+    "DATABASE_ENGINE",
+    "DATABASE_HOST",
+    "DATABASE_PORT",
+    "DATABASE_NAME",
+    "DATABASE_USERNAME",
+    "DATABASE_PASSWORD",
+    "DATABASE_SSL",
+    "DATABASE_SSL_CA",
+    "DATABASE_CONNECT_TIMEOUT",
+    "DATABASE_INSERT_BATCH_SIZE",
+)
+
 
 ###############################################################################
 @pytest.fixture(autouse=True)
-def reset_configuration_state() -> None:
+def reset_configuration_state(monkeypatch: pytest.MonkeyPatch) -> None:
     startup.get_configuration_manager.cache_clear()
     environment.reset_environment_for_tests()
+    for env_name in DATABASE_ENV_KEYS:
+        monkeypatch.delenv(env_name, raising=False)
     yield
     startup.get_configuration_manager.cache_clear()
     environment.reset_environment_for_tests()
@@ -33,19 +50,6 @@ def _write_env(path: Path, lines: list[str]) -> None:
 # -----------------------------------------------------------------------------
 def _default_json_config() -> dict[str, object]:
     return {
-        "database": {
-            "embedded_database": False,
-            "engine": "postgres",
-            "host": "json-db",
-            "port": 5432,
-            "database_name": "json_name",
-            "username": "json_user",
-            "password": "json_pass",
-            "ssl": False,
-            "ssl_ca": None,
-            "connect_timeout": 10,
-            "insert_batch_size": 1000,
-        },
         "jobs": {"polling_interval": 1.0},
         "device": {"jit_compile": False, "jit_backend": "inductor", "use_mixed_precision": False},
     }
@@ -122,20 +126,33 @@ def test_server_settings_use_json_configuration_file(
     _write_json(config_path, _default_json_config())
 
     env_path = tmp_path / ".env"
-    _write_env(env_path, ["FASTAPI_HOST=127.0.0.1"])
+    _write_env(
+        env_path,
+        [
+            "FASTAPI_HOST=127.0.0.1",
+            "EMBEDDED_DATABASE=false",
+            "DATABASE_HOST=env-db",
+            "DATABASE_PORT=5432",
+            "DATABASE_NAME=env_name",
+            "DATABASE_USERNAME=env_user",
+            "DATABASE_PASSWORD=env_pass",
+        ],
+    )
     monkeypatch.setattr(environment, "ENV_FILE_PATH", str(env_path))
 
     settings = startup.reload_settings_for_tests(config_path=str(config_path))
 
-    assert settings.database.host == "json-db"
+    assert settings.database.host == "env-db"
     assert settings.database.port == 5432
+    assert settings.database.database_name == "env_name"
+    assert settings.database.username == "env_user"
     assert settings.jobs.polling_interval == 1.0
     assert settings.device.jit_compile is False
     assert settings.device.jit_backend == "inductor"
 
 
 # -----------------------------------------------------------------------------
-def test_technical_env_overrides_are_not_applied(
+def test_database_settings_are_loaded_from_env(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     config_path = tmp_path / "configurations.json"
@@ -145,7 +162,9 @@ def test_technical_env_overrides_are_not_applied(
     _write_env(
         env_path,
         [
-            "DATABASE_USER=env-user",
+            "EMBEDDED_DATABASE=false",
+            "DATABASE_URL=postgresql+psycopg://url-user:url-pass@url-host:5544/url-db",
+            "DATABASE_USERNAME=env-user",
             "DATABASE_NAME=env-name",
         ],
     )
@@ -153,8 +172,10 @@ def test_technical_env_overrides_are_not_applied(
 
     settings = startup.reload_settings_for_tests(config_path=str(config_path))
 
-    assert settings.database.username == "json_user"
-    assert settings.database.database_name == "json_name"
+    assert settings.database.host == "url-host"
+    assert settings.database.port == 5544
+    assert settings.database.username == "env-user"
+    assert settings.database.database_name == "env-name"
 
 
 # -----------------------------------------------------------------------------
@@ -165,14 +186,26 @@ def test_manager_get_block_and_get_value(
     _write_json(config_path, _default_json_config())
 
     env_path = tmp_path / ".env"
-    _write_env(env_path, ["FASTAPI_HOST=127.0.0.1"])
+    _write_env(
+        env_path,
+        [
+            "FASTAPI_HOST=127.0.0.1",
+            "EMBEDDED_DATABASE=false",
+            "DATABASE_HOST=env-db",
+            "DATABASE_PORT=5432",
+            "DATABASE_NAME=env_name",
+            "DATABASE_USERNAME=env_user",
+            "DATABASE_PASSWORD=env_pass",
+        ],
+    )
     monkeypatch.setattr(environment, "ENV_FILE_PATH", str(env_path))
 
     startup.reload_settings_for_tests(config_path=str(config_path))
     manager = startup.get_configuration_manager()
 
     database_block = manager.get_block("database")
-    assert database_block["host"] == "json-db"
+    assert database_block["host"] == "env-db"
+    assert database_block["database_url"] is None
     assert manager.get_value("jobs", "polling_interval") == 1.0
     assert manager.get_value("device", "missing", default="fallback") == "fallback"
 
@@ -186,7 +219,13 @@ def test_reload_updates_cached_manager_values(
     _write_json(config_path, payload)
 
     env_path = tmp_path / ".env"
-    _write_env(env_path, ["FASTAPI_HOST=127.0.0.1"])
+    _write_env(
+        env_path,
+        [
+            "FASTAPI_HOST=127.0.0.1",
+            "EMBEDDED_DATABASE=true",
+        ],
+    )
     monkeypatch.setattr(environment, "ENV_FILE_PATH", str(env_path))
 
     first = startup.reload_settings_for_tests(config_path=str(config_path))
@@ -204,7 +243,7 @@ def test_missing_configuration_file_fails_fast(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     env_path = tmp_path / ".env"
-    _write_env(env_path, ["FASTAPI_HOST=127.0.0.1"])
+    _write_env(env_path, ["FASTAPI_HOST=127.0.0.1", "EMBEDDED_DATABASE=true"])
     monkeypatch.setattr(environment, "ENV_FILE_PATH", str(env_path))
 
     with pytest.raises(RuntimeError, match="Configuration file not found"):
@@ -219,7 +258,7 @@ def test_invalid_configuration_file_fails_fast(
     config_path.write_text("{not-json", encoding="utf-8")
 
     env_path = tmp_path / ".env"
-    _write_env(env_path, ["FASTAPI_HOST=127.0.0.1"])
+    _write_env(env_path, ["FASTAPI_HOST=127.0.0.1", "EMBEDDED_DATABASE=true"])
     monkeypatch.setattr(environment, "ENV_FILE_PATH", str(env_path))
 
     with pytest.raises(RuntimeError, match="Unable to load configuration"):
