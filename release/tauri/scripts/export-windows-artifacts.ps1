@@ -7,6 +7,7 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\..\.."))
 $clientDir = Join-Path $repoRoot "app\\client"
+$tauriDir = Join-Path $clientDir "src-tauri"
 $releaseDir = Join-Path $clientDir "src-tauri\target\release"
 $bundleDir = Join-Path $releaseDir "bundle"
 
@@ -18,6 +19,7 @@ if ([string]::IsNullOrWhiteSpace($OutputPath)) {
 
 $installersDir = Join-Path $outputDir "installers"
 $portableDir = Join-Path $outputDir "portable"
+$portableRuntimeDir = Join-Path $portableDir "runtime"
 
 if (-not (Test-Path $bundleDir)) {
   throw "Bundle directory not found. Run 'npm run tauri:build' first. Missing: $bundleDir"
@@ -29,6 +31,7 @@ if (Test-Path $outputDir) {
 
 New-Item -ItemType Directory -Path $installersDir -Force | Out-Null
 New-Item -ItemType Directory -Path $portableDir -Force | Out-Null
+New-Item -ItemType Directory -Path $portableRuntimeDir -Force | Out-Null
 
 $installerArtifacts = @()
 
@@ -61,68 +64,35 @@ foreach ($file in $portableExeCandidates) {
   Copy-Item -Path $file.FullName -Destination $portableDir -Force
 }
 
-$requiredPortableEntries = @(
-  "app",
-  "runtimes",
-  "settings"
-)
+$portablePayloadSourceDir = Join-Path $tauriDir "runtime"
+if (Test-Path $portablePayloadSourceDir) {
+  Copy-Item -Path (Join-Path $portablePayloadSourceDir "*") -Destination $portableRuntimeDir -Recurse -Force
+} else {
+  $portablePayloadEntries = @("app", "settings", "runtimes", "resources", "_up_")
 
-foreach ($entry in $requiredPortableEntries) {
-  $sourcePath = Join-Path $releaseDir $entry
-  if (-not (Test-Path $sourcePath)) {
-    throw "Missing required portable payload entry: $sourcePath. Run release\tauri\build_with_tauri.bat again after fixing runtime staging."
-  }
-}
-
-$requiredPortableRuntimeFiles = @(
-  "runtimes\uv\uv.exe",
-  "runtimes\python\python.exe",
-  "runtimes\nodejs\node.exe",
-  "runtimes\nodejs\npm.cmd"
-)
-
-# Ensure required runtime files exist in the release payload by staging from root runtimes if needed.
-foreach ($entry in $requiredPortableRuntimeFiles) {
-  $sourcePath = Join-Path $releaseDir $entry
-  if (-not (Test-Path $sourcePath)) {
-    $fallbackPath = Join-Path $repoRoot $entry
-    if (Test-Path $fallbackPath) {
-      $destinationDir = Split-Path -Parent $sourcePath
-      if (-not (Test-Path $destinationDir)) {
-        New-Item -ItemType Directory -Path $destinationDir -Force | Out-Null
-      }
-      Copy-Item -Path $fallbackPath -Destination $sourcePath -Force
+  foreach ($entry in $portablePayloadEntries) {
+    $sourcePath = Join-Path $releaseDir $entry
+    if (Test-Path $sourcePath) {
+      $destinationPath = Join-Path $portableRuntimeDir $entry
+      Copy-Item -Path $sourcePath -Destination $destinationPath -Recurse -Force
     }
   }
 }
 
-foreach ($entry in $requiredPortableRuntimeFiles) {
-  $sourcePath = Join-Path $releaseDir $entry
-  if (-not (Test-Path $sourcePath)) {
-    throw "Missing required portable runtime file: $sourcePath. Ensure root runtimes are staged before export."
-  }
-}
-
-$portableResourceEntries = @(
-  "app",
-  "runtimes",
+$requiredPortableEntries = @(
+  "app\server",
+  "app\scripts",
   "settings",
-  "resources",
-  "_up_"
+  "app\client\dist",
+  "app\resources\database.db",
+  "runtimes\uv\uv.exe",
+  "runtimes\python\python.exe"
 )
 
-foreach ($entry in $portableResourceEntries) {
-  $sourcePath = Join-Path $releaseDir $entry
-  if (Test-Path $sourcePath) {
-    $destinationPath = Join-Path $portableDir $entry
-    Copy-Item -Path $sourcePath -Destination $destinationPath -Recurse -Force
-  }
-}
-
-foreach ($entry in $requiredPortableRuntimeFiles) {
-  $portablePath = Join-Path $portableDir $entry
+foreach ($entry in $requiredPortableEntries) {
+  $portablePath = Join-Path $portableRuntimeDir $entry
   if (-not (Test-Path $portablePath)) {
-    throw "Exported portable payload is incomplete. Missing: $portablePath"
+    throw "Portable export is incomplete. Missing required payload path: $portablePath"
   }
 }
 
@@ -133,8 +103,9 @@ FAIRS desktop build output
    Open installers\ and run the setup executable (.exe) or .msi.
 
 2) Portable executable:
-   portable\ contains the app .exe and the required runtime resource payload.
-   Keep the exported contents together in the same directory.
+   portable\ contains the app .exe.
+   portable\runtime\ contains the required runtime payload.
+   Keep the .exe beside the runtime\ folder.
 
 Generated from:
 $bundleDir
@@ -155,3 +126,5 @@ if ($portableFiles.Count -eq 0) {
 } else {
   $portableFiles | ForEach-Object { Write-Host " - $($_.FullName)" }
 }
+Write-Host "[INFO] Portable runtime payload:"
+Write-Host " - $portableRuntimeDir"

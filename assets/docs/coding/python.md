@@ -1,0 +1,69 @@
+## Python
+
+Last updated: 2026-06-02
+
+## Runtime Baseline
+
+- Target Python version:
+  - `>=3.14`
+- Preferred environment:
+  - `app/server/.venv` when present
+  - otherwise follow the repository environment policy
+- Keep dependencies managed with `uv`.
+- Prefer running Python tooling from repository root with `uv run ...`.
+
+## Typing Rules
+
+- Type annotations are required for public APIs and non-trivial internal logic.
+- Use built-in generics such as `list[str]` and `dict[str, Any]`.
+- Use `|` for unions.
+- Prefer `collections.abc` types for abstract interfaces where appropriate.
+- Treat typing as a quality gate, not optional decoration.
+
+## Validation And API Rules
+
+- Use domain and Pydantic models for request and response validation.
+- Avoid ad-hoc manual validation when a model can encode the constraint.
+- Return explicit HTTP status codes and stable response shapes.
+- Do not expose raw internal traces in API payloads.
+- Preserve traceability with identifiers such as `job_id` and `session_id`.
+
+## Async And Concurrency Rules
+
+- Use `async` only for genuinely non-blocking operations.
+- Do not run CPU-heavy model workloads in async request handlers.
+- Follow the existing long-running task pattern:
+  - start endpoint
+  - status endpoint
+  - stop or cancel endpoint
+- Reuse the `JobManager` plus worker-process model for training workloads.
+
+## Structure Rules
+
+- Keep functions cohesive and small.
+- Keep side effects explicit.
+- Prefer simple, composable logic over deep abstraction stacks.
+- Add comments only for non-obvious constraints or safety rationale.
+- Respect the existing backend module boundaries:
+  - `api`
+  - `services`
+  - `domain`
+  - `repositories`
+  - `learning`
+  - `configurations`
+- Avoid unrelated stylistic churn.
+- Keep imports at file top.
+- Avoid nested functions unless locality clearly improves the code.
+- Use classes where stateful cohesion benefits readability.
+
+## Persistence And Settings Rules
+
+- Route data access through repository queries and serializers.
+- Keep schema, serializer, and API contracts synchronized.
+- Runtime flags come from environment variables.
+- Structured non-env settings live in `settings/configurations.json`.
+
+## Related Files
+
+- Read `testing_and_quality.md` for tests and linting expectations.
+- Read `../architecture/execution_and_data_flow.md` for how these rules map onto the backend layers.

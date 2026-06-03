@@ -11,7 +11,7 @@ from server.configurations.startup import (
 from server.domain.configuration import (
     DatabaseSettings,
     DeviceSettings,
-    JsonDatabaseSettings,
+    EnvDatabaseSettings,
     JsonDeviceSettings,
     JsonJobsSettings,
     JsonServerSettings,
@@ -30,7 +30,7 @@ __all__ = [
     "JobsSettings",
     "DeviceSettings",
     "ServerSettings",
-    "JsonDatabaseSettings",
+    "EnvDatabaseSettings",
     "JsonJobsSettings",
     "JsonDeviceSettings",
     "JsonServerSettings",

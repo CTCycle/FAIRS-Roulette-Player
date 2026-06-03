@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import urllib.parse
 import sqlalchemy
 from sqlalchemy import delete, func, select
@@ -9,7 +8,6 @@ from sqlalchemy.orm import sessionmaker
 
 from server.configurations import DatabaseSettings
 from server.configurations.startup import get_server_settings
-from server.common.constants import DATABASE_FILENAME, RESOURCES_PATH
 from server.common.utils.logger import logger
 from server.repositories.database.postgres import PostgresRepository
 from server.repositories.database.sqlite import SQLiteRepository
@@ -174,23 +172,6 @@ def initialize_sqlite_database(settings: DatabaseSettings) -> None:
     seed_roulette_outcomes(repository.engine)
     logger.info("Initialized SQLite database at %s", repository.db_path)
 
-
-def initialize_sqlite_database_if_missing(settings: DatabaseSettings) -> None:
-    db_path = os.path.join(RESOURCES_PATH, DATABASE_FILENAME)
-    if os.path.exists(db_path):
-        return
-    initialize_sqlite_database(settings)
-
-
-# -----------------------------------------------------------------------------
-def initialize_sqlite_on_startup_if_missing() -> None:
-    settings = get_server_settings().database
-    if not settings.embedded_database:
-        return
-    initialize_sqlite_database_if_missing(settings)
-
-
-# -----------------------------------------------------------------------------
 def ensure_postgres_database(settings: DatabaseSettings) -> str:
     if not settings.host:
         raise ValueError("Database host is required for PostgreSQL initialization.")
@@ -249,25 +230,6 @@ def ensure_postgres_database(settings: DatabaseSettings) -> str:
 
 
 # -----------------------------------------------------------------------------
-def run_database_initialization() -> None:
-    settings = get_server_settings().database
-    if settings.embedded_database:
-        initialize_sqlite_database(settings)
-        return
-
-    engine_name = normalize_postgres_engine(settings.engine).lower()
-    if engine_name not in {
-        "postgres",
-        "postgresql",
-        "postgresql+psycopg",
-        "postgresql+psycopg2",
-    }:
-        raise ValueError(f"Unsupported database engine: {settings.engine}")
-
-    ensure_postgres_database(settings)
-
-
-# -----------------------------------------------------------------------------
 def build_roulette_outcome_seed_rows() -> list[dict[str, int | str]]:
     reverse_color_map = {
         number: color
@@ -312,9 +274,23 @@ def seed_roulette_outcomes(engine: sqlalchemy.Engine) -> None:
 
 
 # -----------------------------------------------------------------------------
-def initialize_database() -> None:
+def initialize_database(settings: DatabaseSettings | None = None) -> None:
     try:
-        run_database_initialization()
+        resolved_settings = settings or get_server_settings().database
+        if resolved_settings.embedded_database:
+            initialize_sqlite_database(resolved_settings)
+            return
+
+        engine_name = normalize_postgres_engine(resolved_settings.engine).lower()
+        if engine_name not in {
+            "postgres",
+            "postgresql",
+            "postgresql+psycopg",
+            "postgresql+psycopg2",
+        }:
+            raise ValueError(f"Unsupported database engine: {resolved_settings.engine}")
+
+        ensure_postgres_database(resolved_settings)
     except (SQLAlchemyError, ValueError) as exc:
         logger.error("Database initialization failed: %s", exc)
         raise SystemExit(1) from exc
