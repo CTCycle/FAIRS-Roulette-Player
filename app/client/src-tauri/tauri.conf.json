@@ -24,7 +24,9 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": [
+      "msi"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -33,18 +35,13 @@
       "icons/icon.ico"
     ],
     "resources": {
-      "r/server/pyproject.toml": "app/server/pyproject.toml",
-      "r/server/uv.lock": "app/server/uv.lock",
-      "r/server": "app/server",
-      "r/scripts": "app/scripts",
-      "r/settings": "settings",
-      "r/client/dist": "app/client/dist",
-      "r/resources/checkpoints": "app/resources/checkpoints",
-      "r/resources/database.db": "app/resources/database.db",
-      "r/resources/logs": "app/resources/logs",
-      "r/runtimes/nodejs": "runtimes/nodejs",
-      "r/runtimes/python": "runtimes/python",
-      "r/runtimes/uv": "runtimes/uv"
+      "runtime/app/server": "runtime/app/server",
+      "runtime/app/scripts": "runtime/app/scripts",
+      "runtime/settings": "runtime/settings",
+      "runtime/app/client/dist": "runtime/app/client/dist",
+      "runtime/app/resources/database.db": "runtime/app/resources/database.db",
+      "runtime/runtimes/python": "runtime/runtimes/python",
+      "runtime/runtimes/uv": "runtime/runtimes/uv"
     }
   }
 }

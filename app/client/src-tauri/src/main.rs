@@ -213,21 +213,26 @@ fn push_with_ancestors(base: &Path, candidates: &mut Vec<PathBuf>) {
     }
 }
 
+fn push_workspace_candidates(base: &Path, candidates: &mut Vec<PathBuf>) {
+    push_with_ancestors(&base.join("runtime"), candidates);
+    push_with_ancestors(base, candidates);
+}
+
 fn find_workspace_root(app_handle: &tauri::AppHandle) -> Result<PathBuf, String> {
     let mut candidates: Vec<PathBuf> = Vec::new();
 
     if let Ok(exe_path) = std::env::current_exe() {
         if let Some(exe_dir) = exe_path.parent() {
-            push_with_ancestors(exe_dir, &mut candidates);
+            push_workspace_candidates(exe_dir, &mut candidates);
         }
     }
 
     if let Ok(current_dir) = std::env::current_dir() {
-        push_with_ancestors(&current_dir, &mut candidates);
+        push_workspace_candidates(&current_dir, &mut candidates);
     }
 
     if let Ok(resource_dir) = app_handle.path().resource_dir() {
-        push_with_ancestors(&resource_dir, &mut candidates);
+        push_workspace_candidates(&resource_dir, &mut candidates);
     }
 
     let mut seen: HashSet<PathBuf> = HashSet::new();
@@ -242,29 +247,14 @@ fn find_workspace_root(app_handle: &tauri::AppHandle) -> Result<PathBuf, String>
         }
     }
 
-    if let Some(with_layout_and_venv) = workspace_candidates
-        .iter()
-        .find(|candidate| has_workspace_runtime_layout(candidate) && has_workspace_venv(candidate))
-    {
-        return Ok(with_layout_and_venv.clone());
-    }
+    for candidate in workspace_candidates {
+        if has_workspace_venv(&candidate) {
+            return Ok(candidate);
+        }
 
-    if let Some(with_layout) = workspace_candidates
-        .iter()
-        .find(|candidate| has_workspace_runtime_layout(candidate))
-    {
-        return Ok(with_layout.clone());
-    }
-
-    if let Some(with_venv) = workspace_candidates
-        .iter()
-        .find(|candidate| has_workspace_venv(candidate))
-    {
-        return Ok(with_venv.clone());
-    }
-
-    if let Some(first_candidate) = workspace_candidates.into_iter().next() {
-        return Ok(first_candidate);
+        if has_workspace_runtime_layout(&candidate) {
+            return Ok(candidate);
+        }
     }
 
     let checked_paths = format_checked_paths(&checked_candidates);
@@ -381,8 +371,8 @@ fn spawn_backend(app_handle: &tauri::AppHandle, state: &BackendChildState) -> Re
     {
         let workspace_root = find_workspace_root(app_handle)?;
         let runtime_root = resolve_runtime_root(app_handle, &workspace_root)?;
-        let project_dir = workspace_root.join("app");
         let env_path = workspace_root.join("settings").join(".env");
+        let app_dir = workspace_root.join("app");
         let backend_config = resolve_backend_launch_config(&env_path);
         let uv_exe = runtime_uv_exe(&workspace_root);
         let python_exe = runtime_python_exe(&workspace_root);
@@ -390,23 +380,6 @@ fn spawn_backend(app_handle: &tauri::AppHandle, state: &BackendChildState) -> Re
         let venv_dir = runtime_root.join("app").join("server").join(".venv");
         let venv_python_exe = runtime_venv_python(&runtime_root);
         let uv_cache_dir = runtime_state_root.join(".uv-cache");
-
-        if !uv_exe.is_file() {
-            let checked_paths = format_checked_paths(std::slice::from_ref(&uv_exe));
-            return Err(format!(
-                "Bundled uv runtime not found in resolved workspace runtime layout.\nWorkspace root: {}\nChecked paths:\n{}",
-                workspace_root.display(),
-                checked_paths
-            ));
-        }
-        if !python_exe.is_file() {
-            let checked_paths = format_checked_paths(std::slice::from_ref(&python_exe));
-            return Err(format!(
-                "Bundled python runtime not found in resolved workspace runtime layout.\nWorkspace root: {}\nChecked paths:\n{}",
-                workspace_root.display(),
-                checked_paths
-            ));
-        }
 
         let python_exe_str = python_exe.to_string_lossy().to_string();
         let uv_cache_dir_str = uv_cache_dir.to_string_lossy().to_string();
@@ -425,6 +398,23 @@ fn spawn_backend(app_handle: &tauri::AppHandle, state: &BackendChildState) -> Re
             || !python_module_available(&venv_python_exe, &workspace_root, "uvicorn");
 
         if needs_sync {
+            if !uv_exe.is_file() {
+                let checked_paths = format_checked_paths(std::slice::from_ref(&uv_exe));
+                return Err(format!(
+                    "Bundled uv runtime not found in resolved workspace runtime layout.\nWorkspace root: {}\nChecked paths:\n{}",
+                    workspace_root.display(),
+                    checked_paths
+                ));
+            }
+            if !python_exe.is_file() {
+                let checked_paths = format_checked_paths(std::slice::from_ref(&python_exe));
+                return Err(format!(
+                    "Bundled python runtime not found in resolved workspace runtime layout.\nWorkspace root: {}\nChecked paths:\n{}",
+                    workspace_root.display(),
+                    checked_paths
+                ));
+            }
+
             fs::create_dir_all(&uv_cache_dir).map_err(|error| {
                 format!(
                     "Cannot create uv cache directory at {}: {error}",
@@ -477,6 +467,8 @@ fn spawn_backend(app_handle: &tauri::AppHandle, state: &BackendChildState) -> Re
         child_command.arg("-m").arg("uvicorn");
         child_command
             .arg("server.app:app")
+            .arg("--app-dir")
+            .arg(&app_dir)
             .arg("--host")
             .arg(&backend_host)
             .arg("--port")
@@ -488,7 +480,7 @@ fn spawn_backend(app_handle: &tauri::AppHandle, state: &BackendChildState) -> Re
         }
 
         let child = child_command
-            .current_dir(workspace_root.join("app").join("server"))
+            .current_dir(&workspace_root)
             .env("FAIRS_TAURI_MODE", "true")
             .env("MPLBACKEND", mpl_backend)
             .env("KERAS_BACKEND", keras_backend)

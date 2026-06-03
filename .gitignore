@@ -12,6 +12,9 @@ FAIRS/client/*.local
 FAIRS/client/src-tauri/target/
 FAIRS/client/src-tauri/r/
 FAIRS/client/src-tauri/gen/
+app/client/src-tauri/target/
+app/client/src-tauri/gen/
+app/client/src-tauri/runtime/
 release/windows/
 
 # Python
