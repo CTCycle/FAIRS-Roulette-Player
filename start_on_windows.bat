@@ -312,8 +312,11 @@ REM ============================================================================
 set "BACKEND_BASE_URL=http://!FASTAPI_HOST!:!FASTAPI_PORT!"
 echo [WAIT] Waiting for backend readiness at !BACKEND_BASE_URL!...
 for /L %%i in (1,1,60) do (
-  powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command "$base='!BACKEND_BASE_URL!'; $paths=@('/api/health','/health','/docs','/'); foreach ($p in $paths) { try { $r = Invoke-WebRequest -UseBasicParsing -Uri ($base + $p) -TimeoutSec 2; if ($r.StatusCode -ge 200 -and $r.StatusCode -lt 300) { exit 0 } } catch {} }; exit 1" >nul 2>&1
-  if !errorlevel! equ 0 goto :backend_ready_check
+  for %%U in ("!BACKEND_BASE_URL!/api/health" "!BACKEND_BASE_URL!/health" "!BACKEND_BASE_URL!/docs" "!BACKEND_BASE_URL!/") do (
+    set "backend_probe_result="
+    for /f "usebackq delims=" %%R in (`powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%TMPHEALTH%" %%~U`) do set "backend_probe_result=%%R"
+    if /i "!backend_probe_result!"=="ok" goto :backend_ready_check
+  )
   timeout /t 1 /nobreak >nul 2>&1
 )
 echo [FATAL] Backend did not become ready at !BACKEND_BASE_URL! (checked /api/health, /health, /docs, /).
