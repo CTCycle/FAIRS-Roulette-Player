@@ -11,8 +11,6 @@ FAIRS is a research web application for roulette training and inference experime
 - A React + Vite frontend for training and inference workflows.
 - An optional Tauri desktop shell for packaged Windows distribution.
 
-> **Work in Progress**: This project is still under active development. You may encounter bugs, issues, or incomplete features.
-
 ## 2. Runtime Modes
 
 ### 2.1 Local Mode (Default)
@@ -130,12 +128,12 @@ Desktop view of dataset upload, dataset selection, checkpoint panels, and the li
 
 ![Training overview](assets/figures/training-page-v2.4.0.png)
 
-Mobile rendering of the training workspace with the same controls stacked for a narrow viewport.
+Mobile rendering of the same training workspace with the controls stacked for a narrow viewport.
 
 ![Training mobile workspace](assets/figures/training-mobile-v2.4.0.png)
 
 ### Inference Workspace
-Inference controls for checkpoint and dataset pairing with session playback history.
+Inference controls for checkpoint and dataset pairing with session history.
 
 ![Inference overview](assets/figures/inference-page-v2.4.0.png)
 
