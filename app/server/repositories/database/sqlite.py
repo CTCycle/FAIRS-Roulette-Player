@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import os
+from pathlib import Path
 from typing import Any
 
 import sqlalchemy
@@ -8,7 +8,7 @@ from sqlalchemy import event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
 
-from server.common.constants import DATABASE_FILENAME, RESOURCES_PATH
+from server.common.path import DATABASE_FILENAME, RESOURCES_PATH
 from server.configurations import DatabaseSettings
 from server.repositories.database.common import (
     SQLAlchemyRepositoryBase,
@@ -19,7 +19,7 @@ from server.repositories.schemas.models import Base
 SQLITE_FOREIGN_KEYS_PRAGMA = "PRAGMA foreign_keys=ON"
 
 
-# -----------------------------------------------------------------------------
+###############################################################################
 def set_sqlite_pragma(dbapi_connection: Any, _connection_record: Any) -> None:
     cursor = dbapi_connection.cursor()
     cursor.execute(SQLITE_FOREIGN_KEYS_PRAGMA)
@@ -33,8 +33,8 @@ class SQLiteRepository(SQLAlchemyRepositoryBase):
         settings: DatabaseSettings,
         initialize_schema: bool = False,
     ) -> None:
-        self.db_path: str | None = os.path.join(RESOURCES_PATH, DATABASE_FILENAME)
-        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+        self.db_path: Path = RESOURCES_PATH / DATABASE_FILENAME
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.engine: Engine = sqlalchemy.create_engine(
             f"sqlite:///{self.db_path}",
             echo=False,

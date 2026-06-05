@@ -13,7 +13,7 @@ from server.repositories.schemas.models import Base, get_model_class_for_table
 ALLOWED_TABLE_NAMES = frozenset(Base.metadata.tables.keys())
 
 
-# -----------------------------------------------------------------------------
+###############################################################################
 def normalize_table_name(table_name: str) -> str:
     if not isinstance(table_name, str):
         raise ValueError("Table name must be a string.")

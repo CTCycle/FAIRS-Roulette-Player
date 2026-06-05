@@ -166,6 +166,16 @@ class JsonServerSettings(BaseModel):
     jobs: JsonJobsSettings = Field(default_factory=JsonJobsSettings)
     device: JsonDeviceSettings = Field(default_factory=JsonDeviceSettings)
 
+    @model_validator(mode="before")
+    @classmethod
+    def reject_database_block(cls, value: Any) -> Any:
+        if isinstance(value, dict) and "database" in value:
+            raise ValueError(
+                "Database configuration must be provided via settings/.env, "
+                "not settings/configurations.json."
+            )
+        return value
+
     # -------------------------------------------------------------------------
     def to_server_settings(self) -> ServerSettings:
         db = EnvDatabaseSettings.from_environment()
