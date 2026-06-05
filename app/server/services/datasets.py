@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import os
+from pathlib import PurePath
 
 from server.domain.datasets import (
     DatasetDeleteResponse,
@@ -23,7 +23,7 @@ def normalize_filename(filename: str | None) -> str:
     if filename is None:
         raise ValueError("Missing filename.")
     # Normalize both Unix and Windows separators before taking basename.
-    cleaned = os.path.basename(filename.replace("\\", "/")).strip()
+    cleaned = PurePath(filename.replace("\\", "/")).name.strip()
     if not cleaned:
         raise ValueError("Missing filename.")
     if len(cleaned) > MAX_FILENAME_LENGTH:
@@ -98,7 +98,7 @@ class DatasetService:
             sheet_name=sheet_name,
         )
 
-        base_name = os.path.splitext(normalized_filename)[0].strip()
+        base_name = PurePath(normalized_filename).stem.strip()
         dataset_name = base_name if base_name else "dataset"
 
         imported = self.importer.import_dataframe(

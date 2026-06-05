@@ -6,7 +6,7 @@ from typing import Any
 import pandas as pd
 from sqlalchemy.sql.sqltypes import Date, DateTime
 
-# -----------------------------------------------------------------------------
+###############################################################################
 def normalize_postgres_engine(engine: str | None) -> str:
     if not engine:
         return "postgresql+psycopg"
@@ -16,7 +16,7 @@ def normalize_postgres_engine(engine: str | None) -> str:
     return engine
 
 
-# -----------------------------------------------------------------------------
+###############################################################################
 def normalize_datetime_value(value: Any) -> datetime | None:
     if value is None:
         return None
@@ -42,7 +42,7 @@ def normalize_datetime_value(value: Any) -> datetime | None:
     return None
 
 
-# -----------------------------------------------------------------------------
+###############################################################################
 def coerce_value_for_sql_column(value: Any, column_type: Any) -> Any:
     if value is None or pd.isna(value):
         return None

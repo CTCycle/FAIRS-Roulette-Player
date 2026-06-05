@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from server.common.constants import CONFIGURATIONS_FILE
+from server.common.path import CONFIGURATIONS_FILE
 from server.configurations.environment import load_environment
 from server.configurations.management import ConfigurationManager
 from server.domain.configuration import ServerSettings

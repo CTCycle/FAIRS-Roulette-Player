@@ -37,17 +37,17 @@ def reset_configuration_state(monkeypatch: pytest.MonkeyPatch) -> None:
     environment.reset_environment_for_tests()
 
 
-# -----------------------------------------------------------------------------
+###############################################################################
 def _write_json(path: Path, payload: dict[str, object]) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
-# -----------------------------------------------------------------------------
+###############################################################################
 def _write_env(path: Path, lines: list[str]) -> None:
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-# -----------------------------------------------------------------------------
+###############################################################################
 def _default_json_config() -> dict[str, object]:
     return {
         "jobs": {"polling_interval": 1.0},
@@ -55,14 +55,14 @@ def _default_json_config() -> dict[str, object]:
     }
 
 
-# -----------------------------------------------------------------------------
+###############################################################################
 def test_environment_overrides_existing_process_values(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     env_path = tmp_path / ".env"
     _write_env(env_path, ["FASTAPI_HOST=from_dotenv"])
 
-    monkeypatch.setattr(environment, "ENV_FILE_PATH", str(env_path))
+    monkeypatch.setattr(environment, "ENV_FILE_PATH", env_path)
     monkeypatch.setenv("FASTAPI_HOST", "from_process")
 
     environment.load_environment()
@@ -70,14 +70,14 @@ def test_environment_overrides_existing_process_values(
     assert os.getenv("FASTAPI_HOST") == "from_dotenv"
 
 
-# -----------------------------------------------------------------------------
+###############################################################################
 def test_environment_load_is_idempotent_without_force(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     env_path = tmp_path / ".env"
     _write_env(env_path, ["FASTAPI_HOST=first"])
 
-    monkeypatch.setattr(environment, "ENV_FILE_PATH", str(env_path))
+    monkeypatch.setattr(environment, "ENV_FILE_PATH", env_path)
 
     environment.load_environment()
     _write_env(env_path, ["FASTAPI_HOST=second"])
@@ -86,13 +86,13 @@ def test_environment_load_is_idempotent_without_force(
     assert os.getenv("FASTAPI_HOST") == "first"
 
 
-# -----------------------------------------------------------------------------
+###############################################################################
 def test_environment_force_reload_applies_updated_dotenv(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     env_path = tmp_path / ".env"
     _write_env(env_path, ["FASTAPI_HOST=first"])
-    monkeypatch.setattr(environment, "ENV_FILE_PATH", str(env_path))
+    monkeypatch.setattr(environment, "ENV_FILE_PATH", env_path)
 
     environment.load_environment()
     _write_env(env_path, ["FASTAPI_HOST=second"])
@@ -101,14 +101,14 @@ def test_environment_force_reload_applies_updated_dotenv(
     assert os.getenv("FASTAPI_HOST") == "second"
 
 
-# -----------------------------------------------------------------------------
+###############################################################################
 def test_server_package_import_loads_environment_early(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     env_path = tmp_path / ".env"
     _write_env(env_path, ["KERAS_BACKEND=torch"])
 
-    monkeypatch.setattr(environment, "ENV_FILE_PATH", str(env_path))
+    monkeypatch.setattr(environment, "ENV_FILE_PATH", env_path)
     monkeypatch.setenv("KERAS_BACKEND", "tensorflow")
 
     import server as server_package
@@ -118,7 +118,7 @@ def test_server_package_import_loads_environment_early(
     assert os.getenv("KERAS_BACKEND") == "torch"
 
 
-# -----------------------------------------------------------------------------
+###############################################################################
 def test_server_settings_use_json_configuration_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -138,7 +138,7 @@ def test_server_settings_use_json_configuration_file(
             "DATABASE_PASSWORD=env_pass",
         ],
     )
-    monkeypatch.setattr(environment, "ENV_FILE_PATH", str(env_path))
+    monkeypatch.setattr(environment, "ENV_FILE_PATH", env_path)
 
     settings = startup.reload_settings_for_tests(config_path=str(config_path))
 
@@ -151,7 +151,7 @@ def test_server_settings_use_json_configuration_file(
     assert settings.device.jit_backend == "inductor"
 
 
-# -----------------------------------------------------------------------------
+###############################################################################
 def test_database_settings_are_loaded_from_env(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -168,7 +168,7 @@ def test_database_settings_are_loaded_from_env(
             "DATABASE_NAME=env-name",
         ],
     )
-    monkeypatch.setattr(environment, "ENV_FILE_PATH", str(env_path))
+    monkeypatch.setattr(environment, "ENV_FILE_PATH", env_path)
 
     settings = startup.reload_settings_for_tests(config_path=str(config_path))
 
@@ -178,7 +178,7 @@ def test_database_settings_are_loaded_from_env(
     assert settings.database.database_name == "env-name"
 
 
-# -----------------------------------------------------------------------------
+###############################################################################
 def test_manager_get_block_and_get_value(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -198,7 +198,7 @@ def test_manager_get_block_and_get_value(
             "DATABASE_PASSWORD=env_pass",
         ],
     )
-    monkeypatch.setattr(environment, "ENV_FILE_PATH", str(env_path))
+    monkeypatch.setattr(environment, "ENV_FILE_PATH", env_path)
 
     startup.reload_settings_for_tests(config_path=str(config_path))
     manager = startup.get_configuration_manager()
@@ -210,7 +210,7 @@ def test_manager_get_block_and_get_value(
     assert manager.get_value("device", "missing", default="fallback") == "fallback"
 
 
-# -----------------------------------------------------------------------------
+###############################################################################
 def test_reload_updates_cached_manager_values(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -226,7 +226,7 @@ def test_reload_updates_cached_manager_values(
             "EMBEDDED_DATABASE=true",
         ],
     )
-    monkeypatch.setattr(environment, "ENV_FILE_PATH", str(env_path))
+    monkeypatch.setattr(environment, "ENV_FILE_PATH", env_path)
 
     first = startup.reload_settings_for_tests(config_path=str(config_path))
     assert first.jobs.polling_interval == 1.0
@@ -238,19 +238,19 @@ def test_reload_updates_cached_manager_values(
     assert second.jobs.polling_interval == 2.25
 
 
-# -----------------------------------------------------------------------------
+###############################################################################
 def test_missing_configuration_file_fails_fast(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     env_path = tmp_path / ".env"
     _write_env(env_path, ["FASTAPI_HOST=127.0.0.1", "EMBEDDED_DATABASE=true"])
-    monkeypatch.setattr(environment, "ENV_FILE_PATH", str(env_path))
+    monkeypatch.setattr(environment, "ENV_FILE_PATH", env_path)
 
     with pytest.raises(RuntimeError, match="Configuration file not found"):
         _ = startup.reload_settings_for_tests(config_path=str(tmp_path / "missing.json"))
 
 
-# -----------------------------------------------------------------------------
+###############################################################################
 def test_invalid_configuration_file_fails_fast(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -259,7 +259,7 @@ def test_invalid_configuration_file_fails_fast(
 
     env_path = tmp_path / ".env"
     _write_env(env_path, ["FASTAPI_HOST=127.0.0.1", "EMBEDDED_DATABASE=true"])
-    monkeypatch.setattr(environment, "ENV_FILE_PATH", str(env_path))
+    monkeypatch.setattr(environment, "ENV_FILE_PATH", env_path)
 
     with pytest.raises(RuntimeError, match="Unable to load configuration"):
         _ = startup.reload_settings_for_tests(config_path=str(config_path))

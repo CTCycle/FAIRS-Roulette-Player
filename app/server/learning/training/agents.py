@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import os
 import pickle
 import random
 from collections import deque
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -35,13 +35,13 @@ class DQNAgent:
 
     # -------------------------------------------------------------------------
     def dump_memory(self, path) -> None:
-        memory_path = os.path.join(path, "configuration", "replay_memory.pkl")
+        memory_path = Path(path) / "configuration" / "replay_memory.pkl"
         with open(memory_path, "wb") as f:
             pickle.dump(self.memory, f)
 
     # -------------------------------------------------------------------------
     def load_memory(self, path) -> None:
-        memory_path = os.path.join(path, "configuration", "replay_memory.pkl")
+        memory_path = Path(path) / "configuration" / "replay_memory.pkl"
         with open(memory_path, "rb") as f:
             self.memory = pickle.load(f)
 

@@ -2,17 +2,16 @@ from __future__ import annotations
 
 import logging
 import logging.config
-import os
 from datetime import datetime
 from typing import Any
 
-from server.common.constants import LOGS_PATH
+from server.common.path import LOGS_PATH
 
 # Generate timestamp for the log filename
 ###############################################################################
-os.makedirs(LOGS_PATH, exist_ok=True)
+LOGS_PATH.mkdir(parents=True, exist_ok=True)
 current_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-log_filename = os.path.join(LOGS_PATH, f"FAIRS_{current_timestamp}.log")
+log_filename = LOGS_PATH / f"FAIRS_{current_timestamp}.log"
 
 # Define logger configuration
 ###############################################################################

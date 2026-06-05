@@ -54,7 +54,7 @@ Initialize `.env` once:
 copy /Y settings\.env.example settings\.env
 ```
 
-Use `.env` for runtime variables and all database settings; use `configurations.json` for non-database backend settings such as job polling and device defaults.
+Use `.env` for runtime variables and all database settings; use `configurations.json` only for non-database backend settings such as job polling and device defaults. A `database` block in `configurations.json` is invalid and rejected at startup.
 
 ### 3.1 Database Initialization
 

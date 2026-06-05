@@ -11,9 +11,6 @@ from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from server.common.constants import (
-    CLIENT_ASSETS_PATH,
-    CLIENT_DIST_PATH,
-    CLIENT_INDEX_FILE_PATH,
     FASTAPI_API_PREFIX,
     FASTAPI_ASSETS_ENDPOINT,
     FASTAPI_DESCRIPTION,
@@ -22,6 +19,11 @@ from server.common.constants import (
     FASTAPI_SPA_FALLBACK_ENDPOINT,
     FASTAPI_TITLE,
     FASTAPI_VERSION,
+)
+from server.common.path import (
+    CLIENT_ASSETS_PATH,
+    CLIENT_DIST_PATH,
+    CLIENT_INDEX_FILE_PATH,
 )
 from server.api.datasets import router as datasets_router
 from server.api.inference import router as inference_router
@@ -52,12 +54,12 @@ def is_api_docs_enabled() -> bool:
 
 ###############################################################################
 def _client_build_available() -> bool:
-    return os.path.isfile(CLIENT_INDEX_FILE_PATH)
+    return CLIENT_INDEX_FILE_PATH.is_file()
 
 
 ###############################################################################
 def _resolve_client_file(full_path: str) -> Path | None:
-    client_root = Path(CLIENT_DIST_PATH).resolve()
+    client_root = CLIENT_DIST_PATH.resolve()
     requested_path = (client_root / full_path).resolve()
 
     if not requested_path.is_relative_to(client_root):
@@ -136,7 +138,7 @@ def include_api_routers(application: FastAPI) -> None:
 
 def configure_client_routes(application: FastAPI) -> None:
     if _client_build_available():
-        if os.path.isdir(CLIENT_ASSETS_PATH):
+        if CLIENT_ASSETS_PATH.is_dir():
             application.mount(
                 FASTAPI_ASSETS_ENDPOINT,
                 StaticFiles(directory=CLIENT_ASSETS_PATH),
@@ -166,7 +168,7 @@ def configure_client_routes(application: FastAPI) -> None:
     )
 
 
-# -----------------------------------------------------------------------------
+###############################################################################
 def create_app() -> FastAPI:
     enable_api_docs = is_api_docs_enabled()
     application = FastAPI(

@@ -112,7 +112,7 @@ def build_postgres_connect_args(settings: DatabaseSettings) -> dict[str, str | i
     return connect_args
 
 
-# -----------------------------------------------------------------------------
+###############################################################################
 def build_postgres_url(settings: DatabaseSettings, database_name: str) -> str:
     port = settings.port or 5432
     engine_name = normalize_postgres_engine(settings.engine)
@@ -124,12 +124,12 @@ def build_postgres_url(settings: DatabaseSettings, database_name: str) -> str:
     )
 
 
-# -----------------------------------------------------------------------------
+###############################################################################
 def escape_postgres_identifier(identifier: str) -> str:
     return identifier.replace('"', '""')
 
 
-# -----------------------------------------------------------------------------
+###############################################################################
 def is_missing_postgres_database_error(
     exc: SQLAlchemyError,
     target_database: str,
@@ -142,7 +142,7 @@ def is_missing_postgres_database_error(
     return "does not exist" in lowered and target_database.lower() in lowered
 
 
-# -----------------------------------------------------------------------------
+###############################################################################
 def postgres_database_exists(
     settings: DatabaseSettings,
     target_database: str,
@@ -166,7 +166,7 @@ def postgres_database_exists(
         probe_engine.dispose()
 
 
-# -----------------------------------------------------------------------------
+###############################################################################
 def initialize_sqlite_database(settings: DatabaseSettings) -> None:
     repository = SQLiteRepository(settings, initialize_schema=True)
     seed_roulette_outcomes(repository.engine)
@@ -229,7 +229,7 @@ def ensure_postgres_database(settings: DatabaseSettings) -> str:
     return target_database
 
 
-# -----------------------------------------------------------------------------
+###############################################################################
 def build_roulette_outcome_seed_rows() -> list[dict[str, int | str]]:
     reverse_color_map = {
         number: color
@@ -253,7 +253,7 @@ def build_roulette_outcome_seed_rows() -> list[dict[str, int | str]]:
         )
     return rows
 
-# -----------------------------------------------------------------------------
+###############################################################################
 def seed_roulette_outcomes(engine: sqlalchemy.Engine) -> None:
     inspector = sqlalchemy.inspect(engine)
     if not inspector.has_table("roulette_outcomes"):
@@ -273,7 +273,7 @@ def seed_roulette_outcomes(engine: sqlalchemy.Engine) -> None:
     logger.info("Seeded roulette_outcomes table with %d rows", len(rows))
 
 
-# -----------------------------------------------------------------------------
+###############################################################################
 def initialize_database(settings: DatabaseSettings | None = None) -> None:
     try:
         resolved_settings = settings or get_server_settings().database

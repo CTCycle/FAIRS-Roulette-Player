@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import os
 from io import BytesIO
+from pathlib import PurePath
 from typing import Any
 
 import pandas as pd
@@ -18,7 +18,7 @@ class TabularFileLoader:
         sheet_name: str | int = 0,
         kwargs: dict[str, Any] | None = None,
     ) -> pd.DataFrame:
-        extension = os.path.splitext(filename)[1].lower()
+        extension = PurePath(filename).suffix.lower()
         payload = kwargs or {}
         if extension == ".csv":
             return pd.read_csv(
