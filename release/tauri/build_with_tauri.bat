@@ -5,7 +5,7 @@ set "script_dir=%~dp0"
 for %%I in ("%script_dir%..\..") do set "repo_root=%%~fI"
 set "app_dir=%repo_root%\app"
 set "client_dir=%app_dir%\client"
-set "tauri_dir=%client_dir%\src-tauri"
+set "tauri_dir=%app_dir%\src-tauri"
 set "bundle_source_dir=%tauri_dir%\runtime"
 set "release_dir=%tauri_dir%\target\release"
 set "bundle_dir=%tauri_dir%\target\release\bundle"
@@ -126,9 +126,15 @@ set "CARGO_TERM_PROGRESS_WHEN=auto"
 
 echo [STEP 1/2] Installing frontend dependencies
 pushd "%client_dir%" >nul
+call :remove_path "%client_dir%\node_modules\.vite-temp"
+call :remove_path "%client_dir%\node_modules\.package-lock.json"
 if exist "package-lock.json" (
   echo [CMD] "%npm_cmd%" ci --foreground-scripts
   call "%npm_cmd%" ci --foreground-scripts
+  if errorlevel 1 (
+    echo [WARN] npm ci failed. Retrying with npm install --foreground-scripts
+    call "%npm_cmd%" install --foreground-scripts
+  )
 ) else (
   echo [CMD] "%npm_cmd%" install --foreground-scripts
   call "%npm_cmd%" install --foreground-scripts
@@ -183,7 +189,7 @@ echo         Run start_on_windows.bat first to install portable runtimes.
 exit /b 1
 
 :prepare_bundle_sources
-if exist "%bundle_source_dir%" rd /s /q "%bundle_source_dir%" >nul 2>&1
+call :remove_path "%bundle_source_dir%" || exit /b 1
 
 md "%bundle_source_dir%" >nul 2>&1
 if errorlevel 1 (
@@ -262,10 +268,16 @@ if exist "%bundle_dir%" rd /s /q "%bundle_dir%" >nul 2>&1
 exit /b 0
 
 :build_error
-if exist "%bundle_source_dir%" rd /s /q "%bundle_source_dir%" >nul 2>&1
+call :remove_path "%bundle_source_dir%" >nul 2>&1
 if /I "%CI%"=="1" endlocal & exit /b 1
 if /I "%CI%"=="true" endlocal & exit /b 1
 echo.
 echo Press any key to close this build script...
 pause >nul
 endlocal & exit /b 1
+
+:remove_path
+if not exist "%~1" exit /b 0
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Remove-Item -LiteralPath '%~1' -Recurse -Force -ErrorAction Stop" >nul 2>&1
+if exist "%~1" exit /b 1
+exit /b 0
