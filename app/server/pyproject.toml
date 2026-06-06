@@ -39,7 +39,7 @@ test = [
 packages = ["server"] 
 
 [tool.ruff]
-exclude = ["../client/src-tauri/target"]
+exclude = ["../src-tauri/target"]
 
 [[tool.uv.index]]
 name = "pytorch-cu130"
