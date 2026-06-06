@@ -209,7 +209,7 @@ class InferenceSessionSteps(Base):
     )
 
 
-# -----------------------------------------------------------------------------
+###############################################################################
 def iter_model_classes() -> Iterator[type[Any]]:
     for mapper in Base.registry.mappers:
         model_cls = mapper.class_
@@ -217,7 +217,7 @@ def iter_model_classes() -> Iterator[type[Any]]:
             yield model_cls
 
 
-# -----------------------------------------------------------------------------
+###############################################################################
 def get_model_class_for_table(table_name: str) -> type[Any]:
     for model_cls in iter_model_classes():
         if getattr(model_cls, "__tablename__", None) == table_name:

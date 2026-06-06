@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from server.common.constants import CONFIGURATIONS_FILE
+from server.common import path as shared_paths
 from server.configurations.environment import load_environment
 from server.configurations.management import ConfigurationManager
 from server.domain.configuration import ServerSettings
@@ -12,7 +12,7 @@ from server.domain.configuration import ServerSettings
 @lru_cache(maxsize=1)
 def get_configuration_manager() -> ConfigurationManager:
     load_environment()
-    return ConfigurationManager(config_path=CONFIGURATIONS_FILE)
+    return ConfigurationManager(config_path=shared_paths.CONFIGURATIONS_FILE)
 
 
 ###############################################################################

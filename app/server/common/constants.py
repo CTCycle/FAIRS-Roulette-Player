@@ -1,24 +1,5 @@
 from __future__ import annotations
 
-from os.path import abspath, join
-
-# [PATHS]
-###############################################################################
-ROOT_DIR = abspath(join(__file__, "../../../../"))
-APP_DIR = join(ROOT_DIR, "app")
-SERVER_DIR = join(APP_DIR, "server")
-SETTING_PATH = join(ROOT_DIR, "settings")
-RESOURCES_PATH = join(APP_DIR, "resources")
-LOGS_PATH = join(RESOURCES_PATH, "logs")
-ENV_FILE_PATH = join(SETTING_PATH, ".env")
-DATABASE_FILENAME = "database.db"
-CLIENT_DIST_PATH = join(APP_DIR, "client", "dist")
-CLIENT_ASSETS_PATH = join(CLIENT_DIST_PATH, "assets")
-CLIENT_INDEX_FILE_PATH = join(CLIENT_DIST_PATH, "index.html")
-
-###############################################################################
-CONFIGURATIONS_FILE = join(SETTING_PATH, "configurations.json")
-
 # [FASTAPI]
 ###############################################################################
 FASTAPI_ROOT_ENDPOINT = "/"
@@ -97,4 +78,3 @@ INFERENCE_SESSION_STEPS_COLUMNS = [
 NUMBERS: int = 37
 STATES: int = 47
 PAD_VALUE: int = -1
-CHECKPOINT_PATH = join(RESOURCES_PATH, "checkpoints")

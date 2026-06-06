@@ -5,15 +5,17 @@ from pathlib import Path
 from threading import RLock
 from typing import Any
 
-from server.common.constants import CONFIGURATIONS_FILE
+from server.common import path as shared_paths
 from server.domain.configuration import JsonServerSettings, ServerSettings
 
 
 ###############################################################################
 class ConfigurationManager:
-    def __init__(self, config_path: str | None = None) -> None:
+    def __init__(self, config_path: str | Path | None = None) -> None:
         self._lock = RLock()
-        self._config_path = Path(config_path or CONFIGURATIONS_FILE)
+        self._config_path = (
+            Path(config_path) if config_path else shared_paths.CONFIGURATIONS_FILE
+        )
         self._json_settings: JsonServerSettings | None = None
         self._server_settings: ServerSettings | None = None
         self.reload()
@@ -30,13 +32,15 @@ class ConfigurationManager:
         try:
             payload = json.loads(self._config_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
-            raise RuntimeError(f"Unable to load configuration from {self._config_path}") from exc
+            raise RuntimeError(
+                f"Unable to load configuration from {self._config_path}"
+            ) from exc
         if not isinstance(payload, dict):
             raise RuntimeError("Configuration must be a JSON object.")
         return payload
 
     # -------------------------------------------------------------------------
-    def reload(self, config_path: str | None = None) -> ServerSettings:
+    def reload(self, config_path: str | Path | None = None) -> ServerSettings:
         with self._lock:
             if config_path:
                 self._config_path = Path(config_path)

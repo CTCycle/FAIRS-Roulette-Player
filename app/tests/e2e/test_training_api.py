@@ -343,4 +343,3 @@ class TestTrainingResume:
 
         delete_response = api_context.delete(f"/api/training/checkpoints/{checkpoint}")
         assert delete_response.ok
-

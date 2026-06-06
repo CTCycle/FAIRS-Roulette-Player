@@ -26,6 +26,7 @@ TRAINING_BAD_REQUEST_STATUS: ExceptionStatusMap = (
     (ValueError, status.HTTP_400_BAD_REQUEST),
 )
 
+
 ###############################################################################
 def _to_bad_request(exc: Exception) -> HTTPException:
     return http_exception_for_exception(

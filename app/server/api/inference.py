@@ -32,6 +32,7 @@ INFERENCE_EXCEPTION_STATUS: ExceptionStatusMap = (
     (KeyError, status.HTTP_404_NOT_FOUND),
 )
 
+
 ###############################################################################
 def _map_inference_exception(exc: Exception) -> HTTPException:
     return http_exception_for_exception(
@@ -85,7 +86,9 @@ def submit_step(
     service: Annotated[InferenceService, Depends(get_inference_service)],
 ) -> InferenceStepResponse:
     try:
-        return InferenceStepResponse.model_validate(service.step_session(session_id, payload))
+        return InferenceStepResponse.model_validate(
+            service.step_session(session_id, payload)
+        )
     except Exception as exc:
         raise _map_inference_exception(exc) from exc
 
@@ -100,7 +103,9 @@ def shutdown(
     session_id: str,
     service: Annotated[InferenceService, Depends(get_inference_service)],
 ) -> InferenceShutdownResponse:
-    return InferenceShutdownResponse.model_validate(service.shutdown_session(session_id))
+    return InferenceShutdownResponse.model_validate(
+        service.shutdown_session(session_id)
+    )
 
 
 ###############################################################################
@@ -115,7 +120,9 @@ def update_bet_amount(
     service: Annotated[InferenceService, Depends(get_inference_service)],
 ) -> InferenceBetUpdateResponse:
     try:
-        return InferenceBetUpdateResponse.model_validate(service.update_bet(session_id, payload))
+        return InferenceBetUpdateResponse.model_validate(
+            service.update_bet(session_id, payload)
+        )
     except Exception as exc:
         raise _map_inference_exception(exc) from exc
 
@@ -130,7 +137,9 @@ def clear_session_rows(
     session_id: str,
     service: Annotated[InferenceService, Depends(get_inference_service)],
 ) -> InferenceRowsClearResponse:
-    return InferenceRowsClearResponse.model_validate(service.clear_session_rows(session_id))
+    return InferenceRowsClearResponse.model_validate(
+        service.clear_session_rows(session_id)
+    )
 
 
 ###############################################################################

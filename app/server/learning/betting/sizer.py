@@ -92,7 +92,9 @@ class BetSizer:
         self.current_bet = self._clamp_bet(resolved_base, capital)
 
     # -------------------------------------------------------------------------
-    def set_current_bet(self, bet_amount: int, capital: int | float | None = None) -> int:
+    def set_current_bet(
+        self, bet_amount: int, capital: int | float | None = None
+    ) -> int:
         self.current_bet = self._clamp_bet(bet_amount, capital)
         return self.current_bet
 

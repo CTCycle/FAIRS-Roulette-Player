@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import shutil
 from typing import Any
 
@@ -34,9 +33,9 @@ class CheckpointService:
         normalized = normalize_checkpoint_identifier(checkpoint_name)
         checkpoint_path = resolve_checkpoint_path(normalized)
         available = set(self.list_checkpoints())
-        if normalized not in available or not os.path.isdir(checkpoint_path):
+        if normalized not in available or not checkpoint_path.is_dir():
             raise FileNotFoundError(f"Checkpoint not found: {normalized}")
-        return normalized, checkpoint_path
+        return normalized, str(checkpoint_path)
 
     # -------------------------------------------------------------------------
     def get_metadata(self, checkpoint_name: str) -> dict[str, Any]:
