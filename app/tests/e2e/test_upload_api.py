@@ -144,9 +144,7 @@ class TestDataUploadEdgeCases:
     ):
         """POST /data/upload should discard invalid outcomes and enrich valid rows."""
         dataset_name = "test_invalid_outcomes_cleanup"
-        existing_response = api_context.get(
-            "/api/datasets/training/summary"
-        )
+        existing_response = api_context.get("/api/datasets/training/summary")
         if existing_response.ok:
             existing = existing_response.json().get("datasets", [])
             match = next(
@@ -154,9 +152,7 @@ class TestDataUploadEdgeCases:
                 None,
             )
             if match and match.get("dataset_id"):
-                api_context.delete(
-                    f"/api/datasets/training/{match['dataset_id']}"
-                )
+                api_context.delete(f"/api/datasets/training/{match['dataset_id']}")
         csv_content = (
             b"spin,result\n10,5\n11,37\n12,-1\n13,0\n14,36\n15,abc\n16,7.2\n17,7\n"
         )
@@ -180,4 +176,3 @@ class TestDataUploadEdgeCases:
         summary_entry = load_dataset_summary_entry(api_context, dataset_id)
         assert summary_entry is not None
         assert summary_entry.get("row_count") == 4
-

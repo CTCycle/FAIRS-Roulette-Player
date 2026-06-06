@@ -13,7 +13,7 @@ from server.repositories.schemas.models import Base, get_model_class_for_table
 ALLOWED_TABLE_NAMES = frozenset(Base.metadata.tables.keys())
 
 
-# -----------------------------------------------------------------------------
+###############################################################################
 def normalize_table_name(table_name: str) -> str:
     if not isinstance(table_name, str):
         raise ValueError("Table name must be a string.")
@@ -58,7 +58,9 @@ class SQLAlchemyRepositoryBase:
 
     # -------------------------------------------------------------------------
     @staticmethod
-    def build_unique_key(record: dict[str, Any], unique_cols: list[str]) -> tuple[Any, ...]:
+    def build_unique_key(
+        record: dict[str, Any], unique_cols: list[str]
+    ) -> tuple[Any, ...]:
         return tuple(record.get(column) for column in unique_cols)
 
     # -------------------------------------------------------------------------
@@ -67,20 +69,28 @@ class SQLAlchemyRepositoryBase:
         for constraint in table.constraints:
             if isinstance(constraint, UniqueConstraint):
                 return list(constraint.columns.keys())
-        primary_keys = [column.name for column in model_cls.__table__.primary_key.columns]
+        primary_keys = [
+            column.name for column in model_cls.__table__.primary_key.columns
+        ]
         if primary_keys:
             return primary_keys
         raise ValueError(f"No unique key found for {model_cls.__name__}")
 
     # -------------------------------------------------------------------------
     @staticmethod
-    def build_condition_expression(model_cls: type[Any], conditions: dict[str, Any]) -> Any:
+    def build_condition_expression(
+        model_cls: type[Any], conditions: dict[str, Any]
+    ) -> Any:
         predicates = []
         table = model_cls.__table__
         for key, raw_value in conditions.items():
             normalized_value = coerce_value_for_sql_column(raw_value, table.c[key].type)
             column = getattr(model_cls, key)
-            predicates.append(column.is_(None) if normalized_value is None else column == normalized_value)
+            predicates.append(
+                column.is_(None)
+                if normalized_value is None
+                else column == normalized_value
+            )
         return and_(*predicates)
 
     # -------------------------------------------------------------------------
@@ -103,7 +113,9 @@ class SQLAlchemyRepositoryBase:
         elif len(unique_cols) > 1 and all(
             all(value is not None for value in key) for key in unique_keys
         ):
-            tuple_columns = [getattr(model_cls, column_name) for column_name in unique_cols]
+            tuple_columns = [
+                getattr(model_cls, column_name) for column_name in unique_cols
+            ]
             stmt = select(model_cls).where(tuple_(*tuple_columns).in_(unique_keys))
         else:
             conditions = [
@@ -228,7 +240,9 @@ class SQLAlchemyRepositoryBase:
 
     # -------------------------------------------------------------------------
     def upsert_into_database(self, df: pd.DataFrame, table_name: str) -> None:
-        self.upsert_dataframe(df, self.get_table_class(normalize_table_name(table_name)))
+        self.upsert_dataframe(
+            df, self.get_table_class(normalize_table_name(table_name))
+        )
 
     # -------------------------------------------------------------------------
     def delete_from_database(self, table_name: str, conditions: dict[str, Any]) -> None:
@@ -244,7 +258,9 @@ class SQLAlchemyRepositoryBase:
             if key not in columns:
                 logger.warning("Column %s does not exist in %s", key, table_name)
                 return
-        stmt = delete(model_cls).where(self.build_condition_expression(model_cls, conditions))
+        stmt = delete(model_cls).where(
+            self.build_condition_expression(model_cls, conditions)
+        )
         session = self.Session()
         try:
             session.execute(stmt)

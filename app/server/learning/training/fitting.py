@@ -445,7 +445,9 @@ class DQNTraining:
             ):
                 old_strategy_eps = self.strategy_agent.epsilon
                 self.strategy_agent.epsilon = 0.0
-                selected_strategy = self.strategy_agent.act(strategy_model, val_state, gain)
+                selected_strategy = self.strategy_agent.act(
+                    strategy_model, val_state, gain
+                )
                 self.strategy_agent.epsilon = old_strategy_eps
                 strategy_action = int(selected_strategy)
             elif self.dynamic_betting_enabled:
@@ -638,7 +640,11 @@ class DQNTraining:
             minimum=0,
         )
         self.latest_runtime_state["current_strategy_name"] = str(
-            getattr(environment, "current_strategy_name", strategy_name(self.strategy_fixed_id))
+            getattr(
+                environment,
+                "current_strategy_name",
+                strategy_name(self.strategy_fixed_id),
+            )
         )
 
         should_send_update = self.should_send_ws_update()
@@ -760,10 +766,7 @@ class DQNTraining:
 
                 if time_step % self.update_frequency == 0:
                     target_model.set_weights(model.get_weights())
-                    if (
-                        strategy_model is not None
-                        and target_strategy_model is not None
-                    ):
+                    if strategy_model is not None and target_strategy_model is not None:
                         target_strategy_model.set_weights(strategy_model.get_weights())
 
                 self._handle_ws_updates(

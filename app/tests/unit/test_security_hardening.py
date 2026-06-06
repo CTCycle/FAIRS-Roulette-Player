@@ -7,7 +7,6 @@ import pytest
 
 os.environ.setdefault("KERAS_BACKEND", "torch")
 
-from server.common.constants import CHECKPOINT_PATH
 from server.repositories.database.postgres import (
     normalize_table_name as normalize_postgres_table_name,
 )
@@ -18,6 +17,7 @@ from server.common.checkpoints import (
     normalize_checkpoint_identifier,
     resolve_checkpoint_path,
 )
+from server.common.path import CHECKPOINT_PATH
 from server.repositories.serialization.data import normalize_dataset_name
 from server.services.datasets import (
     normalize_csv_separator,
@@ -35,11 +35,11 @@ def test_checkpoint_name_validation_rejects_path_traversal_patterns() -> None:
 
 
 def test_checkpoint_path_builder_stays_under_checkpoint_root() -> None:
-    checkpoint_root = os.path.realpath(CHECKPOINT_PATH)
+    checkpoint_root = CHECKPOINT_PATH.resolve()
     resolved = resolve_checkpoint_path("safe-checkpoint")
 
-    assert os.path.commonpath([checkpoint_root, resolved]) == checkpoint_root
-    assert resolved == os.path.realpath(os.path.join(checkpoint_root, "safe-checkpoint"))
+    assert checkpoint_root in resolved.parents
+    assert resolved == checkpoint_root / "safe-checkpoint"
 
 
 def test_upload_parameter_normalizers_apply_bounds() -> None:
@@ -79,7 +79,7 @@ def test_table_name_allowlist_blocks_injection_patterns() -> None:
         "datasets ",
         " datasets",
         "datasets;DROP TABLE datasets",
-        "datasets\" OR 1=1 --",
+        'datasets" OR 1=1 --',
         "unknown_table",
     ):
         with pytest.raises(ValueError):

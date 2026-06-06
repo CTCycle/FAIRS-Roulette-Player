@@ -52,7 +52,9 @@ def build_service(monkeypatch) -> tuple[InferenceService, Mock]:
     monkeypatch.setattr("server.services.inference.RoulettePlayer", FakePlayer)
     monkeypatch.setattr("server.services.inference.DeviceConfig", FakeDeviceConfig)
 
-    service = InferenceService(serializer=serializer, checkpoint_service=checkpoint_service)
+    service = InferenceService(
+        serializer=serializer, checkpoint_service=checkpoint_service
+    )
     return service, serializer
 
 

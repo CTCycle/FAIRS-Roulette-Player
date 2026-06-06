@@ -1,6 +1,6 @@
 ## Configuration
 
-Last updated: 2026-06-02
+Last updated: 2026-06-05
 
 ## Environment Variables
 
@@ -41,6 +41,8 @@ The runtime scripts and backend consume these environment keys:
 
 - `jobs.polling_interval`
 - device-related options such as JIT and mixed-precision defaults
+
+`settings/configurations.json` must not contain a `database` block. Database configuration is accepted only from `settings/.env`, and startup rejects JSON database settings to avoid ambiguous sources of truth.
 
 ## Behavior Differences Driven By Configuration
 

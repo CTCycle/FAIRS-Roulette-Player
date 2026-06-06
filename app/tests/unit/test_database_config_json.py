@@ -104,7 +104,22 @@ def test_database_validation_requires_external_fields(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     with pytest.raises(
-        ValidationError, match="database.host, database.database_name, database.username"
+        ValidationError,
+        match="database.host, database.database_name, database.username",
     ):
         monkeypatch.setenv("EMBEDDED_DATABASE", "false")
         _ = EnvDatabaseSettings.from_environment()
+
+
+def test_json_server_settings_rejects_database_block() -> None:
+    with pytest.raises(
+        ValidationError,
+        match="Database configuration must be provided via settings/.env",
+    ):
+        JsonServerSettings.model_validate(
+            {
+                "database": {
+                    "embedded_database": True,
+                }
+            }
+        )

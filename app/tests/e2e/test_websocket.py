@@ -21,4 +21,3 @@ class TestTrainingPolling:
         assert isinstance(data["history"], list)
         assert isinstance(data["poll_interval"], (int, float))
         assert float(data["poll_interval"]) > 0
-

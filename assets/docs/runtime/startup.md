@@ -1,6 +1,6 @@
 ## Startup
 
-Last updated: 2026-06-02
+Last updated: 2026-06-05
 
 ## Local Application Startup
 
@@ -63,6 +63,7 @@ The maintenance menu supports:
 
 - database initialization
 - log cleanup
+- Python `__pycache__` cleanup
 - desktop build cleanup
 - runtime-local uninstall or cleanup tasks
 
