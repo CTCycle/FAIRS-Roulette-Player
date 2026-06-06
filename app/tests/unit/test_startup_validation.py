@@ -70,9 +70,15 @@ def test_startup_validations_create_runtime_directories(
     checkpoints_dir = resources_dir / "checkpoints"
 
     monkeypatch.delenv("FAIRS_TAURI_MODE", raising=False)
-    monkeypatch.setattr(startup_validation, "RESOURCES_PATH", resources_dir)
-    monkeypatch.setattr(startup_validation, "LOGS_PATH", logs_dir)
-    monkeypatch.setattr(startup_validation, "CHECKPOINT_PATH", checkpoints_dir)
+    monkeypatch.setattr(
+        startup_validation.shared_paths, "RESOURCES_PATH", resources_dir
+    )
+    monkeypatch.setattr(startup_validation.shared_paths, "LOGS_PATH", logs_dir)
+    monkeypatch.setattr(
+        startup_validation.shared_paths,
+        "CHECKPOINT_PATH",
+        checkpoints_dir,
+    )
 
     startup_validation.run_startup_validations(_embedded_settings())
 
@@ -84,7 +90,7 @@ def test_startup_validations_create_runtime_directories(
 def test_tauri_mode_requires_built_client(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("FAIRS_TAURI_MODE", "true")
     monkeypatch.setattr(
-        startup_validation,
+        startup_validation.shared_paths,
         "CLIENT_INDEX_FILE_PATH",
         Path("missing-client") / "index.html",
     )

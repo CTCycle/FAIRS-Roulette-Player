@@ -79,7 +79,7 @@ def test_table_name_allowlist_blocks_injection_patterns() -> None:
         "datasets ",
         " datasets",
         "datasets;DROP TABLE datasets",
-        "datasets\" OR 1=1 --",
+        'datasets" OR 1=1 --',
         "unknown_table",
     ):
         with pytest.raises(ValueError):

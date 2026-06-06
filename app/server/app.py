@@ -20,11 +20,7 @@ from server.common.constants import (
     FASTAPI_TITLE,
     FASTAPI_VERSION,
 )
-from server.common.path import (
-    CLIENT_ASSETS_PATH,
-    CLIENT_DIST_PATH,
-    CLIENT_INDEX_FILE_PATH,
-)
+from server.common import path as shared_paths
 from server.api.datasets import router as datasets_router
 from server.api.inference import router as inference_router
 from server.api.training import router as training_router
@@ -54,12 +50,12 @@ def is_api_docs_enabled() -> bool:
 
 ###############################################################################
 def _client_build_available() -> bool:
-    return CLIENT_INDEX_FILE_PATH.is_file()
+    return shared_paths.CLIENT_INDEX_FILE_PATH.is_file()
 
 
 ###############################################################################
 def _resolve_client_file(full_path: str) -> Path | None:
-    client_root = CLIENT_DIST_PATH.resolve()
+    client_root = shared_paths.CLIENT_DIST_PATH.resolve()
     requested_path = (client_root / full_path).resolve()
 
     if not requested_path.is_relative_to(client_root):
@@ -73,7 +69,7 @@ def _resolve_client_file(full_path: str) -> Path | None:
 
 ###############################################################################
 def serve_client_root() -> FileResponse:
-    return FileResponse(CLIENT_INDEX_FILE_PATH)
+    return FileResponse(shared_paths.CLIENT_INDEX_FILE_PATH)
 
 
 ###############################################################################
@@ -81,7 +77,7 @@ def serve_client_path(full_path: str) -> FileResponse:
     client_file = _resolve_client_file(full_path)
     if client_file is not None:
         return FileResponse(client_file)
-    return FileResponse(CLIENT_INDEX_FILE_PATH)
+    return FileResponse(shared_paths.CLIENT_INDEX_FILE_PATH)
 
 
 ###############################################################################
@@ -138,10 +134,10 @@ def include_api_routers(application: FastAPI) -> None:
 
 def configure_client_routes(application: FastAPI) -> None:
     if _client_build_available():
-        if CLIENT_ASSETS_PATH.is_dir():
+        if shared_paths.CLIENT_ASSETS_PATH.is_dir():
             application.mount(
                 FASTAPI_ASSETS_ENDPOINT,
-                StaticFiles(directory=CLIENT_ASSETS_PATH),
+                StaticFiles(directory=shared_paths.CLIENT_ASSETS_PATH),
                 name="spa-assets",
             )
 

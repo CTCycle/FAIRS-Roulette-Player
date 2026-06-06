@@ -113,7 +113,9 @@ class RoulettePlayer:
         return exp_values / denom
 
     ###############################################################################
-    def predict_strategy(self, current_state: np.ndarray, gain_input: np.ndarray) -> int:
+    def predict_strategy(
+        self, current_state: np.ndarray, gain_input: np.ndarray
+    ) -> int:
         if (
             not self.dynamic_betting_enabled
             or not self.bet_strategy_model_enabled
@@ -206,7 +208,9 @@ class RoulettePlayer:
         return int(reward), int(self.current_capital)
 
     ###############################################################################
-    def update_bet_amount(self, bet_amount: int, reset_strategy_state: bool = True) -> None:
+    def update_bet_amount(
+        self, bet_amount: int, reset_strategy_state: bool = True
+    ) -> None:
         self.bet_amount = int(bet_amount)
         actions = BetsAndRewards({**self.configuration, "bet_amount": self.bet_amount})
         self.action_descriptions = actions.action_descriptions

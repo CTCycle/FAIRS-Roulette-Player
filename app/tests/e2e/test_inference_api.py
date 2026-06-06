@@ -85,7 +85,9 @@ class TestInferenceEndpoints:
         self, api_context: APIRequestContext
     ):
         """POST /inference/sessions/{invalid_id}/next should return 404."""
-        response = api_context.post("/api/inference/sessions/invalid_session_id_12345/next")
+        response = api_context.post(
+            "/api/inference/sessions/invalid_session_id_12345/next"
+        )
         assert response.status == 404
 
         data = response.json()
@@ -168,7 +170,9 @@ class TestInferenceSessionFlow:
 
         try:
             # Get next prediction
-            next_response = api_context.post(f"/api/inference/sessions/{session_id}/next")
+            next_response = api_context.post(
+                f"/api/inference/sessions/{session_id}/next"
+            )
             assert next_response.ok
             next_data = next_response.json()
             assert "prediction" in next_data
@@ -277,4 +281,3 @@ class TestInferenceSessionFlow:
         start_payload = start_response.json()
         assert "detail" in start_payload
         assert "dataset" in str(start_payload["detail"]).lower()
-

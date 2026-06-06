@@ -71,4 +71,3 @@ class TestRouletteDatasetsEndpoints:
         assert isinstance(sample["dataset_id"], int)
         assert isinstance(sample["row_count"], int)
         assert sample["row_count"] >= 0
-

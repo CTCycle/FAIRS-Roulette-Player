@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import shutil
-from pathlib import Path
 from typing import Any
 
 from server.common.checkpoints import (
@@ -71,4 +70,4 @@ class CheckpointService:
     # -------------------------------------------------------------------------
     def delete_checkpoint(self, checkpoint_name: str) -> None:
         _, checkpoint_path = self.resolve_existing_checkpoint(checkpoint_name)
-        shutil.rmtree(Path(checkpoint_path))
+        shutil.rmtree(checkpoint_path)

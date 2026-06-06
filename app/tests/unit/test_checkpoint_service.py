@@ -21,14 +21,14 @@ class DummyModelSerializer:
 
 
 def test_resolve_existing_checkpoint_rejects_missing(tmp_path, monkeypatch) -> None:
-    monkeypatch.setattr(checkpoint_common, "CHECKPOINT_PATH", tmp_path)
+    monkeypatch.setattr(checkpoint_common.shared_paths, "CHECKPOINT_PATH", tmp_path)
     service = CheckpointService(model_serializer=DummyModelSerializer())
     with pytest.raises(FileNotFoundError):
         service.resolve_existing_checkpoint("missing")
 
 
 def test_get_metadata_returns_summary_shape(tmp_path, monkeypatch) -> None:
-    monkeypatch.setattr(checkpoint_common, "CHECKPOINT_PATH", tmp_path)
+    monkeypatch.setattr(checkpoint_common.shared_paths, "CHECKPOINT_PATH", tmp_path)
     (tmp_path / "cp1").mkdir()
     service = CheckpointService(model_serializer=DummyModelSerializer())
     metadata = service.get_metadata("cp1")

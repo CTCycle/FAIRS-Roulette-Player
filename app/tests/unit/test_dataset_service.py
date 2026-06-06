@@ -52,7 +52,12 @@ def test_import_upload_rejects_oversized_payload() -> None:
 def test_dataset_list_and_delete_delegate_to_serializer() -> None:
     service, serializer, _, _ = build_dataset_service()
     serializer.list_datasets.return_value = [
-        {"dataset_id": 1, "dataset_name": "a", "dataset_kind": "training", "created_at": None}
+        {
+            "dataset_id": 1,
+            "dataset_name": "a",
+            "dataset_kind": "training",
+            "created_at": None,
+        }
     ]
     serializer.list_datasets_summary.return_value = [
         {

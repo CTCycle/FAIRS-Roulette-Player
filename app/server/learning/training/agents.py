@@ -3,13 +3,13 @@ from __future__ import annotations
 import pickle
 import random
 from collections import deque
-from pathlib import Path
 from typing import Any
 
 import numpy as np
 from keras import Model
 
 from server.common.constants import PAD_VALUE, STATES
+from server.common import path as shared_paths
 from server.learning.betting.types import STRATEGY_COUNT
 from server.learning.training.environment import RouletteEnvironment
 
@@ -35,15 +35,15 @@ class DQNAgent:
 
     # -------------------------------------------------------------------------
     def dump_memory(self, path) -> None:
-        memory_path = Path(path) / "configuration" / "replay_memory.pkl"
-        with open(memory_path, "wb") as f:
-            pickle.dump(self.memory, f)
+        memory_path = shared_paths.checkpoint_replay_memory_file(path)
+        with memory_path.open("wb") as file:
+            pickle.dump(self.memory, file)
 
     # -------------------------------------------------------------------------
     def load_memory(self, path) -> None:
-        memory_path = Path(path) / "configuration" / "replay_memory.pkl"
-        with open(memory_path, "rb") as f:
-            self.memory = pickle.load(f)
+        memory_path = shared_paths.checkpoint_replay_memory_file(path)
+        with memory_path.open("rb") as file:
+            self.memory = pickle.load(file)
 
     # -------------------------------------------------------------------------
     def act(self, model: Model, state: Any, gain: float | Any) -> np.int32:

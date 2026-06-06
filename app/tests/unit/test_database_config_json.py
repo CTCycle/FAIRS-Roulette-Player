@@ -104,7 +104,8 @@ def test_database_validation_requires_external_fields(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     with pytest.raises(
-        ValidationError, match="database.host, database.database_name, database.username"
+        ValidationError,
+        match="database.host, database.database_name, database.username",
     ):
         monkeypatch.setenv("EMBEDDED_DATABASE", "false")
         _ = EnvDatabaseSettings.from_environment()

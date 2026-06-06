@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+
 ###############################################################################
 @dataclass(frozen=True)
 class DatabaseSettings:

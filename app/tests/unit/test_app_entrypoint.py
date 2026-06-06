@@ -94,9 +94,9 @@ def test_root_and_nested_routes_serve_built_client_when_available(
     index_file.write_text("<html><body>FAIRS client</body></html>", encoding="utf-8")
     asset_file.write_text("console.log('fairs');", encoding="utf-8")
 
-    monkeypatch.setattr(app_module, "CLIENT_DIST_PATH", client_dist)
-    monkeypatch.setattr(app_module, "CLIENT_INDEX_FILE_PATH", index_file)
-    monkeypatch.setattr(app_module, "CLIENT_ASSETS_PATH", assets_dir)
+    monkeypatch.setattr(app_module.shared_paths, "CLIENT_DIST_PATH", client_dist)
+    monkeypatch.setattr(app_module.shared_paths, "CLIENT_INDEX_FILE_PATH", index_file)
+    monkeypatch.setattr(app_module.shared_paths, "CLIENT_ASSETS_PATH", assets_dir)
     monkeypatch.setattr(app_module, "_client_build_available", lambda: True)
 
     application = app_module.create_app()

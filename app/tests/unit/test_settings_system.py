@@ -51,7 +51,11 @@ def _write_env(path: Path, lines: list[str]) -> None:
 def _default_json_config() -> dict[str, object]:
     return {
         "jobs": {"polling_interval": 1.0},
-        "device": {"jit_compile": False, "jit_backend": "inductor", "use_mixed_precision": False},
+        "device": {
+            "jit_compile": False,
+            "jit_backend": "inductor",
+            "use_mixed_precision": False,
+        },
     }
 
 
@@ -62,7 +66,7 @@ def test_environment_overrides_existing_process_values(
     env_path = tmp_path / ".env"
     _write_env(env_path, ["FASTAPI_HOST=from_dotenv"])
 
-    monkeypatch.setattr(environment, "ENV_FILE_PATH", env_path)
+    monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
     monkeypatch.setenv("FASTAPI_HOST", "from_process")
 
     environment.load_environment()
@@ -77,7 +81,7 @@ def test_environment_load_is_idempotent_without_force(
     env_path = tmp_path / ".env"
     _write_env(env_path, ["FASTAPI_HOST=first"])
 
-    monkeypatch.setattr(environment, "ENV_FILE_PATH", env_path)
+    monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
 
     environment.load_environment()
     _write_env(env_path, ["FASTAPI_HOST=second"])
@@ -92,7 +96,7 @@ def test_environment_force_reload_applies_updated_dotenv(
 ) -> None:
     env_path = tmp_path / ".env"
     _write_env(env_path, ["FASTAPI_HOST=first"])
-    monkeypatch.setattr(environment, "ENV_FILE_PATH", env_path)
+    monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
 
     environment.load_environment()
     _write_env(env_path, ["FASTAPI_HOST=second"])
@@ -108,7 +112,7 @@ def test_server_package_import_loads_environment_early(
     env_path = tmp_path / ".env"
     _write_env(env_path, ["KERAS_BACKEND=torch"])
 
-    monkeypatch.setattr(environment, "ENV_FILE_PATH", env_path)
+    monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
     monkeypatch.setenv("KERAS_BACKEND", "tensorflow")
 
     import server as server_package
@@ -138,7 +142,7 @@ def test_server_settings_use_json_configuration_file(
             "DATABASE_PASSWORD=env_pass",
         ],
     )
-    monkeypatch.setattr(environment, "ENV_FILE_PATH", env_path)
+    monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
 
     settings = startup.reload_settings_for_tests(config_path=str(config_path))
 
@@ -168,7 +172,7 @@ def test_database_settings_are_loaded_from_env(
             "DATABASE_NAME=env-name",
         ],
     )
-    monkeypatch.setattr(environment, "ENV_FILE_PATH", env_path)
+    monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
 
     settings = startup.reload_settings_for_tests(config_path=str(config_path))
 
@@ -198,7 +202,7 @@ def test_manager_get_block_and_get_value(
             "DATABASE_PASSWORD=env_pass",
         ],
     )
-    monkeypatch.setattr(environment, "ENV_FILE_PATH", env_path)
+    monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
 
     startup.reload_settings_for_tests(config_path=str(config_path))
     manager = startup.get_configuration_manager()
@@ -226,7 +230,7 @@ def test_reload_updates_cached_manager_values(
             "EMBEDDED_DATABASE=true",
         ],
     )
-    monkeypatch.setattr(environment, "ENV_FILE_PATH", env_path)
+    monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
 
     first = startup.reload_settings_for_tests(config_path=str(config_path))
     assert first.jobs.polling_interval == 1.0
@@ -244,10 +248,12 @@ def test_missing_configuration_file_fails_fast(
 ) -> None:
     env_path = tmp_path / ".env"
     _write_env(env_path, ["FASTAPI_HOST=127.0.0.1", "EMBEDDED_DATABASE=true"])
-    monkeypatch.setattr(environment, "ENV_FILE_PATH", env_path)
+    monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
 
     with pytest.raises(RuntimeError, match="Configuration file not found"):
-        _ = startup.reload_settings_for_tests(config_path=str(tmp_path / "missing.json"))
+        _ = startup.reload_settings_for_tests(
+            config_path=str(tmp_path / "missing.json")
+        )
 
 
 ###############################################################################
@@ -259,7 +265,7 @@ def test_invalid_configuration_file_fails_fast(
 
     env_path = tmp_path / ".env"
     _write_env(env_path, ["FASTAPI_HOST=127.0.0.1", "EMBEDDED_DATABASE=true"])
-    monkeypatch.setattr(environment, "ENV_FILE_PATH", env_path)
+    monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
 
     with pytest.raises(RuntimeError, match="Unable to load configuration"):
         _ = startup.reload_settings_for_tests(config_path=str(config_path))
