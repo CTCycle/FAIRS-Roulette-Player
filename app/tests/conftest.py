@@ -30,13 +30,11 @@ def _build_base_url(
 
 
 # Base URLs - prefer explicit app test URLs, then host/port pairs.
-UI_BASE_URL = (
-    os.getenv("APP_TEST_FRONTEND_URL")
-    or _build_base_url("UI_HOST", "UI_PORT", "127.0.0.1", "7861")
+UI_BASE_URL = os.getenv("APP_TEST_FRONTEND_URL") or _build_base_url(
+    "UI_HOST", "UI_PORT", "127.0.0.1", "7861"
 )
-API_BASE_URL = (
-    os.getenv("APP_TEST_BACKEND_URL")
-    or _build_base_url("FASTAPI_HOST", "FASTAPI_PORT", "127.0.0.1", "8000")
+API_BASE_URL = os.getenv("APP_TEST_BACKEND_URL") or _build_base_url(
+    "FASTAPI_HOST", "FASTAPI_PORT", "127.0.0.1", "8000"
 )
 API_BASE_PATH = f"{API_BASE_URL}/api"
 

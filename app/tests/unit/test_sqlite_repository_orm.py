@@ -34,8 +34,9 @@ def build_datasets_frame(*rows: dict[str, object]) -> pd.DataFrame:
 
 ###############################################################################
 def test_sqlite_repository_orm_load_filter_delete(tmp_path, monkeypatch) -> None:
-    monkeypatch.setattr(sqlite_module, "RESOURCES_PATH", tmp_path)
-    monkeypatch.setattr(sqlite_module, "DATABASE_FILENAME", "orm_test.db")
+    monkeypatch.setattr(
+        sqlite_module.shared_paths, "DATABASE_PATH", tmp_path / "orm_test.db"
+    )
 
     repository = SQLiteRepository(build_sqlite_settings(), initialize_schema=True)
     rows = build_datasets_frame(
@@ -72,10 +73,15 @@ def test_sqlite_repository_orm_upsert_uses_unique_constraints(
     tmp_path,
     monkeypatch,
 ) -> None:
-    monkeypatch.setattr(sqlite_module, "RESOURCES_PATH", tmp_path)
-    monkeypatch.setattr(sqlite_module, "DATABASE_FILENAME", "orm_upsert.db")
+    monkeypatch.setattr(
+        sqlite_module.shared_paths,
+        "DATABASE_PATH",
+        tmp_path / "orm_upsert.db",
+    )
 
-    repository = SQLiteRepository(build_sqlite_settings(insert_batch_size=1), initialize_schema=True)
+    repository = SQLiteRepository(
+        build_sqlite_settings(insert_batch_size=1), initialize_schema=True
+    )
 
     first = build_datasets_frame(
         {
@@ -107,8 +113,9 @@ def test_sqlite_repository_orm_upsert_uses_unique_constraints(
 
 ###############################################################################
 def test_seed_roulette_outcomes_is_idempotent(tmp_path, monkeypatch) -> None:
-    monkeypatch.setattr(sqlite_module, "RESOURCES_PATH", tmp_path)
-    monkeypatch.setattr(sqlite_module, "DATABASE_FILENAME", "seed.db")
+    monkeypatch.setattr(
+        sqlite_module.shared_paths, "DATABASE_PATH", tmp_path / "seed.db"
+    )
 
     repository = SQLiteRepository(build_sqlite_settings(), initialize_schema=True)
 

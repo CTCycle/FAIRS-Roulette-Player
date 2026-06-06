@@ -5,13 +5,13 @@ import logging.config
 from datetime import datetime
 from typing import Any
 
-from server.common.path import LOGS_PATH
+from server.common import path as shared_paths
 
 # Generate timestamp for the log filename
 ###############################################################################
-LOGS_PATH.mkdir(parents=True, exist_ok=True)
+shared_paths.LOGS_PATH.mkdir(parents=True, exist_ok=True)
 current_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-log_filename = LOGS_PATH / f"FAIRS_{current_timestamp}.log"
+log_filename = shared_paths.LOGS_PATH / f"FAIRS_{current_timestamp}.log"
 
 # Define logger configuration
 ###############################################################################

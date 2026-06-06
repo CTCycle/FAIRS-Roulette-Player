@@ -99,9 +99,7 @@ def test_predict_next_requires_minimum_context_length() -> None:
         dataset_id=1,
         serializer=DummySerializer([1, 2, 3]),
     )
-    with pytest.raises(
-        ValueError, match="at least the perceptive field size"
-    ):
+    with pytest.raises(ValueError, match="at least the perceptive field size"):
         player.predict_next()
 
 

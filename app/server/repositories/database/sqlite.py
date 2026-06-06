@@ -8,7 +8,7 @@ from sqlalchemy import event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
 
-from server.common.path import DATABASE_FILENAME, RESOURCES_PATH
+from server.common import path as shared_paths
 from server.configurations import DatabaseSettings
 from server.repositories.database.common import (
     SQLAlchemyRepositoryBase,
@@ -33,7 +33,7 @@ class SQLiteRepository(SQLAlchemyRepositoryBase):
         settings: DatabaseSettings,
         initialize_schema: bool = False,
     ) -> None:
-        self.db_path: Path = RESOURCES_PATH / DATABASE_FILENAME
+        self.db_path: Path = shared_paths.DATABASE_PATH
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.engine: Engine = sqlalchemy.create_engine(
             f"sqlite:///{self.db_path}",

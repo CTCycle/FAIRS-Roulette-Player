@@ -172,6 +172,7 @@ def initialize_sqlite_database(settings: DatabaseSettings) -> None:
     seed_roulette_outcomes(repository.engine)
     logger.info("Initialized SQLite database at %s", repository.db_path)
 
+
 def ensure_postgres_database(settings: DatabaseSettings) -> str:
     if not settings.host:
         raise ValueError("Database host is required for PostgreSQL initialization.")
@@ -253,6 +254,7 @@ def build_roulette_outcome_seed_rows() -> list[dict[str, int | str]]:
         )
     return rows
 
+
 ###############################################################################
 def seed_roulette_outcomes(engine: sqlalchemy.Engine) -> None:
     inspector = sqlalchemy.inspect(engine)
@@ -262,7 +264,9 @@ def seed_roulette_outcomes(engine: sqlalchemy.Engine) -> None:
     session_factory = sessionmaker(bind=engine, future=True)
     session = session_factory()
     try:
-        current = session.scalar(select(func.count()).select_from(RouletteOutcomes)) or 0
+        current = (
+            session.scalar(select(func.count()).select_from(RouletteOutcomes)) or 0
+        )
         if int(current) == len(rows):
             return
         session.execute(delete(RouletteOutcomes))

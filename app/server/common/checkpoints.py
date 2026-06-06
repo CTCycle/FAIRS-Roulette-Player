@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from server.common.path import CHECKPOINT_PATH
+from server.common import path as shared_paths
 
 MAX_CHECKPOINT_NAME_LENGTH = 128
 CHECKPOINT_EMPTY_MESSAGE_TEXT = "Checkpoint name cannot be empty."
@@ -28,7 +28,7 @@ def normalize_checkpoint_identifier(value: str) -> str:
 
 ###############################################################################
 def resolve_checkpoint_path(checkpoint_name: str) -> Path:
-    checkpoints_root = CHECKPOINT_PATH.resolve()
+    checkpoints_root = shared_paths.CHECKPOINT_PATH.resolve()
     checkpoint_path = (checkpoints_root / checkpoint_name).resolve()
     if checkpoints_root not in checkpoint_path.parents:
         raise ValueError("Invalid checkpoint path.")

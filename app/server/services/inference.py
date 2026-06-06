@@ -164,8 +164,8 @@ class InferenceService:
 
     # -------------------------------------------------------------------------
     def start_session(self, payload: InferenceStartRequest) -> dict[str, Any]:
-        checkpoint, checkpoint_path = self.checkpoint_service.resolve_existing_checkpoint(
-            payload.checkpoint
+        checkpoint, checkpoint_path = (
+            self.checkpoint_service.resolve_existing_checkpoint(payload.checkpoint)
         )
 
         dataset_id = int(payload.dataset_id)
@@ -306,7 +306,9 @@ class InferenceService:
         }
 
     # -------------------------------------------------------------------------
-    def update_bet(self, session_id: str, payload: InferenceBetUpdateRequest) -> dict[str, Any]:
+    def update_bet(
+        self, session_id: str, payload: InferenceBetUpdateRequest
+    ) -> dict[str, Any]:
         session = self.state.get_session(session_id)
         session.update_bet(payload.bet_amount)
         if session.prediction_pending and session.last_prediction is not None:

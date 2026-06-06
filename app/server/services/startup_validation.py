@@ -1,14 +1,8 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
 
-from server.common.path import (
-    CHECKPOINT_PATH,
-    CLIENT_INDEX_FILE_PATH,
-    LOGS_PATH,
-    RESOURCES_PATH,
-)
+from server.common import path as shared_paths
 from server.configurations import ServerSettings, get_server_settings
 from server.repositories.database.utils import normalize_postgres_engine
 
@@ -31,19 +25,25 @@ def tauri_mode_enabled() -> bool:
 def run_startup_validations(settings: ServerSettings | None = None) -> None:
     resolved_settings = settings or get_server_settings()
 
-    for directory in (RESOURCES_PATH, LOGS_PATH, CHECKPOINT_PATH):
+    for directory in (
+        shared_paths.RESOURCES_PATH,
+        shared_paths.LOGS_PATH,
+        shared_paths.CHECKPOINT_PATH,
+    ):
         directory.mkdir(parents=True, exist_ok=True)
 
     if not resolved_settings.database.embedded_database:
-        engine_name = normalize_postgres_engine(resolved_settings.database.engine).lower()
+        engine_name = normalize_postgres_engine(
+            resolved_settings.database.engine
+        ).lower()
         if engine_name not in SUPPORTED_POSTGRES_ENGINES:
             raise RuntimeError(
                 "Unsupported database engine configured for startup: "
                 f"{resolved_settings.database.engine}"
             )
 
-    if tauri_mode_enabled() and not CLIENT_INDEX_FILE_PATH.is_file():
+    if tauri_mode_enabled() and not shared_paths.CLIENT_INDEX_FILE_PATH.is_file():
         raise RuntimeError(
             "Tauri mode requires a built frontend at "
-            f"{CLIENT_INDEX_FILE_PATH}."
+            f"{shared_paths.CLIENT_INDEX_FILE_PATH}."
         )

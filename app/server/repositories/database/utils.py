@@ -6,6 +6,7 @@ from typing import Any
 import pandas as pd
 from sqlalchemy.sql.sqltypes import Date, DateTime
 
+
 ###############################################################################
 def normalize_postgres_engine(engine: str | None) -> str:
     if not engine:

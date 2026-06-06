@@ -79,7 +79,9 @@ class TrainingState:
         self.is_training = True
         self.current_job_id = job_id
         self.max_steps = max_steps
-        self.latest_stats = default_training_stats(total_epochs, max_steps, "exploration")
+        self.latest_stats = default_training_stats(
+            total_epochs, max_steps, "exploration"
+        )
         self.history_points = []
         self.history_bucket_size = (
             max_steps / float(HISTORY_POINTS_PER_EPISODE) if max_steps > 0 else 1.0
@@ -157,7 +159,9 @@ class TrainingState:
 def calculate_progress(stats: dict[str, Any]) -> float:
     epoch = stats.get("epoch", 0)
     total_epochs = stats.get("total_epochs", 0)
-    if not isinstance(epoch, (int, float)) or not isinstance(total_epochs, (int, float)):
+    if not isinstance(epoch, (int, float)) or not isinstance(
+        total_epochs, (int, float)
+    ):
         return 0.0
     if total_epochs <= 0:
         return 0.0
@@ -191,7 +195,9 @@ def build_history_points(
             default=0.0,
         )
         capital_gain = (
-            capital_value - float(initial_capital) if initial_capital is not None else 0.0
+            capital_value - float(initial_capital)
+            if initial_capital is not None
+            else 0.0
         )
         epoch = episodes[index] if index < len(episodes) else 0
         epoch = coerce_finite_int(epoch, default=0, minimum=0) + episode_offset
@@ -296,8 +302,12 @@ class TrainingService:
 
         result_payload = worker.read_result()
         if result_payload is None:
-            if worker.exitcode not in (0, None) and not self.job_manager.should_stop(job_id):
-                raise RuntimeError(f"Training process exited with code {worker.exitcode}")
+            if worker.exitcode not in (0, None) and not self.job_manager.should_stop(
+                job_id
+            ):
+                raise RuntimeError(
+                    f"Training process exited with code {worker.exitcode}"
+                )
             return {}
         if "error" in result_payload and result_payload["error"]:
             raise RuntimeError(str(result_payload["error"]))
@@ -306,7 +316,9 @@ class TrainingService:
         return {}
 
     # -------------------------------------------------------------------------
-    def run_training_job(self, configuration: dict[str, Any], job_id: str) -> dict[str, Any]:
+    def run_training_job(
+        self, configuration: dict[str, Any], job_id: str
+    ) -> dict[str, Any]:
         worker = ProcessWorker()
         self.training_state.worker = worker
         try:
@@ -314,7 +326,9 @@ class TrainingService:
                 target=run_training_process,
                 kwargs={"configuration": configuration},
             )
-            result = self._monitor_training_process(job_id, worker, stop_timeout_seconds=5.0)
+            result = self._monitor_training_process(
+                job_id, worker, stop_timeout_seconds=5.0
+            )
             if self.job_manager.should_stop(job_id):
                 self.training_state.update_stats(
                     {"status": "cancelled", "message": "Training cancelled"}
@@ -356,7 +370,9 @@ class TrainingService:
                     "additional_episodes": additional_episodes,
                 },
             )
-            result = self._monitor_training_process(job_id, worker, stop_timeout_seconds=5.0)
+            result = self._monitor_training_process(
+                job_id, worker, stop_timeout_seconds=5.0
+            )
             if self.job_manager.should_stop(job_id):
                 self.training_state.update_stats(
                     {"status": "cancelled", "message": "Training cancelled"}
@@ -404,9 +420,9 @@ class TrainingService:
         else:
             configuration["checkpoint_name"] = None
 
-        if not bool(configuration.get("use_data_generator", False)) and not configuration.get(
-            "dataset_id"
-        ):
+        if not bool(
+            configuration.get("use_data_generator", False)
+        ) and not configuration.get("dataset_id"):
             raise ValueError("dataset_id is required when use_data_generator is false.")
 
         job_id = self.job_manager.start_job(
@@ -438,17 +454,21 @@ class TrainingService:
         if self.job_manager.is_job_running(self.JOB_TYPE):
             raise RuntimeError("Training is already in progress.")
 
-        checkpoint, checkpoint_path = self.checkpoint_service.resolve_existing_checkpoint(
-            config.checkpoint
+        checkpoint, checkpoint_path = (
+            self.checkpoint_service.resolve_existing_checkpoint(config.checkpoint)
         )
-        configuration, session = self.checkpoint_service.model_serializer.load_training_configuration(
-            checkpoint_path
+        configuration, session = (
+            self.checkpoint_service.model_serializer.load_training_configuration(
+                checkpoint_path
+            )
         )
 
         from_epoch = int(session.get("total_episodes", 0))
         initial_capital = configuration.get("initial_capital")
         initial_capital_value = (
-            float(initial_capital) if isinstance(initial_capital, (int, float)) else None
+            float(initial_capital)
+            if isinstance(initial_capital, (int, float))
+            else None
         )
         restored_points = build_history_points(session, initial_capital_value)
 
@@ -535,5 +555,7 @@ class TrainingService:
         return {
             "job_id": job_id,
             "success": success,
-            "message": "Cancellation requested" if success else "Job cannot be cancelled",
+            "message": "Cancellation requested"
+            if success
+            else "Job cannot be cancelled",
         }

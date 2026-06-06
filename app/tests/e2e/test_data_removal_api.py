@@ -39,20 +39,15 @@ class TestDatasetRemoval:
         dataset_id = dataset_entry.get("dataset_id")
         assert isinstance(dataset_id, int) and dataset_id > 0
 
-        delete_response = api_context.delete(
-            f"/api/datasets/training/{dataset_id}"
-        )
+        delete_response = api_context.delete(f"/api/datasets/training/{dataset_id}")
         assert delete_response.ok
         delete_payload = delete_response.json()
         assert delete_payload.get("status") == "deleted"
         assert delete_payload.get("dataset_id") == dataset_id
 
-        summary_after_response = api_context.get(
-            "/api/datasets/training/summary"
-        )
+        summary_after_response = api_context.get("/api/datasets/training/summary")
         assert summary_after_response.ok
         summary_after = summary_after_response.json()
         datasets_after = summary_after.get("datasets", [])
         names_after = [item.get("dataset_name") for item in datasets_after]
         assert DATASET_NAME not in names_after
-

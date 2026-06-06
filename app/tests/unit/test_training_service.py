@@ -19,7 +19,9 @@ def build_service() -> tuple[TrainingService, Mock, Mock]:
         {"max_steps_episode": 100, "initial_capital": 100},
         {"total_episodes": 2, "history": {"episode": [1, 2], "time_step": [1, 2]}},
     )
-    service = TrainingService(job_manager=job_manager, checkpoint_service=checkpoint_service)
+    service = TrainingService(
+        job_manager=job_manager, checkpoint_service=checkpoint_service
+    )
     return service, job_manager, checkpoint_service
 
 
@@ -34,12 +36,16 @@ def test_start_training_starts_job_and_returns_contract() -> None:
 def test_start_training_requires_dataset_without_generator() -> None:
     service, _, _ = build_service()
     with pytest.raises(ValueError, match="dataset_id is required"):
-        service.start_training(TrainingConfig(use_data_generator=False, dataset_id=None))
+        service.start_training(
+            TrainingConfig(use_data_generator=False, dataset_id=None)
+        )
 
 
 def test_resume_training_starts_resume_job() -> None:
     service, job_manager, _ = build_service()
-    payload = service.resume_training(ResumeConfig(checkpoint="cp1", additional_episodes=1))
+    payload = service.resume_training(
+        ResumeConfig(checkpoint="cp1", additional_episodes=1)
+    )
     assert payload["status"] == "started"
     assert payload["job_type"] == "training"
     job_manager.start_job.assert_called_once()
