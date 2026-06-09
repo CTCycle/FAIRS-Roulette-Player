@@ -114,7 +114,7 @@ Available maintenance actions include log cleanup, local uninstall/runtime clean
 
 ## 8. User Documentation
 Detailed operational guidance is available in:
-- `assets/docs/project_overview.md`
+- `assets/docs/project_index.md`
 - `assets/docs/operations/quick_start.md`
 - `assets/docs/operations/workflows.md`
 - `assets/docs/operations/troubleshooting.md`
