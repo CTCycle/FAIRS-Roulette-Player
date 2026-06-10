@@ -1,20 +1,16 @@
 # Project-specific generated/runtime artifacts
-FAIRS/settings/.env
 runtimes/**
-runtimes/.uv-cache/**
-FAIRS/resources/logs/**
-FAIRS/resources/checkpoints/**
-FAIRS/client/node_modules/
-FAIRS/client/dist/
-FAIRS/client/dist-ssr/
-FAIRS/client/logs/
-FAIRS/client/*.local
-FAIRS/client/src-tauri/target/
-FAIRS/client/src-tauri/r/
-FAIRS/client/src-tauri/gen/
+app/resources/logs/**
+app/resources/checkpoints/**
+app/client/node_modules/
+app/client/dist/
+app/client/dist-ssr/
+app/client/logs/
+app/client/*.local
 app/client/src-tauri/target/
+app/client/src-tauri/r/
 app/client/src-tauri/gen/
-app/client/src-tauri/runtime/
+app/src-tauri/**
 release/windows/
 
 # Python
@@ -49,9 +45,6 @@ yarn.lock
 .DS_Store
 Thumbs.db
 
-# Agents
-.agent/skills/**
-
 # Misc
 *.lock
 *.log
@@ -59,5 +52,4 @@ Thumbs.db
 *.sqlite*
 *.exe
 *.gz
-
 !.gitkeep

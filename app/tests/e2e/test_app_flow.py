@@ -7,14 +7,17 @@ import re
 from playwright.sync_api import Page, expect
 
 
+###############################################################################
 class TestHomePage:
     """Tests for the home page and basic navigation."""
 
+    # -------------------------------------------------------------------------
     def test_homepage_loads_successfully(self, page: Page, base_url: str):
         """The homepage should load without errors."""
         page.goto(base_url)
         expect(page).to_have_title(re.compile("FAIRS Roulette Player", re.IGNORECASE))
 
+    # -------------------------------------------------------------------------
     def test_homepage_has_navigation(self, page: Page, base_url: str):
         """The homepage should have navigation elements."""
         page.goto(base_url)
@@ -23,9 +26,11 @@ class TestHomePage:
         expect(page.get_by_text("Inference", exact=False).first).to_be_visible()
 
 
+###############################################################################
 class TestNavigationFlow:
     """Tests for navigating between different pages."""
 
+    # -------------------------------------------------------------------------
     def test_navigate_to_training_page(self, page: Page, base_url: str):
         """Should be able to navigate to the Training page."""
         page.goto(base_url)
@@ -41,6 +46,7 @@ class TestNavigationFlow:
         page.wait_for_load_state("networkidle")
         expect(page).to_have_url(re.compile(".*training.*", re.IGNORECASE))
 
+    # -------------------------------------------------------------------------
     def test_navigate_to_inference_page(self, page: Page, base_url: str):
         """Should be able to navigate to the Inference page."""
         page.goto(base_url)
@@ -57,9 +63,11 @@ class TestNavigationFlow:
         expect(page).to_have_url(re.compile(".*inference.*", re.IGNORECASE))
 
 
+###############################################################################
 class TestTrainingPage:
     """Tests for the Training page."""
 
+    # -------------------------------------------------------------------------
     def test_training_page_loads(self, page: Page, base_url: str):
         """The Training page should load without errors."""
         page.goto(f"{base_url}/training")
@@ -72,6 +80,7 @@ class TestTrainingPage:
         ).to_be_visible()
         expect(page.get_by_text("Checkpoints", exact=False).first).to_be_visible()
 
+    # -------------------------------------------------------------------------
     def test_training_page_shows_status(self, page: Page, base_url: str):
         """The Training page should display training status."""
         page.goto(f"{base_url}/training")
@@ -84,9 +93,11 @@ class TestTrainingPage:
         expect(page.get_by_text("Checkpoints", exact=False).first).to_be_visible()
 
 
+###############################################################################
 class TestInferencePage:
     """Tests for the Inference page."""
 
+    # -------------------------------------------------------------------------
     def test_inference_page_loads(self, page: Page, base_url: str):
         """The Inference page should load without errors."""
         page.goto(f"{base_url}/inference")
@@ -99,6 +110,7 @@ class TestInferencePage:
         ).to_be_visible()
         expect(page.get_by_text("AI Suggestion", exact=False)).to_be_visible()
 
+    # -------------------------------------------------------------------------
     def test_inference_page_shows_checkpoint_selector(self, page: Page, base_url: str):
         """The Inference page should have a checkpoint selector."""
         page.goto(f"{base_url}/inference")

@@ -24,7 +24,6 @@ DATABASE_ENV_KEYS = (
     "DATABASE_INSERT_BATCH_SIZE",
 )
 
-
 ###############################################################################
 @pytest.fixture(autouse=True)
 def reset_configuration_state(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -36,16 +35,13 @@ def reset_configuration_state(monkeypatch: pytest.MonkeyPatch) -> None:
     startup.get_configuration_manager.cache_clear()
     environment.reset_environment_for_tests()
 
-
 ###############################################################################
 def _write_json(path: Path, payload: dict[str, object]) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
-
 ###############################################################################
 def _write_env(path: Path, lines: list[str]) -> None:
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-
 
 ###############################################################################
 def _default_json_config() -> dict[str, object]:
@@ -57,7 +53,6 @@ def _default_json_config() -> dict[str, object]:
             "use_mixed_precision": False,
         },
     }
-
 
 ###############################################################################
 def test_environment_overrides_existing_process_values(
@@ -72,7 +67,6 @@ def test_environment_overrides_existing_process_values(
     environment.load_environment()
 
     assert os.getenv("FASTAPI_HOST") == "from_dotenv"
-
 
 ###############################################################################
 def test_environment_load_is_idempotent_without_force(
@@ -89,7 +83,6 @@ def test_environment_load_is_idempotent_without_force(
 
     assert os.getenv("FASTAPI_HOST") == "first"
 
-
 ###############################################################################
 def test_environment_force_reload_applies_updated_dotenv(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -103,7 +96,6 @@ def test_environment_force_reload_applies_updated_dotenv(
     environment.load_environment(force=True)
 
     assert os.getenv("FASTAPI_HOST") == "second"
-
 
 ###############################################################################
 def test_server_package_import_loads_environment_early(
@@ -120,7 +112,6 @@ def test_server_package_import_loads_environment_early(
     importlib.reload(server_package)
 
     assert os.getenv("KERAS_BACKEND") == "torch"
-
 
 ###############################################################################
 def test_server_settings_use_json_configuration_file(
@@ -154,7 +145,6 @@ def test_server_settings_use_json_configuration_file(
     assert settings.device.jit_compile is False
     assert settings.device.jit_backend == "inductor"
 
-
 ###############################################################################
 def test_database_settings_are_loaded_from_env(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -180,7 +170,6 @@ def test_database_settings_are_loaded_from_env(
     assert settings.database.port == 5544
     assert settings.database.username == "env-user"
     assert settings.database.database_name == "env-name"
-
 
 ###############################################################################
 def test_manager_get_block_and_get_value(
@@ -213,7 +202,6 @@ def test_manager_get_block_and_get_value(
     assert manager.get_value("jobs", "polling_interval") == 1.0
     assert manager.get_value("device", "missing", default="fallback") == "fallback"
 
-
 ###############################################################################
 def test_reload_updates_cached_manager_values(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -241,7 +229,6 @@ def test_reload_updates_cached_manager_values(
     second = startup.reload_settings_for_tests(config_path=str(config_path))
     assert second.jobs.polling_interval == 2.25
 
-
 ###############################################################################
 def test_missing_configuration_file_fails_fast(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -254,7 +241,6 @@ def test_missing_configuration_file_fails_fast(
         _ = startup.reload_settings_for_tests(
             config_path=str(tmp_path / "missing.json")
         )
-
 
 ###############################################################################
 def test_invalid_configuration_file_fails_fast(

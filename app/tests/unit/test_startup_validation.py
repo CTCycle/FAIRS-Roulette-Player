@@ -13,6 +13,7 @@ from server.domain.configuration import (
 from server.services import startup_validation
 
 
+###############################################################################
 def _embedded_settings() -> ServerSettings:
     return ServerSettings(
         database=DatabaseSettings(
@@ -37,6 +38,7 @@ def _embedded_settings() -> ServerSettings:
     )
 
 
+###############################################################################
 def _external_settings(engine: str) -> ServerSettings:
     return ServerSettings(
         database=DatabaseSettings(
@@ -61,6 +63,7 @@ def _external_settings(engine: str) -> ServerSettings:
     )
 
 
+###############################################################################
 def test_startup_validations_create_runtime_directories(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -87,6 +90,7 @@ def test_startup_validations_create_runtime_directories(
     assert checkpoints_dir.is_dir()
 
 
+###############################################################################
 def test_tauri_mode_requires_built_client(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("FAIRS_TAURI_MODE", "true")
     monkeypatch.setattr(
@@ -99,6 +103,7 @@ def test_tauri_mode_requires_built_client(monkeypatch: pytest.MonkeyPatch) -> No
         startup_validation.run_startup_validations(_embedded_settings())
 
 
+###############################################################################
 def test_external_database_validation_rejects_unsupported_engine() -> None:
     with pytest.raises(RuntimeError, match="Unsupported database engine"):
         startup_validation.run_startup_validations(_external_settings("mysql"))

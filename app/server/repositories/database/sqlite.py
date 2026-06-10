@@ -18,16 +18,16 @@ from server.repositories.schemas.models import Base
 
 SQLITE_FOREIGN_KEYS_PRAGMA = "PRAGMA foreign_keys=ON"
 
-
 ###############################################################################
 def set_sqlite_pragma(dbapi_connection: Any, _connection_record: Any) -> None:
     cursor = dbapi_connection.cursor()
     cursor.execute(SQLITE_FOREIGN_KEYS_PRAGMA)
     cursor.close()
 
-
 ###############################################################################
 class SQLiteRepository(SQLAlchemyRepositoryBase):
+
+    # -------------------------------------------------------------------------
     def __init__(
         self,
         settings: DatabaseSettings,

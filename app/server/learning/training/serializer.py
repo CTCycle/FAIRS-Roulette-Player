@@ -11,9 +11,10 @@ from server.repositories.serialization.model import ModelSerializer
 from server.repositories.serialization.training import TrainingDataSerializer
 from server.services.process import RouletteSeriesEncoder
 
-
 ###############################################################################
 class DataSerializerExtension:
+
+    # -------------------------------------------------------------------------
     def __init__(self) -> None:
         self.encoder = RouletteSeriesEncoder()
         database = FAIRSDatabase()

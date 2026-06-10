@@ -10,9 +10,10 @@ from server.common.constants import NUMBERS, STATES
 from server.learning.models.embeddings import RouletteEmbedding
 from server.learning.models.logits import AddNorm, BatchNormDense, QScoreNet
 
-
 ###############################################################################
 class FAIRSnet:
+
+    # -------------------------------------------------------------------------
     def __init__(self, configuration: dict[str, Any]) -> None:
         self.perceptive_size = configuration.get("perceptive_field_size", 64)
         self.embedding_dims = configuration.get("embedding_dimensions", 200)

@@ -18,11 +18,9 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-
 ###############################################################################
 class Base(DeclarativeBase):
     pass
-
 
 ###############################################################################
 class RouletteOutcomes(Base):
@@ -60,7 +58,6 @@ class RouletteOutcomes(Base):
         ),
     )
 
-
 ###############################################################################
 class Datasets(Base):
     __tablename__ = "datasets"
@@ -87,7 +84,6 @@ class Datasets(Base):
             name="ck_datasets_kind",
         ),
     )
-
 
 ###############################################################################
 class DatasetOutcomes(Base):
@@ -122,7 +118,6 @@ class DatasetOutcomes(Base):
         Index("ix_dataset_outcomes_dataset_outcome", "dataset_id", "outcome_id"),
     )
 
-
 ###############################################################################
 class InferenceSessions(Base):
     __tablename__ = "inference_sessions"
@@ -154,7 +149,6 @@ class InferenceSessions(Base):
         Index("ix_inference_sessions_dataset_started", "dataset_id", "started_at"),
         Index("ix_inference_sessions_checkpoint", "checkpoint_name"),
     )
-
 
 ###############################################################################
 class InferenceSessionSteps(Base):
@@ -208,14 +202,12 @@ class InferenceSessionSteps(Base):
         Index("ix_inference_steps_observed_outcome", "observed_outcome_id"),
     )
 
-
 ###############################################################################
 def iter_model_classes() -> Iterator[type[Any]]:
     for mapper in Base.registry.mappers:
         model_cls = mapper.class_
         if isinstance(model_cls, type):
             yield model_cls
-
 
 ###############################################################################
 def get_model_class_for_table(table_name: str) -> type[Any]:

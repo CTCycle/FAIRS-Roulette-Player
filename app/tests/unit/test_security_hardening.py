@@ -26,6 +26,7 @@ from server.services.datasets import (
 )
 
 
+###############################################################################
 def test_checkpoint_name_validation_rejects_path_traversal_patterns() -> None:
     for candidate in ("", ".", "..", "../x", "..\\x", "x/y", "C:temp", "bad\x00name"):
         with pytest.raises(ValueError):
@@ -34,6 +35,7 @@ def test_checkpoint_name_validation_rejects_path_traversal_patterns() -> None:
     assert normalize_checkpoint_identifier("checkpoint_01") == "checkpoint_01"
 
 
+###############################################################################
 def test_checkpoint_path_builder_stays_under_checkpoint_root() -> None:
     checkpoint_root = CHECKPOINT_PATH.resolve()
     resolved = resolve_checkpoint_path("safe-checkpoint")
@@ -42,6 +44,7 @@ def test_checkpoint_path_builder_stays_under_checkpoint_root() -> None:
     assert resolved == checkpoint_root / "safe-checkpoint"
 
 
+###############################################################################
 def test_upload_parameter_normalizers_apply_bounds() -> None:
     assert normalize_csv_separator(";") == ";"
     assert normalize_sheet_name(0) == 0
@@ -60,6 +63,7 @@ def test_upload_parameter_normalizers_apply_bounds() -> None:
         normalize_filename("bad\x00.csv")
 
 
+###############################################################################
 def test_dataset_name_normalization_rejects_invalid_values() -> None:
     assert normalize_dataset_name("training_set") == "training_set"
 
@@ -71,6 +75,7 @@ def test_dataset_name_normalization_rejects_invalid_values() -> None:
         normalize_dataset_name("bad\x00name")
 
 
+###############################################################################
 def test_table_name_allowlist_blocks_injection_patterns() -> None:
     assert normalize_sqlite_table_name("datasets") == "datasets"
     assert normalize_postgres_table_name("datasets") == "datasets"

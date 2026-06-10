@@ -9,7 +9,6 @@ from server.repositories.database import sqlite as sqlite_module
 from server.repositories.database.initializer import seed_roulette_outcomes
 from server.repositories.database.sqlite import SQLiteRepository
 
-
 ###############################################################################
 def build_sqlite_settings(insert_batch_size: int = 2) -> DatabaseSettings:
     return DatabaseSettings(
@@ -26,11 +25,9 @@ def build_sqlite_settings(insert_batch_size: int = 2) -> DatabaseSettings:
         insert_batch_size=insert_batch_size,
     )
 
-
 ###############################################################################
 def build_datasets_frame(*rows: dict[str, object]) -> pd.DataFrame:
     return pd.DataFrame(list(rows))
-
 
 ###############################################################################
 def test_sqlite_repository_orm_load_filter_delete(tmp_path, monkeypatch) -> None:
@@ -66,7 +63,6 @@ def test_sqlite_repository_orm_load_filter_delete(tmp_path, monkeypatch) -> None
     remaining = repository.load_from_database("datasets")
     assert len(remaining) == 1
     assert int(remaining.iloc[0]["dataset_id"]) == 2
-
 
 ###############################################################################
 def test_sqlite_repository_orm_upsert_uses_unique_constraints(
@@ -109,7 +105,6 @@ def test_sqlite_repository_orm_upsert_uses_unique_constraints(
     )
     assert len(loaded) == 1
     assert int(loaded.iloc[0]["dataset_id"]) == 99
-
 
 ###############################################################################
 def test_seed_roulette_outcomes_is_idempotent(tmp_path, monkeypatch) -> None:

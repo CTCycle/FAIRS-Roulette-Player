@@ -14,12 +14,10 @@ SUPPORTED_POSTGRES_ENGINES = {
     "postgresql+psycopg2",
 }
 
-
 ###############################################################################
 def tauri_mode_enabled() -> bool:
     value = os.getenv("FAIRS_TAURI_MODE", "false").strip().lower()
     return value in {"1", "true", "yes", "on"}
-
 
 ###############################################################################
 def run_startup_validations(settings: ServerSettings | None = None) -> None:

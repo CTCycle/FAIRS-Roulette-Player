@@ -13,7 +13,6 @@ from server.services.datasets import DatasetService
 
 router = APIRouter(prefix="/datasets", tags=["datasets"])
 
-
 ###############################################################################
 @router.get(
     "/training",
@@ -25,7 +24,6 @@ def list_roulette_datasets(
 ) -> DatasetListResponse:
     return service.list_training_datasets()
 
-
 ###############################################################################
 @router.get(
     "/training/summary",
@@ -36,7 +34,6 @@ def list_roulette_datasets_summary(
     service: DatasetService = Depends(get_dataset_service),
 ) -> DatasetSummaryResponse:
     return service.list_training_dataset_summaries()
-
 
 ###############################################################################
 @router.delete(

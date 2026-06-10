@@ -12,29 +12,40 @@ from server.domain.inference import (
 from server.services.inference import InferenceService
 
 
+###############################################################################
 class FakePlayer:
+
+    # -------------------------------------------------------------------------
     def __init__(self, *args, **kwargs):  # noqa: ANN002, ANN003
         self.bet_amount = 10
         self.current_capital = 100
 
+    # -------------------------------------------------------------------------
     def predict_next(self) -> dict[str, object]:
         return {"action": 1, "description": "bet red", "confidence": 0.9}
 
+    # -------------------------------------------------------------------------
     def update_with_true_extraction(self, extraction: int) -> tuple[int, int]:
         return (1, 101 if extraction >= 0 else 100)
 
+    # -------------------------------------------------------------------------
     def update_bet_amount(self, bet_amount: int) -> None:
         self.bet_amount = bet_amount
 
 
+###############################################################################
 class FakeDeviceConfig:
+
+    # -------------------------------------------------------------------------
     def __init__(self, configuration):  # noqa: ANN001
         self.configuration = configuration
 
+    # -------------------------------------------------------------------------
     def set_device(self) -> None:
         return None
 
 
+###############################################################################
 def build_service(monkeypatch) -> tuple[InferenceService, Mock]:
     serializer = Mock()
     serializer.load_dataset.return_value = {"dataset_id": 1}
@@ -58,6 +69,7 @@ def build_service(monkeypatch) -> tuple[InferenceService, Mock]:
     return service, serializer
 
 
+###############################################################################
 def test_session_lifecycle_and_prediction_flow(monkeypatch) -> None:
     service, serializer = build_service(monkeypatch)
     start = service.start_session(InferenceStartRequest(checkpoint="cp1", dataset_id=1))
@@ -81,6 +93,7 @@ def test_session_lifecycle_and_prediction_flow(monkeypatch) -> None:
     serializer.mark_inference_session_ended.assert_called_once_with(session_id)
 
 
+###############################################################################
 def test_clear_rows_preserves_session_header(monkeypatch) -> None:
     service, serializer = build_service(monkeypatch)
     response = service.clear_session_rows("session_1")

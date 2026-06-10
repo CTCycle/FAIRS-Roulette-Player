@@ -21,12 +21,14 @@ DATABASE_ENV_KEYS = (
 )
 
 
+###############################################################################
 @pytest.fixture(autouse=True)
 def reset_database_env(monkeypatch: pytest.MonkeyPatch) -> None:
     for env_name in DATABASE_ENV_KEYS:
         monkeypatch.delenv(env_name, raising=False)
 
 
+###############################################################################
 def test_database_settings_use_env_payload_for_embedded_mode(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -44,6 +46,7 @@ def test_database_settings_use_env_payload_for_embedded_mode(
     assert settings.insert_batch_size == 250
 
 
+###############################################################################
 def test_database_settings_use_env_payload_for_external_postgres_mode(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -74,6 +77,7 @@ def test_database_settings_use_env_payload_for_external_postgres_mode(
     assert settings.insert_batch_size == 250
 
 
+###############################################################################
 def test_database_settings_parse_database_url_and_allow_explicit_overrides(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -100,6 +104,7 @@ def test_database_settings_parse_database_url_and_allow_explicit_overrides(
     assert settings.insert_batch_size == 1000
 
 
+###############################################################################
 def test_database_validation_requires_external_fields(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -111,6 +116,7 @@ def test_database_validation_requires_external_fields(
         _ = EnvDatabaseSettings.from_environment()
 
 
+###############################################################################
 def test_json_server_settings_rejects_database_block() -> None:
     with pytest.raises(
         ValidationError,

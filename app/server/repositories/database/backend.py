@@ -11,7 +11,6 @@ from server.common.utils.logger import logger
 from server.repositories.database.postgres import PostgresRepository
 from server.repositories.database.sqlite import SQLiteRepository
 
-
 ###############################################################################
 class DatabaseBackend(Protocol):
     db_path: str | None
@@ -52,8 +51,11 @@ BACKEND_FACTORIES: dict[str, BackendFactory] = {
 
 
 # [DATABASE]
+
 ###############################################################################
 class FAIRSDatabase:
+
+    # -------------------------------------------------------------------------
     def __init__(self) -> None:
         self.settings = get_server_settings().database
         self.backend = self._build_backend(self.settings.embedded_database)

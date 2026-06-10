@@ -7,12 +7,13 @@ from keras import layers
 
 from server.common.constants import PAD_VALUE
 
-
 ###############################################################################
 @keras.saving.register_keras_serializable(
     package="CustomLayers", name="RouletteEmbedding"
 )
 class RouletteEmbedding(keras.layers.Layer):
+
+    # -------------------------------------------------------------------------
     def __init__(
         self,
         embedding_dims: int,

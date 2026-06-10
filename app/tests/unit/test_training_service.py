@@ -8,6 +8,7 @@ from server.domain.training import ResumeConfig, TrainingConfig
 from server.services.training import TrainingService
 
 
+###############################################################################
 def build_service() -> tuple[TrainingService, Mock, Mock]:
     job_manager = Mock()
     job_manager.is_job_running.return_value = False
@@ -25,6 +26,7 @@ def build_service() -> tuple[TrainingService, Mock, Mock]:
     return service, job_manager, checkpoint_service
 
 
+###############################################################################
 def test_start_training_starts_job_and_returns_contract() -> None:
     service, job_manager, _ = build_service()
     payload = service.start_training(TrainingConfig(use_data_generator=True))
@@ -33,6 +35,7 @@ def test_start_training_starts_job_and_returns_contract() -> None:
     job_manager.start_job.assert_called_once()
 
 
+###############################################################################
 def test_start_training_requires_dataset_without_generator() -> None:
     service, _, _ = build_service()
     with pytest.raises(ValueError, match="dataset_id is required"):
@@ -41,6 +44,7 @@ def test_start_training_requires_dataset_without_generator() -> None:
         )
 
 
+###############################################################################
 def test_resume_training_starts_resume_job() -> None:
     service, job_manager, _ = build_service()
     payload = service.resume_training(
@@ -51,6 +55,7 @@ def test_resume_training_starts_resume_job() -> None:
     job_manager.start_job.assert_called_once()
 
 
+###############################################################################
 def test_stop_sets_cancellation_on_current_job() -> None:
     service, job_manager, _ = build_service()
     service.training_state.is_training = True
@@ -60,6 +65,7 @@ def test_stop_sets_cancellation_on_current_job() -> None:
     job_manager.cancel_job.assert_called_once_with("job123")
 
 
+###############################################################################
 def test_get_and_delete_job_contracts() -> None:
     service, job_manager, _ = build_service()
     job_manager.get_job_status.return_value = {

@@ -7,28 +7,37 @@ import numpy as np
 import pandas as pd
 import pytest
 
-
 ###############################################################################
 class DummyModel:
+
+    # -------------------------------------------------------------------------
     def predict(self, inputs: dict[str, Any], verbose: int = 0) -> np.ndarray:  # noqa: ARG002
         logits = np.zeros((1, 47), dtype=np.float32)
         logits[0, 12] = 1.0
         return logits
 
 
+###############################################################################
 class EmptyLogitsModel:
+
+    # -------------------------------------------------------------------------
     def predict(self, inputs: dict[str, Any], verbose: int = 0) -> np.ndarray:  # noqa: ARG002
         return np.zeros((1, 0), dtype=np.float32)
 
 
+###############################################################################
 class DummySerializer:
+
+    # -------------------------------------------------------------------------
     def __init__(self, outcomes: list[int]) -> None:
         self._frame = pd.DataFrame({"outcome": outcomes})
 
+    # -------------------------------------------------------------------------
     def load_dataset_outcomes(self, dataset_id: int) -> pd.DataFrame:  # noqa: ARG002
         return self._frame
 
 
+###############################################################################
 def test_fallback_strategy_is_deterministic_when_model_disabled() -> None:
     os.environ.setdefault("KERAS_BACKEND", "torch")
     from server.learning.inference.player import RoulettePlayer
@@ -59,6 +68,7 @@ def test_fallback_strategy_is_deterministic_when_model_disabled() -> None:
     assert prediction["current_bet_amount"] == 10
 
 
+###############################################################################
 def test_predict_next_raises_when_model_returns_empty_logits() -> None:
     os.environ.setdefault("KERAS_BACKEND", "torch")
     from server.learning.inference.player import RoulettePlayer
@@ -81,6 +91,7 @@ def test_predict_next_raises_when_model_returns_empty_logits() -> None:
         player.predict_next()
 
 
+###############################################################################
 def test_predict_next_requires_minimum_context_length() -> None:
     os.environ.setdefault("KERAS_BACKEND", "torch")
     from server.learning.inference.player import RoulettePlayer
@@ -103,6 +114,7 @@ def test_predict_next_requires_minimum_context_length() -> None:
         player.predict_next()
 
 
+###############################################################################
 def test_update_with_true_extraction_validates_input() -> None:
     os.environ.setdefault("KERAS_BACKEND", "torch")
     from server.learning.inference.player import RoulettePlayer

@@ -6,7 +6,6 @@ from fastapi import HTTPException, status
 
 ExceptionStatusMap = Sequence[tuple[type[BaseException], int]]
 
-
 ###############################################################################
 def http_exception_for_exception(
     exc: BaseException,

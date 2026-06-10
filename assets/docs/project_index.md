@@ -26,7 +26,7 @@ Read it first, then open the smallest leaf document that matches the task.
 
 ### Root
 
-- `project_overview.md`
+- `project_index.md`
   - Master index, navigation rules, and documentation handling policy.
 
 ### Architecture

@@ -9,7 +9,6 @@ from server.common.checkpoints import (
 )
 from server.repositories.serialization.model import ModelSerializer
 
-
 ###############################################################################
 def get_last_history_value(values: Any) -> float | None:
     if isinstance(values, list) and values:
@@ -18,9 +17,10 @@ def get_last_history_value(values: Any) -> float | None:
             return float(last_value)
     return None
 
-
 ###############################################################################
 class CheckpointService:
+
+    # -------------------------------------------------------------------------
     def __init__(self, model_serializer: ModelSerializer | None = None) -> None:
         self.model_serializer = model_serializer or ModelSerializer()
 

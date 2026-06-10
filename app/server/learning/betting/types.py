@@ -19,11 +19,9 @@ BET_OUTCOME_WIN = "win"
 BET_OUTCOME_LOSS = "loss"
 BET_OUTCOME_NEUTRAL = "neutral"
 
-
 ###############################################################################
 def is_valid_strategy(strategy_id: int) -> bool:
     return 0 <= int(strategy_id) < STRATEGY_COUNT
-
 
 ###############################################################################
 def normalize_strategy_id(strategy_id: int | None, default: int = STRATEGY_KEEP) -> int:
@@ -33,7 +31,6 @@ def normalize_strategy_id(strategy_id: int | None, default: int = STRATEGY_KEEP)
     if is_valid_strategy(candidate):
         return candidate
     return int(default)
-
 
 ###############################################################################
 def strategy_name(strategy_id: int) -> str:
