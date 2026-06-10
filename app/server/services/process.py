@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import pandas as pd
 
-
 ###############################################################################
 class RouletteSeriesEncoder:
+
+    # -------------------------------------------------------------------------
     def __init__(self) -> None:
         self.color_code = {"green": 0, "black": 1, "red": 2}
         self.position_map = {

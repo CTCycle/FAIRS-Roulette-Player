@@ -6,6 +6,7 @@ Tests: POST /data/upload
 from playwright.sync_api import APIRequestContext
 
 
+###############################################################################
 def load_dataset_summary_entry(
     api_context: APIRequestContext, dataset_id: int
 ) -> dict | None:
@@ -18,15 +19,18 @@ def load_dataset_summary_entry(
     )
 
 
+###############################################################################
 class TestDataUploadEndpoint:
     """Tests for the /data/upload API endpoint."""
 
+    # -------------------------------------------------------------------------
     def test_upload_without_file_returns_422(self, api_context: APIRequestContext):
         """POST /data/upload without a file should return 422 (validation error)."""
         response = api_context.post("/api/data/upload?dataset_kind=training")
         # FastAPI returns 422 for missing required fields
         assert response.status == 422
 
+    # -------------------------------------------------------------------------
     def test_upload_with_invalid_dataset_kind_returns_422(
         self, api_context: APIRequestContext
     ):
@@ -47,6 +51,7 @@ class TestDataUploadEndpoint:
         # Invalid dataset kind enum value should fail validation
         assert response.status == 422
 
+    # -------------------------------------------------------------------------
     def test_upload_valid_csv_to_training_dataset(self, api_context: APIRequestContext):
         """POST /data/upload with valid CSV should import data successfully."""
         csv_content = b"draw_index,observed_outcome\n0,0\n1,15\n2,32\n3,7\n4,21"
@@ -80,6 +85,7 @@ class TestDataUploadEndpoint:
         assert isinstance(data["columns"], list)
         assert data["columns"] == ["draw_index", "observed_outcome"]
 
+    # -------------------------------------------------------------------------
     def test_upload_empty_file_returns_400(self, api_context: APIRequestContext):
         """POST /data/upload with empty content should return 400."""
         response = api_context.post(
@@ -96,9 +102,11 @@ class TestDataUploadEndpoint:
         assert response.status == 400
 
 
+###############################################################################
 class TestDataUploadEdgeCases:
     """Edge case tests for data upload functionality."""
 
+    # -------------------------------------------------------------------------
     def test_upload_xlsx_format(self, api_context: APIRequestContext):
         """POST /data/upload should support XLSX files."""
         # Note: Creating a real XLSX in tests is complex; this test verifies
@@ -118,6 +126,7 @@ class TestDataUploadEdgeCases:
         payload = response.json()
         assert "detail" in payload
 
+    # -------------------------------------------------------------------------
     def test_upload_with_custom_separator(self, api_context: APIRequestContext):
         """POST /data/upload should respect csv_separator parameter."""
         # CSV with semicolon separator
@@ -139,6 +148,7 @@ class TestDataUploadEdgeCases:
         assert data.get("rows_imported") == 3
         assert data.get("dataset_kind") == "training"
 
+    # -------------------------------------------------------------------------
     def test_upload_filters_invalid_outcomes_and_enriches_all_valid_rows(
         self, api_context: APIRequestContext
     ):

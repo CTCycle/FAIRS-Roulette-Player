@@ -41,17 +41,14 @@ from server.services.training import TrainingService
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-
 ###############################################################################
 def is_api_docs_enabled() -> bool:
     value = os.getenv("ENABLE_API_DOCS", "true").strip().lower()
     return value in {"1", "true", "yes", "on"}
 
-
 ###############################################################################
 def _client_build_available() -> bool:
     return shared_paths.CLIENT_INDEX_FILE_PATH.is_file()
-
 
 ###############################################################################
 def _resolve_client_file(full_path: str) -> Path | None:
@@ -66,11 +63,9 @@ def _resolve_client_file(full_path: str) -> Path | None:
 
     return None
 
-
 ###############################################################################
 def serve_client_root() -> FileResponse:
     return FileResponse(shared_paths.CLIENT_INDEX_FILE_PATH)
-
 
 ###############################################################################
 def serve_client_path(full_path: str) -> FileResponse:
@@ -79,7 +74,6 @@ def serve_client_path(full_path: str) -> FileResponse:
         return FileResponse(client_file)
     return FileResponse(shared_paths.CLIENT_INDEX_FILE_PATH)
 
-
 ###############################################################################
 def redirect_root_to_docs() -> RedirectResponse | dict[str, str]:
     if is_api_docs_enabled():
@@ -87,6 +81,7 @@ def redirect_root_to_docs() -> RedirectResponse | dict[str, str]:
     return {"status": "ok"}
 
 
+###############################################################################
 @asynccontextmanager
 async def app_lifespan(application: FastAPI) -> AsyncIterator[None]:
     settings = get_server_settings()
@@ -120,7 +115,6 @@ async def app_lifespan(application: FastAPI) -> AsyncIterator[None]:
 
     yield
 
-
 ###############################################################################
 def include_api_routers(application: FastAPI) -> None:
     for router in (
@@ -132,6 +126,7 @@ def include_api_routers(application: FastAPI) -> None:
         application.include_router(router, prefix=FASTAPI_API_PREFIX)
 
 
+###############################################################################
 def configure_client_routes(application: FastAPI) -> None:
     if _client_build_available():
         if shared_paths.CLIENT_ASSETS_PATH.is_dir():
@@ -162,7 +157,6 @@ def configure_client_routes(application: FastAPI) -> None:
         include_in_schema=False,
         response_model=None,
     )
-
 
 ###############################################################################
 def create_app() -> FastAPI:

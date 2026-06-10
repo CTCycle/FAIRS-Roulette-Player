@@ -11,9 +11,10 @@ from server.common.constants import (
 )
 from server.repositories.database.backend import FAIRSDatabase
 
-
 ###############################################################################
 class TrainingRepositoryQueries:
+
+    # -------------------------------------------------------------------------
     def __init__(self, db: FAIRSDatabase) -> None:
         self.database = db
 

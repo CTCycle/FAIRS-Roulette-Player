@@ -12,6 +12,7 @@ from server.domain.configuration import (
 )
 
 
+###############################################################################
 def _build_settings() -> ServerSettings:
     return ServerSettings(
         database=DatabaseSettings(
@@ -36,6 +37,7 @@ def _build_settings() -> ServerSettings:
     )
 
 
+###############################################################################
 def _stub_lifespan_dependencies(monkeypatch, app_module) -> list[object]:
     initialize_calls: list[object] = []
     settings = _build_settings()
@@ -61,6 +63,7 @@ def _stub_lifespan_dependencies(monkeypatch, app_module) -> list[object]:
     return initialize_calls
 
 
+###############################################################################
 def test_root_redirects_to_docs_when_client_build_is_missing(monkeypatch) -> None:
     import server.app as app_module
 
@@ -78,6 +81,7 @@ def test_root_redirects_to_docs_when_client_build_is_missing(monkeypatch) -> Non
     assert len(initialize_calls) == 1
 
 
+###############################################################################
 def test_root_and_nested_routes_serve_built_client_when_available(
     tmp_path: Path,
     monkeypatch,

@@ -8,6 +8,7 @@ import pytest
 from playwright.sync_api import APIRequestContext
 
 
+###############################################################################
 def require_checkpoint(api_context: APIRequestContext) -> str:
     response = api_context.get("/api/training/checkpoints")
     assert response.ok, f"Expected 200, got {response.status}: {response.text()}"
@@ -17,6 +18,7 @@ def require_checkpoint(api_context: APIRequestContext) -> str:
     return str(checkpoints[0])
 
 
+###############################################################################
 def require_dataset_id(api_context: APIRequestContext) -> int:
     response = api_context.get("/api/datasets/training")
     assert response.ok, f"Expected 200, got {response.status}: {response.text()}"
@@ -29,6 +31,7 @@ def require_dataset_id(api_context: APIRequestContext) -> int:
     return dataset_id
 
 
+###############################################################################
 def start_inference_session(
     api_context: APIRequestContext,
     checkpoint: str,
@@ -59,9 +62,11 @@ def start_inference_session(
     return response.json()
 
 
+###############################################################################
 class TestInferenceEndpoints:
     """Tests for the /inference/* API endpoints."""
 
+    # -------------------------------------------------------------------------
     def test_start_session_with_invalid_checkpoint_returns_404(
         self, api_context: APIRequestContext
     ):
@@ -81,6 +86,7 @@ class TestInferenceEndpoints:
         data = response.json()
         assert "detail" in data
 
+    # -------------------------------------------------------------------------
     def test_get_next_prediction_invalid_session_returns_404(
         self, api_context: APIRequestContext
     ):
@@ -94,6 +100,7 @@ class TestInferenceEndpoints:
         assert "detail" in data
         assert "not found" in data["detail"].lower()
 
+    # -------------------------------------------------------------------------
     def test_submit_step_invalid_session_returns_404(
         self, api_context: APIRequestContext
     ):
@@ -106,6 +113,7 @@ class TestInferenceEndpoints:
         )
         assert response.status == 404
 
+    # -------------------------------------------------------------------------
     def test_shutdown_invalid_session_succeeds(self, api_context: APIRequestContext):
         """
         POST /inference/sessions/{invalid_id}/shutdown should succeed (idempotent).
@@ -118,6 +126,7 @@ class TestInferenceEndpoints:
         data = response.json()
         assert data.get("status") == "closed"
 
+    # -------------------------------------------------------------------------
     def test_update_bet_invalid_session_returns_404(
         self, api_context: APIRequestContext
     ):
@@ -129,6 +138,7 @@ class TestInferenceEndpoints:
         data = response.json()
         assert "detail" in data
 
+    # -------------------------------------------------------------------------
     def test_clear_rows_on_unknown_session_is_idempotent(
         self, api_context: APIRequestContext
     ):
@@ -139,12 +149,14 @@ class TestInferenceEndpoints:
         assert data.get("session_id") == "non_existent"
 
 
+###############################################################################
 class TestInferenceSessionFlow:
     """
     Integration tests for the full inference session lifecycle.
     These tests require a valid checkpoint to exist.
     """
 
+    # -------------------------------------------------------------------------
     def test_full_inference_session_flow(self, api_context: APIRequestContext):
         """
         Tests the complete lifecycle: start -> next -> step -> shutdown.
@@ -207,6 +219,7 @@ class TestInferenceSessionFlow:
             )
             assert shutdown_response.ok
 
+    # -------------------------------------------------------------------------
     def test_inference_session_supports_bet_update_and_rows_clear(
         self, api_context: APIRequestContext
     ):
@@ -239,6 +252,7 @@ class TestInferenceSessionFlow:
         finally:
             api_context.post(f"/api/inference/sessions/{session_id}/shutdown")
 
+    # -------------------------------------------------------------------------
     def test_clear_inference_context_removes_uploaded_inference_dataset(
         self, api_context: APIRequestContext
     ):

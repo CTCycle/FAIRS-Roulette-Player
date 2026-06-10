@@ -11,16 +11,17 @@ from server.common import path as shared_paths
 from server.common.utils.logger import logger
 
 
+###############################################################################
 @dataclass
 class _EnvironmentState:
     lock: Lock = field(default_factory=Lock)
     loaded: bool = False
 
 
+###############################################################################
 @lru_cache(maxsize=1)
 def _environment_state() -> _EnvironmentState:
     return _EnvironmentState()
-
 
 ###############################################################################
 def load_environment(*, force: bool = False) -> Path | None:
@@ -37,7 +38,6 @@ def load_environment(*, force: bool = False) -> Path | None:
 
         state.loaded = True
         return env_path if env_path.exists() else None
-
 
 ###############################################################################
 def reset_environment_for_tests() -> None:

@@ -12,9 +12,10 @@ from server.learning import models as custom_layers_registry  # noqa: F401
 from server.common import path as shared_paths
 from server.common.utils.logger import logger
 
-
 ###############################################################################
 class ModelSerializer:
+
+    # -------------------------------------------------------------------------
     def __init__(self) -> None:
         self.model_name = "FAIRS"
         self.strategy_model_file = shared_paths.CHECKPOINT_STRATEGY_MODEL_FILE_NAME

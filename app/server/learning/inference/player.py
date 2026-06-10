@@ -19,9 +19,10 @@ from server.learning.betting.types import (
 from server.repositories.serialization.data import DataSerializer
 from server.learning.training.environment import BetsAndRewards
 
-
 ###############################################################################
 class RoulettePlayer:
+
+    # -------------------------------------------------------------------------
     def __init__(
         self,
         model: Model,
@@ -82,7 +83,7 @@ class RoulettePlayer:
         self.serializer = serializer
         self.context = self.serializer.load_dataset_outcomes(dataset_id)
 
-    ###############################################################################
+    # -------------------------------------------------------------------------
     def initialize_states(self) -> None:
         if self.context.empty or "outcome" not in self.context.columns:
             raise ValueError("Inference context is empty or missing outcome column.")
@@ -103,7 +104,7 @@ class RoulettePlayer:
         state = perceptive_candidates[-self.perceptive_size :]
         self.last_state = state
 
-    ###############################################################################
+    # -------------------------------------------------------------------------
     def softmax(self, values: np.ndarray) -> np.ndarray:
         shifted = values - np.max(values)
         exp_values = np.exp(shifted)
@@ -112,7 +113,7 @@ class RoulettePlayer:
             return np.full_like(exp_values, fill_value=1.0 / float(exp_values.size))
         return exp_values / denom
 
-    ###############################################################################
+    # -------------------------------------------------------------------------
     def predict_strategy(
         self, current_state: np.ndarray, gain_input: np.ndarray
     ) -> int:
@@ -131,7 +132,7 @@ class RoulettePlayer:
             return self.fixed_strategy_id
         return int(np.argmax(logits))
 
-    ###############################################################################
+    # -------------------------------------------------------------------------
     def predict_next(self) -> dict[str, Any]:
         if self.last_state is None:
             self.initialize_states()
@@ -183,7 +184,7 @@ class RoulettePlayer:
 
         return prediction
 
-    ###############################################################################
+    # -------------------------------------------------------------------------
     def update_with_true_extraction(self, real_number: int) -> tuple[int, int]:
         if not isinstance(real_number, (int, np.integer)):
             raise ValueError("Real extraction must be an integer")
@@ -207,7 +208,7 @@ class RoulettePlayer:
 
         return int(reward), int(self.current_capital)
 
-    ###############################################################################
+    # -------------------------------------------------------------------------
     def update_bet_amount(
         self, bet_amount: int, reset_strategy_state: bool = True
     ) -> None:

@@ -4,9 +4,11 @@ Tests the /training/status endpoint used by the UI.
 """
 
 
+###############################################################################
 class TestTrainingPolling:
     """Tests for polling-based training status."""
 
+    # -------------------------------------------------------------------------
     def test_training_status_polling_payload(self, api_context):
         response = api_context.get("/api/training/status")
         assert response.ok, f"Expected 200, got {response.status}"

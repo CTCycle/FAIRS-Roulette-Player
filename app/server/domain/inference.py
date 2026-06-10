@@ -9,7 +9,6 @@ from server.common.checkpoints import (
 
 MAX_SESSION_ID_LENGTH = 64
 
-
 ###############################################################################
 def normalize_session_id(value: str | None) -> str | None:
     if value is None:
@@ -26,7 +25,6 @@ def normalize_session_id(value: str | None) -> str | None:
             "Session identifier can contain only letters, numbers, '-' and '_'."
         )
     return candidate
-
 
 ###############################################################################
 class InferenceStartRequest(BaseModel):
@@ -62,7 +60,6 @@ class InferenceStartRequest(BaseModel):
     def validate_session_id(cls, value: str | None) -> str | None:
         return normalize_session_id(value)
 
-
 ###############################################################################
 class PredictionResponse(BaseModel):
     action: int
@@ -73,7 +70,6 @@ class PredictionResponse(BaseModel):
     suggested_bet_amount: int | None = None
     current_bet_amount: int | None = None
 
-
 ###############################################################################
 class InferenceStartResponse(BaseModel):
     session_id: str
@@ -83,19 +79,16 @@ class InferenceStartResponse(BaseModel):
     current_capital: int
     prediction: PredictionResponse
 
-
 ###############################################################################
 class InferenceNextResponse(BaseModel):
     session_id: str
     prediction: PredictionResponse
-
 
 ###############################################################################
 class InferenceStepRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     extraction: int = Field(..., ge=0, le=36)
-
 
 ###############################################################################
 class InferenceStepResponse(BaseModel):
@@ -107,31 +100,26 @@ class InferenceStepResponse(BaseModel):
     reward: int
     capital_after: int
 
-
 ###############################################################################
 class InferenceBetUpdateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     bet_amount: int = Field(..., ge=1)
 
-
 ###############################################################################
 class InferenceShutdownResponse(BaseModel):
     session_id: str
     status: str
-
 
 ###############################################################################
 class InferenceBetUpdateResponse(BaseModel):
     session_id: str
     bet_amount: int
 
-
 ###############################################################################
 class InferenceRowsClearResponse(BaseModel):
     session_id: str
     status: str
-
 
 ###############################################################################
 class InferenceContextClearResponse(BaseModel):

@@ -22,9 +22,10 @@ from server.learning.training.serializer import (
     ModelSerializer,
 )
 
-
 ###############################################################################
 class QueueProgressReporter:
+
+    # -------------------------------------------------------------------------
     def __init__(self, target_queue: Any) -> None:
         self.target_queue = target_queue
 
@@ -49,9 +50,10 @@ class QueueProgressReporter:
         except Exception as exc:  # noqa: BLE001
             logger.debug("Failed to push training update: %s", exc)
 
-
 ###############################################################################
 class WorkerChannels:
+
+    # -------------------------------------------------------------------------
     def __init__(
         self,
         progress_queue: Any,
@@ -66,9 +68,10 @@ class WorkerChannels:
     def is_interrupted(self) -> bool:
         return bool(self.stop_event.is_set())
 
-
 ###############################################################################
 class ProcessWorker:
+
+    # -------------------------------------------------------------------------
     def __init__(
         self,
         progress_queue_size: int = 256,
@@ -204,7 +207,6 @@ class ProcessWorker:
             return None
         return self.process.exitcode
 
-
 ###############################################################################
 def process_target(
     target: Callable[..., None],
@@ -215,7 +217,6 @@ def process_target(
         os.setsid()
     target(worker=worker, **kwargs)
 
-
 ###############################################################################
 def queue_training_update(
     stats: dict[str, Any],
@@ -223,7 +224,6 @@ def queue_training_update(
 ) -> None:
     payload = {"type": "training_update", **stats}
     reporter(payload)
-
 
 ###############################################################################
 async def run_training_async(
@@ -278,7 +278,6 @@ async def run_training_async(
     )
 
     return model, strategy_model, history, checkpoint_path
-
 
 ###############################################################################
 async def run_resume_training_async(
@@ -335,7 +334,6 @@ async def run_resume_training_async(
 
     return model, strategy_model, history, train_config, checkpoint_path
 
-
 ###############################################################################
 def run_training_process(
     configuration: dict[str, Any],
@@ -381,7 +379,6 @@ def run_training_process(
         )
     except Exception as exc:  # noqa: BLE001
         result_queue.put({"error": str(exc)})
-
 
 ###############################################################################
 def run_resume_training_process(

@@ -12,7 +12,6 @@ from server.repositories.schemas.models import Base, get_model_class_for_table
 
 ALLOWED_TABLE_NAMES = frozenset(Base.metadata.tables.keys())
 
-
 ###############################################################################
 def normalize_table_name(table_name: str) -> str:
     if not isinstance(table_name, str):
@@ -23,7 +22,6 @@ def normalize_table_name(table_name: str) -> str:
     if candidate not in ALLOWED_TABLE_NAMES:
         raise ValueError(f"Unsupported table name: {table_name}")
     return candidate
-
 
 ###############################################################################
 class SQLAlchemyRepositoryBase:

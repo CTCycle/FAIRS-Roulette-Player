@@ -13,9 +13,10 @@ from server.common import path as shared_paths
 from server.learning.betting.types import STRATEGY_COUNT
 from server.learning.training.environment import RouletteEnvironment
 
-
 ###############################################################################
 class DQNAgent:
+
+    # -------------------------------------------------------------------------
     def __init__(
         self,
         configuration: dict[str, Any],
@@ -193,9 +194,10 @@ class DQNAgent:
 
         return results
 
-
 ###############################################################################
 class StrategyAgent(DQNAgent):
+
+    # -------------------------------------------------------------------------
     def __init__(
         self, configuration: dict[str, Any], memory: Any | None = None
     ) -> None:
