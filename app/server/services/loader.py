@@ -6,9 +6,10 @@ from typing import Any
 
 import pandas as pd
 
-
 ###############################################################################
 class TabularFileLoader:
+
+    # -------------------------------------------------------------------------
     def load_bytes(
         self,
         content: bytes,

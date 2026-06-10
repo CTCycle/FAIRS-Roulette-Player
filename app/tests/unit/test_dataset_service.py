@@ -9,6 +9,7 @@ from server.domain.upload import UploadRequest
 from server.services.datasets import DatasetService
 
 
+###############################################################################
 def build_dataset_service() -> tuple[DatasetService, Mock, Mock, Mock]:
     serializer = Mock()
     importer = Mock()
@@ -17,6 +18,7 @@ def build_dataset_service() -> tuple[DatasetService, Mock, Mock, Mock]:
     return service, serializer, importer, loader
 
 
+###############################################################################
 def test_import_upload_normalizes_filename_separator_and_sheet_name() -> None:
     service, _, importer, loader = build_dataset_service()
     loader.load_bytes.return_value = pd.DataFrame({"idx": [0], "outcome": [1]})
@@ -39,6 +41,7 @@ def test_import_upload_normalizes_filename_separator_and_sheet_name() -> None:
     importer.import_dataframe.assert_called_once()
 
 
+###############################################################################
 def test_import_upload_rejects_oversized_payload() -> None:
     service, _, _, _ = build_dataset_service()
     with pytest.raises(ValueError, match="too large"):
@@ -49,6 +52,7 @@ def test_import_upload_rejects_oversized_payload() -> None:
         )
 
 
+###############################################################################
 def test_dataset_list_and_delete_delegate_to_serializer() -> None:
     service, serializer, _, _ = build_dataset_service()
     serializer.list_datasets.return_value = [

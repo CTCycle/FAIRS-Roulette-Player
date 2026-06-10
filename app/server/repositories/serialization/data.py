@@ -22,7 +22,6 @@ from server.repositories.queries.data import DataRepositoryQueries
 
 MAX_DATASET_NAME_LENGTH = 128
 
-
 ###############################################################################
 def normalize_dataset_name(dataset_name: str) -> str:
     cleaned = dataset_name.strip()
@@ -34,9 +33,10 @@ def normalize_dataset_name(dataset_name: str) -> str:
         raise ValueError("Dataset name contains invalid control characters.")
     return cleaned
 
-
 ###############################################################################
 class DataSerializer:
+
+    # -------------------------------------------------------------------------
     def __init__(self, queries: DataRepositoryQueries) -> None:
         self.queries = queries
 

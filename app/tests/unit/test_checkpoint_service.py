@@ -6,13 +6,18 @@ from server.common import checkpoints as checkpoint_common
 from server.services.checkpoints import CheckpointService
 
 
+###############################################################################
 class DummyModelSerializer:
+
+    # -------------------------------------------------------------------------
     def __init__(self) -> None:
         self._checkpoints = ["cp1"]
 
+    # -------------------------------------------------------------------------
     def scan_checkpoints_folder(self) -> list[str]:
         return list(self._checkpoints)
 
+    # -------------------------------------------------------------------------
     def load_training_configuration(self, path: str) -> tuple[dict, dict]:  # noqa: ARG002
         return (
             {"episodes": 3, "batch_size": 8, "qnet_neurons": 16},
@@ -20,6 +25,7 @@ class DummyModelSerializer:
         )
 
 
+###############################################################################
 def test_resolve_existing_checkpoint_rejects_missing(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(checkpoint_common.shared_paths, "CHECKPOINT_PATH", tmp_path)
     service = CheckpointService(model_serializer=DummyModelSerializer())
@@ -27,6 +33,7 @@ def test_resolve_existing_checkpoint_rejects_missing(tmp_path, monkeypatch) -> N
         service.resolve_existing_checkpoint("missing")
 
 
+###############################################################################
 def test_get_metadata_returns_summary_shape(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(checkpoint_common.shared_paths, "CHECKPOINT_PATH", tmp_path)
     (tmp_path / "cp1").mkdir()

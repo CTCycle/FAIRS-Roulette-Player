@@ -8,6 +8,7 @@ from playwright.sync_api import APIRequestContext
 DATASET_NAME = "e2e_dataset_for_listing"
 
 
+###############################################################################
 def ensure_dataset_for_listing(api_context: APIRequestContext) -> None:
     summary_response = api_context.get("/api/datasets/training/summary")
     assert summary_response.ok
@@ -36,9 +37,11 @@ def ensure_dataset_for_listing(api_context: APIRequestContext) -> None:
     )
 
 
+###############################################################################
 class TestRouletteDatasetsEndpoints:
     """Tests for /datasets/training endpoints."""
 
+    # -------------------------------------------------------------------------
     def test_list_roulette_datasets(self, api_context: APIRequestContext):
         ensure_dataset_for_listing(api_context)
         response = api_context.get("/api/datasets/training")
@@ -55,6 +58,7 @@ class TestRouletteDatasetsEndpoints:
         assert isinstance(sample["dataset_name"], str)
         assert sample["dataset_name"]
 
+    # -------------------------------------------------------------------------
     def test_list_roulette_datasets_summary(self, api_context: APIRequestContext):
         ensure_dataset_for_listing(api_context)
         response = api_context.get("/api/datasets/training/summary")

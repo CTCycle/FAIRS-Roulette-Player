@@ -6,9 +6,10 @@ import pandas as pd
 
 from server.repositories.database.backend import FAIRSDatabase
 
-
 ###############################################################################
 class DataRepositoryQueries:
+
+    # -------------------------------------------------------------------------
     def __init__(self, db: FAIRSDatabase) -> None:
         self.database = db
 

@@ -4,9 +4,10 @@ import pandas as pd
 
 from server.repositories.queries.training import TrainingRepositoryQueries
 
-
 ###############################################################################
 class TrainingDataSerializer:
+
+    # -------------------------------------------------------------------------
     def __init__(self, queries: TrainingRepositoryQueries) -> None:
         self.queries = queries
 

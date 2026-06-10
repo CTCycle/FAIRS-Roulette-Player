@@ -47,6 +47,7 @@ TRAINING_TIMEOUT = float(os.getenv("E2E_TRAINING_TIMEOUT", "90"))
 TRAINING_STATUS_TIMEOUT = float(os.getenv("E2E_TRAINING_STATUS_TIMEOUT", "3.0"))
 
 
+###############################################################################
 def wait_for_training_running(
     api_context: APIRequestContext,
     timeout: float = TRAINING_STATUS_TIMEOUT,
@@ -67,6 +68,7 @@ def wait_for_training_running(
     return False
 
 
+###############################################################################
 def wait_for_training_stopped(
     api_context: APIRequestContext,
     timeout: float = TRAINING_STATUS_TIMEOUT,
@@ -81,6 +83,7 @@ def wait_for_training_stopped(
     return False
 
 
+###############################################################################
 def wait_for_job_completion(
     api_context: APIRequestContext,
     job_id: str,
@@ -101,9 +104,11 @@ def wait_for_job_completion(
     return last_payload
 
 
+###############################################################################
 class TestTrainingEndpoints:
     """Tests for the /training/* API endpoints."""
 
+    # -------------------------------------------------------------------------
     def test_get_training_status(self, api_context: APIRequestContext):
         """GET /training/status should return current training state."""
         response = api_context.get("/api/training/status")
@@ -121,6 +126,7 @@ class TestTrainingEndpoints:
         assert isinstance(data["poll_interval"], (int, float))
         assert float(data["poll_interval"]) > 0
 
+    # -------------------------------------------------------------------------
     def test_get_checkpoints_list(self, api_context: APIRequestContext):
         """GET /training/checkpoints should return a list of checkpoint names."""
         response = api_context.get("/api/training/checkpoints")
@@ -130,6 +136,7 @@ class TestTrainingEndpoints:
         assert isinstance(data, list)
         assert all(isinstance(item, str) for item in data)
 
+    # -------------------------------------------------------------------------
     def test_stop_training_when_not_running_returns_400(
         self, api_context: APIRequestContext
     ):
@@ -141,6 +148,7 @@ class TestTrainingEndpoints:
         data = response.json()
         assert "detail" in data
 
+    # -------------------------------------------------------------------------
     def test_start_training_while_already_running_returns_409(
         self, api_context: APIRequestContext
     ):
@@ -166,6 +174,7 @@ class TestTrainingEndpoints:
         api_context.post("/api/training/stop")
         wait_for_training_stopped(api_context)
 
+    # -------------------------------------------------------------------------
     def test_start_training_with_minimal_config(self, api_context: APIRequestContext):
         """
         POST /training/start with minimal config should start training.
@@ -199,6 +208,7 @@ class TestTrainingEndpoints:
             time.sleep(1)
             api_context.post("/api/training/stop")
 
+    # -------------------------------------------------------------------------
     def test_cancel_unknown_training_job_returns_404(
         self, api_context: APIRequestContext
     ):
@@ -208,9 +218,11 @@ class TestTrainingEndpoints:
         assert "detail" in payload
 
 
+###############################################################################
 class TestTrainingLifecycle:
     """Integration tests for training start/stop lifecycle."""
 
+    # -------------------------------------------------------------------------
     def test_training_can_be_stopped(self, api_context: APIRequestContext):
         """
         Tests that training can be started and stopped.
@@ -242,6 +254,7 @@ class TestTrainingLifecycle:
         status = api_context.get("/api/training/status").json()
         assert status.get("is_training") is False
 
+    # -------------------------------------------------------------------------
     def test_training_job_can_be_cancelled_via_jobs_endpoint(
         self, api_context: APIRequestContext
     ):
@@ -273,9 +286,11 @@ class TestTrainingLifecycle:
         assert wait_for_training_stopped(api_context, timeout=10.0)
 
 
+###############################################################################
 class TestTrainingResume:
     """Tests for resume training and checkpoint metadata endpoints."""
 
+    # -------------------------------------------------------------------------
     def test_resume_training_invalid_checkpoint_returns_404(
         self, api_context: APIRequestContext
     ):
@@ -285,6 +300,7 @@ class TestTrainingResume:
         data = response.json()
         assert "detail" in data
 
+    # -------------------------------------------------------------------------
     def test_resume_training_from_new_checkpoint(self, api_context: APIRequestContext):
         api_context.post("/api/training/stop")
         before_response = api_context.get("/api/training/checkpoints")

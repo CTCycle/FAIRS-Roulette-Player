@@ -29,7 +29,6 @@ TRAINING_STATUSES = {
 }
 HISTORY_POINTS_PER_EPISODE = 20
 
-
 ###############################################################################
 def default_training_stats(
     total_epochs: int = 0,
@@ -53,9 +52,10 @@ def default_training_stats(
         "status": status,
     }
 
-
 ###############################################################################
 class TrainingState:
+
+    # -------------------------------------------------------------------------
     def __init__(self) -> None:
         self.is_training = False
         self.current_job_id: str | None = None
@@ -154,7 +154,6 @@ class TrainingState:
         self.worker = None
         self.current_job_id = None
 
-
 ###############################################################################
 def calculate_progress(stats: dict[str, Any]) -> float:
     epoch = stats.get("epoch", 0)
@@ -167,7 +166,6 @@ def calculate_progress(stats: dict[str, Any]) -> float:
         return 0.0
     progress = (float(epoch) / float(total_epochs)) * 100.0
     return min(100.0, max(0.0, progress))
-
 
 ###############################################################################
 def build_history_points(
@@ -237,11 +235,11 @@ def build_history_points(
             results.append(point)
     return results
 
-
 ###############################################################################
 class TrainingService:
     JOB_TYPE = "training"
 
+    # -------------------------------------------------------------------------
     def __init__(
         self,
         job_manager: JobManager,

@@ -26,7 +26,6 @@ TRAINING_BAD_REQUEST_STATUS: ExceptionStatusMap = (
     (ValueError, status.HTTP_400_BAD_REQUEST),
 )
 
-
 ###############################################################################
 def _to_bad_request(exc: Exception) -> HTTPException:
     return http_exception_for_exception(
@@ -34,7 +33,6 @@ def _to_bad_request(exc: Exception) -> HTTPException:
         TRAINING_BAD_REQUEST_STATUS,
         default_detail=str(exc),
     )
-
 
 ###############################################################################
 @router.post(
@@ -60,7 +58,6 @@ def start_training(
         ) from exc
     except ValueError as exc:
         raise _to_bad_request(exc) from exc
-
 
 ###############################################################################
 @router.post(
@@ -92,7 +89,6 @@ def resume_training(
             detail=str(exc),
         ) from exc
 
-
 ###############################################################################
 @router.get(
     "/status",
@@ -103,7 +99,6 @@ def get_status(
     service: TrainingService = Depends(get_training_service),
 ) -> TrainingStatusResponse:
     return TrainingStatusResponse.model_validate(service.get_status())
-
 
 ###############################################################################
 @router.post(
@@ -119,7 +114,6 @@ def stop_training(
     except ValueError as exc:
         raise _to_bad_request(exc) from exc
 
-
 ###############################################################################
 @router.get(
     "/checkpoints",
@@ -130,7 +124,6 @@ def get_checkpoints(
     service: TrainingService = Depends(get_training_service),
 ) -> TrainingCheckpointListResponse:
     return TrainingCheckpointListResponse(service.list_checkpoints())
-
 
 ###############################################################################
 @router.get(
@@ -154,7 +147,6 @@ def get_checkpoint_metadata(
             detail=str(exc),
         ) from exc
 
-
 ###############################################################################
 @router.delete(
     "/checkpoints/{checkpoint}",
@@ -177,7 +169,6 @@ def delete_checkpoint(
             detail=str(exc),
         ) from exc
 
-
 ###############################################################################
 @router.get(
     "/jobs/{job_id}",
@@ -195,7 +186,6 @@ def get_training_job_status(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         ) from exc
-
 
 ###############################################################################
 @router.delete(
