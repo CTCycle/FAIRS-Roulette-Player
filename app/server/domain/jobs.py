@@ -7,7 +7,6 @@ from typing import Any
 
 from pydantic import BaseModel
 
-
 ###############################################################################
 @dataclass
 class JobState:
@@ -43,7 +42,6 @@ class JobState:
                 "completed_at": self.completed_at,
             }
 
-
 ###############################################################################
 class JobStartResponse(BaseModel):
     job_id: str
@@ -51,7 +49,6 @@ class JobStartResponse(BaseModel):
     status: str
     message: str
     poll_interval: float = 1.0
-
 
 ###############################################################################
 class JobStatusResponse(BaseModel):
@@ -63,11 +60,9 @@ class JobStatusResponse(BaseModel):
     error: str | None = None
     poll_interval: float | None = None
 
-
 ###############################################################################
 class JobListResponse(BaseModel):
     jobs: list[JobStatusResponse]
-
 
 ###############################################################################
 class JobCancelResponse(BaseModel):

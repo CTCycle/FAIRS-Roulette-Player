@@ -15,9 +15,10 @@ from server.learning.training.device import DeviceConfig
 from server.repositories.serialization.data import DataSerializer
 from server.services.checkpoints import CheckpointService
 
-
 ###############################################################################
 class InferenceSession:
+
+    # -------------------------------------------------------------------------
     def __init__(
         self,
         session_id: str,
@@ -82,9 +83,10 @@ class InferenceSession:
         self.current_bet = int(bet_amount)
         self.player.update_bet_amount(bet_amount)
 
-
 ###############################################################################
 class InferenceState:
+
+    # -------------------------------------------------------------------------
     def __init__(self) -> None:
         self.sessions: dict[str, InferenceSession] = {}
         self.max_sessions = 16
@@ -114,9 +116,10 @@ class InferenceState:
         for stale in ordered[: max(0, len(ordered) - self.max_sessions)]:
             del self.sessions[stale.session_id]
 
-
 ###############################################################################
 class InferenceService:
+
+    # -------------------------------------------------------------------------
     def __init__(
         self,
         serializer: DataSerializer,

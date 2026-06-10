@@ -8,9 +8,11 @@ from playwright.sync_api import APIRequestContext
 DATASET_NAME = "e2e_dataset_delete"
 
 
+###############################################################################
 class TestDatasetRemoval:
     """Tests for dataset deletion via /datasets/training."""
 
+    # -------------------------------------------------------------------------
     def test_delete_dataset_after_upload(self, api_context: APIRequestContext):
         csv_content = b"idx,outcome\n0,0\n1,12\n2,24\n3,36\n4,5"
         upload_response = api_context.post(

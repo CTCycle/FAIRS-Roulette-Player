@@ -7,7 +7,6 @@ from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-
 ###############################################################################
 @dataclass(frozen=True)
 class DatabaseSettings:
@@ -23,12 +22,10 @@ class DatabaseSettings:
     connect_timeout: int
     insert_batch_size: int
 
-
 ###############################################################################
 @dataclass(frozen=True)
 class JobsSettings:
     polling_interval: float
-
 
 ###############################################################################
 @dataclass(frozen=True)
@@ -37,14 +34,12 @@ class DeviceSettings:
     jit_backend: str
     use_mixed_precision: bool
 
-
 ###############################################################################
 @dataclass(frozen=True)
 class ServerSettings:
     database: DatabaseSettings
     jobs: JobsSettings
     device: DeviceSettings
-
 
 ###############################################################################
 class EnvDatabaseSettings(BaseModel):
@@ -61,6 +56,7 @@ class EnvDatabaseSettings(BaseModel):
     connect_timeout: int = Field(default=10, ge=1)
     insert_batch_size: int = Field(default=1000, ge=1)
 
+    # -------------------------------------------------------------------------
     @field_validator(
         "database_url",
         "host",
@@ -77,12 +73,14 @@ class EnvDatabaseSettings(BaseModel):
         text = str(value).strip()
         return text or None
 
+    # -------------------------------------------------------------------------
     @field_validator("engine", mode="before")
     @classmethod
     def normalize_engine(cls, value: Any) -> str:
         text = str(value).strip() if value is not None else ""
         return text or "postgres"
 
+    # -------------------------------------------------------------------------
     @classmethod
     def from_environment(cls) -> "EnvDatabaseSettings":
         raw: dict[str, Any] = {}
@@ -123,6 +121,7 @@ class EnvDatabaseSettings(BaseModel):
 
         return cls.model_validate(raw)
 
+    # -------------------------------------------------------------------------
     @model_validator(mode="after")
     def validate_external_database_requirements(self) -> "EnvDatabaseSettings":
         if self.embedded_database:
@@ -143,11 +142,9 @@ class EnvDatabaseSettings(BaseModel):
             )
         return self
 
-
 ###############################################################################
 class JsonJobsSettings(BaseModel):
     polling_interval: float = Field(default=1.0, ge=0.1, le=10.0)
-
 
 ###############################################################################
 class JsonDeviceSettings(BaseModel):
@@ -155,18 +152,19 @@ class JsonDeviceSettings(BaseModel):
     jit_backend: str = "inductor"
     use_mixed_precision: bool = False
 
+    # -------------------------------------------------------------------------
     @field_validator("jit_backend", mode="before")
     @classmethod
     def normalize_backend(cls, value: Any) -> str:
         text = str(value).strip() if value is not None else ""
         return text or "inductor"
 
-
 ###############################################################################
 class JsonServerSettings(BaseModel):
     jobs: JsonJobsSettings = Field(default_factory=JsonJobsSettings)
     device: JsonDeviceSettings = Field(default_factory=JsonDeviceSettings)
 
+    # -------------------------------------------------------------------------
     @model_validator(mode="before")
     @classmethod
     def reject_database_block(cls, value: Any) -> Any:

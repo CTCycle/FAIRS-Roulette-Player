@@ -14,9 +14,10 @@ from server.repositories.database.common import (
 )
 from server.repositories.database.utils import normalize_postgres_engine
 
-
 ###############################################################################
 class PostgresRepository(SQLAlchemyRepositoryBase):
+
+    # -------------------------------------------------------------------------
     def __init__(self, settings: DatabaseSettings) -> None:
         if not settings.host:
             raise ValueError("Database host must be provided for external database.")

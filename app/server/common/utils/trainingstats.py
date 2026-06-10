@@ -18,6 +18,7 @@ TRAINING_METRIC_KEYS = (
 )
 
 
+###############################################################################
 def coerce_optional_finite_float(value: Any) -> float | None:
     if value is None:
         return None
@@ -32,6 +33,7 @@ def coerce_optional_finite_float(value: Any) -> float | None:
     return None
 
 
+###############################################################################
 def sanitize_training_stats(
     stats: dict[str, Any],
     *,

@@ -7,7 +7,6 @@ from server.common.checkpoints import (
     normalize_checkpoint_identifier,
 )
 
-
 ###############################################################################
 class TrainingConfig(BaseModel):
     """Configuration for starting a new training session."""
@@ -74,7 +73,6 @@ class TrainingConfig(BaseModel):
             return None
         return normalize_checkpoint_identifier(value)
 
-
 ###############################################################################
 class ResumeConfig(BaseModel):
     """Configuration for resuming a training session from a checkpoint."""
@@ -93,7 +91,6 @@ class ResumeConfig(BaseModel):
     def validate_checkpoint(cls, value: str) -> str:
         return normalize_checkpoint_identifier(value)
 
-
 ###############################################################################
 class TrainingStatusResponse(BaseModel):
     job_id: str | None
@@ -103,23 +100,19 @@ class TrainingStatusResponse(BaseModel):
     latest_env: dict[str, object]
     poll_interval: float
 
-
 ###############################################################################
 class TrainingStopResponse(BaseModel):
     status: str
     message: str
 
-
 ###############################################################################
 class TrainingCheckpointListResponse(RootModel[list[str]]):
     pass
-
 
 ###############################################################################
 class TrainingCheckpointMetadataResponse(BaseModel):
     checkpoint: str
     summary: dict[str, object]
-
 
 ###############################################################################
 class TrainingCheckpointDeleteResponse(BaseModel):

@@ -101,7 +101,6 @@ ROULETTE_COLOR_MAP: dict[str, list[int]] = {
 
 ROULETTE_COLOR_CODE = {"green": 0, "black": 1, "red": 2}
 
-
 ###############################################################################
 def build_postgres_connect_args(settings: DatabaseSettings) -> dict[str, str | int]:
     connect_args: dict[str, str | int] = {"connect_timeout": settings.connect_timeout}
@@ -110,7 +109,6 @@ def build_postgres_connect_args(settings: DatabaseSettings) -> dict[str, str | i
         if settings.ssl_ca:
             connect_args["sslrootcert"] = settings.ssl_ca
     return connect_args
-
 
 ###############################################################################
 def build_postgres_url(settings: DatabaseSettings, database_name: str) -> str:
@@ -123,11 +121,9 @@ def build_postgres_url(settings: DatabaseSettings, database_name: str) -> str:
         f"@{settings.host}:{port}/{database_name}"
     )
 
-
 ###############################################################################
 def escape_postgres_identifier(identifier: str) -> str:
     return identifier.replace('"', '""')
-
 
 ###############################################################################
 def is_missing_postgres_database_error(
@@ -140,7 +136,6 @@ def is_missing_postgres_database_error(
         return True
     lowered = str(exc).lower()
     return "does not exist" in lowered and target_database.lower() in lowered
-
 
 ###############################################################################
 def postgres_database_exists(
@@ -165,7 +160,6 @@ def postgres_database_exists(
     finally:
         probe_engine.dispose()
 
-
 ###############################################################################
 def initialize_sqlite_database(settings: DatabaseSettings) -> None:
     repository = SQLiteRepository(settings, initialize_schema=True)
@@ -173,6 +167,7 @@ def initialize_sqlite_database(settings: DatabaseSettings) -> None:
     logger.info("Initialized SQLite database at %s", repository.db_path)
 
 
+###############################################################################
 def ensure_postgres_database(settings: DatabaseSettings) -> str:
     if not settings.host:
         raise ValueError("Database host is required for PostgreSQL initialization.")
@@ -229,7 +224,6 @@ def ensure_postgres_database(settings: DatabaseSettings) -> str:
 
     return target_database
 
-
 ###############################################################################
 def build_roulette_outcome_seed_rows() -> list[dict[str, int | str]]:
     reverse_color_map = {
@@ -254,7 +248,6 @@ def build_roulette_outcome_seed_rows() -> list[dict[str, int | str]]:
         )
     return rows
 
-
 ###############################################################################
 def seed_roulette_outcomes(engine: sqlalchemy.Engine) -> None:
     inspector = sqlalchemy.inspect(engine)
@@ -275,7 +268,6 @@ def seed_roulette_outcomes(engine: sqlalchemy.Engine) -> None:
     finally:
         session.close()
     logger.info("Seeded roulette_outcomes table with %d rows", len(rows))
-
 
 ###############################################################################
 def initialize_database(settings: DatabaseSettings | None = None) -> None:
