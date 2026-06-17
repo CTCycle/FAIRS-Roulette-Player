@@ -53,3 +53,9 @@ Thumbs.db
 *.exe
 *.gz
 !.gitkeep
+
+# Local Python/runtime artifacts that must not enter Git history
+app/server/.venv/
+setup/triton/
+FAIRS/setup/triton/
+FAIRS/app/triton/
