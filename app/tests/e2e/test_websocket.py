@@ -3,7 +3,6 @@ E2E tests for training polling.
 Tests the /training/status endpoint used by the UI.
 """
 
-
 ###############################################################################
 class TestTrainingPolling:
     """Tests for polling-based training status."""

@@ -46,7 +46,6 @@ TRAINING_POLL_INTERVAL = float(os.getenv("E2E_TRAINING_POLL_INTERVAL", "0.5"))
 TRAINING_TIMEOUT = float(os.getenv("E2E_TRAINING_TIMEOUT", "90"))
 TRAINING_STATUS_TIMEOUT = float(os.getenv("E2E_TRAINING_STATUS_TIMEOUT", "3.0"))
 
-
 ###############################################################################
 def wait_for_training_running(
     api_context: APIRequestContext,
@@ -67,7 +66,6 @@ def wait_for_training_running(
         time.sleep(interval)
     return False
 
-
 ###############################################################################
 def wait_for_training_stopped(
     api_context: APIRequestContext,
@@ -81,7 +79,6 @@ def wait_for_training_stopped(
             return True
         time.sleep(interval)
     return False
-
 
 ###############################################################################
 def wait_for_job_completion(
@@ -102,7 +99,6 @@ def wait_for_job_completion(
             return payload
         time.sleep(interval)
     return last_payload
-
 
 ###############################################################################
 class TestTrainingEndpoints:
@@ -217,7 +213,6 @@ class TestTrainingEndpoints:
         payload = response.json()
         assert "detail" in payload
 
-
 ###############################################################################
 class TestTrainingLifecycle:
     """Integration tests for training start/stop lifecycle."""
@@ -284,7 +279,6 @@ class TestTrainingLifecycle:
         job_payload = wait_for_job_completion(api_context, job_id, timeout=30.0)
         assert job_payload.get("status") in ("cancelled", "completed")
         assert wait_for_training_stopped(api_context, timeout=10.0)
-
 
 ###############################################################################
 class TestTrainingResume:

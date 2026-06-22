@@ -12,7 +12,6 @@ from server.domain.configuration import (
 )
 from server.services import startup_validation
 
-
 ###############################################################################
 def _embedded_settings() -> ServerSettings:
     return ServerSettings(
@@ -37,7 +36,6 @@ def _embedded_settings() -> ServerSettings:
         ),
     )
 
-
 ###############################################################################
 def _external_settings(engine: str) -> ServerSettings:
     return ServerSettings(
@@ -61,7 +59,6 @@ def _external_settings(engine: str) -> ServerSettings:
             use_mixed_precision=False,
         ),
     )
-
 
 ###############################################################################
 def test_startup_validations_create_runtime_directories(
@@ -89,7 +86,6 @@ def test_startup_validations_create_runtime_directories(
     assert logs_dir.is_dir()
     assert checkpoints_dir.is_dir()
 
-
 ###############################################################################
 def test_tauri_mode_requires_built_client(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("FAIRS_TAURI_MODE", "true")
@@ -101,7 +97,6 @@ def test_tauri_mode_requires_built_client(monkeypatch: pytest.MonkeyPatch) -> No
 
     with pytest.raises(RuntimeError, match="requires a built frontend"):
         startup_validation.run_startup_validations(_embedded_settings())
-
 
 ###############################################################################
 def test_external_database_validation_rejects_unsupported_engine() -> None:

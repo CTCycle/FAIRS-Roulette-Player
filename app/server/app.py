@@ -80,7 +80,6 @@ def redirect_root_to_docs() -> RedirectResponse | dict[str, str]:
         return RedirectResponse(FASTAPI_DOCS_ENDPOINT)
     return {"status": "ok"}
 
-
 ###############################################################################
 @asynccontextmanager
 async def app_lifespan(application: FastAPI) -> AsyncIterator[None]:
@@ -124,7 +123,6 @@ def include_api_routers(application: FastAPI) -> None:
         inference_router,
     ):
         application.include_router(router, prefix=FASTAPI_API_PREFIX)
-
 
 ###############################################################################
 def configure_client_routes(application: FastAPI) -> None:

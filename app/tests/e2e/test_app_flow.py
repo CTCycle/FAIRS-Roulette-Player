@@ -6,7 +6,6 @@ Tests basic UI functionality using Playwright browser automation.
 import re
 from playwright.sync_api import Page, expect
 
-
 ###############################################################################
 class TestHomePage:
     """Tests for the home page and basic navigation."""
@@ -24,7 +23,6 @@ class TestHomePage:
         page.wait_for_load_state("networkidle")
         expect(page.get_by_text("Training", exact=False).first).to_be_visible()
         expect(page.get_by_text("Inference", exact=False).first).to_be_visible()
-
 
 ###############################################################################
 class TestNavigationFlow:
@@ -62,7 +60,6 @@ class TestNavigationFlow:
         page.wait_for_load_state("networkidle")
         expect(page).to_have_url(re.compile(".*inference.*", re.IGNORECASE))
 
-
 ###############################################################################
 class TestTrainingPage:
     """Tests for the Training page."""
@@ -91,7 +88,6 @@ class TestTrainingPage:
             )
         ).to_be_visible()
         expect(page.get_by_text("Checkpoints", exact=False).first).to_be_visible()
-
 
 ###############################################################################
 class TestInferencePage:
