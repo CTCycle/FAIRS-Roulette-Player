@@ -166,7 +166,6 @@ def initialize_sqlite_database(settings: DatabaseSettings) -> None:
     seed_roulette_outcomes(repository.engine)
     logger.info("Initialized SQLite database at %s", repository.db_path)
 
-
 ###############################################################################
 def ensure_postgres_database(settings: DatabaseSettings) -> str:
     if not settings.host:

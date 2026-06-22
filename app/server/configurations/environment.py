@@ -10,13 +10,11 @@ from dotenv import load_dotenv
 from server.common import path as shared_paths
 from server.common.utils.logger import logger
 
-
 ###############################################################################
 @dataclass
 class _EnvironmentState:
     lock: Lock = field(default_factory=Lock)
     loaded: bool = False
-
 
 ###############################################################################
 @lru_cache(maxsize=1)

@@ -11,7 +11,6 @@ from server.domain.inference import (
 )
 from server.services.inference import InferenceService
 
-
 ###############################################################################
 class FakePlayer:
 
@@ -32,7 +31,6 @@ class FakePlayer:
     def update_bet_amount(self, bet_amount: int) -> None:
         self.bet_amount = bet_amount
 
-
 ###############################################################################
 class FakeDeviceConfig:
 
@@ -43,7 +41,6 @@ class FakeDeviceConfig:
     # -------------------------------------------------------------------------
     def set_device(self) -> None:
         return None
-
 
 ###############################################################################
 def build_service(monkeypatch) -> tuple[InferenceService, Mock]:
@@ -68,7 +65,6 @@ def build_service(monkeypatch) -> tuple[InferenceService, Mock]:
     )
     return service, serializer
 
-
 ###############################################################################
 def test_session_lifecycle_and_prediction_flow(monkeypatch) -> None:
     service, serializer = build_service(monkeypatch)
@@ -91,7 +87,6 @@ def test_session_lifecycle_and_prediction_flow(monkeypatch) -> None:
     shutdown = service.shutdown_session(session_id)
     assert shutdown["status"] == "closed"
     serializer.mark_inference_session_ended.assert_called_once_with(session_id)
-
 
 ###############################################################################
 def test_clear_rows_preserves_session_header(monkeypatch) -> None:

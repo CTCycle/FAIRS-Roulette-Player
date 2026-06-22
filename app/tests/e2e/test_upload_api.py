@@ -5,7 +5,6 @@ Tests: POST /data/upload
 
 from playwright.sync_api import APIRequestContext
 
-
 ###############################################################################
 def load_dataset_summary_entry(
     api_context: APIRequestContext, dataset_id: int
@@ -17,7 +16,6 @@ def load_dataset_summary_entry(
         (item for item in datasets if item.get("dataset_id") == dataset_id),
         None,
     )
-
 
 ###############################################################################
 class TestDataUploadEndpoint:
@@ -100,7 +98,6 @@ class TestDataUploadEndpoint:
         )
         # Empty file should fail parsing
         assert response.status == 400
-
 
 ###############################################################################
 class TestDataUploadEdgeCases:

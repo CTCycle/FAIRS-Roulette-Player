@@ -7,7 +7,6 @@ import pytest
 from server.domain.training import ResumeConfig, TrainingConfig
 from server.services.training import TrainingService
 
-
 ###############################################################################
 def build_service() -> tuple[TrainingService, Mock, Mock]:
     job_manager = Mock()
@@ -25,7 +24,6 @@ def build_service() -> tuple[TrainingService, Mock, Mock]:
     )
     return service, job_manager, checkpoint_service
 
-
 ###############################################################################
 def test_start_training_starts_job_and_returns_contract() -> None:
     service, job_manager, _ = build_service()
@@ -34,7 +32,6 @@ def test_start_training_starts_job_and_returns_contract() -> None:
     assert payload["job_id"] == "job123"
     job_manager.start_job.assert_called_once()
 
-
 ###############################################################################
 def test_start_training_requires_dataset_without_generator() -> None:
     service, _, _ = build_service()
@@ -42,7 +39,6 @@ def test_start_training_requires_dataset_without_generator() -> None:
         service.start_training(
             TrainingConfig(use_data_generator=False, dataset_id=None)
         )
-
 
 ###############################################################################
 def test_resume_training_starts_resume_job() -> None:
@@ -54,7 +50,6 @@ def test_resume_training_starts_resume_job() -> None:
     assert payload["job_type"] == "training"
     job_manager.start_job.assert_called_once()
 
-
 ###############################################################################
 def test_stop_sets_cancellation_on_current_job() -> None:
     service, job_manager, _ = build_service()
@@ -63,7 +58,6 @@ def test_stop_sets_cancellation_on_current_job() -> None:
     payload = service.stop()
     assert payload["status"] == "stopping"
     job_manager.cancel_job.assert_called_once_with("job123")
-
 
 ###############################################################################
 def test_get_and_delete_job_contracts() -> None:
