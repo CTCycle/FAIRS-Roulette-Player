@@ -1,6 +1,6 @@
 ## Deployment
 
-Last updated: 2026-06-02
+Last updated: 2026-06-23
 
 ## Desktop Packaging Outputs
 
@@ -8,6 +8,10 @@ Last updated: 2026-06-02
 
 - `release/windows/installers`
 - `release/windows/portable`
+
+The versioned Tauri project lives under `app/src-tauri` and is limited to source code, configuration, icons, capabilities, and required build metadata.
+
+Generated packaging outputs under `app/src-tauri/target`, `app/src-tauri/bundle`, `app/src-tauri/gen`, and `release/windows` are local or release artifacts and must not be committed to Git. Desktop binaries are published as release artifacts instead of repository content.
 
 ## Build Chain
 
