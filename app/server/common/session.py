@@ -3,6 +3,7 @@ from __future__ import annotations
 MAX_SESSION_ID_LENGTH = 64
 
 
+###############################################################################
 def normalize_session_id(value: str | None) -> str | None:
     if value is None:
         return None
