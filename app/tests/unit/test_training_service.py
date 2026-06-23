@@ -15,7 +15,7 @@ def build_service() -> tuple[TrainingService, Mock, Mock]:
     checkpoint_service = Mock()
     checkpoint_service.list_checkpoints.return_value = []
     checkpoint_service.resolve_existing_checkpoint.return_value = ("cp1", "path/cp1")
-    checkpoint_service.model_serializer.load_training_configuration.return_value = (
+    checkpoint_service.load_training_configuration.return_value = (
         {"max_steps_episode": 100, "initial_capital": 100},
         {"total_episodes": 2, "history": {"episode": [1, 2], "time_step": [1, 2]}},
     )

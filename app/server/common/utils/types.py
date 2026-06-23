@@ -25,7 +25,7 @@ def extract_positive_int(value: Any) -> int | None:
     else:
         try:
             candidate = int(value)
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             candidate = None
     if candidate is None or candidate <= 0:
         return None
@@ -61,7 +61,7 @@ def coerce_int(
     else:
         try:
             candidate = int(value)
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             candidate = default
     if minimum is not None and candidate < minimum:
         candidate = minimum
@@ -78,7 +78,7 @@ def coerce_float(
 ) -> float:
     try:
         candidate = float(value)
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         candidate = default
     if minimum is not None and candidate < minimum:
         candidate = minimum
@@ -92,7 +92,7 @@ def coerce_finite_float(value: Any, default: float = 0.0) -> float:
         return float(value)
     try:
         candidate = float(value)
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         return default
     if math.isfinite(candidate):
         return candidate

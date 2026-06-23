@@ -456,7 +456,7 @@ class TrainingService:
             self.checkpoint_service.resolve_existing_checkpoint(config.checkpoint)
         )
         configuration, session = (
-            self.checkpoint_service.model_serializer.load_training_configuration(
+            self.checkpoint_service.load_training_configuration(
                 checkpoint_path
             )
         )

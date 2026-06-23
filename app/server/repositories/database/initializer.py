@@ -11,104 +11,16 @@ from server.configurations.startup import get_server_settings
 from server.common.utils.logger import logger
 from server.repositories.database.postgres import PostgresRepository
 from server.repositories.database.sqlite import SQLiteRepository
-from server.repositories.database.utils import normalize_postgres_engine
+from server.common.constants import (
+    ROULETTE_COLOR_CODE,
+    ROULETTE_COLOR_MAP,
+    ROULETTE_POSITION_MAP,
+)
+from server.repositories.database.utils import (
+    build_postgres_connect_args,
+    normalize_postgres_engine,
+)
 from server.repositories.schemas.models import Base, RouletteOutcomes
-
-
-ROULETTE_POSITION_MAP: dict[int, int] = {
-    0: 0,
-    32: 1,
-    15: 2,
-    19: 3,
-    4: 4,
-    21: 5,
-    2: 6,
-    25: 7,
-    17: 8,
-    34: 9,
-    6: 10,
-    27: 11,
-    13: 12,
-    36: 13,
-    11: 14,
-    30: 15,
-    8: 16,
-    23: 17,
-    10: 18,
-    5: 19,
-    24: 20,
-    16: 21,
-    33: 22,
-    1: 23,
-    20: 24,
-    14: 25,
-    31: 26,
-    9: 27,
-    22: 28,
-    18: 29,
-    29: 30,
-    7: 31,
-    28: 32,
-    12: 33,
-    35: 34,
-    3: 35,
-    26: 36,
-}
-
-ROULETTE_COLOR_MAP: dict[str, list[int]] = {
-    "black": [
-        15,
-        4,
-        2,
-        17,
-        6,
-        13,
-        11,
-        8,
-        10,
-        24,
-        33,
-        20,
-        31,
-        22,
-        29,
-        28,
-        35,
-        26,
-    ],
-    "red": [
-        32,
-        19,
-        21,
-        25,
-        34,
-        27,
-        36,
-        30,
-        23,
-        5,
-        16,
-        1,
-        14,
-        9,
-        18,
-        7,
-        12,
-        3,
-    ],
-    "green": [0],
-}
-
-ROULETTE_COLOR_CODE = {"green": 0, "black": 1, "red": 2}
-
-###############################################################################
-def build_postgres_connect_args(settings: DatabaseSettings) -> dict[str, str | int]:
-    connect_args: dict[str, str | int] = {"connect_timeout": settings.connect_timeout}
-    if settings.ssl:
-        connect_args["sslmode"] = "require"
-        if settings.ssl_ca:
-            connect_args["sslrootcert"] = settings.ssl_ca
-    return connect_args
 
 ###############################################################################
 def build_postgres_url(settings: DatabaseSettings, database_name: str) -> str:

@@ -3,6 +3,8 @@ from __future__ import annotations
 import shutil
 from typing import Any
 
+from keras import Model
+
 from server.common.checkpoints import (
     normalize_checkpoint_identifier,
     resolve_checkpoint_path,
@@ -66,6 +68,25 @@ class CheckpointService:
             "final_val_rmse": get_last_history_value(history.get("val_rmse")),
         }
         return {"checkpoint": checkpoint, "summary": summary}
+
+    # -------------------------------------------------------------------------
+    def load_checkpoint(
+        self, checkpoint_name: str
+    ) -> tuple[Model | Any, dict[str, Any], dict[str, Any], str]:
+        normalized = normalize_checkpoint_identifier(checkpoint_name)
+        return self.model_serializer.load_checkpoint(normalized)
+
+    # -------------------------------------------------------------------------
+    def load_training_configuration(
+        self, checkpoint_path: str
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        return self.model_serializer.load_training_configuration(checkpoint_path)
+
+    # -------------------------------------------------------------------------
+    def load_strategy_model(
+        self, checkpoint_path: str, required: bool = False
+    ) -> Model | Any | None:
+        return self.model_serializer.load_strategy_model(checkpoint_path, required=required)
 
     # -------------------------------------------------------------------------
     def delete_checkpoint(self, checkpoint_name: str) -> None:

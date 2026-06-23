@@ -8,7 +8,6 @@ from server.domain.configuration import (
 )
 from server.domain.training import TrainingConfig, ResumeConfig
 from server.domain.jobs import (
-    JobState,
     JobStartResponse,
     JobStatusResponse,
     JobListResponse,
@@ -22,7 +21,6 @@ __all__ = [
     "JobsSettings",
     "DeviceSettings",
     "ServerSettings",
-    "JobState",
     "JobStartResponse",
     "JobStatusResponse",
     "JobListResponse",
