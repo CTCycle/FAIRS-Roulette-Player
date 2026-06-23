@@ -41,6 +41,10 @@ Build output:
 - `release/windows/installers`
 - `release/windows/portable`
 
+Versioned desktop source/configuration lives under `app/src-tauri` and should contain only Tauri source code, configuration, icons, capabilities, and required build metadata such as `Cargo.toml`, `Cargo.lock`, `build.rs`, and `tauri.conf.json`.
+
+Generated desktop outputs under `app/src-tauri/target`, `app/src-tauri/bundle`, `app/src-tauri/gen`, and `release/windows` are not committed to Git. Windows `.exe` installers and portable binaries are published through release artifacts, not tracked in the repository.
+
 ## 3. Configuration
 
 Runtime profile files:
@@ -107,6 +111,7 @@ setup_and_maintenance.bat
 ```
 
 Available maintenance actions include log cleanup, local uninstall/runtime cleanup, desktop build artifact cleanup, and database initialization.
+Desktop build cleanup removes generated output directories only; it does not delete `app/src-tauri` source/config files.
 
 ## 7. Resources
 - Application data and artifacts: `app/resources`
