@@ -49,13 +49,13 @@ def build_service(monkeypatch) -> tuple[InferenceService, Mock]:
 
     checkpoint_service = Mock()
     checkpoint_service.resolve_existing_checkpoint.return_value = ("cp1", "path/cp1")
-    checkpoint_service.model_serializer.load_checkpoint.return_value = (
+    checkpoint_service.load_checkpoint.return_value = (
         object(),
         {"dynamic_betting_enabled": False},
         {},
         "path/cp1",
     )
-    checkpoint_service.model_serializer.load_strategy_model.return_value = None
+    checkpoint_service.load_strategy_model.return_value = None
 
     monkeypatch.setattr("server.services.inference.RoulettePlayer", FakePlayer)
     monkeypatch.setattr("server.services.inference.DeviceConfig", FakeDeviceConfig)
