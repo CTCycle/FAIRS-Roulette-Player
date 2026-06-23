@@ -23,6 +23,7 @@ from server.learning.betting.types import (
     normalize_strategy_id,
     strategy_name,
 )
+
 ###############################################################################
 class BetsAndRewards:
 
