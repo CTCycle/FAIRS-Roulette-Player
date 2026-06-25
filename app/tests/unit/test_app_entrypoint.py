@@ -11,7 +11,6 @@ from server.domain.configuration import (
     ServerSettings,
 )
 
-
 ###############################################################################
 def _build_settings() -> ServerSettings:
     return ServerSettings(
@@ -35,7 +34,6 @@ def _build_settings() -> ServerSettings:
             use_mixed_precision=False,
         ),
     )
-
 
 ###############################################################################
 def _stub_lifespan_dependencies(monkeypatch, app_module) -> list[object]:
@@ -62,7 +60,6 @@ def _stub_lifespan_dependencies(monkeypatch, app_module) -> list[object]:
 
     return initialize_calls
 
-
 ###############################################################################
 def test_root_redirects_to_docs_when_client_build_is_missing(monkeypatch) -> None:
     import server.app as app_module
@@ -79,7 +76,6 @@ def test_root_redirects_to_docs_when_client_build_is_missing(monkeypatch) -> Non
     assert response.status_code == 307
     assert response.headers["location"] == "/docs"
     assert len(initialize_calls) == 1
-
 
 ###############################################################################
 def test_root_and_nested_routes_serve_built_client_when_available(

@@ -123,7 +123,7 @@ def stop_training(
 def get_checkpoints(
     service: TrainingService = Depends(get_training_service),
 ) -> TrainingCheckpointListResponse:
-    return TrainingCheckpointListResponse(service.list_checkpoints())
+    return TrainingCheckpointListResponse.model_validate(service.list_checkpoints())
 
 ###############################################################################
 @router.get(

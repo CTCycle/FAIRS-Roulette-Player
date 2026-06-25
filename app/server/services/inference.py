@@ -127,7 +127,6 @@ class InferenceService:
     ) -> None:
         self.serializer = serializer
         self.checkpoint_service = checkpoint_service
-        self.model_serializer = checkpoint_service.model_serializer
         self.state = InferenceState()
 
     # -------------------------------------------------------------------------
@@ -180,7 +179,7 @@ class InferenceService:
         if dataset is None:
             raise FileNotFoundError(f"Dataset '{dataset_id}' was not found.")
 
-        model, train_config, _, _ = self.model_serializer.load_checkpoint(checkpoint)
+        model, train_config, _, _ = self.checkpoint_service.load_checkpoint(checkpoint)
         configuration = {
             **train_config,
             "game_capital": payload.game_capital,
@@ -218,7 +217,7 @@ class InferenceService:
         if bool(configuration.get("dynamic_betting_enabled", False)) and bool(
             configuration.get("bet_strategy_model_enabled", False)
         ):
-            strategy_model = self.model_serializer.load_strategy_model(
+            strategy_model = self.checkpoint_service.load_strategy_model(
                 checkpoint_path, required=True
             )
         player = RoulettePlayer(

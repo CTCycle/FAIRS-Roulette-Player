@@ -11,7 +11,6 @@ from server.domain.inference import (
 )
 from server.services.inference import InferenceService
 
-
 ###############################################################################
 class FakePlayer:
 
@@ -32,7 +31,6 @@ class FakePlayer:
     def update_bet_amount(self, bet_amount: int) -> None:
         self.bet_amount = bet_amount
 
-
 ###############################################################################
 class FakeDeviceConfig:
 
@@ -44,7 +42,6 @@ class FakeDeviceConfig:
     def set_device(self) -> None:
         return None
 
-
 ###############################################################################
 def build_service(monkeypatch) -> tuple[InferenceService, Mock]:
     serializer = Mock()
@@ -52,13 +49,13 @@ def build_service(monkeypatch) -> tuple[InferenceService, Mock]:
 
     checkpoint_service = Mock()
     checkpoint_service.resolve_existing_checkpoint.return_value = ("cp1", "path/cp1")
-    checkpoint_service.model_serializer.load_checkpoint.return_value = (
+    checkpoint_service.load_checkpoint.return_value = (
         object(),
         {"dynamic_betting_enabled": False},
         {},
         "path/cp1",
     )
-    checkpoint_service.model_serializer.load_strategy_model.return_value = None
+    checkpoint_service.load_strategy_model.return_value = None
 
     monkeypatch.setattr("server.services.inference.RoulettePlayer", FakePlayer)
     monkeypatch.setattr("server.services.inference.DeviceConfig", FakeDeviceConfig)
@@ -67,7 +64,6 @@ def build_service(monkeypatch) -> tuple[InferenceService, Mock]:
         serializer=serializer, checkpoint_service=checkpoint_service
     )
     return service, serializer
-
 
 ###############################################################################
 def test_session_lifecycle_and_prediction_flow(monkeypatch) -> None:
@@ -91,7 +87,6 @@ def test_session_lifecycle_and_prediction_flow(monkeypatch) -> None:
     shutdown = service.shutdown_session(session_id)
     assert shutdown["status"] == "closed"
     serializer.mark_inference_session_ended.assert_called_once_with(session_id)
-
 
 ###############################################################################
 def test_clear_rows_preserves_session_header(monkeypatch) -> None:

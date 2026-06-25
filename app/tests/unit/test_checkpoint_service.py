@@ -5,7 +5,6 @@ import pytest
 from server.common import checkpoints as checkpoint_common
 from server.services.checkpoints import CheckpointService
 
-
 ###############################################################################
 class DummyModelSerializer:
 
@@ -24,14 +23,12 @@ class DummyModelSerializer:
             {"total_episodes": 3, "history": {"loss": [0.2], "metrics": [0.3]}},
         )
 
-
 ###############################################################################
 def test_resolve_existing_checkpoint_rejects_missing(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(checkpoint_common.shared_paths, "CHECKPOINT_PATH", tmp_path)
     service = CheckpointService(model_serializer=DummyModelSerializer())
     with pytest.raises(FileNotFoundError):
         service.resolve_existing_checkpoint("missing")
-
 
 ###############################################################################
 def test_get_metadata_returns_summary_shape(tmp_path, monkeypatch) -> None:

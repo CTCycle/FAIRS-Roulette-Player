@@ -10,7 +10,12 @@ import pandas as pd
 from PIL import Image, ImageDraw, ImageFont
 from gymnasium import spaces
 
-from server.common.constants import NUMBERS, PAD_VALUE, STATES
+from server.common.constants import (
+    NUMBERS,
+    PAD_VALUE,
+    ROULETTE_COLOR_MAP,
+    STATES,
+)
 from server.learning.betting.hold import StrategyHold
 from server.learning.betting.sizer import BetSizer
 from server.learning.betting.types import (
@@ -18,7 +23,6 @@ from server.learning.betting.types import (
     normalize_strategy_id,
     strategy_name,
 )
-from server.services.process import RouletteSeriesEncoder
 
 ###############################################################################
 class BetsAndRewards:
@@ -28,9 +32,8 @@ class BetsAndRewards:
         self.seed = configuration.get("train_seed", 42)
         self.bet_amount = configuration.get("bet_amount", 10)
         self.numbers = list(range(NUMBERS))
-        mapper = RouletteSeriesEncoder()
-        self.red_numbers = mapper.color_map["red"]
-        self.black_numbers = mapper.color_map["black"]
+        self.red_numbers = ROULETTE_COLOR_MAP["red"]
+        self.black_numbers = ROULETTE_COLOR_MAP["black"]
 
         self.num_actions = 47
         self.action_descriptions = {i: f"Bet on number {i}" for i in range(37)}
