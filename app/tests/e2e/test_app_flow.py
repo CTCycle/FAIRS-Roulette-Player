@@ -77,18 +77,6 @@ class TestTrainingPage:
         ).to_be_visible()
         expect(page.get_by_text("Checkpoints", exact=False).first).to_be_visible()
 
-    # -------------------------------------------------------------------------
-    def test_training_page_shows_status(self, page: Page, base_url: str):
-        """The Training page should display training status."""
-        page.goto(f"{base_url}/training")
-        page.wait_for_load_state("networkidle")
-        expect(
-            page.get_by_role(
-                "heading", name=re.compile("Model Training Workspace", re.IGNORECASE)
-            )
-        ).to_be_visible()
-        expect(page.get_by_text("Checkpoints", exact=False).first).to_be_visible()
-
 ###############################################################################
 class TestInferencePage:
     """Tests for the Inference page."""
