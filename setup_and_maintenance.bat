@@ -21,6 +21,11 @@ set "node_exe=%nodejs_dir%\node.exe"
 set "npm_cmd=%nodejs_dir%\npm.cmd"
 set "init_db_script=%scripts_dir%\initialize_database.py"
 set "tauri_clean_script=%repo_root%\release\tauri\scripts\clean-tauri-build.ps1"
+set "tauri_dir=%app_dir%\src-tauri"
+set "tauri_target_dir=%tauri_dir%\target"
+set "tauri_bundle_dir=%tauri_dir%\bundle"
+set "tauri_gen_dir=%tauri_dir%\gen"
+set "windows_release_dir=%repo_root%\release\windows"
 set "pyproject=%server_dir%\pyproject.toml"
 set "frontend_dist=%client_dir%\dist"
 set "frontend_lockfile=%client_dir%\package-lock.json"
@@ -308,9 +313,10 @@ goto :menu
 if exist "%tauri_clean_script%" (
   powershell -NoProfile -ExecutionPolicy Bypass -File "%tauri_clean_script%"
 ) else (
-  if exist "%app_dir%\src-tauri" rd /s /q "%app_dir%\src-tauri"
-  if exist "%repo_root%\release\windows" rd /s /q "%repo_root%\release\windows"
-  for /r "%repo_root%" %%F in (*.exe) do del /q "%%F"
+  if exist "%tauri_target_dir%" rd /s /q "%tauri_target_dir%"
+  if exist "%tauri_bundle_dir%" rd /s /q "%tauri_bundle_dir%"
+  if exist "%tauri_gen_dir%" rd /s /q "%tauri_gen_dir%"
+  if exist "%windows_release_dir%" rd /s /q "%windows_release_dir%"
 )
 echo [SUCCESS] Desktop package cleanup completed.
 pause

@@ -8,7 +8,6 @@ import pytest
 from server.domain.upload import UploadRequest
 from server.services.datasets import DatasetService
 
-
 ###############################################################################
 def build_dataset_service() -> tuple[DatasetService, Mock, Mock, Mock]:
     serializer = Mock()
@@ -16,7 +15,6 @@ def build_dataset_service() -> tuple[DatasetService, Mock, Mock, Mock]:
     loader = Mock()
     service = DatasetService(serializer=serializer, importer=importer, loader=loader)
     return service, serializer, importer, loader
-
 
 ###############################################################################
 def test_import_upload_normalizes_filename_separator_and_sheet_name() -> None:
@@ -40,7 +38,6 @@ def test_import_upload_normalizes_filename_separator_and_sheet_name() -> None:
     loader.load_bytes.assert_called_once()
     importer.import_dataframe.assert_called_once()
 
-
 ###############################################################################
 def test_import_upload_rejects_oversized_payload() -> None:
     service, _, _, _ = build_dataset_service()
@@ -50,7 +47,6 @@ def test_import_upload_rejects_oversized_payload() -> None:
             filename="big.csv",
             request=UploadRequest(dataset_kind="training"),
         )
-
 
 ###############################################################################
 def test_dataset_list_and_delete_delegate_to_serializer() -> None:

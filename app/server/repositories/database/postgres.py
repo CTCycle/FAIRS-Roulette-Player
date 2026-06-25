@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import urllib.parse
-from typing import Any
 
 import sqlalchemy
 from sqlalchemy.engine import Engine
@@ -12,7 +11,10 @@ from server.repositories.database.common import (
     SQLAlchemyRepositoryBase,
     normalize_table_name as normalize_table_name,
 )
-from server.repositories.database.utils import normalize_postgres_engine
+from server.repositories.database.utils import (
+    build_postgres_connect_args,
+    normalize_postgres_engine,
+)
 
 ###############################################################################
 class PostgresRepository(SQLAlchemyRepositoryBase):
@@ -30,11 +32,7 @@ class PostgresRepository(SQLAlchemyRepositoryBase):
 
         port = settings.port or 5432
         engine_name = normalize_postgres_engine(settings.engine)
-        connect_args: dict[str, Any] = {"connect_timeout": settings.connect_timeout}
-        if settings.ssl:
-            connect_args["sslmode"] = "require"
-            if settings.ssl_ca:
-                connect_args["sslrootcert"] = settings.ssl_ca
+        connect_args = build_postgres_connect_args(settings)
 
         safe_username = urllib.parse.quote_plus(settings.username)
         safe_password = urllib.parse.quote_plus(settings.password or "")

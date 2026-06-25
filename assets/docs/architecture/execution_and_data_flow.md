@@ -69,22 +69,28 @@ Last updated: 2026-06-02
   - FastAPI construction, dependency wiring, router mounting, and SPA serving
 - `app/server/common/api_errors.py`
   - shared HTTP exception mapping helpers
+- `app/server/common/constants.py`
+  - shared constants including roulette wheel maps (position, color, color code)
+- `app/server/common/session.py`
+  - session identifier normalization and validation
 - `app/server/configurations/startup.py`
   - cached settings and configuration access
 - `app/server/services/jobs.py`
-  - in-process job registry, progress tracking, and cancellation
+  - in-process job registry, `JobState` dataclass, progress tracking, and cancellation
 - `app/server/services/training.py`
   - training lifecycle, worker management, and resume behavior
 - `app/server/services/inference.py`
   - session state machine and session-step persistence
 - `app/server/services/checkpoints.py`
-  - checkpoint resolution, metadata, listing, and deletion
+  - checkpoint resolution, metadata, listing, deletion, model loading, and strategy model loading
 - `app/server/services/startup_validation.py`
   - runtime pre-flight checks, storage directory creation, and Tauri-mode validation
 - `app/server/repositories/schemas/models.py`
   - SQLAlchemy schema definitions and constraints
 - `app/server/repositories/database/initializer.py`
   - database initialization and embedded-vs-external setup rules
+- `app/server/repositories/database/utils.py`
+  - database utility functions: engine normalization, datetime coercion, Postgres connect-arg builder
 
 ## Concurrency Model
 

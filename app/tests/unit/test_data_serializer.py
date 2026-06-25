@@ -12,7 +12,6 @@ from server.common.constants import (
 )
 from server.repositories.serialization.data import DataSerializer
 
-
 ###############################################################################
 def test_delete_dataset_removes_dependent_rows_before_dataset() -> None:
     queries = Mock()
@@ -35,7 +34,6 @@ def test_delete_dataset_removes_dependent_rows_before_dataset() -> None:
         call(DATASETS_TABLE, {"dataset_id": 7}),
     ]
 
-
 ###############################################################################
 def test_clear_inference_session_steps_deletes_only_steps_table() -> None:
     queries = Mock()
@@ -47,7 +45,6 @@ def test_clear_inference_session_steps_deletes_only_steps_table() -> None:
         INFERENCE_SESSION_STEPS_TABLE,
         {"session_id": "session_1"},
     )
-
 
 ###############################################################################
 def test_delete_inference_session_deletes_steps_and_header() -> None:

@@ -17,7 +17,6 @@ TRAINING_METRIC_KEYS = (
     "capital_gain",
 )
 
-
 ###############################################################################
 def coerce_optional_finite_float(value: Any) -> float | None:
     if value is None:
@@ -26,12 +25,11 @@ def coerce_optional_finite_float(value: Any) -> float | None:
         return float(value)
     try:
         candidate = float(value)
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         return None
     if math.isfinite(candidate):
         return candidate
     return None
-
 
 ###############################################################################
 def sanitize_training_stats(

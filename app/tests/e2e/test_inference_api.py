@@ -7,7 +7,6 @@ Tests: /inference/sessions/start, /inference/sessions/{id}/next,
 import pytest
 from playwright.sync_api import APIRequestContext
 
-
 ###############################################################################
 def require_checkpoint(api_context: APIRequestContext) -> str:
     response = api_context.get("/api/training/checkpoints")
@@ -16,7 +15,6 @@ def require_checkpoint(api_context: APIRequestContext) -> str:
     if not checkpoints:
         pytest.skip("No checkpoints available for inference tests.")
     return str(checkpoints[0])
-
 
 ###############################################################################
 def require_dataset_id(api_context: APIRequestContext) -> int:
@@ -29,7 +27,6 @@ def require_dataset_id(api_context: APIRequestContext) -> int:
     if not isinstance(dataset_id, int) or dataset_id <= 0:
         pytest.skip("Dataset list did not provide a valid dataset_id.")
     return dataset_id
-
 
 ###############################################################################
 def start_inference_session(
@@ -60,7 +57,6 @@ def start_inference_session(
         )
         pytest.skip(f"Unable to start inference session in test environment: {detail}")
     return response.json()
-
 
 ###############################################################################
 class TestInferenceEndpoints:
@@ -147,7 +143,6 @@ class TestInferenceEndpoints:
         data = response.json()
         assert data.get("status") == "cleared"
         assert data.get("session_id") == "non_existent"
-
 
 ###############################################################################
 class TestInferenceSessionFlow:

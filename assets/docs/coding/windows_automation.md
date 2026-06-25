@@ -1,6 +1,6 @@
 ## Windows Automation
 
-Last updated: 2026-06-02
+Last updated: 2026-06-23
 
 ## Scope
 
@@ -17,10 +17,11 @@ This file covers repository-specific conventions for Tauri, Rust, batch launcher
 
 ## Tauri And Rust Rules
 
-- Keep desktop startup behavior aligned with the Tauri shell in `app/client/src-tauri`.
+- Keep desktop startup behavior aligned with the Tauri shell in `app/src-tauri`.
 - Preserve the runtime expectations around local backend spawning, environment propagation, and built frontend availability.
 - Treat `FAIRS_TAURI_MODE` as a real runtime contract, not a cosmetic flag.
 - Keep packaging logic aligned with the current release helper scripts.
+- Cleanup automation may remove generated Tauri outputs, but it must never delete the `app/src-tauri` source/config tree.
 
 ## Runtime Layout Expectations
 
