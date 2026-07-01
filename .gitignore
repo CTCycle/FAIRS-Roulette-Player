@@ -20,12 +20,14 @@ app/src-tauri/**/*.zip
 app/src-tauri/**/*.7z
 app/src-tauri/**/*.tar.gz
 release/windows/
+assets/QA/**
 
 # Python
 __pycache__/
 *.py[cod]
 *.egg-info/
-runtimes/.venv/
+app/server/.venv/
+.venv/
 venv/
 .pytest_cache/
 .mypy_cache/
@@ -34,11 +36,13 @@ dist/
 build/
 .coverage
 htmlcov/
+app/server/uv.lock
 
 # Node / JS
 **/node_modules/
 **/dist/
 **/dist-ssr/
+**/.angular/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -64,7 +68,6 @@ Thumbs.db
 !app/src-tauri/Cargo.lock
 
 # Local Python/runtime artifacts that must not enter Git history
-app/server/.venv/
 setup/triton/
 FAIRS/setup/triton/
 FAIRS/app/triton/
