@@ -36,7 +36,7 @@ Primary automated test surfaces live under `app/tests`:
 
 - Run the smallest relevant test slice first.
 - Use broader checks when shared infrastructure, startup flow, or packaging behavior changes.
-- Keep QA artifacts in the project `QA/` location when persistent evidence is needed.
+- Keep QA artifacts in the project `assets/QA/` location when persistent evidence is needed.
 - Do not leave temporary logs, screenshots, or validation scraps scattered through the repository.
 
 ## Related Files

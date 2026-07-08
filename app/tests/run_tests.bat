@@ -10,6 +10,9 @@ set "TESTS_DIR=%APP_DIR%\tests"
 set "SETTINGS_ENV=%PROJECT_ROOT%\settings\.env"
 set "VENV_PYTHON=%SERVER_DIR%\.venv\Scripts\python.exe"
 set "RUNTIME_NPM=%PROJECT_ROOT%\runtimes\nodejs\npm.cmd"
+set "RUNTIME_UV=%PROJECT_ROOT%\runtimes\uv\uv.exe"
+set "UV_CACHE_DIR=%TEMP%\fairs-uv-cache"
+set "UV_LINK_MODE=copy"
 
 set "FASTAPI_HOST=127.0.0.1"
 set "FASTAPI_PORT=8000"
@@ -75,10 +78,25 @@ if exist "%RUNTIME_NPM%" (
   set "NPM_CMD=npm"
 )
 
-set "UVICORN_APP=app.server.app:app"`r`nset "BACKEND_WORKDIR=%PROJECT_ROOT%"`r`nset "PYTHONPATH=%PROJECT_ROOT%;%APP_DIR%"
+if exist "%RUNTIME_UV%" (
+  set "UV_CMD=%RUNTIME_UV%"
+) else (
+  where uv >nul 2>&1
+  if errorlevel 1 (
+    echo [ERROR] uv runtime not found.
+    exit /b 1
+  )
+  set "UV_CMD=uv"
+)
+
+set "UVICORN_APP=app.server.app:app"
+set "BACKEND_WORKDIR=%PROJECT_ROOT%"
+set "PYTHONPATH=%PROJECT_ROOT%;%APP_DIR%"
 "%PYTHON_CMD%" -c "import importlib; importlib.import_module('app.server.app')" >nul 2>&1
 if errorlevel 1 (
-  set "UVICORN_APP=server.app:app"`r`n  set "BACKEND_WORKDIR=%SERVER_DIR%"`r`n  set "PYTHONPATH=%APP_DIR%"
+  set "UVICORN_APP=server.app:app"
+  set "BACKEND_WORKDIR=%SERVER_DIR%"
+  set "PYTHONPATH=%APP_DIR%"
 )
 
 echo.
@@ -89,6 +107,16 @@ echo [INFO] Project root: %PROJECT_ROOT%
 echo [INFO] Backend URL : %APP_TEST_BACKEND_URL%
 echo [INFO] Frontend URL: %APP_TEST_FRONTEND_URL%
 echo.
+
+echo [STEP] Syncing backend test dependencies...
+pushd "%SERVER_DIR%" >nul
+"%UV_CMD%" sync --python "%PYTHON_CMD%" --extra test
+set "UV_SYNC_RC=%ERRORLEVEL%"
+popd >nul
+if not "%UV_SYNC_RC%"=="0" (
+  echo [ERROR] uv sync --extra test failed with code %UV_SYNC_RC%.
+  exit /b %UV_SYNC_RC%
+)
 
 set "PYTEST_TARGET=%TESTS_DIR%"
 if not "%STANDARD_TEST_PYTEST_TARGET%"=="" set "PYTEST_TARGET=%STANDARD_TEST_PYTEST_TARGET%"
