@@ -127,7 +127,14 @@ Detailed operational guidance is available in:
 - `assets/docs/runtime/deployment.md`
 - `assets/docs/architecture/system_overview.md`
 
-## 9. Screenshots
+## 9. Screenshots & Demo
+
+### Training Demo
+
+DQN agent learning roulette over 30 episodes (epsilon-greedy exploration with decay):
+
+![Training demo](assets/training_demo.gif)
+
 ### Training Workspace
 Desktop view of dataset upload, dataset selection, checkpoint panels, and the live training monitor.
 
