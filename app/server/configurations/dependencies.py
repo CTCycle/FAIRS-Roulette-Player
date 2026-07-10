@@ -2,14 +2,9 @@ from __future__ import annotations
 
 from fastapi import Request
 
-from server.repositories.serialization.data import DataSerializer
 from server.services.datasets import DatasetService
 from server.services.inference import InferenceService
 from server.services.training import TrainingService
-
-###############################################################################
-def get_data_serializer(request: Request) -> DataSerializer:
-    return request.app.state.data_serializer
 
 ###############################################################################
 def get_dataset_service(request: Request) -> DatasetService:
