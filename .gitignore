@@ -21,6 +21,7 @@ app/src-tauri/**/*.7z
 app/src-tauri/**/*.tar.gz
 release/windows/
 assets/QA/**
+scripts/**
 
 # Python
 __pycache__/

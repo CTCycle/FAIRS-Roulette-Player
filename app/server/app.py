@@ -95,7 +95,6 @@ async def app_lifespan(application: FastAPI) -> AsyncIterator[None]:
     checkpoint_service = CheckpointService()
 
     application.state.database = database
-    application.state.data_queries = queries
     application.state.data_serializer = serializer
     application.state.dataset_service = DatasetService(
         serializer=serializer,
