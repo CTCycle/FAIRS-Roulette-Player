@@ -10,8 +10,8 @@ This file covers repository-specific conventions for Tauri, Rust, batch launcher
 
 - Preserve Windows-first behavior in `.bat` and PowerShell automation.
 - Keep startup and maintenance flows aligned with:
-  - `start_on_windows.bat`
-  - `setup_and_maintenance.bat`
+  - `start_on_windows.ps1`
+  - `start_on_windows.ps1`
   - `release/tauri/build_with_tauri.bat`
 - Do not introduce parallel bootstrap paths unless the task explicitly requires them.
 

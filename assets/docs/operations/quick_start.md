@@ -7,7 +7,7 @@ Last updated: 2026-06-02
 1. From repository root, run:
 
 ```cmd
-start_on_windows.bat
+start_on_windows.ps1
 ```
 
 2. Open the UI at the configured frontend URL from `UI_HOST:UI_PORT`.
@@ -20,7 +20,7 @@ start_on_windows.bat
 Start the app:
 
 ```cmd
-start_on_windows.bat
+start_on_windows.ps1
 ```
 
 Run the automated test entry point:
@@ -38,7 +38,7 @@ release\tauri\build_with_tauri.bat
 Open maintenance tools:
 
 ```cmd
-setup_and_maintenance.bat
+start_on_windows.ps1 init-db
 ```
 
 ## Orientation

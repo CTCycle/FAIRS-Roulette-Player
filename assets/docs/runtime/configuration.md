@@ -34,6 +34,8 @@ The runtime scripts and backend consume these environment keys:
   - injected by the desktop runtime when spawning the backend
 - `UV_PROJECT_ENVIRONMENT`
   - set by startup and build scripts to target the runtime virtual environment
+- `FAIRS_USER_DATA_DIR`
+  - overrides the mutable database, logs, and checkpoints directory for packaged desktop or portable mode
 
 ## Structured Settings
 
@@ -60,7 +62,9 @@ The runtime scripts and backend consume these environment keys:
 ### Desktop Runtime
 
 - `FAIRS_TAURI_MODE=true` requires a built frontend at `app/client/dist/index.html`.
-- Desktop startup injects backend process environment values such as `MPLBACKEND` and `KERAS_BACKEND`.
+  - Desktop startup injects backend process environment values such as `MPLBACKEND` and `KERAS_BACKEND`.
+
+When `FAIRS_USER_DATA_DIR` is absent, development mode continues to use `app/resources`. Packaged MSI mode supplies a per-user local-data directory; portable mode supplies a sibling `data` directory.
 
 ## Related Files
 

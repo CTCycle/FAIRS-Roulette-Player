@@ -25,6 +25,7 @@ from server.api.datasets import router as datasets_router
 from server.api.inference import router as inference_router
 from server.api.training import router as training_router
 from server.api.upload import router as upload_router
+from server.api.system import router as system_router
 from server.configurations import get_server_settings
 from server.repositories.database.backend import FAIRSDatabase
 from server.repositories.database.initializer import initialize_database
@@ -120,6 +121,7 @@ def include_api_routers(application: FastAPI) -> None:
         training_router,
         datasets_router,
         inference_router,
+        system_router,
     ):
         application.include_router(router, prefix=FASTAPI_API_PREFIX)
 

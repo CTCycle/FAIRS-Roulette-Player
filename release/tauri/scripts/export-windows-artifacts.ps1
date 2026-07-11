@@ -1,131 +1,27 @@
 [CmdletBinding()]
-param(
-  [string]$OutputPath = ""
-)
-
-$ErrorActionPreference = "Stop"
-
-$repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\..\.."))
-$appDir = Join-Path $repoRoot "app"
-$clientDir = Join-Path $appDir "client"
-$tauriDir = Join-Path $appDir "src-tauri"
-$releaseDir = Join-Path $tauriDir "target\release"
-$bundleDir = Join-Path $releaseDir "bundle"
-
-if ([string]::IsNullOrWhiteSpace($OutputPath)) {
-  $outputDir = Join-Path $repoRoot "release\windows"
-} else {
-  $outputDir = [System.IO.Path]::GetFullPath((Join-Path $repoRoot $OutputPath))
-}
-
-$installersDir = Join-Path $outputDir "installers"
-$portableDir = Join-Path $outputDir "portable"
-$portableRuntimeDir = Join-Path $portableDir "runtime"
-
-if (-not (Test-Path $bundleDir)) {
-  throw "Bundle directory not found. Run 'npm run tauri:build' first. Missing: $bundleDir"
-}
-
-if (Test-Path $outputDir) {
-  Remove-Item -Recurse -Force $outputDir
-}
-
-New-Item -ItemType Directory -Path $installersDir -Force | Out-Null
-New-Item -ItemType Directory -Path $portableDir -Force | Out-Null
-New-Item -ItemType Directory -Path $portableRuntimeDir -Force | Out-Null
-
-$installerArtifacts = @()
-
-$nsisDir = Join-Path $bundleDir "nsis"
-if (Test-Path $nsisDir) {
-  $nsisFiles = Get-ChildItem -Path $nsisDir -Filter "*.exe" -File
-  foreach ($file in $nsisFiles) {
-    Copy-Item -Path $file.FullName -Destination $installersDir -Force
-    $installerArtifacts += Join-Path $installersDir $file.Name
-  }
-}
-
-$msiDir = Join-Path $bundleDir "msi"
-if (Test-Path $msiDir) {
-  $msiFiles = Get-ChildItem -Path $msiDir -Filter "*.msi" -File
-  foreach ($file in $msiFiles) {
-    Copy-Item -Path $file.FullName -Destination $installersDir -Force
-    $installerArtifacts += Join-Path $installersDir $file.Name
-  }
-}
-
-$portableExeCandidates = Get-ChildItem -Path $releaseDir -Filter "*.exe" -File |
-  Where-Object { $_.Name -notmatch "(?i)(setup|installer|uninstall|updater)" }
-
-if ($portableExeCandidates.Count -eq 0) {
-  throw "No portable desktop executable found in $releaseDir. Run release\tauri\build_with_tauri.bat and confirm Tauri release output."
-}
-
-foreach ($file in $portableExeCandidates) {
-  Copy-Item -Path $file.FullName -Destination $portableDir -Force
-}
-
-$portablePayloadSourceDir = Join-Path $tauriDir "runtime"
-if (Test-Path $portablePayloadSourceDir) {
-  Copy-Item -Path (Join-Path $portablePayloadSourceDir "*") -Destination $portableRuntimeDir -Recurse -Force
-} else {
-  $portablePayloadEntries = @("app", "settings", "runtimes", "resources", "_up_")
-
-  foreach ($entry in $portablePayloadEntries) {
-    $sourcePath = Join-Path $releaseDir $entry
-    if (Test-Path $sourcePath) {
-      $destinationPath = Join-Path $portableRuntimeDir $entry
-      Copy-Item -Path $sourcePath -Destination $destinationPath -Recurse -Force
-    }
-  }
-}
-
-$requiredPortableEntries = @(
-  "app\server",
-  "app\scripts",
-  "settings",
-  "app\client\dist",
-  "app\resources\database.db",
-  "runtimes\uv\uv.exe",
-  "runtimes\python\python.exe"
-)
-
-foreach ($entry in $requiredPortableEntries) {
-  $portablePath = Join-Path $portableRuntimeDir $entry
-  if (-not (Test-Path $portablePath)) {
-    throw "Portable export is incomplete. Missing required payload path: $portablePath"
-  }
-}
-
-$instructions = @"
-FAIRS desktop build output
-
-1) Preferred for users:
-   Open installers\ and run the setup executable (.exe) or .msi.
-
-2) Portable executable:
-   portable\ contains the app .exe.
-   portable\runtime\ contains the required runtime payload.
-   Keep the .exe beside the runtime\ folder.
-
-Generated from:
-$bundleDir
-"@
-Set-Content -Path (Join-Path $outputDir "README.txt") -Value $instructions -Encoding ascii
-
-Write-Host "[OK] Exported Windows artifacts to: $outputDir"
-Write-Host "[INFO] Installers:"
-if ($installerArtifacts.Count -eq 0) {
-  Write-Host " - none found"
-} else {
-  $installerArtifacts | ForEach-Object { Write-Host " - $_" }
-}
-Write-Host "[INFO] Portable executables:"
-$portableFiles = Get-ChildItem -Path $portableDir -Filter "*.exe" -File
-if ($portableFiles.Count -eq 0) {
-  Write-Host " - none found"
-} else {
-  $portableFiles | ForEach-Object { Write-Host " - $($_.FullName)" }
-}
-Write-Host "[INFO] Portable runtime payload:"
-Write-Host " - $portableRuntimeDir"
+param()
+$ErrorActionPreference = 'Stop'
+$repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))
+$tauri = Join-Path $repoRoot 'app\src-tauri'
+$bundle = Join-Path $tauri 'target\release\bundle'
+$release = Join-Path $repoRoot 'release\windows'
+if (Test-Path $release) { Remove-Item $release -Recurse -Force }
+New-Item -ItemType Directory -Force $release | Out-Null
+$msi = Get-ChildItem (Join-Path $bundle 'msi') -Filter '*.msi' -File | Select-Object -First 1
+if (-not $msi) { throw "MSI not found under $bundle\msi." }
+Copy-Item $msi.FullName (Join-Path $release 'FAIRS-v2.4.0-windows-x64.msi')
+$portable = Join-Path $release 'portable-root'
+New-Item -ItemType Directory -Force $portable | Out-Null
+$exe = Get-ChildItem (Join-Path $tauri 'target\release') -Filter '*.exe' -File | Where-Object Name -notmatch 'uninstall|setup' | Select-Object -First 1
+if (-not $exe) { throw 'Desktop executable not found.' }
+Copy-Item $exe.FullName (Join-Path $portable 'FAIRS.exe')
+New-Item -ItemType File (Join-Path $portable 'portable.flag') | Out-Null
+Copy-Item (Join-Path $tauri 'runtime') (Join-Path $portable 'runtime') -Recurse
+Copy-Item (Join-Path $repoRoot 'LICENSE') (Join-Path $portable 'LICENSE')
+Set-Content (Join-Path $portable 'THIRD_PARTY_NOTICES.txt') 'Third-party notices are generated as part of the release build.'
+$zip = Join-Path $release 'FAIRS-v2.4.0-windows-x64-portable.zip'
+Compress-Archive (Join-Path $portable '*') $zip -CompressionLevel Optimal
+Remove-Item $portable -Recurse -Force
+$hashes = @($release | Get-ChildItem -File | Get-FileHash -Algorithm SHA256 | ForEach-Object { "$($_.Hash)  $($_.Path | Split-Path -Leaf)" })
+Set-Content (Join-Path $release 'FAIRS-v2.4.0-SHA256SUMS.txt') $hashes
+Write-Host "[OK] Release artifacts exported to $release"
