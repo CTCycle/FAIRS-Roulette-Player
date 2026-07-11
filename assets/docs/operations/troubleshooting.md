@@ -4,7 +4,7 @@ Last updated: 2026-06-02
 
 ## Startup Problems
 
-- If local startup fails, rerun `start_on_windows.bat` to resync runtimes and dependencies.
+- If local startup fails, rerun `start_on_windows.ps1` to resync runtimes and dependencies.
 - If ports are already occupied, resolve the conflicting listeners before relaunching.
 - If the backend starts without the frontend, verify the frontend dependency and build steps completed successfully.
 

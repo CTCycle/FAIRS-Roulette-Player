@@ -1,7 +1,7 @@
 # FAIRS: Fabulous Automated Intelligent Roulette System
 [![Release](https://img.shields.io/github/v/release/CTCycle/FAIRS-Roulette-Player?display_name=tag)](https://github.com/CTCycle/FAIRS-Roulette-Player/releases)
 [![Python](https://img.shields.io/badge/Python-%3E%3D3.14-3776AB?logo=python&logoColor=white)](./app/server/pyproject.toml)
-[![Node.js](https://img.shields.io/badge/Node.js-22.12.0-339933?logo=node.js&logoColor=white)](./start_on_windows.bat)
+[![Node.js](https://img.shields.io/badge/Node.js-22.12.0-339933?logo=node.js&logoColor=white)](./start_on_windows.ps1)
 [![License](https://img.shields.io/badge/License-View-blue.svg)](./LICENSE)
 [![CI](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml?query=branch%3Adevelop)
 [![CTCycle Portfolio](https://img.shields.io/badge/CTCycle-Portfolio-58a6ff?style=flat-square)](https://ctcycle.github.io/CTCycle/)
@@ -19,10 +19,10 @@ FAIRS is a research web application for roulette training and inference experime
 Run from repository root:
 
 ```cmd
-start_on_windows.bat
+start_on_windows.ps1
 ```
 
-The launcher prepares local runtimes/dependencies and starts backend + frontend.
+The launcher delegates to `start_on_windows.ps1`, prepares local dependencies when needed, and starts FastAPI plus the Vite development server. Use `start_on_windows.ps1 install` to install explicitly.
 
 ### 2.2 Desktop Mode (Tauri Packaging)
 Prerequisites:
@@ -30,7 +30,7 @@ Prerequisites:
 2. Local runtimes already prepared at least once:
 
 ```cmd
-start_on_windows.bat
+start_on_windows.ps1
 ```
 
 Build desktop artifacts:
@@ -40,8 +40,8 @@ release\tauri\build_with_tauri.bat
 ```
 
 Build output:
-- `release/windows/installers`
-- `release/windows/portable`
+  - `release/windows/FAIRS-v<version>-windows-x64.msi`
+  - `release/windows/FAIRS-v<version>-windows-x64-portable.zip`
 
 Versioned desktop source/configuration lives under `app/src-tauri` and should contain only Tauri source code, configuration, icons, capabilities, and required build metadata such as `Cargo.toml`, `Cargo.lock`, `build.rs`, and `tauri.conf.json`.
 
@@ -51,10 +51,10 @@ Generated desktop outputs under `app/src-tauri/target`, `app/src-tauri/bundle`, 
 
 Runtime profile files:
 - Template: `settings/.env.example`
-- Active profile: `settings/.env`
+- Active profile: ignored local file `settings/.env` (created automatically from the template)
 - Non-database backend settings: `settings/configurations.json`
 
-Initialize `.env` once:
+Initialize `.env` manually if needed:
 
 ```cmd
 copy /Y settings\.env.example settings\.env
@@ -67,7 +67,7 @@ Use `.env` for runtime variables and all database settings; use `configurations.
 Database backend selection is defined in `settings/.env` (`EMBEDDED_DATABASE`).
 
 - `SQLite` (`EMBEDDED_DATABASE=true`):
-  - The application initializes the database automatically on startup only when `app/resources/database.db` is missing.
+  - The application initializes the database automatically on startup only when the user-data database is missing.
   - Initialization creates schema objects and seeds required data.
   - If `database.db` already exists, startup skips initialization.
 - `PostgreSQL` (`EMBEDDED_DATABASE=false`):
@@ -75,7 +75,7 @@ Database backend selection is defined in `settings/.env` (`EMBEDDED_DATABASE`).
   - Initialization is manual via:
 
 ```cmd
-setup_and_maintenance.bat
+start_on_windows.ps1 init-db
 ```
 
 Select `Initialize database` to run `app/scripts/initialize_database.py`.
@@ -84,7 +84,7 @@ Select `Initialize database` to run `app/scripts/initialize_database.py`.
 
 ## 4. Typical Workflow
 
-1. Start the app: `start_on_windows.bat`
+1. Start the app: `start_on_windows.ps1`
 2. Open the UI and upload or generate dataset data.
 3. Run training and manage checkpoints.
 4. Start inference sessions using a selected checkpoint.
@@ -109,14 +109,14 @@ uv run pytest -q app/tests/e2e
 Use:
 
 ```cmd
-setup_and_maintenance.bat
+start_on_windows.ps1
 ```
 
-Available maintenance actions include log cleanup, local uninstall/runtime cleanup, desktop build artifact cleanup, and database initialization.
+Available actions include `install`, `init-db`, `uninstall`, `clean-desktop`, `clean-logs`, and `clean-cache`.
 Desktop build cleanup removes generated output directories only; it does not delete `app/src-tauri` source/config files.
 
 ## 7. Resources
-- Application data and artifacts: `app/resources`
+- Development application data: `app/resources`; packaged data is redirected through `FAIRS_USER_DATA_DIR`
 - Launcher-managed runtimes and environment: `runtimes`
 
 ## 8. User Documentation

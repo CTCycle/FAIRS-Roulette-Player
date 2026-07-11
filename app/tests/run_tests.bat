@@ -63,7 +63,7 @@ if exist "%VENV_PYTHON%" (
   set "PYTHON_CMD=%VENV_PYTHON%"
 ) else (
   echo [ERROR] Missing backend venv: "%VENV_PYTHON%"
-  echo [ERROR] Run start_on_windows.bat first.
+  echo [ERROR] Run start_on_windows.ps1 first.
   exit /b 1
 )
 
@@ -126,7 +126,7 @@ if exist "%TESTS_DIR%\e2e" set "HAS_E2E=1"
 if /i "%STANDARD_TEST_SKIP_LIVE_SERVERS%"=="false" if "%HAS_E2E%"=="1" (
   set "LIVE_SERVER_PHASE=PASS"
 
-  curl -s --max-time 2 "%APP_TEST_BACKEND_URL%/docs" >nul 2>&1
+  curl -s --max-time 2 "%APP_TEST_BACKEND_URL%/api/health" >nul 2>&1
   if errorlevel 1 (
     echo [INFO] Starting backend server...
     start "" /B /D "%BACKEND_WORKDIR%" "%PYTHON_CMD%" -m uvicorn %UVICORN_APP% --host %FASTAPI_HOST% --port %FASTAPI_PORT% --log-level warning
@@ -176,7 +176,7 @@ if /i "%STANDARD_TEST_SKIP_LIVE_SERVERS%"=="false" if "%HAS_E2E%"=="1" (
     goto cleanup
   )
 
-  curl -s --max-time 2 "%APP_TEST_BACKEND_URL%/docs" >nul 2>&1
+  curl -s --max-time 2 "%APP_TEST_BACKEND_URL%/api/health" >nul 2>&1
   if errorlevel 1 (
     set /a ATTEMPTS+=1
     timeout /t 1 /nobreak >nul

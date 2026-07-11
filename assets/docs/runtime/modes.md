@@ -9,29 +9,22 @@ Last updated: 2026-06-02
 - Backend:
   - FastAPI via `uvicorn`
 - Frontend:
-  - built frontend served alongside a Vite preview workflow
+  - Vite development server
 - Startup orchestrator:
-  - `start_on_windows.bat`
+  - `start_on_windows.ps1`
 - Intended use:
   - day-to-day development and experimentation
 
 ### Desktop Runtime
 
 - Shell:
-  - Tauri app in `app/client/src-tauri`
+  - Tauri app in `app/src-tauri`
 - Backend:
   - local `uvicorn` process spawned by `src-tauri/src/main.rs`
 - Build and packaging orchestrator:
   - `release/tauri/build_with_tauri.bat`
 - Intended use:
   - packaged Windows desktop distribution
-
-### Maintenance Runtime
-
-- Entry point:
-  - `setup_and_maintenance.bat`
-- Purpose:
-  - database initialization, log cleanup, Tauri cleanup, and runtime-local maintenance tasks
 
 ### Container Runtime
 

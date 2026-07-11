@@ -8,6 +8,8 @@ app/client/dist-ssr/
 app/client/logs/
 app/client/*.local
 app/src-tauri/target/
+app/src-tauri/runtime/
+!app/src-tauri/runtime/.gitkeep
 app/src-tauri/bundle/
 app/src-tauri/gen/
 app/src-tauri/**/*.exe
@@ -37,7 +39,6 @@ dist/
 build/
 .coverage
 htmlcov/
-app/server/uv.lock
 
 # Node / JS
 **/node_modules/
@@ -49,7 +50,6 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-package-lock.json
 yarn.lock
 
 # IDE / OS
@@ -59,14 +59,15 @@ yarn.lock
 Thumbs.db
 
 # Misc
-*.lock
+settings/.env
+release/runtime-downloads/
+release/runtime-staging/
 *.log
 *.db
 *.sqlite*
 *.exe
 *.gz
 !.gitkeep
-!app/src-tauri/Cargo.lock
 
 # Local Python/runtime artifacts that must not enter Git history
 setup/triton/

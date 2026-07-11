@@ -7,14 +7,16 @@ Last updated: 2026-06-30
 From repository root in CMD:
 
 ```cmd
-start_on_windows.bat
+start_on_windows.ps1
 ```
 
 From repository root in PowerShell:
 
 ```powershell
-cmd /c start_on_windows.bat
+cmd /c start_on_windows.ps1
 ```
+
+`start_on_windows.ps1` is the single developer entry point and delegates to `start_on_windows.ps1`. It supports `launch`, `install`, `init-db`, `uninstall`, `build-desktop`, `clean-desktop`, `test`, `clean-logs`, and `clean-cache`.
 
 What the launcher does:
 
@@ -23,7 +25,7 @@ What the launcher does:
 - syncs Python dependencies with `uv`
 - installs frontend dependencies as needed
 - launches backend with `uvicorn`
-- launches the frontend preview server
+- launches the Vite development server
 
 ## Desktop Build Startup
 
@@ -44,28 +46,6 @@ Prerequisites:
 - Rust and Cargo installed and usable
 - prepared runtimes from at least one successful local startup
 - frontend build output available for packaging
-
-## Maintenance Startup
-
-From repository root in CMD:
-
-```cmd
-setup_and_maintenance.bat
-```
-
-From repository root in PowerShell:
-
-```powershell
-cmd /c setup_and_maintenance.bat
-```
-
-The maintenance menu supports:
-
-- database initialization
-- log cleanup
-- Python `__pycache__` cleanup
-- desktop build cleanup
-- runtime-local uninstall or cleanup tasks
 
 ## Test Startup
 

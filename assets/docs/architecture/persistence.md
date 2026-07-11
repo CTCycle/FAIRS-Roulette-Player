@@ -19,18 +19,19 @@ Last updated: 2026-06-02
 ## Storage Surfaces
 
 - Embedded relational data:
-  - `app/resources/database.db`
+  - `app/resources/database.db` in development
+  - `<FAIRS_USER_DATA_DIR>/database.db` in packaged mode
 - External relational data:
   - PostgreSQL database defined by the configured connection settings
 - Checkpoints:
-  - `app/resources/checkpoints/<checkpoint_id>/...`
+  - `<data-root>/checkpoints/<checkpoint_id>/...`
 - Logs:
-  - `app/resources/logs/*.log`
+  - `<data-root>/logs/*.log`
 
 ## Initialization Rules
 
 - Embedded SQLite auto-initializes on startup only when the database file is missing.
-- PostgreSQL initialization is manual and is exposed through the maintenance script.
+- PostgreSQL initialization is manual and is exposed through `start_on_windows.ps1 init-db`.
 - Startup validation ensures required resource directories exist before the app begins serving traffic.
 
 ## Persistence Boundaries

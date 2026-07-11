@@ -2,77 +2,44 @@ name: Desktop Release
 
 on:
   workflow_dispatch:
-  release:
-    types:
-      - published
+  push:
+    tags: ['v*']
 
 permissions:
   contents: write
 
+concurrency:
+  group: fairs-desktop-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build-windows-desktop:
     runs-on: windows-latest
-
     steps:
       - uses: actions/checkout@v4
-
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: "22.12.0"
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.14"
-
+          node-version: '22.12.0'
       - uses: astral-sh/setup-uv@v6
-
       - uses: dtolnay/rust-toolchain@stable
-
-      - name: Prepare launcher runtime layout
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-
-          $repoRoot = (Get-Location).Path
-          $runtimeRoot = Join-Path $repoRoot "runtimes"
-          $pythonRoot = Join-Path $runtimeRoot "python"
-          $uvRoot = Join-Path $runtimeRoot "uv"
-          $nodeRoot = Join-Path $runtimeRoot "nodejs"
-
-          New-Item -ItemType Directory -Force -Path $pythonRoot, $uvRoot, $nodeRoot | Out-Null
-
-          $pythonExe = (Get-Command python).Source
-          $pythonInstallRoot = Split-Path -Parent $pythonExe
-          Copy-Item -Path (Join-Path $pythonInstallRoot "*") -Destination $pythonRoot -Recurse -Force
-
-          $uvExe = (Get-Command uv).Source
-          Copy-Item -LiteralPath $uvExe -Destination (Join-Path $uvRoot "uv.exe") -Force
-
-          $nodeExe = (Get-Command node).Source
-          $nodeInstallRoot = Split-Path -Parent $nodeExe
-          Copy-Item -Path (Join-Path $nodeInstallRoot "*") -Destination $nodeRoot -Recurse -Force
-
-      - name: Ensure runtime database exists
-        shell: pwsh
-        run: |
-          $databasePath = Join-Path (Get-Location).Path "app\resources\database.db"
-          if (-not (Test-Path $databasePath)) {
-            python -c "import sqlite3, sys; sqlite3.connect(sys.argv[1]).close()" $databasePath
-          }
-
-      - name: Build Tauri desktop artifacts
+        with:
+          targets: x86_64-pc-windows-msvc
+      - name: Build Windows artifacts
         shell: cmd
         run: release\tauri\build_with_tauri.bat
-
-      - name: Upload desktop artifact bundle
+      - name: Verify portable contents
+        shell: pwsh
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File release/tauri/scripts/verify-artifacts.ps1
+      - name: Upload release assets
         uses: actions/upload-artifact@v4
         with:
-          name: windows-desktop-artifacts
-          path: release/windows/**
+          name: fairs-windows-release
+          path: release/windows/FAIRS-*
           if-no-files-found: error
-
-      - name: Upload release assets
-        if: github.event_name == 'release'
+      - name: Publish release assets
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: release/windows/**
+          files: release/windows/FAIRS-*
