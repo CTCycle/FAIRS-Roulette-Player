@@ -1,8 +1,0 @@
-{
-  "schemaVersion": 1,
-  "platform": "windows-x64",
-  "python": { "version": "3.14.2", "url": "https://www.python.org/ftp/python/3.14.2/python-3.14.2-embed-amd64.zip" },
-  "node": { "version": "22.12.0", "url": "https://nodejs.org/dist/v22.12.0/node-v22.12.0-win-x64.zip" },
-  "uv": { "version": "0.9.17", "url": "https://github.com/astral-sh/uv/releases/download/0.9.17/uv-x86_64-pc-windows-msvc.zip" },
-  "sha256": { "python": null, "node": null, "uv": null }
-}

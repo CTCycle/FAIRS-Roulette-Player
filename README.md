@@ -11,7 +11,6 @@
 FAIRS is a research web application for roulette training and inference experiments. It includes:
 - A FastAPI backend for dataset ingestion, training orchestration, checkpoint management, inference sessions, and persistence.
 - A React + Vite frontend for training and inference workflows.
-- An optional Tauri desktop shell for packaged Windows distribution.
 
 ## 2. Runtime Modes
 
@@ -22,30 +21,7 @@ Run from repository root:
 start_on_windows.ps1
 ```
 
-The launcher delegates to `start_on_windows.ps1`, prepares local dependencies when needed, and starts FastAPI plus the Vite development server. Use `start_on_windows.ps1 install` to install explicitly.
-
-### 2.2 Desktop Mode (Tauri Packaging)
-Prerequisites:
-1. Rust installed with default toolchain configured (`rustup default stable`).
-2. Local runtimes already prepared at least once:
-
-```cmd
-start_on_windows.ps1
-```
-
-Build desktop artifacts:
-
-```cmd
-release\tauri\build_with_tauri.bat
-```
-
-Build output:
-  - `release/windows/FAIRS-v<version>-windows-x64.msi`
-  - `release/windows/FAIRS-v<version>-windows-x64-portable.zip`
-
-Versioned desktop source/configuration lives under `app/src-tauri` and should contain only Tauri source code, configuration, icons, capabilities, and required build metadata such as `Cargo.toml`, `Cargo.lock`, `build.rs`, and `tauri.conf.json`.
-
-Generated desktop outputs under `app/src-tauri/target`, `app/src-tauri/bundle`, `app/src-tauri/gen`, and `release/windows` are not committed to Git. Windows `.exe` installers and portable binaries are published through release artifacts, not tracked in the repository.
+The interactive launcher prepares local dependencies, builds the frontend, and starts FastAPI plus the Vite preview server. Select option 2 to install or update dependencies without launching.
 
 ## 3. Configuration
 
@@ -74,11 +50,11 @@ Database backend selection is defined in `settings/.env` (`EMBEDDED_DATABASE`).
   - The application does not initialize PostgreSQL automatically during startup.
   - Initialization is manual via:
 
-```cmd
-start_on_windows.ps1 init-db
+```powershell
+.\start_on_windows.ps1
 ```
 
-Select `Initialize database` to run `app/scripts/initialize_database.py`.
+Select option 3, `Initialize database`, to run `app/scripts/initialize_database.py`.
 
 `app/scripts/initialize_database.py` can also initialize SQLite when SQLite mode is selected, but this is normally unnecessary because SQLite initialization is already handled automatically by app startup.
 
@@ -88,7 +64,6 @@ Select `Initialize database` to run `app/scripts/initialize_database.py`.
 2. Open the UI and upload or generate dataset data.
 3. Run training and manage checkpoints.
 4. Start inference sessions using a selected checkpoint.
-5. Optionally package a desktop build with Tauri when needed.
 
 ## 5. Testing
 
@@ -112,11 +87,10 @@ Use:
 start_on_windows.ps1
 ```
 
-Available actions include `install`, `init-db`, `uninstall`, `clean-desktop`, `clean-logs`, and `clean-cache`.
-Desktop build cleanup removes generated output directories only; it does not delete `app/src-tauri` source/config files.
+The interactive menu supports launching, dependency installation, database initialization, tests, log cleanup, cache cleanup, and uninstalling local dependencies while preserving user data.
 
 ## 7. Resources
-- Development application data: `app/resources`; packaged data is redirected through `FAIRS_USER_DATA_DIR`
+- Application data: `app/resources`; `FAIRS_USER_DATA_DIR` can override the mutable data root
 - Launcher-managed runtimes and environment: `runtimes`
 
 ## 8. User Documentation
