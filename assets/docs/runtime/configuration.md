@@ -1,6 +1,6 @@
 ## Configuration
 
-Last updated: 2026-06-05
+Last updated: 2026-07-11
 
 ## Environment Variables
 
@@ -10,6 +10,7 @@ The runtime scripts and backend consume these environment keys:
 - `FASTAPI_PORT`
 - `UI_HOST`
 - `UI_PORT`
+- `BACKEND_VISIBLE`
 - `ENABLE_API_DOCS`
 - `RELOAD`
 - `OPTIONAL_DEPENDENCIES`
@@ -28,14 +29,12 @@ The runtime scripts and backend consume these environment keys:
 - `MPLBACKEND`
 - `KERAS_BACKEND`
 
-## Internal Runtime Flags
+## Internal Runtime Settings
 
-- `FAIRS_TAURI_MODE=true`
-  - injected by the desktop runtime when spawning the backend
 - `UV_PROJECT_ENVIRONMENT`
-  - set by startup and build scripts to target the runtime virtual environment
+  - set by the launcher to target the runtime virtual environment
 - `FAIRS_USER_DATA_DIR`
-  - overrides the mutable database, logs, and checkpoints directory for packaged desktop or portable mode
+  - overrides the mutable database, logs, and checkpoints directory
 
 ## Structured Settings
 
@@ -59,12 +58,12 @@ The runtime scripts and backend consume these environment keys:
 - `EMBEDDED_DATABASE=false`
   - uses PostgreSQL and requires explicit configuration plus manual initialization
 
-### Desktop Runtime
+### Backend Visibility
 
-- `FAIRS_TAURI_MODE=true` requires a built frontend at `app/client/dist/index.html`.
-  - Desktop startup injects backend process environment values such as `MPLBACKEND` and `KERAS_BACKEND`.
+- `BACKEND_VISIBLE=false` starts the backend without a visible terminal window.
+- `BACKEND_VISIBLE=true` opens a dedicated backend terminal so logs remain visible.
 
-When `FAIRS_USER_DATA_DIR` is absent, development mode continues to use `app/resources`. Packaged MSI mode supplies a per-user local-data directory; portable mode supplies a sibling `data` directory.
+When `FAIRS_USER_DATA_DIR` is absent, the application uses `app/resources`.
 
 ## Related Files
 

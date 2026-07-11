@@ -1,6 +1,6 @@
 ## Runtime Modes
 
-Last updated: 2026-06-02
+Last updated: 2026-07-11
 
 ## Supported Modes
 
@@ -9,22 +9,11 @@ Last updated: 2026-06-02
 - Backend:
   - FastAPI via `uvicorn`
 - Frontend:
-  - Vite development server
+  - Vite preview server for the built frontend
 - Startup orchestrator:
   - `start_on_windows.ps1`
 - Intended use:
   - day-to-day development and experimentation
-
-### Desktop Runtime
-
-- Shell:
-  - Tauri app in `app/src-tauri`
-- Backend:
-  - local `uvicorn` process spawned by `src-tauri/src/main.rs`
-- Build and packaging orchestrator:
-  - `release/tauri/build_with_tauri.bat`
-- Intended use:
-  - packaged Windows desktop distribution
 
 ### Container Runtime
 
@@ -34,9 +23,7 @@ Last updated: 2026-06-02
 ## Cross-Mode Differences
 
 - Local mode launches browser-based access on the configured UI host and port.
-- Desktop mode launches only the Tauri window and targets the backend root URL once ready.
-- Desktop mode fails fast if Tauri is enabled but the built frontend is missing.
-- Embedded and external database behavior differ by environment configuration, not by UI surface.
+- Embedded and external database behavior differ by environment configuration.
 
 ## Related Files
 

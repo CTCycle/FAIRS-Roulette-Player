@@ -38,9 +38,6 @@ test = [
 [tool.hatch.build.targets.wheel]
 packages = ["server"] 
 
-[tool.ruff]
-exclude = ["../src-tauri/target"]
-
 [[tool.uv.index]]
 name = "pytorch-cu130"
 url = "https://download.pytorch.org/whl/cu130"

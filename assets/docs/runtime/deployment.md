@@ -1,43 +1,25 @@
 ## Deployment
 
-Last updated: 2026-06-23
+Last updated: 2026-07-11
 
-## Desktop Packaging Outputs
+## Supported Distribution
 
-`release/tauri/build_with_tauri.bat` exports Windows artifacts under:
+FAIRS is run locally from its repository through `start_on_windows.ps1`. The repository does not maintain an installer or bundled application release path.
 
-- `release/windows/installers`
-- `release/windows/portable`
+## Local Build Chain
 
-The versioned Tauri project lives under `app/src-tauri` and is limited to source code, configuration, icons, capabilities, and required build metadata.
-
-Generated packaging outputs under `app/src-tauri/target`, `app/src-tauri/bundle`, `app/src-tauri/gen`, and `release/windows` are local or release artifacts and must not be committed to Git. Desktop binaries are published as release artifacts instead of repository content.
-
-## Build Chain
-
-- Frontend build:
-  - `npm run build` in `app/client`
-- Tauri build:
-  - `npm run tauri:build`
-- Windows export:
-  - `npm run tauri:export:windows`
-- End-to-end helper:
-  - `npm run tauri:build:release`
-  - typically invoked through `release/tauri/build_with_tauri.bat`
-
-## Bundled Runtime Expectations
-
-- The packaged desktop runtime bundles the frontend build, backend source, settings, resources, and required runtime payloads as configured by Tauri packaging.
-- Export scripts expect the Tauri release bundle and portable payload entries to exist before artifact export completes.
+- portable Python, uv, and Node.js are prepared under `runtimes/`
+- backend dependencies are synchronized into `app/server/.venv`
+- frontend dependencies are installed in `app/client/node_modules`
+- `npm run build` produces the frontend used by `npm run preview`
 
 ## Constraints
 
-- Desktop packaging is Windows-focused.
-- Linux and macOS desktop packaging are not maintained as first-class workflows here.
+- Windows is the supported launcher platform.
 - No container deployment path is documented or supported in this repository.
 - Training workloads remain compute-heavy and depend on the existing worker-process model.
 
 ## Related Files
 
 - Read `startup.md` for the command entry points.
-- Read `../coding/windows_automation.md` for implementation constraints around scripts and Tauri behavior.
+- Read `../coding/windows_automation.md` for implementation constraints around launcher scripts.

@@ -1,6 +1,6 @@
 ## Testing And Quality
 
-Last updated: 2026-06-02
+Last updated: 2026-07-11
 
 ## Quality Baseline
 
@@ -35,7 +35,7 @@ Primary automated test surfaces live under `app/tests`:
 ## Change Expectations
 
 - Run the smallest relevant test slice first.
-- Use broader checks when shared infrastructure, startup flow, or packaging behavior changes.
+- Use broader checks when shared infrastructure or startup flow changes.
 - Keep QA artifacts in the project `assets/QA/` location when persistent evidence is needed.
 - Do not leave temporary logs, screenshots, or validation scraps scattered through the repository.
 

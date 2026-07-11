@@ -1,6 +1,6 @@
 ## Persistence
 
-Last updated: 2026-06-02
+Last updated: 2026-07-11
 
 ## Database Backends
 
@@ -19,8 +19,8 @@ Last updated: 2026-06-02
 ## Storage Surfaces
 
 - Embedded relational data:
-  - `app/resources/database.db` in development
-  - `<FAIRS_USER_DATA_DIR>/database.db` in packaged mode
+  - `app/resources/database.db` by default
+  - `<FAIRS_USER_DATA_DIR>/database.db` when a custom data root is configured
 - External relational data:
   - PostgreSQL database defined by the configured connection settings
 - Checkpoints:
@@ -31,7 +31,7 @@ Last updated: 2026-06-02
 ## Initialization Rules
 
 - Embedded SQLite auto-initializes on startup only when the database file is missing.
-- PostgreSQL initialization is manual and is exposed through `start_on_windows.ps1 init-db`.
+- PostgreSQL initialization is manual and is exposed as option 3 in `start_on_windows.ps1`.
 - Startup validation ensures required resource directories exist before the app begins serving traffic.
 
 ## Persistence Boundaries

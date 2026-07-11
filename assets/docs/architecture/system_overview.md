@@ -1,14 +1,13 @@
 ## System Overview
 
-Last updated: 2026-06-02
+Last updated: 2026-07-11
 
 ## Summary
 
-FAIRS is a Windows-first roulette research application with three main runtime surfaces:
+FAIRS is a Windows-first roulette research application with two main runtime surfaces:
 
 - FastAPI backend in `app/server`
 - React + TypeScript frontend in `app/client/src`
-- Optional Tauri desktop shell in `app/src-tauri`
 
 The backend is the system of record for API behavior, training orchestration, inference sessions, and persistence.
 
@@ -32,12 +31,6 @@ The structure below is source-focused and excludes dependency, cache, and genera
 │  │  │  ├─ styles/
 │  │  │  ├─ types/
 │  │  │  └─ utils/
-│  │  └─ src-tauri/
-│  │     ├─ Cargo.toml
-│  │     ├─ tauri.conf.json
-│  │     ├─ capabilities/
-│  │     ├─ icons/
-│  │     └─ src/main.rs
 │  ├─ resources/
 │  │  ├─ checkpoints/
 │  │  ├─ logs/
@@ -63,14 +56,9 @@ The structure below is source-focused and excludes dependency, cache, and genera
 │     └─ unit/
 ├─ assets/
 │  └─ docs/
-├─ release/
-│  └─ tauri/
-│     ├─ build_with_tauri.bat
-│     └─ scripts/
 ├─ runtimes/
 ├─ settings/
 │  └─ configurations.json
-├─ start_on_windows.ps1
 └─ start_on_windows.ps1
 ```
 
@@ -80,16 +68,10 @@ The structure below is source-focused and excludes dependency, cache, and genera
   - `app/server/app.py`
 - Local launcher:
   - `start_on_windows.ps1`
-- Maintenance launcher:
-  - `start_on_windows.ps1`
 - Frontend entry:
   - `app/client/src/main.tsx`
 - Frontend route composition:
   - `app/client/src/App.tsx`
-- Desktop shell entry:
-  - `app/src-tauri/src/main.rs`
-- Desktop packaging helper:
-  - `release/tauri/build_with_tauri.bat`
 
 ## Frontend Structure
 

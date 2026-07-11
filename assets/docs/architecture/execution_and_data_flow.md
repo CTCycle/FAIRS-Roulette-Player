@@ -1,6 +1,6 @@
 ## Execution And Data Flow
 
-Last updated: 2026-06-02
+Last updated: 2026-07-11
 
 ## Backend Layers
 
@@ -84,7 +84,7 @@ Last updated: 2026-06-02
 - `app/server/services/checkpoints.py`
   - checkpoint resolution, metadata, listing, deletion, model loading, and strategy model loading
 - `app/server/services/startup_validation.py`
-  - runtime pre-flight checks, storage directory creation, and Tauri-mode validation
+  - runtime pre-flight checks and storage directory creation
 - `app/server/repositories/schemas/models.py`
   - SQLAlchemy schema definitions and constraints
 - `app/server/repositories/database/initializer.py`
