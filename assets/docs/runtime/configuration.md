@@ -10,7 +10,7 @@ The runtime scripts and backend consume these environment keys:
 - `FASTAPI_PORT`
 - `UI_HOST`
 - `UI_PORT`
-- `BACKEND_VISIBLE`
+- `BACKEND_LOGS_VISIBLE`
 - `ENABLE_API_DOCS`
 - `RELOAD`
 - `OPTIONAL_DEPENDENCIES`
@@ -58,10 +58,11 @@ The runtime scripts and backend consume these environment keys:
 - `EMBEDDED_DATABASE=false`
   - uses PostgreSQL and requires explicit configuration plus manual initialization
 
-### Backend Visibility
+### Backend Log Visibility
 
-- `BACKEND_VISIBLE=false` starts the backend without a visible terminal window.
-- `BACKEND_VISIBLE=true` opens a dedicated backend terminal so logs remain visible.
+- `BACKEND_LOGS_VISIBLE=false` starts the backend detached and hidden.
+- `BACKEND_LOGS_VISIBLE=true` opens a dedicated backend terminal so logs remain visible.
+- When `BACKEND_LOGS_VISIBLE` is absent, the launcher defaults to `true`.
 
 When `FAIRS_USER_DATA_DIR` is absent, the application uses `app/resources`.
 
