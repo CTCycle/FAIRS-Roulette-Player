@@ -95,7 +95,7 @@ function Import-DotEnv {
         UI_PORT = '8001'
         RELOAD = 'false'
         OPTIONAL_DEPENDENCIES = 'false'
-        BACKEND_VISIBLE = 'false'
+        BACKEND_LOGS_VISIBLE = 'true'
     }
     foreach ($entry in $defaults.GetEnumerator()) {
         [Environment]::SetEnvironmentVariable($entry.Key, $entry.Value, 'Process')
@@ -221,9 +221,9 @@ function Start-Application {
     $reloadArgument = if ($env:RELOAD -eq 'true') { ' --reload' } else { '' }
     $backendArgs = "-m uvicorn server.app:app --app-dir `"$($repoRoot)\app`" --host $($env:FASTAPI_HOST) --port $fastApiPort$reloadArgument --log-level info"
     Write-Step 'Launching backend.'
-    if ($env:BACKEND_VISIBLE -eq 'true') {
-        $escapedPython = $venvPython.Replace('"', '\"')
-        Start-Process -FilePath 'cmd.exe' -ArgumentList '/c', "start `"Backend`" cmd /c `"`"$escapedPython`" $backendArgs`"" | Out-Null
+    if ($env:BACKEND_LOGS_VISIBLE -eq 'true') {
+        $visibleBackendCommand = 'start "FAIRS Backend" /D "' + $repoRoot + '" cmd.exe /k ""' + $venvPython + '" ' + $backendArgs + '"'
+        Start-Process -FilePath 'cmd.exe' -ArgumentList @('/d', '/c', $visibleBackendCommand) -WorkingDirectory $repoRoot | Out-Null
         $backendProcess = $null
     } else {
         $backendProcess = Start-Process -FilePath $venvPython -ArgumentList $backendArgs -WorkingDirectory $repoRoot -WindowStyle Hidden -PassThru
@@ -349,7 +349,7 @@ function Show-Menu {
         if ($selection -eq '8') { break }
         try {
             switch ($selection) {
-                '1' { Start-Application; return }
+                '1' { Start-Application; exit 0 }
                 '2' { Install-Dependencies -PruneCache }
                 '3' { Initialize-Database }
                 '4' { Invoke-TestSuite }
