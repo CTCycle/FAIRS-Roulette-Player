@@ -1,3 +1,4 @@
+###############################################################################
 def test_health_reports_fairs_metadata(monkeypatch):
     monkeypatch.setenv("KERAS_BACKEND", "torch")
     monkeypatch.delenv("FAIRS_TAURI_MODE", raising=False)
