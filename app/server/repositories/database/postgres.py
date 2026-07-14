@@ -1,48 +1,30 @@
 from __future__ import annotations
 
-import urllib.parse
-
 import sqlalchemy
-from sqlalchemy.engine import Engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.engine import Engine, URL
 
 from server.configurations import DatabaseSettings
-from server.repositories.database.common import (
-    SQLAlchemyRepositoryBase,
-    normalize_table_name as normalize_table_name,
-)
-from server.repositories.database.utils import (
-    build_postgres_connect_args,
-    normalize_postgres_engine,
-)
+from server.repositories.database.utils import build_postgres_connect_args, normalize_postgres_engine
 
-###############################################################################
-class PostgresRepository(SQLAlchemyRepositoryBase):
 
-    # -------------------------------------------------------------------------
-    def __init__(self, settings: DatabaseSettings) -> None:
-        if not settings.host:
-            raise ValueError("Database host must be provided for external database.")
-        if not settings.database_name:
-            raise ValueError("Database name must be provided for external database.")
-        if not settings.username:
-            raise ValueError(
-                "Database username must be provided for external database."
-            )
+def build_postgres_engine(settings: DatabaseSettings) -> Engine:
+    if not settings.host or not settings.database_name or not settings.username:
+        raise ValueError("PostgreSQL host, database name, and username are required.")
+    url = URL.create(
+        drivername=normalize_postgres_engine(settings.engine),
+        username=settings.username,
+        password=settings.password or "",
+        host=settings.host,
+        port=settings.port or 5432,
+        database=settings.database_name,
+    )
+    return sqlalchemy.create_engine(
+        url,
+        echo=False,
+        future=True,
+        connect_args=build_postgres_connect_args(settings),
+        pool_pre_ping=True,
+    )
 
-        port = settings.port or 5432
-        engine_name = normalize_postgres_engine(settings.engine)
-        connect_args = build_postgres_connect_args(settings)
 
-        safe_username = urllib.parse.quote_plus(settings.username)
-        safe_password = urllib.parse.quote_plus(settings.password or "")
-        self.db_path: str | None = None
-        self.engine: Engine = sqlalchemy.create_engine(
-            f"{engine_name}://{safe_username}:{safe_password}@{settings.host}:{port}/{settings.database_name}",
-            echo=False,
-            future=True,
-            connect_args=connect_args,
-            pool_pre_ping=True,
-        )
-        self.Session = sessionmaker(bind=self.engine, future=True)
-        self.insert_batch_size = settings.insert_batch_size
+__all__ = ["build_postgres_engine"]

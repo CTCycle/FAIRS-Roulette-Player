@@ -29,7 +29,8 @@ from server.api.system import router as system_router
 from server.configurations import get_server_settings
 from server.repositories.database.backend import FAIRSDatabase
 from server.repositories.database.initializer import initialize_database
-from server.repositories.queries.data import DataRepositoryQueries
+from server.repositories.datasets import DatasetRepository
+from server.repositories.inference import InferenceRepository
 from server.repositories.serialization.data import DataSerializer
 from server.services.checkpoints import CheckpointService
 from server.services.datasets import DatasetService
@@ -90,8 +91,11 @@ async def app_lifespan(application: FastAPI) -> AsyncIterator[None]:
     run_startup_validations(settings)
 
     database = FAIRSDatabase()
-    queries = DataRepositoryQueries(database)
-    serializer = DataSerializer(queries)
+    database.validate_schema()
+    serializer = DataSerializer(
+        datasets=DatasetRepository(database),
+        inference=InferenceRepository(database),
+    )
     job_manager = create_job_manager()
     checkpoint_service = CheckpointService()
 

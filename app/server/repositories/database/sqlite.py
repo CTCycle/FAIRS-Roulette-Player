@@ -6,42 +6,30 @@ from typing import Any
 import sqlalchemy
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
-from sqlalchemy.orm import sessionmaker
 
 from server.common import path as shared_paths
 from server.configurations import DatabaseSettings
-from server.repositories.database.common import (
-    SQLAlchemyRepositoryBase,
-    normalize_table_name as normalize_table_name,
-)
-from server.repositories.schemas.models import Base
 
-SQLITE_FOREIGN_KEYS_PRAGMA = "PRAGMA foreign_keys=ON"
 
-###############################################################################
 def set_sqlite_pragma(dbapi_connection: Any, _connection_record: Any) -> None:
     cursor = dbapi_connection.cursor()
-    cursor.execute(SQLITE_FOREIGN_KEYS_PRAGMA)
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.execute("PRAGMA busy_timeout=30000")
+    cursor.execute("PRAGMA journal_mode=WAL")
     cursor.close()
 
-###############################################################################
-class SQLiteRepository(SQLAlchemyRepositoryBase):
 
-    # -------------------------------------------------------------------------
-    def __init__(
-        self,
-        settings: DatabaseSettings,
-        initialize_schema: bool = False,
-    ) -> None:
-        self.db_path: Path = shared_paths.DATABASE_PATH
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        self.engine: Engine = sqlalchemy.create_engine(
-            f"sqlite:///{self.db_path}",
-            echo=False,
-            future=True,
-        )
-        event.listen(self.engine, "connect", set_sqlite_pragma)
-        self.Session = sessionmaker(bind=self.engine, future=True)
-        self.insert_batch_size = settings.insert_batch_size
-        if initialize_schema:
-            Base.metadata.create_all(self.engine)
+def build_sqlite_engine(settings: DatabaseSettings) -> Engine:
+    db_path = Path(shared_paths.DATABASE_PATH)
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    engine = sqlalchemy.create_engine(
+        f"sqlite:///{db_path}",
+        echo=False,
+        future=True,
+        connect_args={"check_same_thread": False},
+    )
+    event.listen(engine, "connect", set_sqlite_pragma)
+    return engine
+
+
+__all__ = ["build_sqlite_engine", "set_sqlite_pragma"]
