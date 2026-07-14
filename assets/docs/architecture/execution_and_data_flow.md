@@ -1,6 +1,6 @@
 ## Execution And Data Flow
 
-Last updated: 2026-07-11
+Last updated: 2026-07-14
 
 ## Backend Layers
 
@@ -42,7 +42,7 @@ Last updated: 2026-07-11
   - `DatasetService`
   - `DatasetImportService`
   - `DataSerializer`
-  - `DataRepositoryQueries`
+  - `DatasetRepository`
   - `FAIRSDatabase`
 - Training start or resume:
   - `api/training.py`
@@ -61,7 +61,7 @@ Last updated: 2026-07-11
   - `api/datasets.py`
   - `DatasetService`
   - `DataSerializer`
-  - repository queries and backend
+  - `DatasetRepository`
 
 ## Core Module Responsibilities
 
@@ -91,6 +91,10 @@ Last updated: 2026-07-11
   - database initialization and embedded-vs-external setup rules
 - `app/server/repositories/database/utils.py`
   - database utility functions: engine normalization, datetime coercion, Postgres connect-arg builder
+- `app/server/repositories/datasets.py`
+  - atomic dataset replacement, summaries, reads, and cascade deletion
+- `app/server/repositories/inference.py`
+  - inference session and step persistence
 
 ## Concurrency Model
 

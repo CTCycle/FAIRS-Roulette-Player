@@ -8,7 +8,6 @@ from server.common.constants import FASTAPI_VERSION
 
 router = APIRouter(tags=["system"])
 
-
 ###############################################################################
 @router.get("/health")
 def health() -> dict[str, str]:

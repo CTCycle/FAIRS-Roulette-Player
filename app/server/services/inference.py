@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from server.domain.inference import (
@@ -34,7 +34,7 @@ class InferenceSession:
         self.player = player
         self.initial_capital = int(initial_capital)
         self.current_bet = int(current_bet)
-        self.started_at = datetime.now()
+        self.started_at = datetime.now(timezone.utc)
         self.step_count = 0
         self.last_seen = time.time()
         self.last_prediction: dict[str, Any] | None = None
@@ -160,7 +160,7 @@ class InferenceService:
             "observed_outcome_id": observed_outcome,
             "reward": reward,
             "capital_after": capital_after,
-            "recorded_at": datetime.now(),
+            "recorded_at": datetime.now(timezone.utc),
         }
         self.serializer.upsert_inference_session_step(row)
 
