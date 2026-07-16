@@ -35,6 +35,8 @@ The runtime scripts and backend consume these environment keys:
   - set by the launcher to target the runtime virtual environment
 - `FAIRS_USER_DATA_DIR`
   - overrides the mutable database, logs, and checkpoints directory
+- `FAIRS_LOG_DIR`
+  - overrides the log directory; primarily useful for isolated test runs
 
 ## Structured Settings
 

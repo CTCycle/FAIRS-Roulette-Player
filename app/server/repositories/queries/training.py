@@ -8,10 +8,14 @@ from server.repositories.database.backend import FAIRSDatabase
 from server.repositories.schemas.models import DatasetOutcomes, Datasets
 
 
+###############################################################################
 class TrainingRepositoryQueries:
+
+    # -------------------------------------------------------------------------
     def __init__(self, database: FAIRSDatabase) -> None:
         self.database = database
 
+    # -------------------------------------------------------------------------
     def load_training_dataset(self, dataset_id: int | None = None) -> pd.DataFrame:
         with self.database.Session() as session:
             stmt = select(DatasetOutcomes.dataset_id, DatasetOutcomes.sequence_index, DatasetOutcomes.outcome_id).join(Datasets, Datasets.dataset_id == DatasetOutcomes.dataset_id).where(Datasets.dataset_kind == "training")

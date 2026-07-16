@@ -10,6 +10,7 @@ from server.repositories.database.backend import FAIRSDatabase
 from server.repositories.database.utils import build_postgres_connect_args, normalize_postgres_engine
 
 
+###############################################################################
 def build_postgres_url(settings: DatabaseSettings, database_name: str) -> sqlalchemy.URL:
     return sqlalchemy.URL.create(
         drivername=normalize_postgres_engine(settings.engine),
@@ -21,16 +22,19 @@ def build_postgres_url(settings: DatabaseSettings, database_name: str) -> sqlalc
     )
 
 
+###############################################################################
 def escape_postgres_identifier(identifier: str) -> str:
     return identifier.replace('"', '""')
 
 
+###############################################################################
 def is_missing_postgres_database_error(exc: SQLAlchemyError, target_database: str) -> bool:
     original = getattr(exc, "orig", None)
     sql_state = getattr(original, "sqlstate", None) or getattr(original, "pgcode", None)
     return sql_state == "3D000" or ("does not exist" in str(exc).lower() and target_database.lower() in str(exc).lower())
 
 
+###############################################################################
 def postgres_database_exists(settings: DatabaseSettings, target_database: str, connect_args: dict[str, object]) -> bool:
     engine = sqlalchemy.create_engine(build_postgres_url(settings, target_database), future=True, connect_args=connect_args, pool_pre_ping=True)
     try:
@@ -44,6 +48,7 @@ def postgres_database_exists(settings: DatabaseSettings, target_database: str, c
         engine.dispose()
 
 
+###############################################################################
 def initialize_sqlite_database(settings: DatabaseSettings) -> None:
     database = FAIRSDatabase(settings)
     database.create_schema()
@@ -51,6 +56,7 @@ def initialize_sqlite_database(settings: DatabaseSettings) -> None:
     logger.info("Initialized SQLite database at %s", database.db_path)
 
 
+###############################################################################
 def ensure_postgres_database(settings: DatabaseSettings) -> str:
     if not settings.host or not settings.username or not settings.database_name:
         raise ValueError("PostgreSQL host, username, and database name are required.")
@@ -71,6 +77,7 @@ def ensure_postgres_database(settings: DatabaseSettings) -> str:
     return target
 
 
+###############################################################################
 def initialize_database(settings: DatabaseSettings | None = None) -> None:
     resolved = settings or get_server_settings().database
     try:

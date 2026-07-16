@@ -11,10 +11,12 @@ from server.common.checkpoints import MAX_CHECKPOINT_NAME_LENGTH
 from server.common.session import MAX_SESSION_ID_LENGTH
 
 
+###############################################################################
 class UTCDateTime(TypeDecorator[datetime]):
     impl = DateTime(timezone=True)
     cache_ok = True
 
+    # -------------------------------------------------------------------------
     def process_bind_param(self, value: datetime | None, _dialect: Any) -> datetime | None:
         if value is None:
             return None
@@ -22,16 +24,19 @@ class UTCDateTime(TypeDecorator[datetime]):
             return value.replace(tzinfo=timezone.utc)
         return value.astimezone(timezone.utc)
 
+    # -------------------------------------------------------------------------
     def process_result_value(self, value: datetime | None, _dialect: Any) -> datetime | None:
         if value is None:
             return None
         return (value if value.tzinfo else value.replace(tzinfo=timezone.utc)).astimezone(timezone.utc)
 
 
+###############################################################################
 class Base(DeclarativeBase):
     pass
 
 
+###############################################################################
 class Datasets(Base):
     __tablename__ = "datasets"
 
@@ -51,6 +56,7 @@ class Datasets(Base):
     )
 
 
+###############################################################################
 class DatasetOutcomes(Base):
     __tablename__ = "dataset_outcomes"
 
@@ -65,6 +71,7 @@ class DatasetOutcomes(Base):
     )
 
 
+###############################################################################
 class InferenceSessions(Base):
     __tablename__ = "inference_sessions"
 
@@ -82,6 +89,7 @@ class InferenceSessions(Base):
     )
 
 
+###############################################################################
 class InferenceSessionSteps(Base):
     __tablename__ = "inference_session_steps"
 
