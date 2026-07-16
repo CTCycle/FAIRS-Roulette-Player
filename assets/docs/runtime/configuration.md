@@ -14,6 +14,7 @@ The runtime scripts and backend consume these environment keys:
 - `ENABLE_API_DOCS`
 - `RELOAD`
 - `OPTIONAL_DEPENDENCIES`
+- `always_rebuild`
 - `EMBEDDED_DATABASE`
 - `DATABASE_URL`
 - `DATABASE_ENGINE`
@@ -65,6 +66,11 @@ The runtime scripts and backend consume these environment keys:
 - `BACKEND_LOGS_VISIBLE=false` starts the backend detached and hidden.
 - `BACKEND_LOGS_VISIBLE=true` opens a dedicated backend terminal so logs remain visible.
 - When `BACKEND_LOGS_VISIBLE` is absent, the launcher defaults to `true`.
+
+### Frontend Build
+
+- `always_rebuild=true` rebuilds the frontend whenever the application starts.
+- `always_rebuild=false` skips the frontend build at application startup.
 
 When `FAIRS_USER_DATA_DIR` is absent, the application uses `app/resources`.
 
