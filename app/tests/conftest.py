@@ -5,6 +5,7 @@ Provides fixtures for Playwright page objects and API client.
 
 import os
 import sys
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -13,6 +14,12 @@ import pytest
 APP_ROOT = Path(__file__).resolve().parents[1]
 if str(APP_ROOT) not in sys.path:
     sys.path.insert(0, str(APP_ROOT))
+
+# Keep collection-time imports from writing logs into the checkout.  This must
+# be configured before service modules import the application logger.
+TEST_LOG_DIR = Path(tempfile.gettempdir()) / "fairs-roulette-player-tests" / "logs"
+TEST_LOG_DIR.mkdir(parents=True, exist_ok=True)
+os.environ.setdefault("FAIRS_LOG_DIR", str(TEST_LOG_DIR))
 
 ###############################################################################
 def _normalize_connect_host(host: str) -> str:

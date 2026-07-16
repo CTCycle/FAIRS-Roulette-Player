@@ -12,6 +12,7 @@ from server.repositories.schemas.models import DatasetOutcomes, Datasets
 MAX_DATASET_NAME_LENGTH = 128
 
 
+###############################################################################
 def normalize_dataset_name(value: str) -> str:
     name = value.strip()
     if not name or len(name) > MAX_DATASET_NAME_LENGTH or any(ord(char) < 32 for char in name):
@@ -19,14 +20,19 @@ def normalize_dataset_name(value: str) -> str:
     return name
 
 
+###############################################################################
 class DatasetRepository:
+
+    # -------------------------------------------------------------------------
     def __init__(self, database: FAIRSDatabase) -> None:
         self.database = database
 
+    # -------------------------------------------------------------------------
     @staticmethod
     def _key(name: str) -> str:
         return name.casefold()
 
+    # -------------------------------------------------------------------------
     @staticmethod
     def _row(dataset: Datasets, row_count: int | None = None) -> dict[str, Any]:
         result = {
@@ -40,11 +46,13 @@ class DatasetRepository:
             result["row_count"] = row_count
         return result
 
+    # -------------------------------------------------------------------------
     def get(self, dataset_id: int) -> dict[str, Any] | None:
         with self.database.Session() as session:
             dataset = session.get(Datasets, dataset_id)
             return None if dataset is None else self._row(dataset)
 
+    # -------------------------------------------------------------------------
     def list(self, dataset_kind: str | None = None, *, limit: int | None = None, offset: int = 0) -> list[dict[str, Any]]:
         with self.database.Session() as session:
             stmt = select(Datasets)
@@ -55,6 +63,7 @@ class DatasetRepository:
                 stmt = stmt.limit(max(limit, 0))
             return [self._row(dataset) for dataset in session.scalars(stmt)]
 
+    # -------------------------------------------------------------------------
     def summaries(self, dataset_kind: str | None = None) -> list[dict[str, Any]]:
         with self.database.Session() as session:
             count = select(func.count(DatasetOutcomes.sequence_index)).where(DatasetOutcomes.dataset_id == Datasets.dataset_id).scalar_subquery()
@@ -64,6 +73,7 @@ class DatasetRepository:
             stmt = stmt.order_by(Datasets.dataset_kind, Datasets.dataset_name_key, Datasets.dataset_id)
             return [self._row(dataset, int(row_count)) for dataset, row_count in session.execute(stmt)]
 
+    # -------------------------------------------------------------------------
     def import_replacement(self, dataset_name: str, dataset_kind: str, outcomes: pd.DataFrame) -> dict[str, Any]:
         clean_name = normalize_dataset_name(dataset_name)
         clean_kind = dataset_kind.strip().lower()
@@ -85,6 +95,7 @@ class DatasetRepository:
                 session.execute(DatasetOutcomes.__table__.insert(), [{"dataset_id": dataset.dataset_id, **row} for row in records[start : start + self.database.insert_batch_size]])
             return {"dataset_id": dataset.dataset_id, "dataset_name": dataset.dataset_name, "dataset_kind": dataset.dataset_kind, "rows_imported": len(records)}
 
+    # -------------------------------------------------------------------------
     def outcomes(self, dataset_id: int) -> pd.DataFrame:
         with self.database.Session() as session:
             rows = session.execute(select(DatasetOutcomes.dataset_id, DatasetOutcomes.sequence_index, DatasetOutcomes.outcome_id).where(DatasetOutcomes.dataset_id == dataset_id).order_by(DatasetOutcomes.sequence_index)).mappings().all()
@@ -93,10 +104,12 @@ class DatasetRepository:
             frame["outcome"] = frame["outcome_id"]
         return frame
 
+    # -------------------------------------------------------------------------
     def delete(self, dataset_id: int) -> None:
         with self.database.transaction() as session:
             session.execute(delete(Datasets).where(Datasets.dataset_id == dataset_id))
 
+    # -------------------------------------------------------------------------
     def clear(self, dataset_kind: str | None = None) -> None:
         with self.database.transaction() as session:
             stmt = delete(Datasets)

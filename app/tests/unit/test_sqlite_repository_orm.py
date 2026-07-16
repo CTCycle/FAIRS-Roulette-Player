@@ -9,10 +9,12 @@ from server.repositories.datasets import DatasetRepository
 from server.repositories.inference import InferenceRepository
 
 
+###############################################################################
 def build_sqlite_settings(insert_batch_size: int = 2) -> DatabaseSettings:
     return DatabaseSettings(True, None, None, None, None, None, None, False, None, 10, insert_batch_size)
 
 
+###############################################################################
 def test_sqlite_persistence_contract() -> None:
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
     event.listen(engine, "connect", lambda connection, _: connection.execute("PRAGMA foreign_keys=ON"))

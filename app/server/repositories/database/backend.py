@@ -12,9 +12,11 @@ from server.configurations.startup import get_server_settings
 from server.repositories.schemas.models import Base
 
 
+###############################################################################
 class FAIRSDatabase:
     """Owns the SQLAlchemy engine, sessions, schema lifecycle, and transactions."""
 
+    # -------------------------------------------------------------------------
     def __init__(self, settings: DatabaseSettings | None = None, engine: Engine | None = None) -> None:
         self.settings = settings or get_server_settings().database
         if engine is not None:
@@ -31,9 +33,11 @@ class FAIRSDatabase:
         self.Session = sessionmaker(bind=self.engine, future=True, expire_on_commit=False)
         self.insert_batch_size = self.settings.insert_batch_size
 
+    # -------------------------------------------------------------------------
     def create_schema(self) -> None:
         Base.metadata.create_all(self.engine)
 
+    # -------------------------------------------------------------------------
     def validate_schema(self) -> None:
         inspector = inspect(self.engine)
         missing_tables = set(Base.metadata.tables) - set(inspector.get_table_names())
@@ -48,14 +52,17 @@ class FAIRSDatabase:
             details.extend(f"{name} columns={', '.join(sorted(columns))}" for name, columns in missing_columns.items())
             raise RuntimeError(f"Database schema is incompatible with the canonical schema ({'; '.join(details)}). Recreate or migrate the database.")
 
+    # -------------------------------------------------------------------------
     @contextmanager
     def transaction(self) -> Iterator[Session]:
         with self.Session.begin() as session:
             yield session
 
+    # -------------------------------------------------------------------------
     def dispose(self) -> None:
         self.engine.dispose()
 
+    # -------------------------------------------------------------------------
     def close(self) -> None:
         self.dispose()
 

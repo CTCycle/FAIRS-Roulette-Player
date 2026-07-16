@@ -11,6 +11,7 @@ from server.common import path as shared_paths
 from server.configurations import DatabaseSettings
 
 
+###############################################################################
 def set_sqlite_pragma(dbapi_connection: Any, _connection_record: Any) -> None:
     cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA foreign_keys=ON")
@@ -19,6 +20,7 @@ def set_sqlite_pragma(dbapi_connection: Any, _connection_record: Any) -> None:
     cursor.close()
 
 
+###############################################################################
 def build_sqlite_engine(settings: DatabaseSettings) -> Engine:
     db_path = Path(shared_paths.DATABASE_PATH)
     db_path.parent.mkdir(parents=True, exist_ok=True)
