@@ -112,10 +112,14 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
     };
 
     useEffect(() => {
+        // Data loading updates the async request state for this refresh cycle.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         void loadCheckpoints();
     }, [refreshKey]);
 
     useEffect(() => {
+        // Data loading updates the async request state for this refresh cycle.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         void loadDatasets();
     }, [refreshKey]);
 
