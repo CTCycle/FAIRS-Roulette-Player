@@ -1,13 +1,7 @@
 from __future__ import annotations
 
-from server.api.upload import router as upload_router
-from server.api.training import router as training_router
-from server.api.datasets import router as datasets_router
-from server.api.inference import router as inference_router
+"""API package marker.
 
-__all__ = [
-    "upload_router",
-    "training_router",
-    "datasets_router",
-    "inference_router",
-]
+Routers are imported by the application composition root so importing a
+small endpoint module does not eagerly load the training and ML stack.
+"""

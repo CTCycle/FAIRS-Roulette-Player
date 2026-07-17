@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import logging
 import logging.config
+import os
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from server.common import path as shared_paths
@@ -10,7 +12,14 @@ from server.common import path as shared_paths
 ###############################################################################
 def _build_log_config() -> dict[str, Any]:
     current_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_filename = shared_paths.LOGS_PATH / f"FAIRS_{current_timestamp}.log"
+    configured_log_dir = os.getenv("FAIRS_LOG_DIR")
+    log_directory = (
+        Path(configured_log_dir).expanduser()
+        if configured_log_dir
+        else shared_paths.LOGS_PATH
+    )
+    log_directory.mkdir(parents=True, exist_ok=True)
+    log_filename = log_directory / f"FAIRS_{current_timestamp}.log"
     return {
         "version": 1,
         "disable_existing_loggers": False,

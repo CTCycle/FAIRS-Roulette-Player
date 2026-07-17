@@ -47,9 +47,10 @@ def _stub_lifespan_dependencies(monkeypatch, app_module) -> list[object]:
         lambda database_settings: initialize_calls.append(database_settings),
     )
     monkeypatch.setattr(app_module, "run_startup_validations", lambda settings: None)
-    monkeypatch.setattr(app_module, "FAIRSDatabase", lambda: object())
-    monkeypatch.setattr(app_module, "DataRepositoryQueries", lambda database: object())
-    monkeypatch.setattr(app_module, "DataSerializer", lambda queries: object())
+    monkeypatch.setattr(app_module, "FAIRSDatabase", lambda: type("DatabaseStub", (), {"validate_schema": lambda self: None})())
+    monkeypatch.setattr(app_module, "DatasetRepository", lambda database: object())
+    monkeypatch.setattr(app_module, "InferenceRepository", lambda database: object())
+    monkeypatch.setattr(app_module, "DataSerializer", lambda **kwargs: object())
     monkeypatch.setattr(app_module, "create_job_manager", lambda: object())
     monkeypatch.setattr(app_module, "CheckpointService", lambda: object())
     monkeypatch.setattr(app_module, "DatasetImportService", lambda **kwargs: object())

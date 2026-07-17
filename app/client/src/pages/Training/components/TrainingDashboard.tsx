@@ -176,6 +176,8 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({ isActive, 
 
     useEffect(() => {
         if (isActive) {
+            // Reset stop state whenever a new training run becomes active.
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setStopRequested(false);
             setStopError(null);
         }

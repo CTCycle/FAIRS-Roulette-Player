@@ -1,20 +1,16 @@
 ## Startup
 
-Last updated: 2026-06-30
+Last updated: 2026-07-11
 
 ## Local Application Startup
-
-From repository root in CMD:
-
-```cmd
-start_on_windows.bat
-```
 
 From repository root in PowerShell:
 
 ```powershell
-cmd /c start_on_windows.bat
+.\start_on_windows.ps1
 ```
+
+`start_on_windows.ps1` is the single interactive entry point. Its menu supports launching the application, installing or updating dependencies, initializing the database, running tests, removing logs, clearing caches, and uninstalling local runtime dependencies.
 
 What the launcher does:
 
@@ -23,49 +19,8 @@ What the launcher does:
 - syncs Python dependencies with `uv`
 - installs frontend dependencies as needed
 - launches backend with `uvicorn`
-- launches the frontend preview server
-
-## Desktop Build Startup
-
-From repository root in CMD:
-
-```cmd
-release\tauri\build_with_tauri.bat
-```
-
-From repository root in PowerShell:
-
-```powershell
-cmd /c release\tauri\build_with_tauri.bat
-```
-
-Prerequisites:
-
-- Rust and Cargo installed and usable
-- prepared runtimes from at least one successful local startup
-- frontend build output available for packaging
-
-## Maintenance Startup
-
-From repository root in CMD:
-
-```cmd
-setup_and_maintenance.bat
-```
-
-From repository root in PowerShell:
-
-```powershell
-cmd /c setup_and_maintenance.bat
-```
-
-The maintenance menu supports:
-
-- database initialization
-- log cleanup
-- Python `__pycache__` cleanup
-- desktop build cleanup
-- runtime-local uninstall or cleanup tasks
+- builds the frontend and launches its Vite preview server
+- opens the configured frontend URL in the default browser
 
 ## Test Startup
 
@@ -83,5 +38,5 @@ cmd /c app\tests\run_tests.bat
 
 ## Related Files
 
-- Read `modes.md` for when to use each startup path.
+- Read `modes.md` for the supported runtime surface.
 - Read `configuration.md` for the settings consumed by these launchers.

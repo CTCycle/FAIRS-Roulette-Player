@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import pandas as pd
 
-from server.common.constants import DATASET_OUTCOMES_WRITE_COLUMNS
 from server.domain.upload import DatasetKind
 from server.repositories.serialization.data import DataSerializer
 
@@ -67,7 +66,7 @@ class DatasetImportService:
             raise ValueError(
                 "No valid roulette outcomes found. Outcomes must be in the range 0 to 36."
             )
-        return normalized.reindex(columns=DATASET_OUTCOMES_WRITE_COLUMNS)
+        return normalized.reindex(columns=["sequence_index", "outcome_id"])
 
     # -------------------------------------------------------------------------
     def normalize_inference_dataset(self, dataframe: pd.DataFrame) -> pd.DataFrame:
@@ -92,7 +91,7 @@ class DatasetImportService:
                 "No valid roulette outcomes found. Outcomes must be in the range 0 to 36."
             )
         normalized.insert(0, "sequence_index", range(len(normalized)))
-        return normalized.reindex(columns=DATASET_OUTCOMES_WRITE_COLUMNS)
+        return normalized.reindex(columns=["sequence_index", "outcome_id"])
 
     # -------------------------------------------------------------------------
     def import_dataframe(

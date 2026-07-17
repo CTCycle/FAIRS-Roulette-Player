@@ -25,10 +25,12 @@ from server.api.datasets import router as datasets_router
 from server.api.inference import router as inference_router
 from server.api.training import router as training_router
 from server.api.upload import router as upload_router
+from server.api.system import router as system_router
 from server.configurations import get_server_settings
 from server.repositories.database.backend import FAIRSDatabase
 from server.repositories.database.initializer import initialize_database
-from server.repositories.queries.data import DataRepositoryQueries
+from server.repositories.datasets import DatasetRepository
+from server.repositories.inference import InferenceRepository
 from server.repositories.serialization.data import DataSerializer
 from server.services.checkpoints import CheckpointService
 from server.services.datasets import DatasetService
@@ -89,13 +91,15 @@ async def app_lifespan(application: FastAPI) -> AsyncIterator[None]:
     run_startup_validations(settings)
 
     database = FAIRSDatabase()
-    queries = DataRepositoryQueries(database)
-    serializer = DataSerializer(queries)
+    database.validate_schema()
+    serializer = DataSerializer(
+        datasets=DatasetRepository(database),
+        inference=InferenceRepository(database),
+    )
     job_manager = create_job_manager()
     checkpoint_service = CheckpointService()
 
     application.state.database = database
-    application.state.data_queries = queries
     application.state.data_serializer = serializer
     application.state.dataset_service = DatasetService(
         serializer=serializer,
@@ -121,6 +125,7 @@ def include_api_routers(application: FastAPI) -> None:
         training_router,
         datasets_router,
         inference_router,
+        system_router,
     ):
         application.include_router(router, prefix=FASTAPI_API_PREFIX)
 

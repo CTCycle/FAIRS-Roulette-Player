@@ -1,6 +1,6 @@
 ## Project Overview
 
-Last updated: 2026-06-02
+Last updated: 2026-07-11
 
 ## Purpose
 
@@ -49,18 +49,18 @@ Read it first, then open the smallest leaf document that matches the task.
 - `coding/testing_and_quality.md`
   - Testing layout, linting, type discipline, and change-quality expectations.
 - `coding/windows_automation.md`
-  - Tauri, Rust, batch, and PowerShell conventions for Windows-first automation.
+  - PowerShell conventions for the Windows-first launcher and its helper scripts.
 
 ### Runtime
 
 - `runtime/modes.md`
   - Supported runtime modes and how they differ.
 - `runtime/startup.md`
-  - Local startup, desktop build, maintenance, and test commands.
+  - Local startup, maintenance, and test commands.
 - `runtime/configuration.md`
   - Environment variables, runtime flags, and structured settings files.
 - `runtime/deployment.md`
-  - Packaging outputs, build chain, and operational constraints.
+  - Local distribution boundaries and operational constraints.
 
 ### UI
 
@@ -78,7 +78,7 @@ Read it first, then open the smallest leaf document that matches the task.
 - `operations/workflows.md`
   - Primary training and inference user journeys plus day-to-day usage patterns.
 - `operations/troubleshooting.md`
-  - High-signal checks for startup, API docs, tests, packaging, and runtime mismatches.
+  - High-signal checks for startup, API docs, tests, and runtime mismatches.
 
 ## Reading Paths By Task
 
@@ -86,7 +86,7 @@ Read it first, then open the smallest leaf document that matches the task.
   - start in `architecture/`
 - For implementation standards:
   - start in `coding/`
-- For launchers, environment, or packaging:
+- For launchers, environment, or local distribution:
   - start in `runtime/`
 - For frontend design behavior:
   - start in `ui/`
@@ -105,5 +105,5 @@ Read it first, then open the smallest leaf document that matches the task.
 
 - Windows is the default operating environment for this repository.
 - PowerShell is the default interactive shell for analysis and automation.
-- Batch launchers remain first-class because core startup and maintenance flows are `.bat` based.
-- Command examples should include both PowerShell and CMD when that materially improves usability.
+- `start_on_windows.ps1` is the single interactive startup and maintenance entry point.
+- Command examples should use PowerShell unless CMD materially improves usability.

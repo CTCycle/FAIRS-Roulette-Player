@@ -1,103 +1,70 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import Any, Protocol
+from contextlib import contextmanager
+from pathlib import Path
+from collections.abc import Iterator
 
-import pandas as pd
+from sqlalchemy import Engine, inspect
+from sqlalchemy.orm import Session, sessionmaker
 
 from server.configurations import DatabaseSettings
 from server.configurations.startup import get_server_settings
-from server.common.utils.logger import logger
-from server.repositories.database.postgres import PostgresRepository
-from server.repositories.database.sqlite import SQLiteRepository
+from server.repositories.schemas.models import Base
 
-###############################################################################
-class DatabaseBackend(Protocol):
-    db_path: str | None
-    engine: Any
-
-    # -------------------------------------------------------------------------
-    def load_from_database(
-        self,
-        table_name: str,
-        limit: int | None = None,
-        offset: int | None = None,
-    ) -> pd.DataFrame: ...
-
-    # -------------------------------------------------------------------------
-    def append_into_database(self, df: pd.DataFrame, table_name: str) -> None: ...
-
-    # -------------------------------------------------------------------------
-    def upsert_into_database(self, df: pd.DataFrame, table_name: str) -> None: ...
-
-    # -------------------------------------------------------------------------
-    def delete_from_database(
-        self, table_name: str, conditions: dict[str, Any]
-    ) -> None: ...
-
-    # -------------------------------------------------------------------------
-    def load_filtered(
-        self, table_name: str, conditions: dict[str, Any]
-    ) -> pd.DataFrame: ...
-
-
-BackendFactory = Callable[[DatabaseSettings], DatabaseBackend]
-
-
-BACKEND_FACTORIES: dict[str, BackendFactory] = {
-    "sqlite": SQLiteRepository,
-    "postgres": PostgresRepository,
-}
-
-
-# [DATABASE]
 
 ###############################################################################
 class FAIRSDatabase:
+    """Owns the SQLAlchemy engine, sessions, schema lifecycle, and transactions."""
 
     # -------------------------------------------------------------------------
-    def __init__(self) -> None:
-        self.settings = get_server_settings().database
-        self.backend = self._build_backend(self.settings.embedded_database)
+    def __init__(self, settings: DatabaseSettings | None = None, engine: Engine | None = None) -> None:
+        self.settings = settings or get_server_settings().database
+        if engine is not None:
+            self.engine = engine
+            self.db_path = None
+        elif self.settings.embedded_database:
+            from server.repositories.database.sqlite import build_sqlite_engine
+            self.engine = build_sqlite_engine(self.settings)
+            self.db_path = Path(str(self.engine.url.database)) if self.engine.url.database else None
+        else:
+            from server.repositories.database.postgres import build_postgres_engine
+            self.engine = build_postgres_engine(self.settings)
+            self.db_path = None
+        self.Session = sessionmaker(bind=self.engine, future=True, expire_on_commit=False)
+        self.insert_batch_size = self.settings.insert_batch_size
 
     # -------------------------------------------------------------------------
-    def _build_backend(self, is_embedded: bool) -> DatabaseBackend:
-        backend_name = "sqlite" if is_embedded else (self.settings.engine or "postgres")
-        normalized_name = backend_name.lower()
-        logger.info("Initializing %s database backend", backend_name)
-        if normalized_name not in BACKEND_FACTORIES:
-            raise ValueError(f"Unsupported database engine: {backend_name}")
-        factory = BACKEND_FACTORIES[normalized_name]
-        return factory(self.settings)
+    def create_schema(self) -> None:
+        Base.metadata.create_all(self.engine)
 
     # -------------------------------------------------------------------------
-    @property
-    def db_path(self) -> str | None:
-        return getattr(self.backend, "db_path", None)
+    def validate_schema(self) -> None:
+        inspector = inspect(self.engine)
+        missing_tables = set(Base.metadata.tables) - set(inspector.get_table_names())
+        missing_columns = {
+            table_name: {column.name for column in table.columns} - {column["name"] for column in inspector.get_columns(table_name)}
+            for table_name, table in Base.metadata.tables.items()
+            if table_name in inspector.get_table_names()
+        }
+        missing_columns = {name: columns for name, columns in missing_columns.items() if columns}
+        if missing_tables or missing_columns:
+            details = [f"tables={', '.join(sorted(missing_tables))}"] if missing_tables else []
+            details.extend(f"{name} columns={', '.join(sorted(columns))}" for name, columns in missing_columns.items())
+            raise RuntimeError(f"Database schema is incompatible with the canonical schema ({'; '.join(details)}). Recreate or migrate the database.")
 
     # -------------------------------------------------------------------------
-    def load_from_database(
-        self,
-        table_name: str,
-        limit: int | None = None,
-        offset: int | None = None,
-    ) -> pd.DataFrame:
-        return self.backend.load_from_database(table_name, limit=limit, offset=offset)
+    @contextmanager
+    def transaction(self) -> Iterator[Session]:
+        with self.Session.begin() as session:
+            yield session
 
     # -------------------------------------------------------------------------
-    def append_into_database(self, df: pd.DataFrame, table_name: str) -> None:
-        self.backend.append_into_database(df, table_name)
+    def dispose(self) -> None:
+        self.engine.dispose()
 
     # -------------------------------------------------------------------------
-    def upsert_into_database(self, df: pd.DataFrame, table_name: str) -> None:
-        self.backend.upsert_into_database(df, table_name)
+    def close(self) -> None:
+        self.dispose()
 
-    # -------------------------------------------------------------------------
-    def delete_from_database(self, table_name: str, conditions: dict[str, Any]) -> None:
-        self.backend.delete_from_database(table_name, conditions)
 
-    # -------------------------------------------------------------------------
-    def load_filtered(
-        self, table_name: str, conditions: dict[str, Any]
-    ) -> pd.DataFrame:
-        return self.backend.load_filtered(table_name, conditions)
+__all__ = ["FAIRSDatabase"]

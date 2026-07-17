@@ -1,6 +1,6 @@
 ## Execution And Data Flow
 
-Last updated: 2026-06-02
+Last updated: 2026-07-14
 
 ## Backend Layers
 
@@ -42,7 +42,7 @@ Last updated: 2026-06-02
   - `DatasetService`
   - `DatasetImportService`
   - `DataSerializer`
-  - `DataRepositoryQueries`
+  - `DatasetRepository`
   - `FAIRSDatabase`
 - Training start or resume:
   - `api/training.py`
@@ -61,7 +61,7 @@ Last updated: 2026-06-02
   - `api/datasets.py`
   - `DatasetService`
   - `DataSerializer`
-  - repository queries and backend
+  - `DatasetRepository`
 
 ## Core Module Responsibilities
 
@@ -84,13 +84,17 @@ Last updated: 2026-06-02
 - `app/server/services/checkpoints.py`
   - checkpoint resolution, metadata, listing, deletion, model loading, and strategy model loading
 - `app/server/services/startup_validation.py`
-  - runtime pre-flight checks, storage directory creation, and Tauri-mode validation
+  - runtime pre-flight checks and storage directory creation
 - `app/server/repositories/schemas/models.py`
   - SQLAlchemy schema definitions and constraints
 - `app/server/repositories/database/initializer.py`
   - database initialization and embedded-vs-external setup rules
 - `app/server/repositories/database/utils.py`
   - database utility functions: engine normalization, datetime coercion, Postgres connect-arg builder
+- `app/server/repositories/datasets.py`
+  - atomic dataset replacement, summaries, reads, and cascade deletion
+- `app/server/repositories/inference.py`
+  - inference session and step persistence
 
 ## Concurrency Model
 

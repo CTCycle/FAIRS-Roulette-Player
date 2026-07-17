@@ -1,6 +1,6 @@
 ## Workflows
 
-Last updated: 2026-06-02
+Last updated: 2026-07-11
 
 ## Training Workflow
 
@@ -37,7 +37,6 @@ Last updated: 2026-06-02
 
 - Use local startup for normal experimentation.
 - Run tests before sharing behavior changes.
-- Use desktop packaging only for release-oriented workflows.
 
 ## Key Features
 
@@ -45,7 +44,7 @@ Last updated: 2026-06-02
 - Training start, resume, stop, and status workflows
 - Checkpoint listing, metadata inspection, and deletion
 - Inference sessions with stepwise progression and context controls
-- Local-first runtime with optional desktop packaging
+- Local-first web runtime
 
 ## Related Files
 
