@@ -1,6 +1,6 @@
 ## Configuration
 
-Last updated: 2026-06-05
+Last updated: 2026-07-11
 
 ## Environment Variables
 
@@ -10,9 +10,11 @@ The runtime scripts and backend consume these environment keys:
 - `FASTAPI_PORT`
 - `UI_HOST`
 - `UI_PORT`
+- `BACKEND_LOGS_VISIBLE`
 - `ENABLE_API_DOCS`
 - `RELOAD`
 - `OPTIONAL_DEPENDENCIES`
+- `ALWAYS_REBUILD`
 - `EMBEDDED_DATABASE`
 - `DATABASE_URL`
 - `DATABASE_ENGINE`
@@ -28,12 +30,14 @@ The runtime scripts and backend consume these environment keys:
 - `MPLBACKEND`
 - `KERAS_BACKEND`
 
-## Internal Runtime Flags
+## Internal Runtime Settings
 
-- `FAIRS_TAURI_MODE=true`
-  - injected by the desktop runtime when spawning the backend
 - `UV_PROJECT_ENVIRONMENT`
-  - set by startup and build scripts to target the runtime virtual environment
+  - set by the launcher to target the runtime virtual environment
+- `FAIRS_USER_DATA_DIR`
+  - overrides the mutable database, logs, and checkpoints directory
+- `FAIRS_LOG_DIR`
+  - overrides the log directory; primarily useful for isolated test runs
 
 ## Structured Settings
 
@@ -57,10 +61,18 @@ The runtime scripts and backend consume these environment keys:
 - `EMBEDDED_DATABASE=false`
   - uses PostgreSQL and requires explicit configuration plus manual initialization
 
-### Desktop Runtime
+### Backend Log Visibility
 
-- `FAIRS_TAURI_MODE=true` requires a built frontend at `app/client/dist/index.html`.
-- Desktop startup injects backend process environment values such as `MPLBACKEND` and `KERAS_BACKEND`.
+- `BACKEND_LOGS_VISIBLE=false` starts the backend detached and hidden.
+- `BACKEND_LOGS_VISIBLE=true` opens a dedicated backend terminal so logs remain visible.
+- When `BACKEND_LOGS_VISIBLE` is absent, the launcher defaults to `true`.
+
+### Frontend Build
+
+- `ALWAYS_REBUILD=true` rebuilds the frontend whenever the application starts.
+- `ALWAYS_REBUILD=false` skips the frontend build at application startup.
+
+When `FAIRS_USER_DATA_DIR` is absent, the application uses `app/resources`.
 
 ## Related Files
 

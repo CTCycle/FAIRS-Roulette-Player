@@ -44,7 +44,8 @@ RESUME_TRAINING_CONFIG = {
 
 TRAINING_POLL_INTERVAL = float(os.getenv("E2E_TRAINING_POLL_INTERVAL", "0.5"))
 TRAINING_TIMEOUT = float(os.getenv("E2E_TRAINING_TIMEOUT", "90"))
-TRAINING_STATUS_TIMEOUT = float(os.getenv("E2E_TRAINING_STATUS_TIMEOUT", "3.0"))
+# Worker shutdown is asynchronous and may include process termination on Windows.
+TRAINING_STATUS_TIMEOUT = float(os.getenv("E2E_TRAINING_STATUS_TIMEOUT", "10.0"))
 
 ###############################################################################
 def wait_for_training_running(

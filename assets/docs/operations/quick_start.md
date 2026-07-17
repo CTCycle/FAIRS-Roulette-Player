@@ -1,13 +1,13 @@
 ## Quick Start
 
-Last updated: 2026-06-02
+Last updated: 2026-07-11
 
 ## Fastest Path
 
 1. From repository root, run:
 
-```cmd
-start_on_windows.bat
+```powershell
+.\start_on_windows.ps1
 ```
 
 2. Open the UI at the configured frontend URL from `UI_HOST:UI_PORT`.
@@ -19,8 +19,8 @@ start_on_windows.bat
 
 Start the app:
 
-```cmd
-start_on_windows.bat
+```powershell
+.\start_on_windows.ps1
 ```
 
 Run the automated test entry point:
@@ -29,23 +29,16 @@ Run the automated test entry point:
 app\tests\run_tests.bat
 ```
 
-Build the desktop package:
-
-```cmd
-release\tauri\build_with_tauri.bat
-```
-
 Open maintenance tools:
 
-```cmd
-setup_and_maintenance.bat
+```powershell
+.\start_on_windows.ps1
 ```
 
 ## Orientation
 
 - Use local web mode for normal development and experimentation.
-- Use desktop packaging only when preparing distributable Windows builds.
-- Keep `settings` and environment configuration aligned with the runtime mode you intend to use.
+- Keep `settings` and environment configuration aligned with the local runtime.
 
 ## Related Files
 

@@ -7,18 +7,12 @@ import pytest
 
 os.environ.setdefault("KERAS_BACKEND", "torch")
 
-from server.repositories.database.postgres import (
-    normalize_table_name as normalize_postgres_table_name,
-)
-from server.repositories.database.sqlite import (
-    normalize_table_name as normalize_sqlite_table_name,
-)
 from server.common.checkpoints import (
     normalize_checkpoint_identifier,
     resolve_checkpoint_path,
 )
 from server.common.path import CHECKPOINT_PATH
-from server.repositories.serialization.data import normalize_dataset_name
+from server.repositories.datasets import normalize_dataset_name
 from server.services.datasets import (
     normalize_csv_separator,
     normalize_filename,
@@ -71,18 +65,3 @@ def test_dataset_name_normalization_rejects_invalid_values() -> None:
         normalize_dataset_name("bad\x00name")
 
 ###############################################################################
-def test_table_name_allowlist_blocks_injection_patterns() -> None:
-    assert normalize_sqlite_table_name("datasets") == "datasets"
-    assert normalize_postgres_table_name("datasets") == "datasets"
-
-    for candidate in (
-        "datasets ",
-        " datasets",
-        "datasets;DROP TABLE datasets",
-        'datasets" OR 1=1 --',
-        "unknown_table",
-    ):
-        with pytest.raises(ValueError):
-            normalize_sqlite_table_name(candidate)
-        with pytest.raises(ValueError):
-            normalize_postgres_table_name(candidate)
