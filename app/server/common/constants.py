@@ -9,7 +9,7 @@ FASTAPI_ASSETS_ENDPOINT = "/assets"
 FASTAPI_SPA_FALLBACK_ENDPOINT = "/{full_path:path}"
 FASTAPI_TITLE = "FAIRS Roulette Backend"
 FASTAPI_DESCRIPTION = "FastAPI backend"
-FASTAPI_VERSION = "2.4.0"
+FASTAPI_VERSION = "2.5.0"
 
 # [ENDPOINS]
 ###############################################################################

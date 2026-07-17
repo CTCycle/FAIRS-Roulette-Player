@@ -89,6 +89,8 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
     };
 
     useEffect(() => {
+        // Data loading updates the async request state for this refresh cycle.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         void loadDatasets();
     }, [refreshKey]);
 
