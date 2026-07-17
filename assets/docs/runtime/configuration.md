@@ -14,7 +14,7 @@ The runtime scripts and backend consume these environment keys:
 - `ENABLE_API_DOCS`
 - `RELOAD`
 - `OPTIONAL_DEPENDENCIES`
-- `always_rebuild`
+- `ALWAYS_REBUILD`
 - `EMBEDDED_DATABASE`
 - `DATABASE_URL`
 - `DATABASE_ENGINE`
@@ -69,8 +69,8 @@ The runtime scripts and backend consume these environment keys:
 
 ### Frontend Build
 
-- `always_rebuild=true` rebuilds the frontend whenever the application starts.
-- `always_rebuild=false` skips the frontend build at application startup.
+- `ALWAYS_REBUILD=true` rebuilds the frontend whenever the application starts.
+- `ALWAYS_REBUILD=false` skips the frontend build at application startup.
 
 When `FAIRS_USER_DATA_DIR` is absent, the application uses `app/resources`.
 
