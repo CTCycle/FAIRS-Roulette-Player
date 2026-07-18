@@ -326,26 +326,45 @@ function Uninstall-Application {
 
 function Wait-ForMenu {
     Write-Host ''
-    Write-Host 'Press any key to return to menu...'
+    Write-Host '  Press any key to return to the menu...' -ForegroundColor DarkGray
     [void][Console]::ReadKey($true)
+}
+
+function Write-MenuItem([string]$Number, [string]$Label, [string]$Description, [ConsoleColor]$Color = [ConsoleColor]::White) {
+    Write-Host '  ' -NoNewline
+    Write-Host (" {0} " -f $Number) -NoNewline -ForegroundColor Black -BackgroundColor $Color
+    Write-Host "  $Label" -NoNewline -ForegroundColor $Color
+    Write-Host "  $Description" -ForegroundColor DarkGray
 }
 
 function Show-Menu {
     while ($true) {
         Clear-Host
-        Write-Host '========================================='
-        Write-Host '    FAIRS -- Roulette Player'
-        Write-Host '========================================='
-        Write-Host '1.  Launch application'
-        Write-Host '2.  Install / update dependencies'
-        Write-Host '3.  Initialize database'
-        Write-Host '4.  Run test suite'
-        Write-Host '5.  Remove logs'
-        Write-Host '6.  Clear cache'
-        Write-Host '7.  Uninstall application'
-        Write-Host '8.  Exit'
-        Write-Host '========================================='
-        $selection = Read-Host 'Select an option (1-8)'
+        Write-Host ''
+        Write-Host '  +---------------------------------------------------+' -ForegroundColor DarkCyan
+        Write-Host '  |                                                   |' -ForegroundColor DarkCyan
+        Write-Host '  |             FAIRS  /  ROULETTE PLAYER             |' -ForegroundColor Cyan
+        Write-Host '  |          Local launcher and maintenance           |' -ForegroundColor DarkGray
+        Write-Host '  |                                                   |' -ForegroundColor DarkCyan
+        Write-Host '  +---------------------------------------------------+' -ForegroundColor DarkCyan
+        Write-Host ''
+        Write-Host '  START' -ForegroundColor DarkCyan
+        Write-MenuItem '1' 'Launch application' 'Start the backend and player' Cyan
+        Write-Host ''
+        Write-Host '  SETUP & MAINTENANCE' -ForegroundColor DarkCyan
+        Write-MenuItem '2' 'Install / update dependencies' 'Prepare local runtimes and build the frontend' Yellow
+        Write-MenuItem '3' 'Initialize database' 'Create and seed application data' Yellow
+        Write-MenuItem '4' 'Run test suite' 'Execute automated checks' Yellow
+        Write-Host ''
+        Write-Host '  CLEANUP' -ForegroundColor DarkCyan
+        Write-MenuItem '5' 'Remove logs' 'Delete application log files' DarkYellow
+        Write-MenuItem '6' 'Clear cache' 'Remove Python and uv caches' DarkYellow
+        Write-MenuItem '7' 'Uninstall application' 'Remove local runtimes and build outputs' Red
+        Write-Host ''
+        Write-Host '  -----------------------------------------------------' -ForegroundColor DarkCyan
+        Write-MenuItem '8' 'Exit' 'Close this launcher' DarkGray
+        Write-Host ''
+        $selection = Read-Host '  Select an option (1-8)'
         if ($selection -notmatch '^[1-8]$') {
             Write-Fatal 'Invalid option. Select a number from 1 through 8.'
             Wait-ForMenu

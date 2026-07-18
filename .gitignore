@@ -8,7 +8,6 @@ app/client/dist-ssr/
 app/client/logs/
 app/client/*.local
 assets/QA/**
-scripts/**
 
 # Python
 __pycache__/
@@ -44,17 +43,12 @@ yarn.lock
 Thumbs.db
 
 # Misc
-settings/.env
-release/runtime-downloads/
-release/runtime-staging/
+.env
 *.log
-*.db
+*.db*
 *.sqlite*
 *.exe
 *.gz
 !.gitkeep
 
-# Local Python/runtime artifacts that must not enter Git history
-setup/triton/
-FAIRS/setup/triton/
-FAIRS/app/triton/
+
