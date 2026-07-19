@@ -10,7 +10,6 @@ from sqlalchemy.engine import Engine
 from server.common import path as shared_paths
 from server.configurations import DatabaseSettings
 
-
 ###############################################################################
 def set_sqlite_pragma(dbapi_connection: Any, _connection_record: Any) -> None:
     cursor = dbapi_connection.cursor()
@@ -18,7 +17,6 @@ def set_sqlite_pragma(dbapi_connection: Any, _connection_record: Any) -> None:
     cursor.execute("PRAGMA busy_timeout=30000")
     cursor.execute("PRAGMA journal_mode=WAL")
     cursor.close()
-
 
 ###############################################################################
 def build_sqlite_engine(settings: DatabaseSettings) -> Engine:

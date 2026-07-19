@@ -7,7 +7,6 @@ from server.common.constants import ROULETTE_COLOR_CODE, ROULETTE_COLOR_MAP, ROU
 from server.repositories.database.backend import FAIRSDatabase
 from server.repositories.schemas.models import DatasetOutcomes, Datasets
 
-
 ###############################################################################
 class TrainingRepositoryQueries:
 

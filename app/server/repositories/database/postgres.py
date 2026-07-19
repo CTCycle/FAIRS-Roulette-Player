@@ -6,7 +6,6 @@ from sqlalchemy.engine import Engine, URL
 from server.configurations import DatabaseSettings
 from server.repositories.database.utils import build_postgres_connect_args, normalize_postgres_engine
 
-
 ###############################################################################
 def build_postgres_engine(settings: DatabaseSettings) -> Engine:
     if not settings.host or not settings.database_name or not settings.username:

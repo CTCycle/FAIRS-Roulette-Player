@@ -8,7 +8,6 @@ import pandas as pd
 from server.repositories.datasets import DatasetRepository
 from server.repositories.inference import InferenceRepository
 
-
 ###############################################################################
 class DataSerializer:
     """Converts repository results to the dictionaries and frames used by services."""
