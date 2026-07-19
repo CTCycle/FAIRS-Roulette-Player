@@ -11,14 +11,12 @@ from server.repositories.schemas.models import DatasetOutcomes, Datasets
 
 MAX_DATASET_NAME_LENGTH = 128
 
-
 ###############################################################################
 def normalize_dataset_name(value: str) -> str:
     name = value.strip()
     if not name or len(name) > MAX_DATASET_NAME_LENGTH or any(ord(char) < 32 for char in name):
         raise ValueError("Invalid dataset name.")
     return name
-
 
 ###############################################################################
 class DatasetRepository:

@@ -8,11 +8,9 @@ from server.repositories.database.backend import FAIRSDatabase
 from server.repositories.datasets import DatasetRepository
 from server.repositories.inference import InferenceRepository
 
-
 ###############################################################################
 def build_sqlite_settings(insert_batch_size: int = 2) -> DatabaseSettings:
     return DatabaseSettings(True, None, None, None, None, None, None, False, None, 10, insert_batch_size)
-
 
 ###############################################################################
 def test_sqlite_persistence_contract() -> None:

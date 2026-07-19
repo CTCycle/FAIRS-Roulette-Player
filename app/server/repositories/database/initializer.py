@@ -9,7 +9,6 @@ from server.configurations.startup import get_server_settings
 from server.repositories.database.backend import FAIRSDatabase
 from server.repositories.database.utils import build_postgres_connect_args, normalize_postgres_engine
 
-
 ###############################################################################
 def build_postgres_url(settings: DatabaseSettings, database_name: str) -> sqlalchemy.URL:
     return sqlalchemy.URL.create(
@@ -21,18 +20,15 @@ def build_postgres_url(settings: DatabaseSettings, database_name: str) -> sqlalc
         database=database_name,
     )
 
-
 ###############################################################################
 def escape_postgres_identifier(identifier: str) -> str:
     return identifier.replace('"', '""')
-
 
 ###############################################################################
 def is_missing_postgres_database_error(exc: SQLAlchemyError, target_database: str) -> bool:
     original = getattr(exc, "orig", None)
     sql_state = getattr(original, "sqlstate", None) or getattr(original, "pgcode", None)
     return sql_state == "3D000" or ("does not exist" in str(exc).lower() and target_database.lower() in str(exc).lower())
-
 
 ###############################################################################
 def postgres_database_exists(settings: DatabaseSettings, target_database: str, connect_args: dict[str, object]) -> bool:
@@ -47,14 +43,12 @@ def postgres_database_exists(settings: DatabaseSettings, target_database: str, c
     finally:
         engine.dispose()
 
-
 ###############################################################################
 def initialize_sqlite_database(settings: DatabaseSettings) -> None:
     database = FAIRSDatabase(settings)
     database.create_schema()
     database.dispose()
     logger.info("Initialized SQLite database at %s", database.db_path)
-
 
 ###############################################################################
 def ensure_postgres_database(settings: DatabaseSettings) -> str:
@@ -75,7 +69,6 @@ def ensure_postgres_database(settings: DatabaseSettings) -> str:
     database.dispose()
     logger.info("Ensured PostgreSQL schema exists in %s", target)
     return target
-
 
 ###############################################################################
 def initialize_database(settings: DatabaseSettings | None = None) -> None:

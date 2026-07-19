@@ -8,7 +8,6 @@ from sqlalchemy import delete, update
 from server.repositories.database.backend import FAIRSDatabase
 from server.repositories.schemas.models import InferenceSessionSteps, InferenceSessions
 
-
 ###############################################################################
 class InferenceRepository:
 

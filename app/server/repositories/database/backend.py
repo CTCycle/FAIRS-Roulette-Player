@@ -11,7 +11,6 @@ from server.configurations import DatabaseSettings
 from server.configurations.startup import get_server_settings
 from server.repositories.schemas.models import Base
 
-
 ###############################################################################
 class FAIRSDatabase:
     """Owns the SQLAlchemy engine, sessions, schema lifecycle, and transactions."""

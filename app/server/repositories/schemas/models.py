@@ -10,7 +10,6 @@ from sqlalchemy.types import TypeDecorator
 from server.common.checkpoints import MAX_CHECKPOINT_NAME_LENGTH
 from server.common.session import MAX_SESSION_ID_LENGTH
 
-
 ###############################################################################
 class UTCDateTime(TypeDecorator[datetime]):
     impl = DateTime(timezone=True)
@@ -30,11 +29,9 @@ class UTCDateTime(TypeDecorator[datetime]):
             return None
         return (value if value.tzinfo else value.replace(tzinfo=timezone.utc)).astimezone(timezone.utc)
 
-
 ###############################################################################
 class Base(DeclarativeBase):
     pass
-
 
 ###############################################################################
 class Datasets(Base):
@@ -55,7 +52,6 @@ class Datasets(Base):
         CheckConstraint("dataset_kind IN ('training', 'inference')", name="ck_datasets_kind"),
     )
 
-
 ###############################################################################
 class DatasetOutcomes(Base):
     __tablename__ = "dataset_outcomes"
@@ -69,7 +65,6 @@ class DatasetOutcomes(Base):
         CheckConstraint("outcome_id >= 0 AND outcome_id <= 36", name="ck_dataset_outcomes_outcome"),
         Index("ix_dataset_outcomes_dataset_outcome", "dataset_id", "outcome_id"),
     )
-
 
 ###############################################################################
 class InferenceSessions(Base):
@@ -87,7 +82,6 @@ class InferenceSessions(Base):
         CheckConstraint("initial_capital > 0", name="ck_inference_sessions_initial_capital"),
         Index("ix_inference_sessions_dataset_started", "dataset_id", "started_at"),
     )
-
 
 ###############################################################################
 class InferenceSessionSteps(Base):
