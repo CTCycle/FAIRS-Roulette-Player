@@ -1,6 +1,6 @@
 ## Quick Start
 
-Last updated: 2026-07-11
+Last updated: 2026-07-20
 
 ## Fastest Path
 
@@ -14,6 +14,8 @@ Last updated: 2026-07-11
 3. Use the top navigation to switch between:
    - `Training`
    - `Inference`
+
+The launcher reports the backend and frontend URLs after both services pass their readiness checks.
 
 ## Primary Commands
 

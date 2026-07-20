@@ -1,6 +1,6 @@
 ## Backend API
 
-Last updated: 2026-06-02
+Last updated: 2026-07-20
 
 ## Mounting Model
 
@@ -52,6 +52,11 @@ Router prefix: `/inference`
 - `POST /api/inference/sessions/{session_id}/rows/clear`
 - `POST /api/inference/context/clear`
 
+## System Endpoints
+
+- `GET /api/health`
+  - returns application status, version, and runtime mode.
+
 ## Non-API Routes
 
 - When `app/client/dist/index.html` exists, the backend serves the built SPA from `/`.
@@ -61,6 +66,7 @@ Router prefix: `/inference`
 ## API Design Notes
 
 - Endpoints use explicit domain identifiers such as `job_id` and `session_id`.
+- Training start and resume requests return `202 Accepted` because work is tracked as a background job.
 - HTTP handlers validate and marshal payloads at the API boundary, then delegate orchestration to services.
 - API docs exposure is controlled by `ENABLE_API_DOCS`.
 

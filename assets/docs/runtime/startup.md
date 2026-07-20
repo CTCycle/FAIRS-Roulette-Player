@@ -1,6 +1,6 @@
 ## Startup
 
-Last updated: 2026-07-11
+Last updated: 2026-07-20
 
 ## Local Application Startup
 
@@ -10,7 +10,16 @@ From repository root in PowerShell:
 .\start_on_windows.ps1
 ```
 
-`start_on_windows.ps1` is the single interactive entry point. Its menu supports launching the application, installing or updating dependencies, initializing the database, running tests, removing logs, clearing caches, and uninstalling local runtime dependencies.
+`start_on_windows.ps1` is the single interactive entry point. Its menu supports:
+
+- launching the application
+- installing or updating dependencies
+- initializing the database
+- running the test suite
+- removing logs
+- clearing Python and uv caches
+- uninstalling local runtimes and build outputs
+- exiting the launcher
 
 What the launcher does:
 
@@ -21,6 +30,7 @@ What the launcher does:
 - launches backend with `uvicorn`
 - builds the frontend and launches its Vite preview server
 - opens the configured frontend URL in the default browser
+- verifies backend health and frontend preview readiness before reporting success
 
 ## Test Startup
 

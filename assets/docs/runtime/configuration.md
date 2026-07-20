@@ -1,6 +1,6 @@
 ## Configuration
 
-Last updated: 2026-07-11
+Last updated: 2026-07-20
 
 ## Environment Variables
 
@@ -38,6 +38,8 @@ The runtime scripts and backend consume these environment keys:
   - overrides the mutable database, logs, and checkpoints directory
 - `FAIRS_LOG_DIR`
   - overrides the log directory; primarily useful for isolated test runs
+
+The backend creates timestamped `FAIRS_*.log` files in `FAIRS_LOG_DIR` when set, or in the active user-data `logs` directory otherwise.
 
 ## Structured Settings
 

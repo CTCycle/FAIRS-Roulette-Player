@@ -1,6 +1,6 @@
 ## System Overview
 
-Last updated: 2026-07-11
+Last updated: 2026-07-20
 
 ## Summary
 
@@ -8,6 +8,7 @@ FAIRS is a Windows-first roulette research application with two main runtime sur
 
 - FastAPI backend in `app/server`
 - React + TypeScript frontend in `app/client/src`
+- Current application version: `2.5.0`
 
 The backend is the system of record for API behavior, training orchestration, inference sessions, and persistence.
 
@@ -83,6 +84,7 @@ The structure below is source-focused and excludes dependency, cache, and genera
 - Shared application state lives in `src/context`.
 - Feature logic is split between `src/hooks`, `src/pages`, and `src/components`.
 - Styling is token-driven through `src/styles/global.css` plus feature CSS files and CSS modules.
+- Training includes dataset/checkpoint previews, a multi-step configuration wizard, and live metric/history charts.
 
 ## Related Files
 
