@@ -1,6 +1,6 @@
 ## Workflows
 
-Last updated: 2026-07-11
+Last updated: 2026-07-20
 
 ## Training Workflow
 
@@ -10,6 +10,8 @@ Last updated: 2026-07-11
 4. Start training.
 5. Monitor progress, metrics, and status.
 6. Review generated checkpoints from the checkpoint list.
+
+The training wizard summarizes the selected dataset, checkpoint, strategy, betting, sampling, and compute settings before submission. The dashboard then displays live metrics and training history.
 
 ## Resume Training Workflow
 

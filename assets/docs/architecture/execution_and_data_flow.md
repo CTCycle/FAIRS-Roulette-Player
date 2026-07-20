@@ -1,6 +1,6 @@
 ## Execution And Data Flow
 
-Last updated: 2026-07-14
+Last updated: 2026-07-20
 
 ## Backend Layers
 
@@ -95,6 +95,12 @@ Last updated: 2026-07-14
   - atomic dataset replacement, summaries, reads, and cascade deletion
 - `app/server/repositories/inference.py`
   - inference session and step persistence
+- `app/server/repositories/queries/training.py`
+  - training-oriented database queries and checkpoint-adjacent persistence operations
+- `app/server/repositories/serialization/model.py`
+  - model and checkpoint serialization helpers
+- `app/server/repositories/serialization/training.py`
+  - training configuration and result serialization helpers
 
 ## Concurrency Model
 
@@ -105,6 +111,12 @@ Last updated: 2026-07-14
   - heavy training work runs in a separate process managed by `TrainingService`
 - Inference is synchronous and stateful per active session.
 - No async database driver or event-loop-based persistence model is used.
+
+## Runtime Observability
+
+- The backend writes timestamped `FAIRS_*.log` files under the configured log directory.
+- `FAIRS_LOG_DIR` can isolate logs for tests or diagnostics.
+- `GET /api/health` exposes a lightweight readiness check with application version and mode.
 
 ## Frontend Interaction Pattern
 

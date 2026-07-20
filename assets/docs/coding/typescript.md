@@ -1,6 +1,6 @@
 ## TypeScript
 
-Last updated: 2026-06-02
+Last updated: 2026-07-20
 
 ## Baseline
 
@@ -31,6 +31,7 @@ Last updated: 2026-06-02
 - Preserve keyboard-safe and focus-safe interactions.
 - Keep error, loading, and empty-state behavior consistent across pages.
 - Prefer existing patterns before introducing parallel styling or state conventions.
+- Normalize optional numeric training metrics at the UI boundary so missing or invalid telemetry does not break charts.
 
 ## Tooling
 

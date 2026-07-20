@@ -1,6 +1,6 @@
 ## Persistence
 
-Last updated: 2026-07-14
+Last updated: 2026-07-20
 
 ## Database Backends
 
@@ -29,8 +29,10 @@ Last updated: 2026-07-14
 
 ## Initialization Rules
 
-- Embedded SQLite creates the canonical schema on startup.
-- PostgreSQL initialization is manual and is exposed as option 3 in `start_on_windows.ps1`.
+- Application startup initializes or ensures the canonical schema objects for the selected backend.
+- Embedded SQLite creates the local schema through SQLAlchemy metadata; startup then validates required tables and columns.
+- PostgreSQL mode verifies or creates the configured database, then ensures the schema exists.
+- Explicit database initialization remains available as option 3 in `start_on_windows.ps1`.
 - Startup validates that the canonical tables exist before serving traffic.
 - This is a clean schema cutover: an existing legacy database must be recreated or
   migrated before startup; the application does not retain the five-table CRUD

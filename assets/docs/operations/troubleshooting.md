@@ -1,12 +1,13 @@
 ## Troubleshooting
 
-Last updated: 2026-07-11
+Last updated: 2026-07-20
 
 ## Startup Problems
 
 - If local startup fails, rerun `start_on_windows.ps1` to resync runtimes and dependencies.
 - If ports are already occupied, resolve the conflicting listeners before relaunching.
 - If the backend starts without the frontend, verify the frontend dependency and build steps completed successfully.
+- If the launcher reports a backend readiness failure, open `http://<FASTAPI_HOST>:<FASTAPI_PORT>/api/health` and inspect the generated `FAIRS_*.log` file.
 
 ## API Docs Problems
 
@@ -21,7 +22,7 @@ Last updated: 2026-07-11
 ## Configuration Problems
 
 - If database startup fails, confirm the embedded-vs-external database settings are internally consistent.
-- If PostgreSQL mode is enabled, verify the configured engine and connection details match the supported backend expectations.
+- If PostgreSQL mode is enabled, verify the configured engine and connection details match the supported backend expectations; startup must be able to reach the server and ensure the target database/schema.
 
 ## Related Files
 

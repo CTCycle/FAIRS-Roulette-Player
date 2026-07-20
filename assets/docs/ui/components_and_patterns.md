@@ -1,6 +1,6 @@
 ## Components And Patterns
 
-Last updated: 2026-06-02
+Last updated: 2026-07-20
 
 ## Navigation And Structure
 
@@ -41,6 +41,7 @@ Additional rules:
   - dataset upload
   - dataset preview
   - checkpoint preview and management
+  - multi-step training configuration wizard with summary confirmation
   - training dashboard with metrics and charts
 - Inference page patterns:
   - setup controls

@@ -1,6 +1,6 @@
 ## Python
 
-Last updated: 2026-06-02
+Last updated: 2026-07-20
 
 ## Runtime Baseline
 
@@ -62,6 +62,7 @@ Last updated: 2026-06-02
 - Keep schema, serializer, and API contracts synchronized.
 - Runtime flags come from environment variables.
 - Structured non-env settings live in `settings/configurations.json`.
+- Database connection and selection settings live in `settings/.env`; do not add a `database` block to the JSON settings file.
 
 ## Related Files
 

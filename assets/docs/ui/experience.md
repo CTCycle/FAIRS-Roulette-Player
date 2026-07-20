@@ -1,12 +1,13 @@
 ## Experience
 
-Last updated: 2026-06-02
+Last updated: 2026-07-20
 
 ## Page Composition
 
 - `/training`
   - dataset upload and preview
   - checkpoint preview and management
+  - multi-step training configuration and summary confirmation
   - training dashboard, metrics, and charts
 - `/inference`
   - checkpoint and dataset setup
