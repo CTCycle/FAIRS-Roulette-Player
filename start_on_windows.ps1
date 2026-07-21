@@ -23,7 +23,7 @@ $uvCacheDir = Join-Path $runtimeRoot '.uv-cache'
 
 $pythonVersion = '3.14.2'
 $pythonUrl = "https://www.python.org/ftp/python/$pythonVersion/python-$pythonVersion-embed-amd64.zip"
-$nodeVersion = '22.12.0'
+$nodeVersion = '22.13.0'
 $nodeArchiveName = "node-v$nodeVersion-win-x64"
 $nodeUrl = "https://nodejs.org/dist/v$nodeVersion/$nodeArchiveName.zip"
 $uvUrl = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') {
@@ -136,7 +136,15 @@ function Ensure-PortableRuntimes {
     Write-Ok (& $uvExe --version)
 
     Write-Step 'Installing Node.js (portable).'
-    if (-not (Test-Path -LiteralPath $nodeExe)) {
+    $nodeNeedsInstall = $true
+    if (Test-Path -LiteralPath $nodeExe) {
+        $installedNodeVersion = (& $nodeExe --version).Trim()
+        $nodeNeedsInstall = $installedNodeVersion -ne "v$nodeVersion" -or -not (Test-Path -LiteralPath $npmCmd)
+        if (-not $nodeNeedsInstall) { Write-Info "Node.js $installedNodeVersion already matches the launcher baseline." }
+    }
+    if ($nodeNeedsInstall) {
+        if (Test-Path -LiteralPath $nodeDir) { Remove-Item -LiteralPath $nodeDir -Recurse -Force }
+        New-Item -ItemType Directory -Path $nodeDir -Force | Out-Null
         Invoke-DownloadAndExtract $nodeUrl (Join-Path $nodeDir 'node.zip') $nodeDir
         $nestedNodeDir = Join-Path $nodeDir $nodeArchiveName
         if (Test-Path -LiteralPath (Join-Path $nestedNodeDir 'node.exe')) {
@@ -312,19 +320,19 @@ function Uninstall-Application {
         (Join-Path $repoRoot '.venv'),
         (Join-Path $clientDir 'node_modules'),
         (Join-Path $clientDir '.angular'),
-        (Join-Path $clientDir 'dist'),
-        (Join-Path $clientDir 'package-lock.json'),
-        (Join-Path $serverDir 'uv.lock'),
-        (Join-Path $repoRoot 'uv.lock')
+        (Join-Path $clientDir 'dist')
     )
     foreach ($path in $paths) {
         if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Recurse -Force }
     }
+    New-Item -ItemType Directory -Path $runtimeRoot -Force | Out-Null
+    New-Item -ItemType File -Path (Join-Path $runtimeRoot '.gitkeep') -Force | Out-Null
     Remove-PythonCaches
-    Write-Ok 'Application runtimes, dependencies, build outputs, and lockfiles removed. User data was preserved.'
+    Write-Ok 'Application runtimes, dependencies, and build outputs removed. Dependency lockfiles and user data were preserved.'
 }
 
 function Wait-ForMenu {
+    if ([Console]::IsInputRedirected) { return }
     Write-Host ''
     Write-Host '  Press any key to return to the menu...' -ForegroundColor DarkGray
     [void][Console]::ReadKey($true)
@@ -381,8 +389,10 @@ function Show-Menu {
                 '6' { Clear-Cache }
                 '7' { Uninstall-Application }
             }
+            if ([Console]::IsInputRedirected) { break }
         } catch {
             Write-Fatal $_.Exception.Message
+            if ([Console]::IsInputRedirected) { exit 1 }
         }
         Wait-ForMenu
     }
