@@ -1,4 +1,5 @@
 import React from 'react';
+import TopNavigation from './TopNavigation';
 
 const HeaderBar: React.FC = () => {
     return (
@@ -10,6 +11,7 @@ const HeaderBar: React.FC = () => {
                     <span className="app-shell-subtitle">Training and inference workspace</span>
                 </div>
             </div>
+            <TopNavigation />
         </header>
     );
 };
