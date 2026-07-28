@@ -116,13 +116,6 @@ body,
   color: var(--primary-accent);
 }
 
-.page-title {
-  color: var(--text-primary);
-  font-size: clamp(1.7rem, 1.8vw + 0.85rem, 2.2rem);
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
-
 .page-subtitle {
   margin-top: 0.5rem;
   color: var(--text-secondary);

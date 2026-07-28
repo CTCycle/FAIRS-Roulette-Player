@@ -28,7 +28,6 @@ const TrainingPage: React.FC = () => {
     return (
         <div className="training-page page-shell">
             <div className="page-header">
-                <h1 className="page-title">Model Training Workspace</h1>
                 <p className="page-subtitle">
                     Upload roulette datasets, manage checkpoints, and monitor live agent training from a single surface.
                 </p>
@@ -60,7 +59,7 @@ const TrainingPage: React.FC = () => {
                         <div className="info-content">
                             <h3>Checkpoints</h3>
                             <p>
-                                Review trained snapshots, resume runs, or launch evaluation sessions directly from the checkpoint panel.
+                                Review trained model snapshots, compare checkpoint metadata, resume interrupted training runs, and launch evaluation sessions directly from the checkpoint panel.
                             </p>
                         </div>
                     </div>
