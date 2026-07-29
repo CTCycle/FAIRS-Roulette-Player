@@ -13,7 +13,6 @@ The runtime scripts and backend consume these environment keys:
 - `BACKEND_LOGS_VISIBLE`
 - `ENABLE_API_DOCS`
 - `RELOAD`
-- `OPTIONAL_DEPENDENCIES`
 - `ALWAYS_REBUILD`
 - `EMBEDDED_DATABASE`
 - `DATABASE_URL`
