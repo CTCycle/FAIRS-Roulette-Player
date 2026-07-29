@@ -94,7 +94,6 @@ function Import-DotEnv {
         UI_HOST = '127.0.0.1'
         UI_PORT = '8001'
         RELOAD = 'false'
-        OPTIONAL_DEPENDENCIES = 'false'
         BACKEND_LOGS_VISIBLE = 'true'
         ALWAYS_REBUILD = 'true'
     }
@@ -159,7 +158,12 @@ function Ensure-PortableRuntimes {
     Write-Ok "Node.js ready: $(& $nodeExe --version)"
 }
 
-function Install-Dependencies([switch]$PruneCache) {
+function Install-Dependencies {
+    param(
+        [switch]$PruneCache,
+        [ValidateSet('Standard', 'Development')]
+        [string]$InstallationType = 'Standard'
+    )
     Initialize-EnvironmentFile
     Import-DotEnv
     Ensure-PortableRuntimes
@@ -171,7 +175,7 @@ function Install-Dependencies([switch]$PruneCache) {
 
     Write-Step 'Installing Python dependencies with uv.'
     $syncArguments = @('sync', '--python', $pythonExe)
-    if ($env:OPTIONAL_DEPENDENCIES -eq 'true') { $syncArguments += '--all-extras' }
+    if ($InstallationType -eq 'Development') { $syncArguments += '--all-extras' }
     Push-Location $serverDir
     try {
         & $uvExe @syncArguments
@@ -265,7 +269,7 @@ function Start-Application {
     Remove-Item Env:PYTHONHOME, Env:PYTHONPATH, Env:PYTHONNOUSERSITE -ErrorAction SilentlyContinue
     if (-not (Test-DependenciesReady)) {
         Write-Step 'Required application environments are missing or unusable; installing dependencies.'
-        Install-Dependencies
+        Install-Dependencies -InstallationType 'Standard'
     }
     else {
         Write-Ok 'Application environments are ready; skipped dependency installation.'
@@ -389,6 +393,15 @@ function Write-MenuItem([string]$Number, [string]$Label, [string]$Description, [
     Write-Host "  $Description" -ForegroundColor DarkGray
 }
 
+function Read-InstallationType {
+    $selection = (Read-Host 'Installation type [1=Development, 2=Standard]').Trim()
+    switch ($selection) {
+        '1' { return 'Development' }
+        '2' { return 'Standard' }
+        default { throw 'Invalid installation type. Enter 1 for Development or 2 for Standard.' }
+    }
+}
+
 function Show-Menu {
     while ($true) {
         Clear-Host
@@ -426,7 +439,10 @@ function Show-Menu {
         try {
             switch ($selection) {
                 '1' { Start-Application; exit 0 }
-                '2' { Install-Dependencies -PruneCache }
+                '2' {
+                    $installationType = Read-InstallationType
+                    Install-Dependencies -PruneCache -InstallationType $installationType
+                }
                 '3' { Initialize-Database }
                 '4' { Invoke-TestSuite }
                 '5' { Remove-Logs }

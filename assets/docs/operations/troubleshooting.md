@@ -16,7 +16,7 @@ Last updated: 2026-07-20
 
 ## Test Problems
 
-- If browser-dependent tests fail to start correctly, confirm optional dependencies are enabled where required and rerun the launcher or test setup flow.
+- If browser-dependent tests fail to start correctly, choose `Development` in the launcher's install/update option and rerun the test setup flow.
 - Prefer starting with the smallest failing test slice before rerunning the full test suite.
 
 ## Configuration Problems
