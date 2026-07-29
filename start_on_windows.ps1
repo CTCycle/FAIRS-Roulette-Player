@@ -204,6 +204,39 @@ function Install-Dependencies([switch]$PruneCache) {
     Write-Ok 'Dependencies are installed and the frontend build is ready.'
 }
 
+function Test-DependenciesReady {
+    $frontendPackage = Join-Path $clientDir 'package.json'
+    $frontendLock = Join-Path $clientDir 'package-lock.json'
+    $frontendModules = Join-Path $clientDir 'node_modules'
+    $frontendInstallState = Join-Path $frontendModules '.package-lock.json'
+    $frontendRunner = Join-Path $frontendModules '.bin\vite.cmd'
+    $backendEntrypoint = Join-Path $serverDir 'app.py'
+
+    if (-not (Test-Path -LiteralPath $pythonExe) -or
+        -not (Test-Path -LiteralPath $uvExe) -or
+        -not (Test-Path -LiteralPath $nodeExe) -or
+        -not (Test-Path -LiteralPath $npmCmd) -or
+        -not (Test-Path -LiteralPath $venvPython) -or
+        -not (Test-Path -LiteralPath $backendEntrypoint) -or
+        -not (Test-Path -LiteralPath $frontendPackage) -or
+        -not (Test-Path -LiteralPath $frontendLock) -or
+        -not (Test-Path -LiteralPath $frontendInstallState) -or
+        -not (Test-Path -LiteralPath $frontendRunner)) {
+        return $false
+    }
+
+    & $pythonExe --version *> $null
+    if ($LASTEXITCODE -ne 0) { return $false }
+    & $uvExe --version *> $null
+    if ($LASTEXITCODE -ne 0) { return $false }
+    & $nodeExe --version *> $null
+    if ($LASTEXITCODE -ne 0) { return $false }
+    & $venvPython -c 'import fastapi, uvicorn' *> $null
+    if ($LASTEXITCODE -ne 0) { return $false }
+
+    return $true
+}
+
 function Get-PortProcessIds([int]$Port) {
     $pattern = ":$Port\s+.*LISTENING\s+(\d+)$"
     return @(netstat.exe -ano -p TCP | ForEach-Object {
@@ -224,8 +257,19 @@ function Clear-Port([int]$Port) {
 }
 
 function Start-Application {
-    Install-Dependencies
     Import-DotEnv
+    Ensure-PortableRuntimes
+    $env:UV_CACHE_DIR = $uvCacheDir
+    $env:UV_PROJECT_ENVIRONMENT = $venvDir
+    $env:UV_LINK_MODE = 'copy'
+    Remove-Item Env:PYTHONHOME, Env:PYTHONPATH, Env:PYTHONNOUSERSITE -ErrorAction SilentlyContinue
+    if (-not (Test-DependenciesReady)) {
+        Write-Step 'Required application environments are missing or unusable; installing dependencies.'
+        Install-Dependencies
+    }
+    else {
+        Write-Ok 'Application environments are ready; skipped dependency installation.'
+    }
     $fastApiPort = [int]$env:FASTAPI_PORT
     $uiPort = [int]$env:UI_PORT
     Clear-Port $fastApiPort
