@@ -1,6 +1,6 @@
 ## Execution And Data Flow
 
-Last updated: 2026-07-20
+Last updated: 2026-08-02
 
 ## Backend Layers
 
@@ -26,14 +26,16 @@ Last updated: 2026-07-20
 
 ## Application Startup Flow
 
-`app/server/app.py` builds the app in this order:
+`app/server/app.py` constructs the app with routers and client routes, then its lifespan performs runtime startup in this order:
 
 1. Resolve server settings.
 2. Initialize the configured database backend.
 3. Run startup validations.
 4. Construct shared services and attach them to `application.state`.
-5. Mount API routers.
-6. Configure SPA serving or docs redirect behavior.
+5. Validate the database schema.
+6. Attach the database, serializers, job manager, checkpoint service, and domain services to `application.state`.
+
+Router mounting and SPA/docs route configuration happen during app construction before the lifespan runs.
 
 ## Typical Orchestration Chains
 
@@ -44,6 +46,11 @@ Last updated: 2026-07-20
   - `DataSerializer`
   - `DatasetRepository`
   - `FAIRSDatabase`
+- Synthetic training data:
+  - `DataSerializerExtension`
+  - `RouletteSyntheticGenerator` emits canonical `outcome` values in the range `0..36`
+  - `RouletteSeriesEncoder` adds wheel and color features
+  - the training serializer normalizes the encoded outcome column to `extraction`, matching the training environment contract
 - Training start or resume:
   - `api/training.py`
   - `TrainingService`
@@ -101,6 +108,10 @@ Last updated: 2026-07-20
   - model and checkpoint serialization helpers
 - `app/server/repositories/serialization/training.py`
   - training configuration and result serialization helpers
+- `app/server/learning/training/generator.py`
+  - deterministic synthetic roulette-series generation from the training configuration
+- `app/server/learning/training/serializer.py`
+  - synthetic/data-backed series selection and canonical training-column normalization
 
 ## Concurrency Model
 
