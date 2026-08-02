@@ -1,6 +1,6 @@
 ## Startup
 
-Last updated: 2026-07-20
+Last updated: 2026-08-02
 
 ## Local Application Startup
 
@@ -23,14 +23,18 @@ From repository root in PowerShell:
 
 What the launcher does:
 
-- prepares or validates portable runtimes in `runtimes/`
+- prepares or validates portable Python `3.14.2`, uv, and Node.js `22.13.0` in `runtimes/`
 - targets the runtime virtual environment through `UV_PROJECT_ENVIRONMENT`
-- syncs Python dependencies with `uv`
+- checks whether the application environment is ready before installing
+- syncs Python dependencies with `uv` in `Standard` mode when installation is needed
+- installs the server's test extra when option 2 is run with `Development` selected
 - installs frontend dependencies as needed
-- launches backend with `uvicorn`
-- builds the frontend and launches its Vite preview server
+- builds the frontend during dependency installation when `ALWAYS_REBUILD=true`
+- launches the backend with `uvicorn` and the built frontend with Vite preview
 - opens the configured frontend URL in the default browser
 - verifies backend health and frontend preview readiness before reporting success
+
+If the readiness check passes, normal application start skips dependency installation and proceeds directly to the two services. Use option 2 when source changes require a fresh dependency sync or frontend build.
 
 ## Test Startup
 

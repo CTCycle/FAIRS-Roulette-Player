@@ -1,6 +1,6 @@
 ## Design Tokens
 
-Last updated: 2026-06-02
+Last updated: 2026-08-02
 
 ## Typography
 
@@ -16,11 +16,15 @@ Last updated: 2026-06-02
 - Default line height:
   - `--line-height-default: 1.5`
 - Page titles use responsive `clamp(...)` scaling.
+- Control and icon sizing:
+  - `--control-height: 2.25rem`
+  - `--icon-button-size: 2rem`
 
 ## Layout And Spacing
 
 - Main app shell is route-based with sticky header and navigation.
-- Global page container is constrained through `.page-shell`.
+- The app shell uses a sticky branded header; content scrolls inside the main layout.
+- Global page container is constrained through `.page-shell` to a maximum width of 1680px.
 - Spacing tokens:
   - `--spacing-xs: 0.25rem`
   - `--spacing-sm: 0.5rem`
@@ -61,6 +65,9 @@ The current UI uses a dark-first tokenized palette defined in `app/client/src/st
   - `--roulette-red`
 - Focus:
   - `--focus-ring`
+- Shadows:
+  - `--shadow-sm`
+  - `--shadow-md`
 
 ## Token Rules
 

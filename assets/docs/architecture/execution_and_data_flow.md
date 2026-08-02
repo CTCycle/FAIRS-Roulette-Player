@@ -31,9 +31,9 @@ Last updated: 2026-08-02
 1. Resolve server settings.
 2. Initialize the configured database backend.
 3. Run startup validations.
-4. Construct shared services and attach them to `application.state`.
+4. Construct the database handle.
 5. Validate the database schema.
-6. Attach the database, serializers, job manager, checkpoint service, and domain services to `application.state`.
+6. Construct the serializers, job manager, checkpoint service, and domain services, then attach them and the database to `application.state`.
 
 Router mounting and SPA/docs route configuration happen during app construction before the lifespan runs.
 

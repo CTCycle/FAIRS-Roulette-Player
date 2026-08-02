@@ -1,6 +1,6 @@
 ## Configuration
 
-Last updated: 2026-07-20
+Last updated: 2026-08-02
 
 ## Environment Variables
 
@@ -37,6 +37,8 @@ The runtime scripts and backend consume these environment keys:
   - overrides the mutable database, logs, and checkpoints directory
 - `FAIRS_LOG_DIR`
   - overrides the log directory; primarily useful for isolated test runs
+- `FAIRS_TAURI_MODE`
+  - marks the health response as `desktop` and requires a built frontend, but does not provide packaging
 
 The backend creates timestamped `FAIRS_*.log` files in `FAIRS_LOG_DIR` when set, or in the active user-data `logs` directory otherwise.
 
@@ -60,7 +62,7 @@ The backend creates timestamped `FAIRS_*.log` files in `FAIRS_LOG_DIR` when set,
 - `EMBEDDED_DATABASE=true`
   - uses SQLite and can auto-initialize the embedded database file
 - `EMBEDDED_DATABASE=false`
-  - uses PostgreSQL and requires explicit configuration plus manual initialization
+  - uses PostgreSQL, requires explicit connection settings, and initializes or ensures the database/schema during backend startup
 
 ### Backend Log Visibility
 
@@ -68,10 +70,12 @@ The backend creates timestamped `FAIRS_*.log` files in `FAIRS_LOG_DIR` when set,
 - `BACKEND_LOGS_VISIBLE=true` opens a dedicated backend terminal so logs remain visible.
 - When `BACKEND_LOGS_VISIBLE` is absent, the launcher defaults to `true`.
 
-### Frontend Build
+### Dependency Installation And Frontend Build
 
-- `ALWAYS_REBUILD=true` rebuilds the frontend whenever the application starts.
-- `ALWAYS_REBUILD=false` skips the frontend build at application startup.
+- The launcher checks runtime readiness before installing dependencies.
+- `ALWAYS_REBUILD=true` runs the frontend build during a dependency installation.
+- `ALWAYS_REBUILD=false` skips the frontend build during dependency installation; it does not rebuild on a normal start that reuses a ready environment.
+- Launcher option 2 selects `Standard` or `Development` installation; `Development` adds the backend's test extra.
 
 When `FAIRS_USER_DATA_DIR` is absent, the application uses `app/resources`.
 
