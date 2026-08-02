@@ -1,6 +1,6 @@
 ## Testing And Quality
 
-Last updated: 2026-07-20
+Last updated: 2026-08-02
 
 ## Quality Baseline
 
@@ -20,6 +20,7 @@ Last updated: 2026-07-20
 - Use the existing npm scripts for linting and build validation.
 - Keep parser logic defensive where backend payloads can drift.
 - Validate UI behavior visually when user-facing layout or interaction changes are involved.
+- The current frontend package provides build and lint scripts but no standalone frontend test scripts.
 
 ## Test Layout
 
@@ -31,12 +32,14 @@ Primary automated test surfaces live under `app/tests`:
   - API and workflow coverage
 - `app/tests/run_tests.bat`
   - repository-standard Windows test entry point
+- `.github/workflows/ci.yml`
+  - Linux CI currently runs Ruff, backend unit tests, OpenAPI generation, and the PostgreSQL persistence contract.
 
 ## Change Expectations
 
 - Run the smallest relevant test slice first.
 - Use broader checks when shared infrastructure or startup flow changes.
-- Keep QA artifacts in the project root `QA/` location when persistent evidence is needed.
+- Keep QA artifacts in `assets/QA/` when persistent evidence is needed.
 - Do not leave temporary logs, screenshots, or validation scraps scattered through the repository.
 
 ## Related Files

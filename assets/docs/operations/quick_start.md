@@ -1,17 +1,18 @@
 ## Quick Start
 
-Last updated: 2026-07-20
+Last updated: 2026-08-02
 
 ## Fastest Path
 
-1. From repository root, run:
+1. From repository root in PowerShell, run:
 
 ```powershell
 .\start_on_windows.ps1
 ```
 
-2. Open the UI at the configured frontend URL from `UI_HOST:UI_PORT`.
-3. Use the top navigation to switch between:
+2. On first use, allow the launcher to prepare its portable runtimes and install Standard dependencies. Later starts reuse the environment when its readiness checks pass.
+3. Open the UI at the configured frontend URL from `UI_HOST:UI_PORT`.
+4. Use the top navigation to switch between:
    - `Training`
    - `Inference`
 
@@ -24,6 +25,8 @@ Start the app:
 ```powershell
 .\start_on_windows.ps1
 ```
+
+Choose option 2 and then `Development` when browser/test dependencies are required; choose `Standard` for the normal application environment.
 
 Run the automated test entry point:
 

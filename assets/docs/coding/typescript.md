@@ -1,10 +1,11 @@
 ## TypeScript
 
-Last updated: 2026-07-20
+Last updated: 2026-08-02
 
 ## Baseline
 
 - Keep strict TypeScript settings enabled through the project `tsconfig` files.
+- The current frontend baseline is React `19.2`, React Router `7.10`, TypeScript `5.9`, and Vite `7.2`.
 - Avoid `any`.
 - Define domain-level types in `app/client/src/types` or the closest feature module.
 - Keep API payload parsing defensive through the existing parser and normalizer utilities.
@@ -32,6 +33,7 @@ Last updated: 2026-07-20
 - Keep error, loading, and empty-state behavior consistent across pages.
 - Prefer existing patterns before introducing parallel styling or state conventions.
 - Normalize optional numeric training metrics at the UI boundary so missing or invalid telemetry does not break charts.
+- Keep training data adapters aligned with the backend's canonical dataset and serializer fields; do not reintroduce the pre-encoding synthetic `extraction` shape.
 
 ## Tooling
 
@@ -41,6 +43,8 @@ Use the npm scripts from `app/client/package.json`:
 - `npm run build`
 - `npm run lint`
 - `npm run preview`
+
+The frontend package does not currently define `test:unit` or `test:e2e` scripts; the standard Windows test runner detects and skips those phases when absent.
 
 ## Related Files
 
