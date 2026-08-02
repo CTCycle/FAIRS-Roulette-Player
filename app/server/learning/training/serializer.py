@@ -35,6 +35,7 @@ class DataSerializerExtension:
         if use_generator:
             dataset = self.generate_synthetic_dataset(configuration)
             dataset = self.encoder.encode(dataset)
+            dataset = dataset.rename(columns={"outcome": "extraction"})
             return dataset, True
 
         seed = configuration.get("seed", 42)
