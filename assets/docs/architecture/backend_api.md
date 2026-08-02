@@ -1,6 +1,6 @@
 ## Backend API
 
-Last updated: 2026-07-20
+Last updated: 2026-08-02
 
 ## Mounting Model
 
@@ -10,7 +10,8 @@ Last updated: 2026-07-20
   - `app/server/api/training.py`
   - `app/server/api/datasets.py`
   - `app/server/api/inference.py`
-- No WebSocket routes are currently implemented in `app/server/api`.
+  - `app/server/api/system.py`
+- No WebSocket routes are currently implemented in `app/server/api`; long-running training is polled through job/status endpoints.
 
 ## Upload Endpoints
 
@@ -55,7 +56,8 @@ Router prefix: `/inference`
 ## System Endpoints
 
 - `GET /api/health`
-  - returns application status, version, and runtime mode.
+  - returns `status`, `application`, `version`, and `mode`.
+  - reports `development` by default and `desktop` only when `FAIRS_TAURI_MODE=true`; no packaged desktop runtime is shipped by this repository.
 
 ## Non-API Routes
 
@@ -67,6 +69,7 @@ Router prefix: `/inference`
 
 - Endpoints use explicit domain identifiers such as `job_id` and `session_id`.
 - Training start and resume requests return `202 Accepted` because work is tracked as a background job.
+- Upload, dataset, checkpoint, inference, and job-management operations return `200 OK` on success unless a documented validation or conflict error applies.
 - HTTP handlers validate and marshal payloads at the API boundary, then delegate orchestration to services.
 - API docs exposure is controlled by `ENABLE_API_DOCS`.
 

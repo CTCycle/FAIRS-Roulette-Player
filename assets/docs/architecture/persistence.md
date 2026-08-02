@@ -1,6 +1,6 @@
 ## Persistence
 
-Last updated: 2026-07-20
+Last updated: 2026-08-02
 
 ## Database Backends
 
@@ -14,6 +14,8 @@ Last updated: 2026-07-20
 - `dataset_outcomes`
 - `inference_sessions`
 - `inference_session_steps`
+
+The schema enforces roulette outcome ranges, positive session/step values, bounded predicted confidence, dataset-kind values, and cascading cleanup from datasets to outcomes and inference sessions.
 
 ## Storage Surfaces
 
@@ -34,6 +36,7 @@ Last updated: 2026-07-20
 - PostgreSQL mode verifies or creates the configured database, then ensures the schema exists.
 - Explicit database initialization remains available as option 3 in `start_on_windows.ps1`.
 - Startup validates that the canonical tables exist before serving traffic.
+- The explicit initializer is useful for pre-seeding or repeatable setup; it is not a substitute for the startup schema-readiness path.
 - This is a clean schema cutover: an existing legacy database must be recreated or
   migrated before startup; the application does not retain the five-table CRUD
   compatibility layer.
