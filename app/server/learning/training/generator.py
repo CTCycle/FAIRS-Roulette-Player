@@ -28,6 +28,6 @@ class RouletteSyntheticGenerator:
     def generate(self) -> pd.DataFrame:
         rng = np.random.default_rng(self.seed)
         extractions = rng.integers(low=0, high=NUMBERS, size=self.series_length)
-        dataframe = pd.DataFrame({"extraction": extractions.astype(int)})
+        dataframe = pd.DataFrame({"outcome": extractions.astype(int)})
 
         return dataframe
