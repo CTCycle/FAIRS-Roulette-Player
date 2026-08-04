@@ -1,6 +1,6 @@
 ## Persistence
 
-Last updated: 2026-08-02
+Last updated: 2026-08-03
 
 ## Database Backends
 
@@ -31,15 +31,11 @@ The schema enforces roulette outcome ranges, positive session/step values, bound
 
 ## Initialization Rules
 
-- Application startup initializes or ensures the canonical schema objects for the selected backend.
-- Embedded SQLite creates the local schema through SQLAlchemy metadata; startup then validates required tables and columns.
-- PostgreSQL mode verifies or creates the configured database, then ensures the schema exists.
-- Explicit database initialization remains available as option 3 in `start_on_windows.ps1`.
-- Startup validates that the canonical tables exist before serving traffic.
-- The explicit initializer is useful for pre-seeding or repeatable setup; it is not a substitute for the startup schema-readiness path.
-- This is a clean schema cutover: an existing legacy database must be recreated or
-  migrated before startup; the application does not retain the five-table CRUD
-  compatibility layer.
+- Application startup uses different lifecycle rules for the selected backend.
+- Embedded SQLite checks only whether the configured database file exists. A missing file is created through SQLAlchemy metadata; an existing file is not initialized, reseeded, reset, or schema-validated during normal startup.
+- PostgreSQL is not created or initialized during normal startup. Startup only runs a non-mutating connection probe against the configured database.
+- The explicit initializer creates or ensures the PostgreSQL database and schema after the user selects option 3 in `start_on_windows.ps1`.
+- The current schema has no applicable seed workflow; initialization does not add or reseed catalog data.
 
 ## Persistence Boundaries
 

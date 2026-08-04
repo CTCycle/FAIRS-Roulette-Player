@@ -3,11 +3,16 @@ from __future__ import annotations
 import sqlalchemy
 from sqlalchemy.exc import SQLAlchemyError
 
+from server.common import path as shared_paths
 from server.common.utils.logger import logger
 from server.configurations import DatabaseSettings
 from server.configurations.startup import get_server_settings
 from server.repositories.database.backend import FAIRSDatabase
-from server.repositories.database.utils import build_postgres_connect_args, normalize_postgres_engine
+from server.repositories.database.utils import (
+    build_postgres_connect_args,
+    is_supported_postgres_engine,
+    normalize_postgres_engine,
+)
 
 ###############################################################################
 def build_postgres_url(settings: DatabaseSettings, database_name: str) -> sqlalchemy.URL:
@@ -51,6 +56,14 @@ def initialize_sqlite_database(settings: DatabaseSettings) -> None:
     logger.info("Initialized SQLite database at %s", database.db_path)
 
 ###############################################################################
+def initialize_sqlite_database_if_missing(settings: DatabaseSettings) -> None:
+    database_path = shared_paths.DATABASE_PATH
+    if database_path.is_file():
+        logger.info("SQLite database already exists at %s; skipped initialization", database_path)
+        return
+    initialize_sqlite_database(settings)
+
+###############################################################################
 def ensure_postgres_database(settings: DatabaseSettings) -> str:
     if not settings.host or not settings.username or not settings.database_name:
         raise ValueError("PostgreSQL host, username, and database name are required.")
@@ -75,9 +88,9 @@ def initialize_database(settings: DatabaseSettings | None = None) -> None:
     resolved = settings or get_server_settings().database
     try:
         if resolved.embedded_database:
-            initialize_sqlite_database(resolved)
+            initialize_sqlite_database_if_missing(resolved)
             return
-        if normalize_postgres_engine(resolved.engine) not in {"postgresql+psycopg", "postgresql+psycopg2"}:
+        if not is_supported_postgres_engine(resolved.engine):
             raise ValueError(f"Unsupported database engine: {resolved.engine}")
         ensure_postgres_database(resolved)
     except (SQLAlchemyError, ValueError) as exc:
@@ -85,4 +98,10 @@ def initialize_database(settings: DatabaseSettings | None = None) -> None:
         raise SystemExit(1) from exc
 
 
-__all__ = ["build_postgres_url", "ensure_postgres_database", "initialize_database", "initialize_sqlite_database"]
+__all__ = [
+    "build_postgres_url",
+    "ensure_postgres_database",
+    "initialize_database",
+    "initialize_sqlite_database",
+    "initialize_sqlite_database_if_missing",
+]

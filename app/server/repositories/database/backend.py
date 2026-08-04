@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from collections.abc import Iterator
 
-from sqlalchemy import Engine, inspect
+from sqlalchemy import Engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from server.configurations import DatabaseSettings
@@ -37,19 +37,9 @@ class FAIRSDatabase:
         Base.metadata.create_all(self.engine)
 
     # -------------------------------------------------------------------------
-    def validate_schema(self) -> None:
-        inspector = inspect(self.engine)
-        missing_tables = set(Base.metadata.tables) - set(inspector.get_table_names())
-        missing_columns = {
-            table_name: {column.name for column in table.columns} - {column["name"] for column in inspector.get_columns(table_name)}
-            for table_name, table in Base.metadata.tables.items()
-            if table_name in inspector.get_table_names()
-        }
-        missing_columns = {name: columns for name, columns in missing_columns.items() if columns}
-        if missing_tables or missing_columns:
-            details = [f"tables={', '.join(sorted(missing_tables))}"] if missing_tables else []
-            details.extend(f"{name} columns={', '.join(sorted(columns))}" for name, columns in missing_columns.items())
-            raise RuntimeError(f"Database schema is incompatible with the canonical schema ({'; '.join(details)}). Recreate or migrate the database.")
+    def check_connection(self) -> None:
+        with self.engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
 
     # -------------------------------------------------------------------------
     @contextmanager

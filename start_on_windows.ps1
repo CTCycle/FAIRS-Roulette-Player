@@ -80,14 +80,19 @@ function Invoke-HealthCheck([string]$Url, [int]$TimeoutSeconds = 60) {
 }
 
 function Initialize-EnvironmentFile {
-    if (-not (Test-Path -LiteralPath $envFile)) {
-        if (-not (Test-Path -LiteralPath $envExample)) { throw "Missing environment template: $envExample" }
-        Copy-Item -LiteralPath $envExample -Destination $envFile
+    if (-not (Test-Path -LiteralPath $envFile -PathType Leaf)) {
+        if (-not (Test-Path -LiteralPath $envExample -PathType Leaf)) { throw "Missing environment template: $envExample" }
+        try {
+            [System.IO.File]::Copy($envExample, $envFile, $false)
+        } catch [System.IO.IOException] {
+            if (-not (Test-Path -LiteralPath $envFile -PathType Leaf)) { throw }
+        }
         Write-Ok 'Created settings\.env from settings\.env.example.'
     }
 }
 
 function Import-DotEnv {
+    Initialize-EnvironmentFile
     $defaults = [ordered]@{
         FASTAPI_HOST = '127.0.0.1'
         FASTAPI_PORT = '8000'
@@ -164,7 +169,6 @@ function Install-Dependencies {
         [ValidateSet('Standard', 'Development')]
         [string]$InstallationType = 'Standard'
     )
-    Initialize-EnvironmentFile
     Import-DotEnv
     Ensure-PortableRuntimes
 
@@ -326,14 +330,23 @@ function Start-Application {
 }
 
 function Initialize-Database {
-    Initialize-EnvironmentFile
     Import-DotEnv
     Ensure-PortableRuntimes
     $env:UV_CACHE_DIR = $uvCacheDir
     $env:UV_PROJECT_ENVIRONMENT = $venvDir
+    $previousPythonPath = $env:PYTHONPATH
     Remove-Item Env:PYTHONHOME, Env:PYTHONPATH, Env:PYTHONNOUSERSITE -ErrorAction SilentlyContinue
-    & $uvExe run --project $serverDir --python $pythonExe python (Join-Path $repoRoot 'app\scripts\initialize_database.py') --drop-existing --seed-catalogs --force-reseed-catalogs
-    if ($LASTEXITCODE -ne 0) { throw "Database initialization failed with exit code $LASTEXITCODE." }
+    $env:PYTHONPATH = Join-Path $repoRoot 'app'
+    try {
+        & $uvExe run --project $serverDir --python $pythonExe python (Join-Path $repoRoot 'app\scripts\initialize_database.py')
+        if ($LASTEXITCODE -ne 0) { throw "Database initialization failed with exit code $LASTEXITCODE." }
+    } finally {
+        if ($null -eq $previousPythonPath) {
+            Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue
+        } else {
+            $env:PYTHONPATH = $previousPythonPath
+        }
+    }
     Write-Ok 'Database initialization completed.'
 }
 
@@ -418,7 +431,7 @@ function Show-Menu {
         Write-Host ''
         Write-Host '  SETUP & MAINTENANCE' -ForegroundColor DarkCyan
         Write-MenuItem '2' 'Install / update dependencies' 'Prepare local runtimes and build the frontend' Yellow
-        Write-MenuItem '3' 'Initialize database' 'Create and seed application data' Yellow
+        Write-MenuItem '3' 'Initialize database' 'Create the selected database and schema' Yellow
         Write-MenuItem '4' 'Run test suite' 'Execute automated checks' Yellow
         Write-Host ''
         Write-Host '  CLEANUP' -ForegroundColor DarkCyan

@@ -27,6 +27,20 @@ def normalize_postgres_engine(engine: str | None) -> str:
     return engine
 
 ###############################################################################
+SUPPORTED_POSTGRES_ENGINES = frozenset(
+    {
+        "postgres",
+        "postgresql",
+        "postgresql+psycopg",
+        "postgresql+psycopg2",
+    }
+)
+
+###############################################################################
+def is_supported_postgres_engine(engine: str | None) -> bool:
+    return normalize_postgres_engine(engine).lower() in SUPPORTED_POSTGRES_ENGINES
+
+###############################################################################
 def normalize_datetime_value(value: Any) -> datetime | None:
     if value is None:
         return None

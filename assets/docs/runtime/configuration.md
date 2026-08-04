@@ -1,6 +1,6 @@
 ## Configuration
 
-Last updated: 2026-08-02
+Last updated: 2026-08-03
 
 ## Environment Variables
 
@@ -60,9 +60,12 @@ The backend creates timestamped `FAIRS_*.log` files in `FAIRS_LOG_DIR` when set,
 ### Database Mode
 
 - `EMBEDDED_DATABASE=true`
-  - uses SQLite and can auto-initialize the embedded database file
+  - uses SQLite and creates the embedded database file only when it is missing
+  - does not cross-validate an existing database during normal startup
 - `EMBEDDED_DATABASE=false`
-  - uses PostgreSQL, requires explicit connection settings, and initializes or ensures the database/schema during backend startup
+  - uses PostgreSQL and requires explicit connection settings
+  - requires launcher option 3 to create or initialize the database and schema
+  - normal startup only probes the existing database connection
 
 ### Backend Log Visibility
 
