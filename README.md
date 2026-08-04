@@ -36,7 +36,7 @@ Runtime profile files:
 Initialize `.env` manually if needed:
 
 ```cmd
-copy /Y settings\.env.example settings\.env
+if not exist settings\.env copy settings\.env.example settings\.env
 ```
 
 Use `.env` for runtime variables and all database settings; use `configurations.json` only for non-database backend settings such as job polling and device defaults. A `database` block in `configurations.json` is invalid and rejected at startup.
@@ -46,11 +46,11 @@ Use `.env` for runtime variables and all database settings; use `configurations.
 Database backend selection is defined in `settings/.env` (`EMBEDDED_DATABASE`).
 
 - `SQLite` (`EMBEDDED_DATABASE=true`):
-  - The application initializes the database automatically on startup only when the user-data database is missing.
-  - Initialization creates schema objects and seeds required data.
-  - If `database.db` already exists, startup skips initialization.
+  - The application creates the configured database automatically only when the SQLite file is missing.
+  - If `database.db` already exists, startup skips initialization and does not validate or alter the schema.
 - `PostgreSQL` (`EMBEDDED_DATABASE=false`):
-  - The application does not initialize PostgreSQL automatically during startup.
+  - The application never creates or initializes PostgreSQL during normal startup.
+  - Startup only checks that the configured database accepts a non-mutating connection.
   - Initialization is manual via:
 
 ```powershell
@@ -59,7 +59,7 @@ Database backend selection is defined in `settings/.env` (`EMBEDDED_DATABASE`).
 
 Select option 3, `Initialize database`, to run `app/scripts/initialize_database.py`.
 
-`app/scripts/initialize_database.py` can also initialize SQLite when SQLite mode is selected, but this is normally unnecessary because SQLite initialization is already handled automatically by app startup.
+`app/scripts/initialize_database.py` also uses the safe missing-file rule for SQLite. It does not reset or reseed an existing SQLite database.
 
 ## 5. Typical Workflow
 

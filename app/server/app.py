@@ -9,6 +9,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy.exc import SQLAlchemyError
 
 from server.common.constants import (
     FASTAPI_API_PREFIX,
@@ -28,7 +29,7 @@ from server.api.upload import router as upload_router
 from server.api.system import router as system_router
 from server.configurations import get_server_settings
 from server.repositories.database.backend import FAIRSDatabase
-from server.repositories.database.initializer import initialize_database
+from server.repositories.database.initializer import initialize_sqlite_database_if_missing
 from server.repositories.datasets import DatasetRepository
 from server.repositories.inference import InferenceRepository
 from server.repositories.serialization.data import DataSerializer
@@ -87,11 +88,20 @@ def redirect_root_to_docs() -> RedirectResponse | dict[str, str]:
 async def app_lifespan(application: FastAPI) -> AsyncIterator[None]:
     settings = get_server_settings()
 
-    initialize_database(settings.database)
     run_startup_validations(settings)
 
-    database = FAIRSDatabase()
-    database.validate_schema()
+    if settings.database.embedded_database:
+        initialize_sqlite_database_if_missing(settings.database)
+        database = FAIRSDatabase(settings.database)
+    else:
+        database = FAIRSDatabase(settings.database)
+        try:
+            database.check_connection()
+        except SQLAlchemyError as exc:
+            raise RuntimeError(
+                "Unable to connect to the configured PostgreSQL database. "
+                "Run the launcher's database initialization command and verify the connection settings."
+            ) from exc
     serializer = DataSerializer(
         datasets=DatasetRepository(database),
         inference=InferenceRepository(database),

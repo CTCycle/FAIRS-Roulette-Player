@@ -1,6 +1,6 @@
 ## Startup
 
-Last updated: 2026-08-02
+Last updated: 2026-08-03
 
 ## Local Application Startup
 
@@ -23,6 +23,7 @@ From repository root in PowerShell:
 
 What the launcher does:
 
+- creates `settings/.env` from `settings/.env.example` when the active file is missing, without overwriting an existing file
 - prepares or validates portable Python `3.14.2`, uv, and Node.js `22.13.0` in `runtimes/`
 - targets the runtime virtual environment through `UV_PROJECT_ENVIRONMENT`
 - checks whether the application environment is ready before installing
@@ -33,6 +34,12 @@ What the launcher does:
 - launches the backend with `uvicorn` and the built frontend with Vite preview
 - opens the configured frontend URL in the default browser
 - verifies backend health and frontend preview readiness before reporting success
+
+Database behavior:
+
+- SQLite is created automatically only when its configured `.db` file is missing.
+- PostgreSQL is never created or initialized by normal application startup. Select option 3, `Initialize database`, after configuring PostgreSQL.
+- Option 3 is non-destructive for an existing SQLite database and is the explicit PostgreSQL initialization path.
 
 If the readiness check passes, normal application start skips dependency installation and proceeds directly to the two services. Use option 2 when source changes require a fresh dependency sync or frontend build.
 

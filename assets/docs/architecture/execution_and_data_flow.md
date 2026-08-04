@@ -1,6 +1,6 @@
 ## Execution And Data Flow
 
-Last updated: 2026-08-02
+Last updated: 2026-08-03
 
 ## Backend Layers
 
@@ -29,11 +29,10 @@ Last updated: 2026-08-02
 `app/server/app.py` constructs the app with routers and client routes, then its lifespan performs runtime startup in this order:
 
 1. Resolve server settings.
-2. Initialize the configured database backend.
-3. Run startup validations.
+2. Run startup validations.
+3. In SQLite mode, create the database only when its configured file is missing; in PostgreSQL mode, probe the existing connection with `SELECT 1`.
 4. Construct the database handle.
-5. Validate the database schema.
-6. Construct the serializers, job manager, checkpoint service, and domain services, then attach them and the database to `application.state`.
+5. Construct the serializers, job manager, checkpoint service, and domain services, then attach them and the database to `application.state`.
 
 Router mounting and SPA/docs route configuration happen during app construction before the lifespan runs.
 
