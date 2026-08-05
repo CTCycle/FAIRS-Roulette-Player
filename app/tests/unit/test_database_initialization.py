@@ -74,27 +74,40 @@ def test_explicit_postgres_initialization_creates_database_and_schema(monkeypatc
     create_database_statements: list[str] = []
     schema_calls: list[bool] = []
 
+    ###############################################################################
     class Connection:
+
+        # -------------------------------------------------------------------------
         def __enter__(self) -> "Connection":
             return self
 
+        # -------------------------------------------------------------------------
         def __exit__(self, *_args: object) -> None:
             return None
 
+        # -------------------------------------------------------------------------
         def exec_driver_sql(self, statement: str) -> None:
             create_database_statements.append(statement)
 
+    ###############################################################################
     class AdminEngine:
+
+        # -------------------------------------------------------------------------
         def connect(self) -> Connection:
             return Connection()
 
+        # -------------------------------------------------------------------------
         def dispose(self) -> None:
             return None
 
+    ###############################################################################
     class Database:
+
+        # -------------------------------------------------------------------------
         def create_schema(self) -> None:
             schema_calls.append(True)
 
+        # -------------------------------------------------------------------------
         def dispose(self) -> None:
             return None
 

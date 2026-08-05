@@ -76,7 +76,10 @@ def _stub_lifespan_dependencies(
     )
     monkeypatch.setattr(app_module, "run_startup_validations", lambda settings: None)
 
+    ###############################################################################
     class DatabaseStub:
+
+        # -------------------------------------------------------------------------
         def check_connection(self) -> None:
             connection_calls.append(True)
 
@@ -173,7 +176,10 @@ def test_postgresql_startup_reports_connection_failure(monkeypatch) -> None:
 
     _stub_lifespan_dependencies(monkeypatch, app_module, _build_external_settings())
 
+    ###############################################################################
     class FailingDatabase:
+
+        # -------------------------------------------------------------------------
         def check_connection(self) -> None:
             raise SQLAlchemyError("connection refused")
 
