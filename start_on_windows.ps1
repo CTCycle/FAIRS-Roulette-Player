@@ -23,7 +23,7 @@ $uvCacheDir = Join-Path $runtimeRoot '.uv-cache'
 
 $pythonVersion = '3.14.2'
 $pythonUrl = "https://www.python.org/ftp/python/$pythonVersion/python-$pythonVersion-embed-amd64.zip"
-$nodeVersion = '22.12.0'
+$nodeVersion = '22.13.0'
 $nodeArchiveName = "node-v$nodeVersion-win-x64"
 $nodeUrl = "https://nodejs.org/dist/v$nodeVersion/$nodeArchiveName.zip"
 $uvUrl = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') {
@@ -80,21 +80,25 @@ function Invoke-HealthCheck([string]$Url, [int]$TimeoutSeconds = 60) {
 }
 
 function Initialize-EnvironmentFile {
-    if (-not (Test-Path -LiteralPath $envFile)) {
-        if (-not (Test-Path -LiteralPath $envExample)) { throw "Missing environment template: $envExample" }
-        Copy-Item -LiteralPath $envExample -Destination $envFile
+    if (-not (Test-Path -LiteralPath $envFile -PathType Leaf)) {
+        if (-not (Test-Path -LiteralPath $envExample -PathType Leaf)) { throw "Missing environment template: $envExample" }
+        try {
+            [System.IO.File]::Copy($envExample, $envFile, $false)
+        } catch [System.IO.IOException] {
+            if (-not (Test-Path -LiteralPath $envFile -PathType Leaf)) { throw }
+        }
         Write-Ok 'Created settings\.env from settings\.env.example.'
     }
 }
 
 function Import-DotEnv {
+    Initialize-EnvironmentFile
     $defaults = [ordered]@{
         FASTAPI_HOST = '127.0.0.1'
         FASTAPI_PORT = '8000'
         UI_HOST = '127.0.0.1'
         UI_PORT = '8001'
         RELOAD = 'false'
-        OPTIONAL_DEPENDENCIES = 'false'
         BACKEND_LOGS_VISIBLE = 'true'
         ALWAYS_REBUILD = 'true'
     }
@@ -136,7 +140,15 @@ function Ensure-PortableRuntimes {
     Write-Ok (& $uvExe --version)
 
     Write-Step 'Installing Node.js (portable).'
-    if (-not (Test-Path -LiteralPath $nodeExe)) {
+    $nodeNeedsInstall = $true
+    if (Test-Path -LiteralPath $nodeExe) {
+        $installedNodeVersion = (& $nodeExe --version).Trim()
+        $nodeNeedsInstall = $installedNodeVersion -ne "v$nodeVersion" -or -not (Test-Path -LiteralPath $npmCmd)
+        if (-not $nodeNeedsInstall) { Write-Info "Node.js $installedNodeVersion already matches the launcher baseline." }
+    }
+    if ($nodeNeedsInstall) {
+        if (Test-Path -LiteralPath $nodeDir) { Remove-Item -LiteralPath $nodeDir -Recurse -Force }
+        New-Item -ItemType Directory -Path $nodeDir -Force | Out-Null
         Invoke-DownloadAndExtract $nodeUrl (Join-Path $nodeDir 'node.zip') $nodeDir
         $nestedNodeDir = Join-Path $nodeDir $nodeArchiveName
         if (Test-Path -LiteralPath (Join-Path $nestedNodeDir 'node.exe')) {
@@ -151,8 +163,12 @@ function Ensure-PortableRuntimes {
     Write-Ok "Node.js ready: $(& $nodeExe --version)"
 }
 
-function Install-Dependencies([switch]$PruneCache) {
-    Initialize-EnvironmentFile
+function Install-Dependencies {
+    param(
+        [switch]$PruneCache,
+        [ValidateSet('Standard', 'Development')]
+        [string]$InstallationType = 'Standard'
+    )
     Import-DotEnv
     Ensure-PortableRuntimes
 
@@ -163,7 +179,7 @@ function Install-Dependencies([switch]$PruneCache) {
 
     Write-Step 'Installing Python dependencies with uv.'
     $syncArguments = @('sync', '--python', $pythonExe)
-    if ($env:OPTIONAL_DEPENDENCIES -eq 'true') { $syncArguments += '--all-extras' }
+    if ($InstallationType -eq 'Development') { $syncArguments += '--all-extras' }
     Push-Location $serverDir
     try {
         & $uvExe @syncArguments
@@ -175,6 +191,8 @@ function Install-Dependencies([switch]$PruneCache) {
         if ($LASTEXITCODE -ne 0) { throw "uv sync failed with exit code $LASTEXITCODE." }
     } finally { Pop-Location }
 
+    Write-Step 'Stopping any running frontend before updating dependencies.'
+    Clear-Port ([int]$env:UI_PORT)
     Write-Step 'Installing frontend dependencies.'
     Push-Location $clientDir
     try {
@@ -194,6 +212,39 @@ function Install-Dependencies([switch]$PruneCache) {
         Remove-Item -LiteralPath $uvCacheDir -Recurse -Force
     }
     Write-Ok 'Dependencies are installed and the frontend build is ready.'
+}
+
+function Test-DependenciesReady {
+    $frontendPackage = Join-Path $clientDir 'package.json'
+    $frontendLock = Join-Path $clientDir 'package-lock.json'
+    $frontendModules = Join-Path $clientDir 'node_modules'
+    $frontendInstallState = Join-Path $frontendModules '.package-lock.json'
+    $frontendRunner = Join-Path $frontendModules '.bin\vite.cmd'
+    $backendEntrypoint = Join-Path $serverDir 'app.py'
+
+    if (-not (Test-Path -LiteralPath $pythonExe) -or
+        -not (Test-Path -LiteralPath $uvExe) -or
+        -not (Test-Path -LiteralPath $nodeExe) -or
+        -not (Test-Path -LiteralPath $npmCmd) -or
+        -not (Test-Path -LiteralPath $venvPython) -or
+        -not (Test-Path -LiteralPath $backendEntrypoint) -or
+        -not (Test-Path -LiteralPath $frontendPackage) -or
+        -not (Test-Path -LiteralPath $frontendLock) -or
+        -not (Test-Path -LiteralPath $frontendInstallState) -or
+        -not (Test-Path -LiteralPath $frontendRunner)) {
+        return $false
+    }
+
+    & $pythonExe --version *> $null
+    if ($LASTEXITCODE -ne 0) { return $false }
+    & $uvExe --version *> $null
+    if ($LASTEXITCODE -ne 0) { return $false }
+    & $nodeExe --version *> $null
+    if ($LASTEXITCODE -ne 0) { return $false }
+    & $venvPython -c 'import fastapi, uvicorn' *> $null
+    if ($LASTEXITCODE -ne 0) { return $false }
+
+    return $true
 }
 
 function Get-PortProcessIds([int]$Port) {
@@ -216,8 +267,19 @@ function Clear-Port([int]$Port) {
 }
 
 function Start-Application {
-    Install-Dependencies
     Import-DotEnv
+    Ensure-PortableRuntimes
+    $env:UV_CACHE_DIR = $uvCacheDir
+    $env:UV_PROJECT_ENVIRONMENT = $venvDir
+    $env:UV_LINK_MODE = 'copy'
+    Remove-Item Env:PYTHONHOME, Env:PYTHONPATH, Env:PYTHONNOUSERSITE -ErrorAction SilentlyContinue
+    if (-not (Test-DependenciesReady)) {
+        Write-Step 'Required application environments are missing or unusable; installing dependencies.'
+        Install-Dependencies -InstallationType 'Standard'
+    }
+    else {
+        Write-Ok 'Application environments are ready; skipped dependency installation.'
+    }
     $fastApiPort = [int]$env:FASTAPI_PORT
     $uiPort = [int]$env:UI_PORT
     Clear-Port $fastApiPort
@@ -270,14 +332,23 @@ function Start-Application {
 }
 
 function Initialize-Database {
-    Initialize-EnvironmentFile
     Import-DotEnv
     Ensure-PortableRuntimes
     $env:UV_CACHE_DIR = $uvCacheDir
     $env:UV_PROJECT_ENVIRONMENT = $venvDir
+    $previousPythonPath = $env:PYTHONPATH
     Remove-Item Env:PYTHONHOME, Env:PYTHONPATH, Env:PYTHONNOUSERSITE -ErrorAction SilentlyContinue
-    & $uvExe run --project $serverDir --python $pythonExe python (Join-Path $repoRoot 'app\scripts\initialize_database.py') --drop-existing --seed-catalogs --force-reseed-catalogs
-    if ($LASTEXITCODE -ne 0) { throw "Database initialization failed with exit code $LASTEXITCODE." }
+    $env:PYTHONPATH = Join-Path $repoRoot 'app'
+    try {
+        & $uvExe run --project $serverDir --python $pythonExe python (Join-Path $repoRoot 'app\scripts\initialize_database.py')
+        if ($LASTEXITCODE -ne 0) { throw "Database initialization failed with exit code $LASTEXITCODE." }
+    } finally {
+        if ($null -eq $previousPythonPath) {
+            Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue
+        } else {
+            $env:PYTHONPATH = $previousPythonPath
+        }
+    }
     Write-Ok 'Database initialization completed.'
 }
 
@@ -312,40 +383,68 @@ function Uninstall-Application {
         (Join-Path $repoRoot '.venv'),
         (Join-Path $clientDir 'node_modules'),
         (Join-Path $clientDir '.angular'),
-        (Join-Path $clientDir 'dist'),
-        (Join-Path $clientDir 'package-lock.json'),
-        (Join-Path $serverDir 'uv.lock'),
-        (Join-Path $repoRoot 'uv.lock')
+        (Join-Path $clientDir 'dist')
     )
     foreach ($path in $paths) {
         if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Recurse -Force }
     }
+    New-Item -ItemType Directory -Path $runtimeRoot -Force | Out-Null
+    New-Item -ItemType File -Path (Join-Path $runtimeRoot '.gitkeep') -Force | Out-Null
     Remove-PythonCaches
-    Write-Ok 'Application runtimes, dependencies, build outputs, and lockfiles removed. User data was preserved.'
+    Write-Ok 'Application runtimes, dependencies, and build outputs removed. Dependency lockfiles and user data were preserved.'
 }
 
 function Wait-ForMenu {
+    if ([Console]::IsInputRedirected) { return }
     Write-Host ''
-    Write-Host 'Press any key to return to menu...'
+    Write-Host '  Press any key to return to the menu...' -ForegroundColor DarkGray
     [void][Console]::ReadKey($true)
+}
+
+function Write-MenuItem([string]$Number, [string]$Label, [string]$Description, [ConsoleColor]$Color = [ConsoleColor]::White) {
+    Write-Host '  ' -NoNewline
+    Write-Host (" {0} " -f $Number) -NoNewline -ForegroundColor Black -BackgroundColor $Color
+    Write-Host "  $Label" -NoNewline -ForegroundColor $Color
+    Write-Host "  $Description" -ForegroundColor DarkGray
+}
+
+function Read-InstallationType {
+    $selection = (Read-Host 'Installation type [1=Development, 2=Standard]').Trim()
+    switch ($selection) {
+        '1' { return 'Development' }
+        '2' { return 'Standard' }
+        default { throw 'Invalid installation type. Enter 1 for Development or 2 for Standard.' }
+    }
 }
 
 function Show-Menu {
     while ($true) {
         Clear-Host
-        Write-Host '========================================='
-        Write-Host '    FAIRS -- Roulette Player'
-        Write-Host '========================================='
-        Write-Host '1.  Launch application'
-        Write-Host '2.  Install / update dependencies'
-        Write-Host '3.  Initialize database'
-        Write-Host '4.  Run test suite'
-        Write-Host '5.  Remove logs'
-        Write-Host '6.  Clear cache'
-        Write-Host '7.  Uninstall application'
-        Write-Host '8.  Exit'
-        Write-Host '========================================='
-        $selection = Read-Host 'Select an option (1-8)'
+        Write-Host ''
+        Write-Host '  +---------------------------------------------------+' -ForegroundColor DarkCyan
+        Write-Host '  |                                                   |' -ForegroundColor DarkCyan
+        Write-Host '  |             FAIRS  /  ROULETTE PLAYER             |' -ForegroundColor Cyan
+        Write-Host '  |          Local launcher and maintenance           |' -ForegroundColor DarkGray
+        Write-Host '  |                                                   |' -ForegroundColor DarkCyan
+        Write-Host '  +---------------------------------------------------+' -ForegroundColor DarkCyan
+        Write-Host ''
+        Write-Host '  START' -ForegroundColor DarkCyan
+        Write-MenuItem '1' 'Launch application' 'Start the backend and player' Cyan
+        Write-Host ''
+        Write-Host '  SETUP & MAINTENANCE' -ForegroundColor DarkCyan
+        Write-MenuItem '2' 'Install / update dependencies' 'Prepare local runtimes and build the frontend' Yellow
+        Write-MenuItem '3' 'Initialize database' 'Create the selected database and schema' Yellow
+        Write-MenuItem '4' 'Run test suite' 'Execute automated checks' Yellow
+        Write-Host ''
+        Write-Host '  CLEANUP' -ForegroundColor DarkCyan
+        Write-MenuItem '5' 'Remove logs' 'Delete application log files' DarkYellow
+        Write-MenuItem '6' 'Clear cache' 'Remove Python and uv caches' DarkYellow
+        Write-MenuItem '7' 'Uninstall application' 'Remove local runtimes and build outputs' Red
+        Write-Host ''
+        Write-Host '  -----------------------------------------------------' -ForegroundColor DarkCyan
+        Write-MenuItem '8' 'Exit' 'Close this launcher' DarkGray
+        Write-Host ''
+        $selection = Read-Host '  Select an option (1-8)'
         if ($selection -notmatch '^[1-8]$') {
             Write-Fatal 'Invalid option. Select a number from 1 through 8.'
             Wait-ForMenu
@@ -355,15 +454,20 @@ function Show-Menu {
         try {
             switch ($selection) {
                 '1' { Start-Application; exit 0 }
-                '2' { Install-Dependencies -PruneCache }
+                '2' {
+                    $installationType = Read-InstallationType
+                    Install-Dependencies -PruneCache -InstallationType $installationType
+                }
                 '3' { Initialize-Database }
                 '4' { Invoke-TestSuite }
                 '5' { Remove-Logs }
                 '6' { Clear-Cache }
                 '7' { Uninstall-Application }
             }
+            if ([Console]::IsInputRedirected) { break }
         } catch {
             Write-Fatal $_.Exception.Message
+            if ([Console]::IsInputRedirected) { exit 1 }
         }
         Wait-ForMenu
     }

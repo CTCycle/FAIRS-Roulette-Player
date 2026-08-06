@@ -5,6 +5,7 @@
     height: auto;
     min-height: 100%;
     align-items: stretch;
+    padding-bottom: 1.5rem;
 }
 
 .leftPanel {
@@ -182,6 +183,12 @@
 
 .primaryButton {
     border: 1px solid transparent;
+}
+
+.compactButton {
+    height: 32px;
+    padding: 0 0.75rem;
+    font-size: 0.82rem;
 }
 
 .ghostButton:disabled {
@@ -381,16 +388,9 @@
     color: var(--text-secondary);
 }
 
-.emptyStatePanel {
-    display: grid;
-    place-items: center;
-    min-height: 220px;
-    text-align: center;
-    padding: 2rem;
+.placeholderRow td {
     color: var(--text-secondary);
-    border: 1px dashed var(--border-color);
-    border-radius: var(--radius-md);
-    background-color: rgba(15, 25, 44, 0.35);
+    opacity: 0.45;
 }
 
 @media (max-width: 1100px) {

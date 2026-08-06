@@ -4,15 +4,7 @@ import os
 
 from server.common import path as shared_paths
 from server.configurations import ServerSettings, get_server_settings
-from server.repositories.database.utils import normalize_postgres_engine
-
-
-SUPPORTED_POSTGRES_ENGINES = {
-    "postgres",
-    "postgresql",
-    "postgresql+psycopg",
-    "postgresql+psycopg2",
-}
+from server.repositories.database.utils import is_supported_postgres_engine
 
 ###############################################################################
 def tauri_mode_enabled() -> bool:
@@ -31,10 +23,7 @@ def run_startup_validations(settings: ServerSettings | None = None) -> None:
         directory.mkdir(parents=True, exist_ok=True)
 
     if not resolved_settings.database.embedded_database:
-        engine_name = normalize_postgres_engine(
-            resolved_settings.database.engine
-        ).lower()
-        if engine_name not in SUPPORTED_POSTGRES_ENGINES:
+        if not is_supported_postgres_engine(resolved_settings.database.engine):
             raise RuntimeError(
                 "Unsupported database engine configured for startup: "
                 f"{resolved_settings.database.engine}"

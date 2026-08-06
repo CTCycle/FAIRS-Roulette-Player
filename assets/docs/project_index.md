@@ -1,11 +1,13 @@
 ## Project Overview
 
-Last updated: 2026-07-11
+Last updated: 2026-08-02
 
 ## Purpose
 
 This file is the root index for `assets/docs`.
 Read it first, then open the smallest leaf document that matches the task.
+
+The documentation set is synchronized with the current `2.5.0` codebase: local Windows web runtime, portable Python `3.14.2`, Node.js `22.13.0`, FastAPI backend, and React/Vite frontend.
 
 ## Navigation Rules
 
@@ -98,6 +100,7 @@ Read it first, then open the smallest leaf document that matches the task.
 - Read documentation only when required by the current task.
 - Prefer the smallest leaf file that answers the question.
 - Keep all affected docs updated in the same change when implementation changes alter behavior.
+- When launcher, schema, API, or UI behavior changes, update the corresponding architecture, runtime, operations, and UI leaf documents together.
 - Use folder structure, file names, routes, tests, and imports to pre-select docs before opening them.
 - Do not read the entire documentation tree unless the task explicitly requires broad context.
 

@@ -69,6 +69,65 @@ def test_environment_overrides_existing_process_values(
     assert os.getenv("FASTAPI_HOST") == "from_dotenv"
 
 ###############################################################################
+def test_environment_creates_missing_env_from_example(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    env_path = tmp_path / ".env"
+    example_path = tmp_path / ".env.example"
+    example_contents = "FASTAPI_HOST=from-example\nEMBEDDED_DATABASE=true\n"
+    example_path.write_text(example_contents, encoding="utf-8")
+
+    monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
+    monkeypatch.setattr(
+        environment.shared_paths,
+        "ENV_EXAMPLE_FILE_PATH",
+        example_path,
+    )
+
+    loaded_path = environment.load_environment(force=True)
+
+    assert loaded_path == env_path
+    assert env_path.read_text(encoding="utf-8") == example_contents
+    assert os.getenv("FASTAPI_HOST") == "from-example"
+
+###############################################################################
+def test_environment_preserves_existing_env(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    env_path = tmp_path / ".env"
+    example_path = tmp_path / ".env.example"
+    existing_contents = "FASTAPI_HOST=from-existing\n"
+    env_path.write_text(existing_contents, encoding="utf-8")
+    example_path.write_text("FASTAPI_HOST=from-example\n", encoding="utf-8")
+
+    monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
+    monkeypatch.setattr(
+        environment.shared_paths,
+        "ENV_EXAMPLE_FILE_PATH",
+        example_path,
+    )
+
+    environment.load_environment(force=True)
+
+    assert env_path.read_text(encoding="utf-8") == existing_contents
+    assert os.getenv("FASTAPI_HOST") == "from-existing"
+
+###############################################################################
+def test_environment_requires_template_when_env_is_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    env_path = tmp_path / ".env"
+    monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
+    monkeypatch.setattr(
+        environment.shared_paths,
+        "ENV_EXAMPLE_FILE_PATH",
+        tmp_path / ".env.example",
+    )
+
+    with pytest.raises(RuntimeError, match="template was not found"):
+        environment.load_environment(force=True)
+
+###############################################################################
 def test_environment_load_is_idempotent_without_force(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

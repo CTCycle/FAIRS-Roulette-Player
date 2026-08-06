@@ -1,15 +1,16 @@
 ## System Overview
 
-Last updated: 2026-07-11
+Last updated: 2026-08-02
 
 ## Summary
 
-FAIRS is a Windows-first roulette research application with two main runtime surfaces:
+FAIRS is a Windows-first roulette research application for local web-mode roulette training and inference experiments. It has two main runtime surfaces:
 
 - FastAPI backend in `app/server`
-- React + TypeScript frontend in `app/client/src`
+- React 19 + TypeScript frontend in `app/client/src`
+- Current application version: `2.5.0`
 
-The backend is the system of record for API behavior, training orchestration, inference sessions, and persistence.
+The backend is the system of record for API behavior, training orchestration, inference sessions, persistence, and startup readiness. The repository does not include a desktop installer, container deployment, or packaged executable path.
 
 ## Source Tree
 
@@ -55,7 +56,8 @@ The structure below is source-focused and excludes dependency, cache, and genera
 │     ├─ e2e/
 │     └─ unit/
 ├─ assets/
-│  └─ docs/
+│  ├─ docs/
+│  └─ figures/
 ├─ runtimes/
 ├─ settings/
 │  └─ configurations.json
@@ -80,9 +82,12 @@ The structure below is source-focused and excludes dependency, cache, and genera
 - Primary pages are:
   - `/training`
   - `/inference`
+- The shared header includes the FAIRS logo, workspace subtitle, and icon-backed Training/Inference navigation.
 - Shared application state lives in `src/context`.
 - Feature logic is split between `src/hooks`, `src/pages`, and `src/components`.
 - Styling is token-driven through `src/styles/global.css` plus feature CSS files and CSS modules.
+- Training includes dataset/checkpoint previews, a clickable six-step configuration wizard, and a live monitor with metric cards, progress, and history charts.
+- Inference uses a setup/statistics/suggestion panel beside a session-history table with Play, Stop, Clear, and row-edit controls.
 
 ## Related Files
 

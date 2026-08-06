@@ -712,7 +712,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
                         />
                         <button
                             type="button"
-                            className={`${styles.secondaryButton} ${styles.uploadButton}`}
+                            className={`${styles.secondaryButton} ${styles.uploadButton} ${styles.compactButton}`}
                             onClick={handleUploadClick}
                             disabled={setupLocked || isUploading}
                         >
@@ -720,7 +720,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
                         </button>
                         <button
                             type="button"
-                            className={styles.ghostButton}
+                            className={`${styles.ghostButton} ${styles.compactButton}`}
                             onClick={handleClearUpload}
                             disabled={setupLocked || setup.datasetSource !== 'uploaded'}
                         >
@@ -835,7 +835,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
                         <div className={styles.headerActions}>
                             <button
                                 type="button"
-                                className={styles.primaryButton}
+                                className={`${styles.primaryButton} ${styles.compactButton}`}
                                 onClick={handlePlay}
                                 disabled={!canPlay || isRecomputing}
                             >
@@ -843,7 +843,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
                             </button>
                             <button
                                 type="button"
-                                className={styles.secondaryButton}
+                                className={`${styles.secondaryButton} ${styles.compactButton}`}
                                 onClick={handleStop}
                                 disabled={!canStop || isRecomputing}
                             >
@@ -851,7 +851,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
                             </button>
                             <button
                                 type="button"
-                                className={styles.ghostButton}
+                                className={`${styles.ghostButton} ${styles.compactButton}`}
                                 onClick={handleClear}
                                 disabled={!canClear || isRecomputing}
                             >
@@ -863,24 +863,35 @@ export const GameSession: React.FC<GameSessionProps> = ({
                         <div className={styles.errorText} role="alert" aria-live="polite">{error}</div>
                     )}
                     <div className={styles.tableBody}>
-                        {history.length === 0 ? (
-                            <div className={styles.emptyStatePanel}>
-                                No history yet. Start playing!
-                            </div>
-                        ) : (
-                            <table className={styles.historyTable}>
-                                <thead>
-                                    <tr>
-                                        <th>Step</th>
-                                        <th>Prediction</th>
-                                        <th>Observed</th>
-                                        <th>Outcome</th>
-                                        <th>Capital</th>
-                                        <th className={styles.actionsHeader}>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {history.map((step, index) => {
+                        <table className={styles.historyTable}>
+                            <thead>
+                                <tr>
+                                    <th>Step</th>
+                                    <th>Prediction</th>
+                                    <th>Observed</th>
+                                    <th>Outcome</th>
+                                    <th>Capital</th>
+                                    <th className={styles.actionsHeader}>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {history.length === 0 ? (
+                                    Array.from({ length: 3 }, (_, index) => (
+                                        <tr
+                                            key={`placeholder-${index}`}
+                                            className={styles.placeholderRow}
+                                            aria-hidden="true"
+                                        >
+                                            <td>—</td>
+                                            <td>—</td>
+                                            <td>—</td>
+                                            <td>—</td>
+                                            <td>—</td>
+                                            <td className={styles.actionsCell}>—</td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    history.map((step, index) => {
                                         const isLastRow = index === history.length - 1;
                                         const canNext =
                                             isLastRow &&
@@ -946,10 +957,10 @@ export const GameSession: React.FC<GameSessionProps> = ({
                                                 </td>
                                             </tr>
                                         );
-                                    })}
-                                </tbody>
-                            </table>
-                        )}
+                                    })
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>

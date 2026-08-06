@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Database, Play, RefreshCw, X } from 'lucide-react';
+import { ChevronDown, Database, Play, RefreshCw, X } from 'lucide-react';
 import type { TrainingNewConfig } from '../../../context/AppStateContext';
 import { useAppState } from '../../../hooks/useAppState';
 import { useWizardStep } from '../../../hooks/useWizardStep';
@@ -54,6 +54,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
         isLastStep: isLastWizardStep,
         goToPreviousStep: goToPreviousWizardStep,
         goToNextStep: goToNextWizardStep,
+        setStep: setWizardStep,
         resetStep: resetWizardStep,
     } = useWizardStep({ totalSteps: WIZARD_STEPS.length });
     const [wizardDatasetId, setWizardDatasetId] = useState<string | null>(null);
@@ -373,6 +374,21 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                             <span>{newConfig.useDataGen ? 'Mode: Synthetic Generator' : `Dataset: ${wizardDatasetLabel}`}</span>
                             <span>{`Step ${wizardStep + 1} of ${WIZARD_STEPS.length}`}</span>
                         </div>
+                        <nav className="wizard-breadcrumbs" aria-label="Training wizard steps">
+                            {WIZARD_STEPS.map((stepTitle, index) => (
+                                <button
+                                    key={stepTitle}
+                                    type="button"
+                                    className={`wizard-breadcrumb${wizardStep === index ? ' wizard-breadcrumb-active' : ''}`}
+                                    onClick={() => setWizardStep(index)}
+                                    aria-current={wizardStep === index ? 'step' : undefined}
+                                    title={stepTitle}
+                                >
+                                    <span className="wizard-breadcrumb-index">{index + 1}</span>
+                                    <span className="wizard-breadcrumb-label">{stepTitle}</span>
+                                </button>
+                            ))}
+                        </nav>
                         <div className="wizard-step-title">
                             {wizardStep === 3 && newConfig.useDataGen ? 'Generator Parameters' : WIZARD_STEPS[wizardStep]}
                         </div>
@@ -461,19 +477,22 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                                             </label>
                                             <div className="form-group">
                                                 <label className="form-label">Fallback Strategy</label>
-                                                <select
-                                                    name="betStrategyFixedId"
-                                                    value={newConfig.betStrategyFixedId}
-                                                    onChange={(event) => handleNumberChange('betStrategyFixedId', Number(event.target.value))}
-                                                    className="form-select"
-                                                    disabled={!newConfig.dynamicBettingEnabled || newConfig.betStrategyModelEnabled}
-                                                >
-                                                    {BET_STRATEGY_OPTIONS.map((option) => (
-                                                        <option key={option.id} value={option.id}>
-                                                            {option.name}
-                                                        </option>
-                                                    ))}
-                                                </select>
+                                                <div className="wizard-select-wrap">
+                                                    <select
+                                                        name="betStrategyFixedId"
+                                                        value={newConfig.betStrategyFixedId}
+                                                        onChange={(event) => handleNumberChange('betStrategyFixedId', Number(event.target.value))}
+                                                        className="form-select"
+                                                        disabled={!newConfig.dynamicBettingEnabled || newConfig.betStrategyModelEnabled}
+                                                    >
+                                                        {BET_STRATEGY_OPTIONS.map((option) => (
+                                                            <option key={option.id} value={option.id}>
+                                                                {option.name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                    <ChevronDown className="wizard-select-icon" size={16} aria-hidden="true" />
+                                                </div>
                                             </div>
                                             <div className="form-group">
                                                 <label className="form-label">Strategy Hold Steps</label>
