@@ -72,7 +72,7 @@ class TestTrainingPage:
 
         expect(
             page.get_by_role(
-                "heading", name=re.compile("Model Training Workspace", re.IGNORECASE)
+                "heading", name=re.compile("Training Monitor", re.IGNORECASE)
             )
         ).to_be_visible()
         expect(page.get_by_text("Checkpoints", exact=False).first).to_be_visible()
