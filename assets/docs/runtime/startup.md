@@ -1,6 +1,6 @@
 ## Startup
 
-Last updated: 2026-08-03
+Last updated: 2026-08-06
 
 ## Local Application Startup
 
@@ -30,6 +30,7 @@ What the launcher does:
 - syncs Python dependencies with `uv` in `Standard` mode when installation is needed
 - installs the server's test extra when option 2 is run with `Development` selected
 - installs frontend dependencies as needed
+- stops a frontend listener on the configured UI port before replacing frontend dependencies
 - builds the frontend during dependency installation when `ALWAYS_REBUILD=true`
 - launches the backend with `uvicorn` and the built frontend with Vite preview
 - opens the configured frontend URL in the default browser

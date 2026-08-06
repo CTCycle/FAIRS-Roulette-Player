@@ -191,6 +191,8 @@ function Install-Dependencies {
         if ($LASTEXITCODE -ne 0) { throw "uv sync failed with exit code $LASTEXITCODE." }
     } finally { Pop-Location }
 
+    Write-Step 'Stopping any running frontend before updating dependencies.'
+    Clear-Port ([int]$env:UI_PORT)
     Write-Step 'Installing frontend dependencies.'
     Push-Location $clientDir
     try {
