@@ -1,6 +1,6 @@
 ## Windows Automation
 
-Last updated: 2026-08-02
+Last updated: 2026-08-06
 
 ## Scope
 
@@ -20,7 +20,7 @@ This file covers repository-specific conventions for the PowerShell launcher and
 - The current launcher baseline is portable Python `3.14.2`, Node.js `22.13.0`, and a portable `uv` executable.
 - Local launch relies on a prepared virtual environment and a built frontend.
 - Startup checks the runtime executables, the backend environment, and the Vite runner before deciding whether dependency installation is needed.
-- The launcher clears only its configured FastAPI and UI ports before starting services.
+- The launcher clears its configured FastAPI and UI ports before starting services and clears the configured UI port before replacing frontend dependencies.
 - Any changes to runtime staging should be reflected in both the scripts and the runtime documentation.
 
 ## Related Files

@@ -1,6 +1,6 @@
 ## Troubleshooting
 
-Last updated: 2026-08-03
+Last updated: 2026-08-06
 
 ## Startup Problems
 
@@ -8,6 +8,7 @@ Last updated: 2026-08-03
 - If test or browser tooling is missing, run option 2 and choose `Development` so the server's `test` extra is installed.
 - If ports are already occupied, resolve the conflicting listeners before relaunching.
 - If the backend starts without the frontend, verify that `app/client/node_modules` contains Vite and that `app/client/dist` exists; use option 2 with `ALWAYS_REBUILD=true` to rebuild.
+- Option 2 stops a process listening on the configured `UI_PORT` before `npm ci` replaces frontend dependencies. If npm still reports `EPERM` for `esbuild.exe`, stop any external Vite or Node process using `app/client/node_modules` and retry.
 - If the launcher reports a backend readiness failure, open `http://<FASTAPI_HOST>:<FASTAPI_PORT>/api/health` and inspect the generated `FAIRS_*.log` file.
 
 ## API Docs Problems
