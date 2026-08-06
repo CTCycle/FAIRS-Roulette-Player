@@ -1,16 +1,18 @@
 ## Python
 
-Last updated: 2026-06-02
+Last updated: 2026-08-02
 
 ## Runtime Baseline
 
 - Target Python version:
   - `>=3.14`
+- The launcher currently stages portable CPython `3.14.2`.
 - Preferred environment:
   - `app/server/.venv` when present
   - otherwise follow the repository environment policy
 - Keep dependencies managed with `uv`.
 - Prefer running Python tooling from repository root with `uv run ...`.
+- Development-only test and tooling dependencies are declared under the `test` optional extra and installed through the launcher's `Development` mode or `uv sync --extra test`.
 
 ## Typing Rules
 
@@ -62,6 +64,8 @@ Last updated: 2026-06-02
 - Keep schema, serializer, and API contracts synchronized.
 - Runtime flags come from environment variables.
 - Structured non-env settings live in `settings/configurations.json`.
+- Database connection and selection settings live in `settings/.env`; do not add a `database` block to the JSON settings file.
+- Synthetic training data must preserve the canonical roulette `outcome` input through encoding and expose the training environment's `extraction` column at the serializer boundary.
 
 ## Related Files
 

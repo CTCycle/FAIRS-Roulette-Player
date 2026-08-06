@@ -1,6 +1,6 @@
 ## Execution And Data Flow
 
-Last updated: 2026-07-14
+Last updated: 2026-08-03
 
 ## Backend Layers
 
@@ -26,14 +26,15 @@ Last updated: 2026-07-14
 
 ## Application Startup Flow
 
-`app/server/app.py` builds the app in this order:
+`app/server/app.py` constructs the app with routers and client routes, then its lifespan performs runtime startup in this order:
 
 1. Resolve server settings.
-2. Initialize the configured database backend.
-3. Run startup validations.
-4. Construct shared services and attach them to `application.state`.
-5. Mount API routers.
-6. Configure SPA serving or docs redirect behavior.
+2. Run startup validations.
+3. In SQLite mode, create the database only when its configured file is missing; in PostgreSQL mode, probe the existing connection with `SELECT 1`.
+4. Construct the database handle.
+5. Construct the serializers, job manager, checkpoint service, and domain services, then attach them and the database to `application.state`.
+
+Router mounting and SPA/docs route configuration happen during app construction before the lifespan runs.
 
 ## Typical Orchestration Chains
 
@@ -44,6 +45,11 @@ Last updated: 2026-07-14
   - `DataSerializer`
   - `DatasetRepository`
   - `FAIRSDatabase`
+- Synthetic training data:
+  - `DataSerializerExtension`
+  - `RouletteSyntheticGenerator` emits canonical `outcome` values in the range `0..36`
+  - `RouletteSeriesEncoder` adds wheel and color features
+  - the training serializer normalizes the encoded outcome column to `extraction`, matching the training environment contract
 - Training start or resume:
   - `api/training.py`
   - `TrainingService`
@@ -95,6 +101,16 @@ Last updated: 2026-07-14
   - atomic dataset replacement, summaries, reads, and cascade deletion
 - `app/server/repositories/inference.py`
   - inference session and step persistence
+- `app/server/repositories/queries/training.py`
+  - training-oriented database queries and checkpoint-adjacent persistence operations
+- `app/server/repositories/serialization/model.py`
+  - model and checkpoint serialization helpers
+- `app/server/repositories/serialization/training.py`
+  - training configuration and result serialization helpers
+- `app/server/learning/training/generator.py`
+  - deterministic synthetic roulette-series generation from the training configuration
+- `app/server/learning/training/serializer.py`
+  - synthetic/data-backed series selection and canonical training-column normalization
 
 ## Concurrency Model
 
@@ -105,6 +121,12 @@ Last updated: 2026-07-14
   - heavy training work runs in a separate process managed by `TrainingService`
 - Inference is synchronous and stateful per active session.
 - No async database driver or event-loop-based persistence model is used.
+
+## Runtime Observability
+
+- The backend writes timestamped `FAIRS_*.log` files under the configured log directory.
+- `FAIRS_LOG_DIR` can isolate logs for tests or diagnostics.
+- `GET /api/health` exposes a lightweight readiness check with application version and mode.
 
 ## Frontend Interaction Pattern
 

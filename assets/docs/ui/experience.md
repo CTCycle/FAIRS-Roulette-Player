@@ -1,18 +1,19 @@
 ## Experience
 
-Last updated: 2026-06-02
+Last updated: 2026-08-02
 
 ## Page Composition
 
 - `/training`
   - dataset upload and preview
   - checkpoint preview and management
-  - training dashboard, metrics, and charts
+  - six-step training configuration with clickable breadcrumbs and summary confirmation
+  - training monitor with live metrics, circular episode progress, Stop action, and loss/reward charts
 - `/inference`
-  - checkpoint and dataset setup
-  - session controls
+  - checkpoint and dataset setup, including inference upload
+  - initial-capital and bet controls
   - AI suggestion panel
-  - session history table
+  - session history table with editable observed values and row actions
 
 Composition rules:
 
@@ -29,6 +30,7 @@ Composition rules:
 - Keep error feedback local to the action that failed.
 - Preserve explicit loading states for long-running or multi-step actions.
 - Keep outcome and profit feedback immediate and visually distinct.
+- Preserve the two-panel inference layout on wide screens and stack setup/history regions on narrow screens.
 
 ## Responsiveness
 
@@ -45,6 +47,7 @@ Implemented breakpoints currently include:
 Rules:
 
 - Multi-column layouts must collapse cleanly on narrow viewports.
+- Training upload/preview and checkpoint rows collapse to one column at 768px; training wizard grids collapse to one column at 720px.
 - Tables should remain scrollable when width is constrained.
 - Button groups should wrap instead of overflowing.
 
@@ -55,6 +58,7 @@ Rules:
 - Inputs and icon-only actions need explicit labels or `aria-label` values.
 - Error alerts should preserve live-region behavior where implemented.
 - Respect reduced motion preferences.
+- Dialogs should retain `role="dialog"`, `aria-modal`, and an accessible title; wizard steps expose current-step state.
 
 ## Design Principles
 
