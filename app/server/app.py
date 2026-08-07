@@ -28,6 +28,7 @@ from server.api.training import router as training_router
 from server.api.upload import router as upload_router
 from server.api.system import router as system_router
 from server.configurations import get_server_settings
+from server.domain.system import RootStatusResponse
 from server.repositories.database.backend import FAIRSDatabase
 from server.repositories.database.initializer import initialize_sqlite_database_if_missing
 from server.repositories.datasets import DatasetRepository
@@ -37,7 +38,7 @@ from server.services.checkpoints import CheckpointService
 from server.services.datasets import DatasetService
 from server.services.importer import DatasetImportService
 from server.services.inference import InferenceService
-from server.services.jobs import create_job_manager
+from server.services.jobs import JobManager
 from server.services.loader import TabularFileLoader
 from server.services.startup_validation import run_startup_validations
 from server.services.training import TrainingService
@@ -78,10 +79,10 @@ def serve_client_path(full_path: str) -> FileResponse:
     return FileResponse(shared_paths.CLIENT_INDEX_FILE_PATH)
 
 ###############################################################################
-def redirect_root_to_docs() -> RedirectResponse | dict[str, str]:
+def redirect_root_to_docs() -> RedirectResponse | RootStatusResponse:
     if is_api_docs_enabled():
         return RedirectResponse(FASTAPI_DOCS_ENDPOINT)
-    return {"status": "ok"}
+    return RootStatusResponse(status="ok")
 
 ###############################################################################
 @asynccontextmanager
@@ -106,7 +107,7 @@ async def app_lifespan(application: FastAPI) -> AsyncIterator[None]:
         datasets=DatasetRepository(database),
         inference=InferenceRepository(database),
     )
-    job_manager = create_job_manager()
+    job_manager = JobManager()
     checkpoint_service = CheckpointService()
 
     application.state.database = database
@@ -168,7 +169,7 @@ def configure_client_routes(application: FastAPI) -> None:
         redirect_root_to_docs,
         methods=["GET"],
         include_in_schema=False,
-        response_model=None,
+        response_model=RootStatusResponse,
     )
 
 ###############################################################################
