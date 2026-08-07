@@ -1,6 +1,6 @@
 ## System Overview
 
-Last updated: 2026-08-06
+Last updated: 2026-08-07
 
 ## Summary
 
@@ -48,8 +48,6 @@ The structure below is source-focused and excludes dependency, cache, and genera
 │  │  ├─ learning/
 │  │  ├─ repositories/
 │  │  └─ services/
-│  ├─ shared/
-│  │  └─ openapi.json
 │  └─ tests/
 │     ├─ conftest.py
 │     ├─ run_tests.bat

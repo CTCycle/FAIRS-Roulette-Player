@@ -183,9 +183,6 @@ def build_history_points(
     total_rewards = history.get("total_reward", [])
     capitals = history.get("capital", [])
 
-    episode_offset = (
-        1 if any(isinstance(value, int) and value <= 0 for value in episodes) else 0
-    )
     results: list[dict[str, Any]] = []
     for index in range(len(time_steps)):
         capital_value = coerce_finite_float(
@@ -198,7 +195,7 @@ def build_history_points(
             else 0.0
         )
         epoch = episodes[index] if index < len(episodes) else 0
-        epoch = coerce_finite_int(epoch, default=0, minimum=0) + episode_offset
+        epoch = coerce_finite_int(epoch, default=0, minimum=0)
         point = {
             "time_step": coerce_finite_int(
                 time_steps[index] if index < len(time_steps) else 0,

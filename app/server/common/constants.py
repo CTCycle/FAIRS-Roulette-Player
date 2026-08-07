@@ -11,14 +11,6 @@ FASTAPI_TITLE = "FAIRS Roulette Backend"
 FASTAPI_DESCRIPTION = "FastAPI backend"
 FASTAPI_VERSION = "2.6.0"
 
-# [ENDPOINS]
-###############################################################################
-BASE_URL = "/base/tags"
-
-# [EXTERNAL DATA SOURCES]
-###############################################################################
-CONSTANT = 1.0
-
 # [ROULETTE WHEEL CONSTANTS]
 ###############################################################################
 ROULETTE_POSITION_MAP: dict[int, int] = {
