@@ -87,7 +87,7 @@ def _stub_lifespan_dependencies(
     monkeypatch.setattr(app_module, "DatasetRepository", lambda database: object())
     monkeypatch.setattr(app_module, "InferenceRepository", lambda database: object())
     monkeypatch.setattr(app_module, "DataSerializer", lambda **kwargs: object())
-    monkeypatch.setattr(app_module, "create_job_manager", lambda: object())
+    monkeypatch.setattr(app_module, "JobManager", lambda: object())
     monkeypatch.setattr(app_module, "CheckpointService", lambda: object())
     monkeypatch.setattr(app_module, "DatasetImportService", lambda **kwargs: object())
     monkeypatch.setattr(app_module, "TabularFileLoader", lambda: object())
@@ -112,6 +112,24 @@ def test_root_redirects_to_docs_when_client_build_is_missing(monkeypatch) -> Non
 
     assert response.status_code == 307
     assert response.headers["location"] == "/docs"
+    assert len(initialize_calls) == 1
+    assert connection_calls == []
+
+###############################################################################
+def test_root_returns_status_when_api_docs_are_disabled(monkeypatch) -> None:
+    import server.app as app_module
+
+    initialize_calls, connection_calls = _stub_lifespan_dependencies(monkeypatch, app_module)
+    monkeypatch.setenv("ENABLE_API_DOCS", "false")
+    monkeypatch.setattr(app_module, "_client_build_available", lambda: False)
+
+    application = app_module.create_app()
+
+    with TestClient(application) as client:
+        response = client.get("/")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
     assert len(initialize_calls) == 1
     assert connection_calls == []
 

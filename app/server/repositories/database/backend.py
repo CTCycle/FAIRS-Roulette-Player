@@ -1,14 +1,16 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from collections.abc import Iterator
 
 from sqlalchemy import Engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from server.configurations import DatabaseSettings
 from server.configurations.startup import get_server_settings
+from server.repositories.database.postgres import build_postgres_engine
+from server.repositories.database.sqlite import build_sqlite_engine
 from server.repositories.schemas.models import Base
 
 ###############################################################################
@@ -22,11 +24,9 @@ class FAIRSDatabase:
             self.engine = engine
             self.db_path = None
         elif self.settings.embedded_database:
-            from server.repositories.database.sqlite import build_sqlite_engine
             self.engine = build_sqlite_engine(self.settings)
             self.db_path = Path(str(self.engine.url.database)) if self.engine.url.database else None
         else:
-            from server.repositories.database.postgres import build_postgres_engine
             self.engine = build_postgres_engine(self.settings)
             self.db_path = None
         self.Session = sessionmaker(bind=self.engine, future=True, expire_on_commit=False)
@@ -50,10 +50,6 @@ class FAIRSDatabase:
     # -------------------------------------------------------------------------
     def dispose(self) -> None:
         self.engine.dispose()
-
-    # -------------------------------------------------------------------------
-    def close(self) -> None:
-        self.dispose()
 
 
 __all__ = ["FAIRSDatabase"]
