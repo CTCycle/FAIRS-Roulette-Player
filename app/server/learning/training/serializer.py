@@ -7,7 +7,6 @@ import pandas as pd
 from server.learning.training.generator import RouletteSyntheticGenerator
 from server.repositories.database.backend import FAIRSDatabase
 from server.repositories.queries.training import TrainingRepositoryQueries
-from server.repositories.serialization.model import ModelSerializer
 from server.repositories.serialization.training import TrainingDataSerializer
 from server.services.process import RouletteSeriesEncoder
 
@@ -43,7 +42,11 @@ class DataSerializerExtension:
         dataset_id = configuration.get("dataset_id")
         if not isinstance(dataset_id, int) or isinstance(dataset_id, bool):
             dataset_id = None
-        dataset = self.load_roulette_dataset(sample_size, seed, dataset_id)
+        dataset = self.training_serializer.load_training_series(
+            sample_size=sample_size,
+            seed=seed,
+            dataset_id=dataset_id,
+        )
         if "outcome" in dataset.columns and "extraction" not in dataset.columns:
             dataset = dataset.rename(columns={"outcome": "extraction"})
         if dataset.empty or "extraction" not in dataset.columns:
@@ -56,18 +59,4 @@ class DataSerializerExtension:
 
         return dataset, False
 
-    # -------------------------------------------------------------------------
-    def load_roulette_dataset(
-        self,
-        sample_size: float = 1.0,
-        seed: int = 42,
-        dataset_id: int | None = None,
-    ) -> pd.DataFrame:
-        return self.training_serializer.load_training_series(
-            sample_size=sample_size,
-            seed=seed,
-            dataset_id=dataset_id,
-        )
-
-
-__all__ = ["DataSerializerExtension", "ModelSerializer"]
+__all__ = ["DataSerializerExtension"]

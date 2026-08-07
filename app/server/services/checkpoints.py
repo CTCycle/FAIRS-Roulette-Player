@@ -50,7 +50,7 @@ class CheckpointService:
             "dataset_id": configuration.get("dataset_id") or "",
             "sample_size": configuration.get("sample_size"),
             "seed": configuration.get("seed"),
-            "episodes": configuration.get("episodes") or session.get("total_episodes"),
+            "episodes": configuration["episodes"],
             "batch_size": configuration.get("batch_size"),
             "learning_rate": configuration.get("learning_rate"),
             "perceptive_field_size": configuration.get("perceptive_field_size"),

@@ -23,10 +23,6 @@ class JobStatusResponse(BaseModel):
     poll_interval: float | None = None
 
 ###############################################################################
-class JobListResponse(BaseModel):
-    jobs: list[JobStatusResponse]
-
-###############################################################################
 class JobCancelResponse(BaseModel):
     job_id: str
     success: bool

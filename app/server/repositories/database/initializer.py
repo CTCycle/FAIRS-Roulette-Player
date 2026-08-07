@@ -11,13 +11,14 @@ from server.repositories.database.backend import FAIRSDatabase
 from server.repositories.database.utils import (
     build_postgres_connect_args,
     is_supported_postgres_engine,
-    normalize_postgres_engine,
 )
 
 ###############################################################################
 def build_postgres_url(settings: DatabaseSettings, database_name: str) -> sqlalchemy.URL:
+    if not is_supported_postgres_engine(settings.engine):
+        raise ValueError(f"Unsupported database engine: {settings.engine}")
     return sqlalchemy.URL.create(
-        drivername=normalize_postgres_engine(settings.engine),
+        drivername=settings.engine.strip().lower(),
         username=settings.username or "",
         password=settings.password or "",
         host=settings.host,

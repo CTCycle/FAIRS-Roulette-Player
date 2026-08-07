@@ -102,3 +102,9 @@ def test_tauri_mode_requires_built_client(monkeypatch: pytest.MonkeyPatch) -> No
 def test_external_database_validation_rejects_unsupported_engine() -> None:
     with pytest.raises(RuntimeError, match="Unsupported database engine"):
         startup_validation.run_startup_validations(_external_settings("mysql"))
+
+###############################################################################
+@pytest.mark.parametrize("engine", ["postgres", "postgresql", "postgresql+psycopg2"])
+def test_external_database_validation_rejects_legacy_postgres_aliases(engine: str) -> None:
+    with pytest.raises(RuntimeError, match="Unsupported database engine"):
+        startup_validation.run_startup_validations(_external_settings(engine))
