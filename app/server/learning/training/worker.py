@@ -17,10 +17,8 @@ from server.learning.training.device import DeviceConfig
 from server.learning.training.fitting import DQNTraining
 from server.learning.models.qnet import FAIRSnet
 from server.learning.models.strategy import StrategyNet
-from server.learning.training.serializer import (
-    DataSerializerExtension,
-    ModelSerializer,
-)
+from server.learning.training.serializer import DataSerializerExtension
+from server.repositories.serialization.model import ModelSerializer
 
 ###############################################################################
 class QueueProgressReporter:

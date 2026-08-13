@@ -1,6 +1,6 @@
 ## Configuration
 
-Last updated: 2026-08-03
+Last updated: 2026-08-13
 
 ## Environment Variables
 
@@ -39,6 +39,8 @@ The runtime scripts and backend consume these environment keys:
   - overrides the log directory; primarily useful for isolated test runs
 - `FAIRS_TAURI_MODE`
   - marks the health response as `desktop` and requires a built frontend, but does not provide packaging
+
+For external PostgreSQL mode, `DATABASE_ENGINE` must be `postgresql+psycopg`. Legacy aliases such as `postgres`, `postgresql`, and `postgresql+psycopg2` are rejected during startup validation.
 
 The backend creates timestamped `FAIRS_*.log` files in `FAIRS_LOG_DIR` when set, or in the active user-data `logs` directory otherwise.
 

@@ -48,10 +48,6 @@ class DataSerializer:
         return self.datasets.outcomes(self.require_dataset_id(dataset_id))
 
     # -------------------------------------------------------------------------
-    def load_training_outcomes(self, dataset_id: int | None = None) -> pd.DataFrame:
-        return self.load_dataset_outcomes(dataset_id) if dataset_id is not None else pd.DataFrame()
-
-    # -------------------------------------------------------------------------
     def delete_dataset(self, dataset_id: int) -> None:
         self.datasets.delete(self.require_dataset_id(dataset_id))
 

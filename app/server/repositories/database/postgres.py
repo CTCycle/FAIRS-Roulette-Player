@@ -4,14 +4,19 @@ import sqlalchemy
 from sqlalchemy.engine import Engine, URL
 
 from server.configurations import DatabaseSettings
-from server.repositories.database.utils import build_postgres_connect_args, normalize_postgres_engine
+from server.repositories.database.utils import (
+    build_postgres_connect_args,
+    is_supported_postgres_engine,
+)
 
 ###############################################################################
 def build_postgres_engine(settings: DatabaseSettings) -> Engine:
     if not settings.host or not settings.database_name or not settings.username:
         raise ValueError("PostgreSQL host, database name, and username are required.")
+    if not is_supported_postgres_engine(settings.engine):
+        raise ValueError(f"Unsupported database engine: {settings.engine}")
     url = URL.create(
-        drivername=normalize_postgres_engine(settings.engine),
+        drivername=settings.engine.strip().lower(),
         username=settings.username,
         password=settings.password or "",
         host=settings.host,
