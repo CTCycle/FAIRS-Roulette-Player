@@ -201,7 +201,3 @@ class JobManager:
             if param.kind == param.VAR_KEYWORD:
                 return True
         return "job_id" in signature.parameters
-
-###############################################################################
-def create_job_manager() -> JobManager:
-    return JobManager()
