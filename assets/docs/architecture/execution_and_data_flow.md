@@ -1,6 +1,6 @@
 ## Execution And Data Flow
 
-Last updated: 2026-08-03
+Last updated: 2026-08-13
 
 ## Backend Layers
 
@@ -12,7 +12,7 @@ Last updated: 2026-08-03
   - coordinates jobs, training, inference, dataset import, and checkpoint lifecycle
 - Domain layer:
   - `app/server/domain/*`
-  - defines request, response, and configuration contracts
+  - defines request, response, system-status, and configuration contracts
 - Repository layer:
   - `app/server/repositories/queries/*`
   - `app/server/repositories/serialization/*`
@@ -73,6 +73,8 @@ Router mounting and SPA/docs route configuration happen during app construction 
 
 - `app/server/app.py`
   - FastAPI construction, dependency wiring, router mounting, and SPA serving
+- `app/server/domain/system.py`
+  - typed health and root-status response contracts
 - `app/server/common/api_errors.py`
   - shared HTTP exception mapping helpers
 - `app/server/common/constants.py`
