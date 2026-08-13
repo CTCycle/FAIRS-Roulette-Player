@@ -1,6 +1,6 @@
 ## Troubleshooting
 
-Last updated: 2026-08-06
+Last updated: 2026-08-13
 
 ## Startup Problems
 
@@ -25,6 +25,7 @@ Last updated: 2026-08-06
 
 - If database startup fails, confirm the embedded-vs-external database settings are internally consistent.
 - If PostgreSQL mode is enabled, select option 3 in `start_on_windows.ps1` once to create or initialize the configured database and schema. Normal startup only probes the existing database; it never creates or resets it. Invalid or unavailable connection settings therefore stop startup and must be corrected before relaunching.
+- If startup reports an unsupported database engine, set external PostgreSQL configuration to `DATABASE_ENGINE=postgresql+psycopg`; legacy aliases are not accepted.
 
 ## Related Files
 

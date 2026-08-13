@@ -1,6 +1,6 @@
 ## Deployment
 
-Last updated: 2026-08-02
+Last updated: 2026-08-13
 
 ## Supported Distribution
 
@@ -19,6 +19,12 @@ FAIRS is distributed as source and run locally from its repository through `star
 - No container deployment path is documented or supported in this repository.
 - Training workloads remain compute-heavy and depend on the existing worker-process model.
 - The launcher is the supported operational boundary for preparing runtimes, starting services, testing, and removing generated dependencies/build output while preserving source and user data.
+
+## Source Release Boundary
+
+- The current source release is `v2.7.0`.
+- Releases use annotated `vX.Y.Z` tags from the synchronized `main` branch; GitHub supplies the repository source archives for the tag.
+- This repository has no Tauri, MSI, portable executable, installer, or release-artifact workflow. Do not describe a packaged desktop artifact as part of the supported distribution.
 
 ## Related Files
 

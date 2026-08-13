@@ -1,6 +1,6 @@
 ## Backend API
 
-Last updated: 2026-08-02
+Last updated: 2026-08-13
 
 ## Mounting Model
 
@@ -56,13 +56,14 @@ Router prefix: `/inference`
 ## System Endpoints
 
 - `GET /api/health`
-  - returns `status`, `application`, `version`, and `mode`.
+  - returns a typed `HealthResponse` with `status`, `application`, `version`, and `mode`.
   - reports `development` by default and `desktop` only when `FAIRS_TAURI_MODE=true`; no packaged desktop runtime is shipped by this repository.
 
 ## Non-API Routes
 
 - When `app/client/dist/index.html` exists, the backend serves the built SPA from `/`.
 - When no built frontend is available, `/` redirects to `/docs` if API docs are enabled.
+- When no built frontend is available and API docs are disabled, `/` returns the typed `RootStatusResponse` payload `{ "status": "ok" }`.
 - Static SPA assets are mounted from `/assets` when the frontend build exists.
 
 ## API Design Notes
