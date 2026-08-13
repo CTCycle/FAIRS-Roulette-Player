@@ -111,13 +111,6 @@ Start with [`assets/docs/project_index.md`](assets/docs/project_index.md), then 
 - [`assets/docs/runtime/configuration.md`](assets/docs/runtime/configuration.md) — environment and settings.
 - [`assets/docs/architecture/system_overview.md`](assets/docs/architecture/system_overview.md) — source tree and runtime surfaces.
 
-## Training demo
-
-The repository also includes a short training animation:
-
-![Training demo](assets/training_demo.gif)
-_DQN agent learning roulette over 30 episodes with epsilon-greedy exploration and decay._
-
 ## License
 
 FAIRS is licensed under the MIT License. See [`LICENSE`](LICENSE) for the terms.
