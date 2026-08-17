@@ -33,7 +33,7 @@ The runtime scripts and backend consume these environment keys:
 
 - `UV_PROJECT_ENVIRONMENT`
   - set by the launcher to target the runtime virtual environment
-- `FAIRS_USER_DATA_DIR`
+- `FAIRS_DATA_DIR`
   - overrides the mutable database, logs, and checkpoints directory
 - `FAIRS_LOG_DIR`
   - overrides the log directory; primarily useful for isolated test runs
@@ -42,7 +42,7 @@ The runtime scripts and backend consume these environment keys:
 
 For external PostgreSQL mode, `DATABASE_ENGINE` must be `postgresql+psycopg`. Legacy aliases such as `postgres`, `postgresql`, and `postgresql+psycopg2` are rejected during startup validation.
 
-The backend creates timestamped `FAIRS_*.log` files in `FAIRS_LOG_DIR` when set, or in the active user-data `logs` directory otherwise.
+The backend creates timestamped `FAIRS_*.log` files in `FAIRS_LOG_DIR` when set, or in the active data `logs` directory otherwise.
 
 ## Structured Settings
 
@@ -82,7 +82,7 @@ The backend creates timestamped `FAIRS_*.log` files in `FAIRS_LOG_DIR` when set,
 - `ALWAYS_REBUILD=false` skips the frontend build during dependency installation; it does not rebuild on a normal start that reuses a ready environment.
 - Launcher option 2 selects `Standard` or `Development` installation; `Development` adds the backend's test extra.
 
-When `FAIRS_USER_DATA_DIR` is absent, the application uses `app/resources`.
+When `FAIRS_DATA_DIR` is absent, the application uses `app/resources`.
 
 ## Related Files
 

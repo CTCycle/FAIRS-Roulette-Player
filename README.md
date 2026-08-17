@@ -77,7 +77,7 @@ Database settings belong in `settings/.env`; a `database` block in `configuratio
 - `EMBEDDED_DATABASE=true` uses SQLite. The application creates the configured database only when the file is missing and does not reset an existing database during normal startup.
 - `EMBEDDED_DATABASE=false` uses PostgreSQL. Normal startup performs a non-mutating connection check. Use the launcher’s `Initialize database` option to create or initialize the database explicitly.
 
-`FAIRS_USER_DATA_DIR` can override the mutable database, logs, and checkpoint root. `FAIRS_LOG_DIR` can override the log directory for isolated runs.
+`FAIRS_DATA_DIR` can override the mutable database, logs, and checkpoint root. `FAIRS_LOG_DIR` can override the log directory for isolated runs.
 
 ## Training workflow
 
