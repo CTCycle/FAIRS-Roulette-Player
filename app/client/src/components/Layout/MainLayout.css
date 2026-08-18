@@ -63,7 +63,6 @@
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    margin-left: auto;
     gap: 0.5rem;
     flex-wrap: wrap;
 }
@@ -114,6 +113,10 @@
     .top-nav-link {
         flex: 1 1 auto;
         justify-content: flex-start;
+    }
+
+    .app-shell-nav-inner {
+        width: 100%;
     }
 
     .app-shell-title {
