@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-export type GuidanceStatus = 'seen' | 'dismissed' | 'skipped' | 'completed';
+export type GuidanceStatus = 'seen' | 'dismissed' | 'completed';
 
 export interface GuidanceEntry {
     version: number;

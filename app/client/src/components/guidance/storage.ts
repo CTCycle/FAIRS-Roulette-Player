@@ -15,7 +15,6 @@ export const createEmptyGuidanceState = (): GuidanceStorageState => ({
 const isGuidanceStatus = (value: unknown): value is GuidanceStatus => (
     value === 'seen'
     || value === 'dismissed'
-    || value === 'skipped'
     || value === 'completed'
 );
 

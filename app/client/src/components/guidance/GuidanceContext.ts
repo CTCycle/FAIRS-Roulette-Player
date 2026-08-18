@@ -15,10 +15,8 @@ export interface GuidanceContextValue {
     nextTourStep: () => void;
     previousTourStep: () => void;
     dismissTour: () => void;
-    skipTour: () => void;
     getStatus: (id: string, version: number) => GuidanceStatus | undefined;
     markDismissed: (id: string, version: number) => void;
-    resetGuidance: () => void;
     tips: TipDefinition[];
 }
 

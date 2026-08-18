@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, BookOpen, RotateCcw } from 'lucide-react';
+import { ArrowRight, BookOpen } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { GuidanceDialog } from './GuidanceDialog';
 import { INFERENCE_TOUR, TRAINING_TOUR } from './definitions';
@@ -15,7 +15,6 @@ export const TipsAndTricksDialog: React.FC<TipsAndTricksDialogProps> = ({ open, 
     const {
         tips,
         startTour,
-        resetGuidance,
     } = useGuidance();
     const location = useLocation();
     const isTrainingRoute = location.pathname === TRAINING_TOUR.route;
@@ -51,37 +50,22 @@ export const TipsAndTricksDialog: React.FC<TipsAndTricksDialogProps> = ({ open, 
                 <TutorialMedia />
 
                 <div className="guidance-tips-section">
-                    <div className="guidance-section-heading">
+                    <div className="guidance-section-heading guidance-tour-heading">
                         <ArrowRight size={17} aria-hidden="true" />
                         <h3>Optional walkthroughs</h3>
-                    </div>
-                    <div className="guidance-tour-links">
                         {isTrainingRoute ? (
-                            <button type="button" onClick={() => startTour(TRAINING_TOUR)}>
-                                Restart Training walkthrough
+                            <button className="guidance-tour-launch" type="button" onClick={() => startTour(TRAINING_TOUR)}>
+                                Show the Training walkthrough
                                 <ArrowRight size={15} aria-hidden="true" />
                             </button>
                         ) : (
-                            <button type="button" onClick={() => startTour(INFERENCE_TOUR)}>
+                            <button className="guidance-tour-launch" type="button" onClick={() => startTour(INFERENCE_TOUR)}>
                                 Show the Inference loop
                                 <ArrowRight size={15} aria-hidden="true" />
                             </button>
                         )}
                     </div>
                 </div>
-            </div>
-            <div className="guidance-dialog-footer">
-                <button
-                    type="button"
-                    className="guidance-reset-button"
-                    onClick={() => {
-                        resetGuidance();
-                        onClose();
-                    }}
-                >
-                    <RotateCcw size={14} aria-hidden="true" />
-                    Reset guidance
-                </button>
             </div>
         </GuidanceDialog>
     );

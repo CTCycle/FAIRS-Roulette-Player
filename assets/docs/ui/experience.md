@@ -14,7 +14,7 @@ Last updated: 2026-08-18
   - initial-capital and bet controls
   - AI suggestion panel
   - session history table with editable observed values and row actions
-- On the first Training visit, a skippable three-step walkthrough points to data, configuration, and monitoring. Inference does not open a walkthrough automatically; its three-step loop is available from Help or Tips & Tricks when the user wants it.
+- Walkthroughs do not open automatically. From Help, users can choose a three-step walkthrough for Training or Inference, covering data/setup, configuration/play, and monitoring/observation.
 
 Composition rules:
 

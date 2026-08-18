@@ -6,28 +6,44 @@ from playwright.sync_api import Page, expect
 GUIDANCE_KEY = "fairs.guidance"
 
 
-def _show_first_use_training_tour(page: Page, base_url: str) -> None:
+def _prepare_training_guidance(page: Page, base_url: str) -> None:
     page.goto(f"{base_url}/training")
     page.wait_for_load_state("domcontentloaded")
     page.evaluate(f"localStorage.removeItem('{GUIDANCE_KEY}')")
     page.reload()
-    page.wait_for_timeout(700)
+    page.wait_for_timeout(300)
 
 
 class TestGuidance:
     """The guidance layer should help once, then stay out of the way."""
 
-    def test_training_walkthrough_is_skippable_and_persisted(
+    def test_training_walkthrough_is_manual_and_persisted(
         self, page: Page, base_url: str
     ):
-        _show_first_use_training_tour(page, base_url)
+        _prepare_training_guidance(page, base_url)
+
+        expect(page.get_by_role("dialog")).not_to_be_visible()
+
+        page.get_by_role("button", name="Help").click()
+        tips = page.get_by_role("dialog", name="Tips & Tricks")
+        expect(tips).to_be_visible()
+        launch_button = tips.get_by_role("button", name="Show the Training walkthrough")
+        expect(tips.locator(".guidance-tour-heading").get_by_role("button")).to_be_visible()
+        expect(tips.get_by_role("button", name="Replay")).to_have_count(0)
+        expect(tips.get_by_role("button", name="Reset guidance")).to_have_count(0)
+        launch_button.click()
 
         tour = page.get_by_role("dialog", name="Start with data")
         expect(tour).to_be_visible()
         expect(tour.get_by_role("button", name="Close walkthrough")).to_be_focused()
         expect(page.get_by_text("Step 1 of 3", exact=True)).to_be_visible()
+        expect(tour.get_by_role("button", name="Skip walkthrough")).to_have_count(0)
 
-        page.get_by_role("button", name="Skip walkthrough").click()
+        page.get_by_role("button", name="Next").click()
+        expect(page.get_by_role("dialog", name="Configure a run")).to_be_visible()
+        page.get_by_role("button", name="Back").click()
+        expect(page.get_by_role("dialog", name="Start with data")).to_be_visible()
+        page.get_by_role("button", name="Close walkthrough").click()
         expect(tour).not_to_be_visible()
 
         page.reload()
