@@ -6,6 +6,7 @@ from playwright.sync_api import Page, expect
 GUIDANCE_KEY = "fairs.guidance"
 
 
+###############################################################################
 def _prepare_training_guidance(page: Page, base_url: str) -> None:
     page.goto(f"{base_url}/training")
     page.wait_for_load_state("domcontentloaded")
@@ -14,9 +15,11 @@ def _prepare_training_guidance(page: Page, base_url: str) -> None:
     page.wait_for_timeout(300)
 
 
+###############################################################################
 class TestGuidance:
     """The guidance layer should help once, then stay out of the way."""
 
+    # -------------------------------------------------------------------------
     def test_training_walkthrough_is_manual_and_persisted(
         self, page: Page, base_url: str
     ):
@@ -59,6 +62,7 @@ class TestGuidance:
         expect(tips).not_to_be_visible()
         expect(help_button).to_be_focused()
 
+    # -------------------------------------------------------------------------
     def test_inference_walkthrough_is_manual_and_supports_back_navigation(
         self, page: Page, base_url: str
     ):
