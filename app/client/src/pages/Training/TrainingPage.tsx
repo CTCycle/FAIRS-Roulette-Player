@@ -35,7 +35,7 @@ const TrainingPage: React.FC = () => {
 
             <div className="training-content">
                 <div className="training-top-row">
-                    <div className="upload-column">
+                    <div className="upload-column" data-guidance-target="training-data">
                         <DatasetUpload
                             uploadStatus={datasetUpload.uploadStatus}
                             uploadMessage={datasetUpload.uploadMessage}
@@ -44,7 +44,7 @@ const TrainingPage: React.FC = () => {
                             onUploadSuccess={handleUploadSuccess}
                         />
                     </div>
-                    <div className="preview-column">
+                    <div className="preview-column" data-guidance-target="training-configuration">
                         <DatasetPreview
                             refreshKey={datasetRefreshKey}
                             onDelete={handleDatasetDelete}
@@ -71,11 +71,13 @@ const TrainingPage: React.FC = () => {
 
             <div className="section-separator training-dashboard-separator" />
 
-            <TrainingDashboard
-                isActive={isTraining}
-                onTrainingStart={() => dispatch({ type: 'SET_TRAINING_IS_TRAINING', payload: true })}
-                onTrainingEnd={() => dispatch({ type: 'SET_TRAINING_IS_TRAINING', payload: false })}
-            />
+            <div data-guidance-target="training-monitor">
+                <TrainingDashboard
+                    isActive={isTraining}
+                    onTrainingStart={() => dispatch({ type: 'SET_TRAINING_IS_TRAINING', payload: true })}
+                    onTrainingEnd={() => dispatch({ type: 'SET_TRAINING_IS_TRAINING', payload: false })}
+                />
+            </div>
         </div>
     );
 };

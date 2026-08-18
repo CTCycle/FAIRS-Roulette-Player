@@ -8,13 +8,13 @@ APP_DIR = ROOT_DIR / "app"
 SERVER_DIR = APP_DIR / "server"
 CLIENT_DIR = APP_DIR / "client"
 SETTINGS_DIR = ROOT_DIR / "settings"
-_configured_user_data_dir = os.getenv("FAIRS_USER_DATA_DIR")
-USER_DATA_DIR = (
-    Path(_configured_user_data_dir).expanduser().resolve()
-    if _configured_user_data_dir
+_configured_data_dir = os.getenv("FAIRS_DATA_DIR")
+DATA_DIR = (
+    Path(_configured_data_dir).expanduser().resolve()
+    if _configured_data_dir
     else None
 )
-RESOURCES_PATH = USER_DATA_DIR if USER_DATA_DIR is not None else APP_DIR / "resources"
+RESOURCES_PATH = DATA_DIR if DATA_DIR is not None else APP_DIR / "resources"
 LOGS_PATH = RESOURCES_PATH / "logs"
 CHECKPOINT_PATH = RESOURCES_PATH / "checkpoints"
 ENV_FILE_PATH = SETTINGS_DIR / ".env"

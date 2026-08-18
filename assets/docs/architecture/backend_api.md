@@ -1,6 +1,6 @@
 ## Backend API
 
-Last updated: 2026-08-13
+Last updated: 2026-08-18
 
 ## Mounting Model
 
@@ -73,6 +73,12 @@ Router prefix: `/inference`
 - Upload, dataset, checkpoint, inference, and job-management operations return `200 OK` on success unless a documented validation or conflict error applies.
 - HTTP handlers validate and marshal payloads at the API boundary, then delegate orchestration to services.
 - API docs exposure is controlled by `ENABLE_API_DOCS`.
+
+## Shared Contract
+
+- The checked-in runtime contract is `app/shared/openapi.json`.
+- Regenerate it from the FastAPI application in PowerShell with `$env:PYTHONPATH='app'; & '.\\app\\server\\.venv\\Scripts\\python.exe' '.\\app\\scripts\\export_openapi.py'`.
+- CI runs the same exporter in check mode and fails when the snapshot differs from `app.openapi()`.
 
 ## Related Files
 

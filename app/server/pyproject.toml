@@ -4,23 +4,21 @@ build-backend = "hatchling.build"
 
 [project]
 name = "fairs-server"
-version = "2.7.0"
+version = "2.8.0"
 requires-python = ">=3.14"
 
 dependencies = [
     "fastapi==0.128.0",
     "uvicorn[standard]>=0.40.0",
-    "numpy==2.4.1",
-    "pandas==3.0.0",
-    "tqdm==4.67.1",    
+    "numpy==2.4.6",
+    "pandas==3.0.5",
     "torch==2.9.0+cu130",    
-    "keras==3.13.1",    
-    "SQLAlchemy==2.0.46",
-    "psycopg[binary]==3.3.1",
+    "keras==3.13.2",
+    "SQLAlchemy==2.0.51",
+    "psycopg[binary]==3.3.4",
     "python-dotenv==1.2.1", 
-    "pydantic-settings>=2.7.0",
     "python-multipart>=0.0.21", 
-    "gymnasium==1.2.2",    
+    "gymnasium==1.2.3",
     "openpyxl==3.1.5",
     "pillow==12.0.0"
 ]
@@ -31,8 +29,7 @@ test = [
     "playwright>=1.58.0",
     "pytest-playwright>=0.5.0",
     "httpx>=0.28.0",
-    "psutil>=6.1.1",
-    "ruff==0.15.9"
+    "ruff==0.15.22"
 ]
 
 [tool.hatch.build.targets.wheel]
