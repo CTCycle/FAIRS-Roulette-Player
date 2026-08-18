@@ -1,6 +1,6 @@
 ## Startup
 
-Last updated: 2026-08-06
+Last updated: 2026-08-18
 
 ## Local Application Startup
 
@@ -31,7 +31,7 @@ What the launcher does:
 - installs the server's test extra when option 2 is run with `Development` selected
 - installs frontend dependencies as needed
 - stops a frontend listener on the configured UI port before replacing frontend dependencies
-- builds the frontend during dependency installation when `ALWAYS_REBUILD=true`
+- rebuilds the frontend when option 2 is executed
 - launches the backend with `uvicorn` and the built frontend with Vite preview
 - opens the configured frontend URL in the default browser
 - verifies backend health and frontend preview readiness before reporting success
@@ -42,7 +42,7 @@ Database behavior:
 - PostgreSQL is never created or initialized by normal application startup. Select option 3, `Initialize database`, after configuring PostgreSQL.
 - Option 3 is non-destructive for an existing SQLite database and is the explicit PostgreSQL initialization path.
 
-If the readiness check passes, normal application start skips dependency installation and proceeds directly to the two services. Use option 2 when source changes require a fresh dependency sync or frontend build.
+If the readiness check passes, normal application start skips dependency installation and proceeds directly to the two services. Use option 2 when source changes require a fresh dependency sync or frontend rebuild.
 
 ## Test Startup
 
