@@ -94,7 +94,6 @@ export const GuidedTour: React.FC = () => {
         nextTourStep,
         previousTourStep,
         dismissTour,
-        skipTour,
     } = useGuidance();
     const location = useLocation();
     const panelRef = useRef<HTMLDivElement>(null);
@@ -185,7 +184,6 @@ export const GuidedTour: React.FC = () => {
                 </div>
                 <p id="guidance-tour-body" className="guidance-tour-body">{step.body}</p>
                 <div className="guidance-tour-footer">
-                    <button type="button" className="guidance-tour-skip" onClick={skipTour}>Skip walkthrough</button>
                     <div className="guidance-tour-actions">
                         <button
                             type="button"

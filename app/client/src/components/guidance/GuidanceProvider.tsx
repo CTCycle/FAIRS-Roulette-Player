@@ -4,7 +4,6 @@ import { GuidedTour } from './GuidedTour';
 import { TipsAndTricksDialog } from './TipsAndTricksDialog';
 import { TIPS } from './definitions';
 import {
-    createEmptyGuidanceState,
     getGuidanceStatus,
     readGuidanceState,
     writeGuidanceState,
@@ -72,12 +71,6 @@ export const GuidanceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         updateStatus(id, version, 'dismissed');
     }, [updateStatus]);
 
-    const resetGuidance = useCallback(() => {
-        setStorageState(createEmptyGuidanceState());
-        setActiveTour(null);
-        setActiveTourStep(0);
-    }, []);
-
     const value = useMemo<GuidanceContextValue>(() => ({
         tipsOpen,
         activeTour,
@@ -88,10 +81,8 @@ export const GuidanceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         nextTourStep,
         previousTourStep,
         dismissTour: () => finishTour('dismissed'),
-        skipTour: () => finishTour('skipped'),
         getStatus,
         markDismissed,
-        resetGuidance,
         tips: TIPS,
     }), [
         activeTour,
@@ -101,7 +92,6 @@ export const GuidanceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         markDismissed,
         nextTourStep,
         previousTourStep,
-        resetGuidance,
         startTour,
         tipsOpen,
     ]);

@@ -1,8 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useAppState } from '../../hooks/useAppState';
 import { useDatasetUploadState } from '../../hooks/useDatasetUploadState';
-import { useGuidance } from '../../components/guidance/GuidanceContext';
-import { TRAINING_TOUR } from '../../components/guidance/definitions';
 import './Training.css';
 import { TrainingDashboard } from './components/TrainingDashboard';
 import { DatasetUpload } from './components/DatasetUpload';
@@ -11,7 +9,6 @@ import { CheckpointPreview } from './components/CheckpointPreview';
 
 const TrainingPage: React.FC = () => {
     const { state, dispatch } = useAppState();
-    const { getStatus, startTour } = useGuidance();
     const { isTraining } = state.training;
     const {
         datasetUpload,
@@ -27,23 +24,6 @@ const TrainingPage: React.FC = () => {
     const handleDatasetDelete = () => {
         setDatasetRefreshKey((prev) => prev + 1);
     };
-
-    useEffect(() => {
-        if (getStatus(TRAINING_TOUR.id, TRAINING_TOUR.version)) {
-            return undefined;
-        }
-
-        const timeoutId = window.setTimeout(() => {
-            if (
-                document.visibilityState === 'visible'
-                && !getStatus(TRAINING_TOUR.id, TRAINING_TOUR.version)
-            ) {
-                startTour(TRAINING_TOUR);
-            }
-        }, 500);
-
-        return () => window.clearTimeout(timeoutId);
-    }, [getStatus, startTour]);
 
     return (
         <div className="training-page page-shell">

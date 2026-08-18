@@ -11,7 +11,7 @@ Last updated: 2026-08-18
 5. Monitor status, progress, loss/RMSE, reward, capital, current bet, strategy, timestep, and history charts.
 6. Review generated checkpoints from the checkpoint preview.
 
-If the workflow is unfamiliar, the first Training visit offers a short walkthrough. It can be skipped or dismissed at any time and can later be restarted from the header Help button or Tips & Tricks.
+If the workflow is unfamiliar, open Help and choose the Training walkthrough for a short guided tour. It can be dismissed at any time with the X button and can later be reopened from Tips & Tricks.
 
 Synthetic training generates roulette `outcome` values in `0..36` and normalizes them to the training serializer's `extraction` field after wheel/color encoding. The dashboard displays live metrics and training history.
 
@@ -35,9 +35,8 @@ For a new session, open Help and choose the Inference walkthrough if the setup-t
 
 ## Guidance And Tips
 
-- Open `Help` in the header for Tips & Tricks and replayable walkthroughs.
+- Open `Help` in the header for Tips & Tricks and optional walkthroughs.
 - Dismiss a contextual tip with its close button when it is no longer useful; the choice is remembered locally for that guidance version.
-- Use `Reset guidance` in Tips & Tricks to restore first-use walkthroughs and contextual tips for local QA or a new operator.
 
 ## Dataset And Checkpoint Hygiene
 
