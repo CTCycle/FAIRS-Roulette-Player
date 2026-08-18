@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAppState } from '../../hooks/useAppState';
 import { useDatasetUploadState } from '../../hooks/useDatasetUploadState';
+import { useGuidance } from '../../components/guidance/GuidanceContext';
+import { TRAINING_TOUR } from '../../components/guidance/definitions';
 import './Training.css';
 import { TrainingDashboard } from './components/TrainingDashboard';
 import { DatasetUpload } from './components/DatasetUpload';
@@ -9,6 +11,7 @@ import { CheckpointPreview } from './components/CheckpointPreview';
 
 const TrainingPage: React.FC = () => {
     const { state, dispatch } = useAppState();
+    const { getStatus, startTour } = useGuidance();
     const { isTraining } = state.training;
     const {
         datasetUpload,
@@ -25,6 +28,23 @@ const TrainingPage: React.FC = () => {
         setDatasetRefreshKey((prev) => prev + 1);
     };
 
+    useEffect(() => {
+        if (getStatus(TRAINING_TOUR.id, TRAINING_TOUR.version)) {
+            return undefined;
+        }
+
+        const timeoutId = window.setTimeout(() => {
+            if (
+                document.visibilityState === 'visible'
+                && !getStatus(TRAINING_TOUR.id, TRAINING_TOUR.version)
+            ) {
+                startTour(TRAINING_TOUR);
+            }
+        }, 500);
+
+        return () => window.clearTimeout(timeoutId);
+    }, [getStatus, startTour]);
+
     return (
         <div className="training-page page-shell">
             <div className="page-header">
@@ -35,7 +55,7 @@ const TrainingPage: React.FC = () => {
 
             <div className="training-content">
                 <div className="training-top-row">
-                    <div className="upload-column">
+                    <div className="upload-column" data-guidance-target="training-data">
                         <DatasetUpload
                             uploadStatus={datasetUpload.uploadStatus}
                             uploadMessage={datasetUpload.uploadMessage}
@@ -44,7 +64,7 @@ const TrainingPage: React.FC = () => {
                             onUploadSuccess={handleUploadSuccess}
                         />
                     </div>
-                    <div className="preview-column">
+                    <div className="preview-column" data-guidance-target="training-configuration">
                         <DatasetPreview
                             refreshKey={datasetRefreshKey}
                             onDelete={handleDatasetDelete}
@@ -71,11 +91,13 @@ const TrainingPage: React.FC = () => {
 
             <div className="section-separator training-dashboard-separator" />
 
-            <TrainingDashboard
-                isActive={isTraining}
-                onTrainingStart={() => dispatch({ type: 'SET_TRAINING_IS_TRAINING', payload: true })}
-                onTrainingEnd={() => dispatch({ type: 'SET_TRAINING_IS_TRAINING', payload: false })}
-            />
+            <div data-guidance-target="training-monitor">
+                <TrainingDashboard
+                    isActive={isTraining}
+                    onTrainingStart={() => dispatch({ type: 'SET_TRAINING_IS_TRAINING', payload: true })}
+                    onTrainingEnd={() => dispatch({ type: 'SET_TRAINING_IS_TRAINING', payload: false })}
+                />
+            </div>
         </div>
     );
 };
