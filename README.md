@@ -1,5 +1,5 @@
 # FAIRS: Fabulous Automated Intelligent Roulette System
-Last updated: 2026-08-16
+Last updated: 2026-08-18
 
 [![Release](https://img.shields.io/github/v/release/CTCycle/FAIRS-Roulette-Player?display_name=tag)](https://github.com/CTCycle/FAIRS-Roulette-Player/releases) [![Python](https://img.shields.io/badge/python-%3E%3D3.14-3776AB?logo=python&logoColor=white)](./app/server/pyproject.toml) [![Node.js](https://img.shields.io/badge/node.js-22.13.0-339933?logo=node.js&logoColor=white)](./start_on_windows.ps1) [![React](https://img.shields.io/badge/react-19.2.0-61DAFB?logo=react&logoColor=black)](./app/client/package.json) [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE) [![CI](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml?query=branch%3Adevelop)
 [![CTCycle Portfolio](https://img.shields.io/badge/CTCycle-Portfolio-58a6ff?style=flat-square)](https://ctcycle.github.io/CTCycle/)
@@ -28,7 +28,7 @@ The backend is the source of truth for API behavior, background jobs, session st
 
 ## Get the source
 
-The current source release is `v2.7.0`. Download a versioned source archive from the [GitHub Releases page](https://github.com/CTCycle/FAIRS-Roulette-Player/releases). FAIRS is intended for local launcher-based operation from an extracted repository.
+The current source release is `v2.8.0`. Download a versioned source archive from the [GitHub Releases page](https://github.com/CTCycle/FAIRS-Roulette-Player/releases). FAIRS is intended for local launcher-based operation from an extracted repository.
 
 ## Set up and start the application
 
@@ -62,6 +62,13 @@ The active ports come from `settings/.env`. The launcher also provides maintenan
 | `6` | Clear Python and uv caches. |
 | `7` | Remove local runtimes and build outputs so the environment can be rebuilt. |
 
+## Tips & Tricks
+
+Open **Help** from the Training or Inference workspace to see practical shortcuts and the optional walkthroughs. Tips & Tricks keeps the round-by-round inference loop, checkpoint reuse, synthetic-data setup, and baseline comparisons visible while you work.
+
+![Tips & Tricks dialog](assets/figures/tips-and-tricks.png)
+_Tips & Tricks brings workflow shortcuts and an optional Inference walkthrough into the local workspace._
+
 ## Configure the runtime
 
 Runtime configuration is split between these files:
@@ -77,7 +84,7 @@ Database settings belong in `settings/.env`; a `database` block in `configuratio
 - `EMBEDDED_DATABASE=true` uses SQLite. The application creates the configured database only when the file is missing and does not reset an existing database during normal startup.
 - `EMBEDDED_DATABASE=false` uses PostgreSQL. Normal startup performs a non-mutating connection check. Use the launcher’s `Initialize database` option to create or initialize the database explicitly.
 
-`FAIRS_USER_DATA_DIR` can override the mutable database, logs, and checkpoint root. `FAIRS_LOG_DIR` can override the log directory for isolated runs.
+`FAIRS_DATA_DIR` can override the mutable database, logs, and checkpoint root. `FAIRS_LOG_DIR` can override the log directory for isolated runs.
 
 ## Training workflow
 

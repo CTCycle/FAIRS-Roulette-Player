@@ -8,6 +8,8 @@ import { WizardActions } from './WizardActions';
 import { parseApiErrorDetail } from '../../../utils/apiParsers';
 import { parseDatasetSummaryItems } from '../../../utils/frontendApiParsers';
 import { WizardSummaryRows, type WizardSummaryRow } from '../../../components/wizard/WizardSummaryRows';
+import { FeatureTip } from '../../../components/guidance/FeatureTip';
+import { HelpPopover } from '../../../components/guidance/HelpPopover';
 
 interface DatasetPreviewProps {
     refreshKey: number;
@@ -36,6 +38,25 @@ const BET_STRATEGY_OPTIONS = [
     { id: 3, name: "D'Alembert" },
     { id: 4, name: 'Fibonacci' },
 ] as const;
+
+const WIZARD_STEP_HELP: Partial<Record<number, { title: string; body: string }>> = {
+    2: {
+        title: 'Dynamic betting',
+        body: 'Leave dynamic betting off for a fixed-bet baseline. Enable it when you want the agent to change stake size through a strategy model or fallback strategy.',
+    },
+    3: {
+        title: 'Dataset split',
+        body: 'Sample size and validation split apply to uploaded datasets. The generator uses its own sample count instead.',
+    },
+    4: {
+        title: 'Session and compute',
+        body: 'More episodes and steps provide more training signal but take longer. GPU and mixed precision only help when the local runtime supports them.',
+    },
+    5: {
+        title: 'Review before starting',
+        body: 'Check the summary, then start the run. You can return to any earlier step before submitting.',
+    },
+};
 
 export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
     refreshKey,
@@ -323,7 +344,12 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                 {loading && <div className="preview-loading">Loading...</div>}
                 {error && <div className="preview-error">{error}</div>}
                 {!loading && !error && datasets.length === 0 && (
-                    <div className="preview-empty">No datasets available</div>
+                    <>
+                        <div className="preview-empty">No datasets available</div>
+                        <FeatureTip id="training-datasets-empty" title="Bring in a dataset">
+                            Upload a CSV/XLSX file or use the generator above to create a starting dataset.
+                        </FeatureTip>
+                    </>
                 )}
                 {!loading && !error && datasets.length > 0 && (
                     <div className="preview-list">
@@ -390,7 +416,14 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                             ))}
                         </nav>
                         <div className="wizard-step-title">
-                            {wizardStep === 3 && newConfig.useDataGen ? 'Generator Parameters' : WIZARD_STEPS[wizardStep]}
+                            <span>{wizardStep === 3 && newConfig.useDataGen ? 'Generator Parameters' : WIZARD_STEPS[wizardStep]}</span>
+                            {WIZARD_STEP_HELP[wizardStep] && (
+                                <HelpPopover
+                                    title={WIZARD_STEP_HELP[wizardStep]?.title ?? 'About this step'}
+                                >
+                                    {WIZARD_STEP_HELP[wizardStep]?.body}
+                                </HelpPopover>
+                            )}
                         </div>
                         <div className="wizard-step-content">
                             {wizardStep === 0 && (

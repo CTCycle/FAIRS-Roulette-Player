@@ -12,6 +12,7 @@ import {
 } from '../../../utils/frontendApiParsers';
 import type { CheckpointMetadataResponse } from '../../../types/frontendApi';
 import { WizardSummaryRows, type WizardSummaryRow } from '../../../components/wizard/WizardSummaryRows';
+import { FeatureTip } from '../../../components/guidance/FeatureTip';
 
 interface CheckpointPreviewProps {
     refreshKey?: number;
@@ -434,7 +435,12 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
                 {error && <div className="preview-error">{error}</div>}
                 {notice && <div className="preview-notice">{notice}</div>}
                 {!loading && !error && checkpoints.length === 0 && (
-                    <div className="preview-empty">No checkpoints available</div>
+                    <>
+                        <div className="preview-empty">No checkpoints available</div>
+                        <FeatureTip id="training-checkpoints-empty" title="Checkpoints appear after training">
+                            Start a training run to create a reusable model snapshot. You can then inspect, evaluate, or resume it here.
+                        </FeatureTip>
+                    </>
                 )}
                 {!loading && !error && datasetsError && (
                     <div className="preview-error">{datasetsError}</div>

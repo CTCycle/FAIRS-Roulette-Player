@@ -1,6 +1,6 @@
 ## System Overview
 
-Last updated: 2026-08-13
+Last updated: 2026-08-18
 
 ## Summary
 
@@ -8,7 +8,7 @@ FAIRS is a Windows-first roulette research application for local web-mode roulet
 
 - FastAPI backend in `app/server`
 - React 19 + TypeScript frontend in `app/client/src`
-- Current application version: `2.7.0`
+- Current application version: `2.8.0`
 
 The backend is the system of record for API behavior, training orchestration, inference sessions, persistence, and startup readiness. The repository does not include a desktop installer, container deployment, or packaged executable path.
 
@@ -37,6 +37,7 @@ The structure below is source-focused and excludes dependency, cache, and genera
 │  │  ├─ logs/
 │  │  └─ database.db
 │  ├─ scripts/
+│  │  ├─ export_openapi.py
 │  │  └─ initialize_database.py
 │  ├─ server/
 │  │  ├─ app.py
@@ -48,6 +49,8 @@ The structure below is source-focused and excludes dependency, cache, and genera
 │  │  ├─ learning/
 │  │  ├─ repositories/
 │  │  └─ services/
+│  ├─ shared/
+│  │  └─ openapi.json
 │  └─ tests/
 │     ├─ conftest.py
 │     ├─ run_tests.bat

@@ -246,6 +246,10 @@
 }
 
 .predictionTitle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
     color: var(--primary-accent);
     font-size: 0.85rem;
     text-transform: uppercase;

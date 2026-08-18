@@ -1,10 +1,13 @@
 import React, { useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import type { GameConfig, GameStep, PredictionResult, SessionState } from '../../types/inference';
 import type { InferenceSetupState } from '../../context/AppStateContext';
 import styles from './GameSession.module.css';
 import { Check, History, Pencil, Play, Square, Trash2 } from 'lucide-react';
 import { useInferenceSetupOptions } from '../../hooks/useInferenceSetupOptions';
 import { isRecord, parseApiErrorDetail } from '../../utils/apiParsers';
+import { FeatureTip } from '../guidance/FeatureTip';
+import { HelpPopover } from '../guidance/HelpPopover';
 
 interface GameSessionProps {
     config: GameConfig | null;
@@ -652,7 +655,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
     return (
         <div className={styles.sessionContainer}>
             <div className={styles.leftPanel}>
-                <div className={styles.card}>
+                <div className={styles.card} data-guidance-target="inference-setup">
                     <div className={styles.sectionTitle}>Select checkpoint</div>
                     <select
                         id="inference-checkpoint"
@@ -670,6 +673,16 @@ export const GameSession: React.FC<GameSessionProps> = ({
                             ))
                         )}
                     </select>
+
+                    {checkpoints.length === 0 && (
+                        <FeatureTip
+                            id="inference-no-checkpoint"
+                            title="Train a checkpoint first"
+                            action={<Link to="/training">Open Training</Link>}
+                        >
+                            Inference needs a trained checkpoint. Train one first, then return here with a compatible dataset.
+                        </FeatureTip>
+                    )}
 
                     <div className={styles.sectionTitle}>Selected dataset</div>
                     <div className={styles.datasetRow}>
@@ -793,7 +806,12 @@ export const GameSession: React.FC<GameSessionProps> = ({
                 </div>
 
                 <div className={styles.predictionCard}>
-                    <div className={styles.predictionTitle}>AI Suggestion</div>
+                    <div className={styles.predictionTitle}>
+                        <span>AI Suggestion</span>
+                        <HelpPopover title="How the suggestion works">
+                            Play starts a session and fetches a prediction. Apply Suggested Bet only changes the current bet amount; it does not advance the session.
+                        </HelpPopover>
+                    </div>
                     <div className={styles.predictionValue}>
                         {sessionState.lastPrediction?.description || 'Waiting for a prediction'}
                     </div>
@@ -838,6 +856,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
                                 className={`${styles.primaryButton} ${styles.compactButton}`}
                                 onClick={handlePlay}
                                 disabled={!canPlay || isRecomputing}
+                                data-guidance-target="inference-play"
                             >
                                 <Play size={16} /> Play
                             </button>
@@ -862,7 +881,12 @@ export const GameSession: React.FC<GameSessionProps> = ({
                     {error && (
                         <div className={styles.errorText} role="alert" aria-live="polite">{error}</div>
                     )}
-                    <div className={styles.tableBody}>
+                    {history.length === 0 && (
+                        <FeatureTip id="inference-session-empty" title="One round at a time">
+                            Start with Play. After each prediction, enter the observed wheel value and confirm it before requesting the next round.
+                        </FeatureTip>
+                    )}
+                    <div className={styles.tableBody} data-guidance-target="inference-observation">
                         <table className={styles.historyTable}>
                             <thead>
                                 <tr>

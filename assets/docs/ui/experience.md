@@ -1,6 +1,6 @@
 ## Experience
 
-Last updated: 2026-08-02
+Last updated: 2026-08-18
 
 ## Page Composition
 
@@ -14,6 +14,7 @@ Last updated: 2026-08-02
   - initial-capital and bet controls
   - AI suggestion panel
   - session history table with editable observed values and row actions
+- Walkthroughs do not open automatically. From Help, users can choose a three-step walkthrough for Training or Inference, covering data/setup, configuration/play, and monitoring/observation.
 
 Composition rules:
 
@@ -31,6 +32,7 @@ Composition rules:
 - Preserve explicit loading states for long-running or multi-step actions.
 - Keep outcome and profit feedback immediate and visually distinct.
 - Preserve the two-panel inference layout on wide screens and stack setup/history regions on narrow screens.
+- Keep guidance adjacent to the feature it explains, short enough to scan, and dismissible without blocking the workflow. Do not repeat a dismissed tip during the same guidance version.
 
 ## Responsiveness
 
@@ -59,6 +61,7 @@ Rules:
 - Error alerts should preserve live-region behavior where implemented.
 - Respect reduced motion preferences.
 - Dialogs should retain `role="dialog"`, `aria-modal`, and an accessible title; wizard steps expose current-step state.
+- Guidance dialogs and tours move focus to their first action, keep Tab navigation within the open surface, close with Escape, and restore focus to the invoking control. Tour targets are highlighted without replacing the underlying controls, and the animated demonstration becomes static when reduced motion is requested.
 
 ## Design Principles
 

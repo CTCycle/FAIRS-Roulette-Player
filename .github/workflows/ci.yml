@@ -39,8 +39,8 @@ jobs:
         run: uv --project app/server run ruff check app/server app/tests
       - name: Unit tests
         run: uv --project app/server run pytest -q app/tests/unit
-      - name: OpenAPI check
-        run: uv --project app/server run python -c "from server.app import app; app.openapi()"
+      - name: OpenAPI snapshot check
+        run: uv --project app/server run python app/scripts/export_openapi.py --check
       - name: Persistence contract
         env:
           TEST_POSTGRES_URL: postgresql+psycopg://fairs:fairs@localhost:5432/fairs

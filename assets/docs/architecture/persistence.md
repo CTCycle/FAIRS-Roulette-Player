@@ -21,7 +21,7 @@ The schema enforces roulette outcome ranges, positive session/step values, bound
 
 - Embedded relational data:
   - `app/resources/database.db` by default
-  - `<FAIRS_USER_DATA_DIR>/database.db` when a custom data root is configured
+  - `<FAIRS_DATA_DIR>/database.db` when a custom data root is configured
 - External relational data:
   - PostgreSQL database defined by the configured connection settings
 - Checkpoints:
