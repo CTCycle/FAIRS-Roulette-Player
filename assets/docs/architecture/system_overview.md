@@ -1,6 +1,6 @@
 ## System Overview
 
-Last updated: 2026-08-13
+Last updated: 2026-08-18
 
 ## Summary
 
@@ -37,6 +37,7 @@ The structure below is source-focused and excludes dependency, cache, and genera
 │  │  ├─ logs/
 │  │  └─ database.db
 │  ├─ scripts/
+│  │  ├─ export_openapi.py
 │  │  └─ initialize_database.py
 │  ├─ server/
 │  │  ├─ app.py
@@ -48,6 +49,8 @@ The structure below is source-focused and excludes dependency, cache, and genera
 │  │  ├─ learning/
 │  │  ├─ repositories/
 │  │  └─ services/
+│  ├─ shared/
+│  │  └─ openapi.json
 │  └─ tests/
 │     ├─ conftest.py
 │     ├─ run_tests.bat
