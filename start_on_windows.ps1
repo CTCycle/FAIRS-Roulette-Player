@@ -215,6 +215,20 @@ function Build-Frontend {
     } finally { Pop-Location }
 }
 
+function Test-FrontendBuildReady {
+    $frontendEntry = Join-Path $clientDir 'dist\index.html'
+    $frontendAssets = Join-Path $clientDir 'dist\assets'
+    if (-not (Test-Path -LiteralPath $frontendEntry -PathType Leaf) -or
+        -not (Test-Path -LiteralPath $frontendAssets -PathType Container)) {
+        return $false
+    }
+    if ((Get-Item -LiteralPath $frontendEntry).Length -eq 0) { return $false }
+    if (-not (Get-ChildItem -LiteralPath $frontendAssets -File -ErrorAction SilentlyContinue | Select-Object -First 1)) {
+        return $false
+    }
+    return $true
+}
+
 function Test-DependenciesReady {
     $frontendPackage = Join-Path $clientDir 'package.json'
     $frontendLock = Join-Path $clientDir 'package-lock.json'
@@ -244,6 +258,8 @@ function Test-DependenciesReady {
     if ($LASTEXITCODE -ne 0) { return $false }
     & $venvPython -c 'import fastapi, uvicorn' *> $null
     if ($LASTEXITCODE -ne 0) { return $false }
+
+    if (-not (Test-FrontendBuildReady)) { return $false }
 
     return $true
 }
@@ -275,8 +291,9 @@ function Start-Application {
     $env:UV_LINK_MODE = 'copy'
     Remove-Item Env:PYTHONHOME, Env:PYTHONPATH, Env:PYTHONNOUSERSITE -ErrorAction SilentlyContinue
     if (-not (Test-DependenciesReady)) {
-        Write-Step 'Required application environments are missing or unusable; installing dependencies.'
+        Write-Step 'Required application environments or the frontend build are missing or unusable; recovering.'
         Install-Dependencies -InstallationType 'Standard'
+        Build-Frontend
     }
     else {
         Write-Ok 'Application environments are ready; skipped dependency installation.'
