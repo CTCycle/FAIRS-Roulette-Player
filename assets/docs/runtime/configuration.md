@@ -1,6 +1,6 @@
 ## Configuration
 
-Last updated: 2026-08-13
+Last updated: 2026-08-18
 
 ## Environment Variables
 
@@ -13,7 +13,6 @@ The runtime scripts and backend consume these environment keys:
 - `BACKEND_LOGS_VISIBLE`
 - `ENABLE_API_DOCS`
 - `RELOAD`
-- `ALWAYS_REBUILD`
 - `EMBEDDED_DATABASE`
 - `DATABASE_URL`
 - `DATABASE_ENGINE`
@@ -78,9 +77,8 @@ The backend creates timestamped `FAIRS_*.log` files in `FAIRS_LOG_DIR` when set,
 ### Dependency Installation And Frontend Build
 
 - The launcher checks runtime readiness before installing dependencies.
-- `ALWAYS_REBUILD=true` runs the frontend build during a dependency installation.
-- `ALWAYS_REBUILD=false` skips the frontend build during dependency installation; it does not rebuild on a normal start that reuses a ready environment.
-- Launcher option 2 selects `Standard` or `Development` installation; `Development` adds the backend's test extra.
+- Launcher option 2 selects `Standard` or `Development` installation, installs dependencies, and rebuilds the frontend; `Development` adds the backend's test extra.
+- Normal application startup may install missing dependencies, but it does not rebuild the frontend. Run option 2 when a frontend build is required.
 
 When `FAIRS_DATA_DIR` is absent, the application uses `app/resources`.
 

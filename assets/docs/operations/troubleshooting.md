@@ -1,13 +1,13 @@
 ## Troubleshooting
 
-Last updated: 2026-08-13
+Last updated: 2026-08-18
 
 ## Startup Problems
 
 - If local startup fails, run option 2 in `start_on_windows.ps1` and choose `Standard` to resync runtimes and application dependencies.
 - If test or browser tooling is missing, run option 2 and choose `Development` so the server's `test` extra is installed.
 - If ports are already occupied, resolve the conflicting listeners before relaunching.
-- If the backend starts without the frontend, verify that `app/client/node_modules` contains Vite and that `app/client/dist` exists; use option 2 with `ALWAYS_REBUILD=true` to rebuild.
+- If the backend starts without the frontend, verify that `app/client/node_modules` contains Vite and that `app/client/dist` exists; run option 2 to rebuild the frontend.
 - Option 2 stops a process listening on the configured `UI_PORT` before `npm ci` replaces frontend dependencies. If npm still reports `EPERM` for `esbuild.exe`, stop any external Vite or Node process using `app/client/node_modules` and retry.
 - If the launcher reports a backend readiness failure, open `http://<FASTAPI_HOST>:<FASTAPI_PORT>/api/health` and inspect the generated `FAIRS_*.log` file.
 

@@ -100,7 +100,6 @@ function Import-DotEnv {
         UI_PORT = '8001'
         RELOAD = 'false'
         BACKEND_LOGS_VISIBLE = 'true'
-        ALWAYS_REBUILD = 'true'
     }
     foreach ($entry in $defaults.GetEnumerator()) {
         [Environment]::SetEnvironmentVariable($entry.Key, $entry.Value, 'Process')
@@ -198,20 +197,22 @@ function Install-Dependencies {
     try {
         if (Test-Path -LiteralPath (Join-Path $clientDir 'package-lock.json')) { & $npmCmd ci } else { & $npmCmd install }
         if ($LASTEXITCODE -ne 0) { throw "npm dependency installation failed with exit code $LASTEXITCODE." }
-        if ($env:ALWAYS_REBUILD -eq 'true') {
-            Write-Step 'Building frontend.'
-            & $npmCmd run build
-            if ($LASTEXITCODE -ne 0) { throw "Frontend build failed with exit code $LASTEXITCODE." }
-        } else {
-            Write-Info 'Skipping frontend build because ALWAYS_REBUILD=false.'
-        }
     } finally { Pop-Location }
 
     if ($PruneCache -and (Test-Path -LiteralPath $uvCacheDir)) {
         Write-Step 'Pruning uv cache.'
         Remove-Item -LiteralPath $uvCacheDir -Recurse -Force
     }
-    Write-Ok 'Dependencies are installed and the frontend build is ready.'
+    Write-Ok 'Dependencies are installed.'
+}
+
+function Build-Frontend {
+    Write-Step 'Building frontend.'
+    Push-Location $clientDir
+    try {
+        & $npmCmd run build
+        if ($LASTEXITCODE -ne 0) { throw "Frontend build failed with exit code $LASTEXITCODE." }
+    } finally { Pop-Location }
 }
 
 function Test-DependenciesReady {
@@ -457,6 +458,7 @@ function Show-Menu {
                 '2' {
                     $installationType = Read-InstallationType
                     Install-Dependencies -PruneCache -InstallationType $installationType
+                    Build-Frontend
                 }
                 '3' { Initialize-Database }
                 '4' { Invoke-TestSuite }
