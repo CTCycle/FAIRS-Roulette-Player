@@ -1,6 +1,6 @@
 ## Configuration
 
-Last updated: 2026-08-18
+Last updated: 2026-08-19
 
 ## Environment Variables
 
@@ -78,7 +78,7 @@ The backend creates timestamped `FAIRS_*.log` files in `FAIRS_LOG_DIR` when set,
 
 - The launcher checks runtime readiness before installing dependencies.
 - Launcher option 2 selects `Standard` or `Development` installation, installs dependencies, and rebuilds the frontend; `Development` adds the backend's test extra.
-- Normal application startup may install missing dependencies, but it does not rebuild the frontend. Run option 2 when a frontend build is required.
+- Normal application startup skips installation and rebuilding when the environment and frontend build are ready. If either is missing or unusable, option 1 recovers dependencies and rebuilds the frontend; option 2 remains the explicit install/update and rebuild path.
 
 When `FAIRS_DATA_DIR` is absent, the application uses `app/resources`.
 
