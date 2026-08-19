@@ -1,5 +1,5 @@
 # FAIRS: Fabulous Automated Intelligent Roulette System
-Last updated: 2026-08-18
+Last updated: 2026-08-19
 
 [![Release](https://img.shields.io/github/v/release/CTCycle/FAIRS-Roulette-Player?display_name=tag)](https://github.com/CTCycle/FAIRS-Roulette-Player/releases) [![Python](https://img.shields.io/badge/python-%3E%3D3.14-3776AB?logo=python&logoColor=white)](./app/server/pyproject.toml) [![Node.js](https://img.shields.io/badge/node.js-22.13.0-339933?logo=node.js&logoColor=white)](./start_on_windows.ps1) [![React](https://img.shields.io/badge/react-19.2.0-61DAFB?logo=react&logoColor=black)](./app/client/package.json) [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE) [![CI](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml?query=branch%3Adevelop)
 [![CTCycle Portfolio](https://img.shields.io/badge/CTCycle-Portfolio-58a6ff?style=flat-square)](https://ctcycle.github.io/CTCycle/)
@@ -28,7 +28,7 @@ The backend is the source of truth for API behavior, background jobs, session st
 
 ## Get the source
 
-The current source release is `v2.8.0`. Download a versioned source archive from the [GitHub Releases page](https://github.com/CTCycle/FAIRS-Roulette-Player/releases). FAIRS is intended for local launcher-based operation from an extracted repository.
+The current source release is `v2.9.0`. Download a versioned source archive from the [GitHub Releases page](https://github.com/CTCycle/FAIRS-Roulette-Player/releases). FAIRS is intended for local launcher-based operation from an extracted repository.
 
 ## Set up and start the application
 
@@ -42,11 +42,11 @@ On the first run, choose **2 — Install / update dependencies** if you want to 
 
 The launcher creates `settings/.env` from `settings/.env.example` when needed, starts the FastAPI backend, and serves the built React frontend through Vite preview. Later starts reuse the environment when its readiness checks pass.
 
-With the default settings, open:
+With the checked-in default settings, open:
 
-- UI: `http://127.0.0.1:8001`
-- API health: `http://127.0.0.1:8000/api/health`
-- API documentation: `http://127.0.0.1:8000/docs`
+- UI: `http://127.0.0.1:8051`
+- API health: `http://127.0.0.1:8890/api/health`
+- API documentation: `http://127.0.0.1:8890/docs`
 
 The active ports come from `settings/.env`. The launcher also provides maintenance actions for dependency installation, database initialization, tests, logs, caches, and local runtime cleanup.
 
