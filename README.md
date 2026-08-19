@@ -56,11 +56,13 @@ The active ports come from `settings/.env`. The launcher also provides maintenan
 | --- | --- |
 | `1` | Launch the backend and web UI. |
 | `2` | Install or update dependencies; choose `Standard` or `Development`. |
-| `3` | Explicitly initialize the configured database, including PostgreSQL. |
-| `4` | Run the repository test suite. |
-| `5` | Remove application log files. |
-| `6` | Clear Python and uv caches. |
-| `7` | Remove local runtimes and build outputs so the environment can be rebuilt. |
+| `3` | Rebuild the frontend from current source without updating dependencies. |
+| `4` | Explicitly initialize the configured database, including PostgreSQL. |
+| `5` | Run the repository test suite. |
+| `6` | Remove application log files. |
+| `7` | Clear Python and uv caches. |
+| `8` | Remove local runtimes and build outputs so the environment can be rebuilt. |
+| `9` | Exit the launcher. |
 
 ## Tips & Tricks
 
