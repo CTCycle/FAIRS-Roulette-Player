@@ -451,24 +451,25 @@ function Show-Menu {
         Write-Host ''
         Write-Host '  SETUP & MAINTENANCE' -ForegroundColor DarkCyan
         Write-MenuItem '2' 'Install / update dependencies' 'Prepare local runtimes and build the frontend' Yellow
-        Write-MenuItem '3' 'Initialize database' 'Create the selected database and schema' Yellow
-        Write-MenuItem '4' 'Run test suite' 'Execute automated checks' Yellow
+        Write-MenuItem '3' 'Rebuild frontend' 'Build the frontend without updating dependencies' Yellow
+        Write-MenuItem '4' 'Initialize database' 'Create the selected database and schema' Yellow
+        Write-MenuItem '5' 'Run test suite' 'Execute automated checks' Yellow
         Write-Host ''
         Write-Host '  CLEANUP' -ForegroundColor DarkCyan
-        Write-MenuItem '5' 'Remove logs' 'Delete application log files' DarkYellow
-        Write-MenuItem '6' 'Clear cache' 'Remove Python and uv caches' DarkYellow
-        Write-MenuItem '7' 'Uninstall application' 'Remove local runtimes and build outputs' Red
+        Write-MenuItem '6' 'Remove logs' 'Delete application log files' DarkYellow
+        Write-MenuItem '7' 'Clear cache' 'Remove Python and uv caches' DarkYellow
+        Write-MenuItem '8' 'Uninstall application' 'Remove local runtimes and build outputs' Red
         Write-Host ''
         Write-Host '  -----------------------------------------------------' -ForegroundColor DarkCyan
-        Write-MenuItem '8' 'Exit' 'Close this launcher' DarkGray
+        Write-MenuItem '9' 'Exit' 'Close this launcher' DarkGray
         Write-Host ''
-        $selection = Read-Host '  Select an option (1-8)'
-        if ($selection -notmatch '^[1-8]$') {
-            Write-Fatal 'Invalid option. Select a number from 1 through 8.'
+        $selection = Read-Host '  Select an option (1-9)'
+        if ($selection -notmatch '^[1-9]$') {
+            Write-Fatal 'Invalid option. Select a number from 1 through 9.'
             Wait-ForMenu
             continue
         }
-        if ($selection -eq '8') { break }
+        if ($selection -eq '9') { break }
         try {
             switch ($selection) {
                 '1' { Start-Application; exit 0 }
@@ -477,11 +478,12 @@ function Show-Menu {
                     Install-Dependencies -PruneCache -InstallationType $installationType
                     Build-Frontend
                 }
-                '3' { Initialize-Database }
-                '4' { Invoke-TestSuite }
-                '5' { Remove-Logs }
-                '6' { Clear-Cache }
-                '7' { Uninstall-Application }
+                '3' { Build-Frontend }
+                '4' { Initialize-Database }
+                '5' { Invoke-TestSuite }
+                '6' { Remove-Logs }
+                '7' { Clear-Cache }
+                '8' { Uninstall-Application }
             }
             if ([Console]::IsInputRedirected) { break }
         } catch {
