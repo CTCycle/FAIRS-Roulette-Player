@@ -69,7 +69,7 @@ The active ports come from `settings/.env`. The launcher also provides maintenan
 Open **Help** from the Training or Inference workspace to see practical shortcuts and the optional walkthroughs. Tips & Tricks keeps the round-by-round inference loop, checkpoint reuse, synthetic-data setup, and baseline comparisons visible while you work.
 
 ![Tips & Tricks dialog](assets/figures/tips-and-tricks.png)
-_Tips & Tricks brings workflow shortcuts and an optional Inference walkthrough into the local workspace._
+_Tips & Tricks brings workflow shortcuts and an optional Inference walkthrough into an active local inference workspace._
 
 ## Configure the runtime
 
@@ -97,7 +97,7 @@ Database settings belong in `settings/.env`; a `database` block in `configuratio
 5. Review generated checkpoints or resume an interrupted training run.
 
 ![Training workspace](assets/figures/training-page.png)
-_The Training workspace combines dataset upload, checkpoint management, and the live training monitor._
+_The Training workspace combines dataset upload, checkpoint management, and a live training monitor with populated metrics and history charts._
 
 Synthetic training generates roulette outcomes in the canonical `0..36` range and normalizes them for the training serializer.
 
@@ -138,7 +138,7 @@ The defaults below are the starting values in the Training wizard. Change one or
 6. Use **Play**, **Stop**, **Clear**, and session shutdown controls as needed.
 
 ![Inference session](assets/figures/inference-page.png)
-_The Inference workspace pairs checkpoint and dataset setup with stepwise predictions and session history._
+_The Inference workspace pairs a trained checkpoint and dataset with live stepwise predictions, observed outcomes, and session history._
 
 ## Testing
 
