@@ -966,97 +966,6 @@
   line-height: 1rem;
 }
 
-/* Responsive adjustments for new layouts */
-@media (max-width: 900px) {
-  .training-page {
-    padding: 1rem;
-  }
-
-  .training-top-row,
-  .checkpoints-row {
-    grid-template-columns: 1fr;
-  }
-
-  .checkpoints-row {
-    min-height: 0;
-  }
-
-  .controls-row-side-by-side {
-    flex-direction: column;
-  }
-
-  .controls-row-side-by-side .control-fieldset-left,
-  .controls-row-side-by-side .control-fieldset-right {
-    flex: 1;
-  }
-
-  .session-compute-layout {
-    flex-direction: column;
-  }
-
-  .session-compute-left,
-  .session-compute-right {
-    flex: 1;
-  }
-
-  .controls-two-column {
-    flex-direction: column;
-  }
-
-  .fieldset-separator-vertical {
-    width: 100%;
-    height: 1px;
-  }
-}
-
-@media (max-width: 768px) {
-  .metrics-progress-row {
-    flex-direction: column;
-  }
-
-  .metrics-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .metrics-meta-row {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .dashboard-visuals {
-    grid-template-columns: 1fr;
-  }
-
-  .progress-side {
-    align-items: center;
-  }
-}
-
-@media (max-width: 520px) {
-  .metrics-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .metrics-meta-row {
-    grid-template-columns: 1fr;
-  }
-
-  .metric-card {
-    width: 100%;
-  }
-}
-
-@media (max-width: 480px) {
-  .metrics-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (min-width: 769px) and (max-width: 1320px) {
-  .metrics-grid {
-    grid-template-columns: repeat(3, minmax(170px, 1fr));
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .progress-wheel-fill {
     transition: none;
@@ -1079,12 +988,6 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-}
-
-@media (max-width: 768px) {
-  .previews-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 .preview-panel {
@@ -1728,29 +1631,6 @@
 
 .wizard-btn-secondary:hover {
   background: #475569;
-}
-
-@media (max-width: 720px) {
-
-  .wizard-grid-2x4,
-  .wizard-grid-2x2,
-  .wizard-grid-3x2 {
-    grid-template-columns: 1fr;
-  }
-
-  .wizard-modal {
-    padding: 1rem;
-  }
-
-  .wizard-optional-field {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .wizard-optional-field .form-input {
-    width: 100%;
-    max-width: none;
-  }
 }
 
 .preview-header-actions {

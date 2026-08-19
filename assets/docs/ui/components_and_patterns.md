@@ -1,6 +1,6 @@
 ## Components And Patterns
 
-Last updated: 2026-08-18
+Last updated: 2026-08-20
 
 ## Navigation And Structure
 
@@ -8,6 +8,13 @@ Last updated: 2026-08-18
   - `Training`
   - `Inference`
 - The sticky header includes the FAIRS logo, the `Training and inference workspace` subtitle, and icon-backed active navigation links.
+- Navigation remains a desktop header; no mobile menu or collapsed navigation is provided.
+
+## Desktop support
+
+- The shared shell requires a browser viewport at least `1100px` wide and preserves the desktop layout below that width.
+- Below the minimum, a non-dismissible notice tells the user to enlarge the browser window.
+- Keep controls sized and ordered for mouse and keyboard use; do not add touch-first interaction variants.
 
 ## Core Reusable Patterns
 

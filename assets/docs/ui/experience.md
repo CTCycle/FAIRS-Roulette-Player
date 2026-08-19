@@ -1,6 +1,6 @@
 ## Experience
 
-Last updated: 2026-08-18
+Last updated: 2026-08-20
 
 ## Page Composition
 
@@ -31,27 +31,18 @@ Composition rules:
 - Keep error feedback local to the action that failed.
 - Preserve explicit loading states for long-running or multi-step actions.
 - Keep outcome and profit feedback immediate and visually distinct.
-- Preserve the two-panel inference layout on wide screens and stack setup/history regions on narrow screens.
+- Preserve the two-panel inference layout at every supported viewport width. Below the desktop minimum, retain the desktop geometry and show the minimum-window notice instead of stacking setup and history regions.
 - Keep guidance adjacent to the feature it explains, short enough to scan, and dismissible without blocking the workflow. Do not repeat a dismissed tip during the same guidance version.
 
-## Responsiveness
+## Desktop support
 
-Implemented breakpoints currently include:
+- The supported browser viewport is at least `1100px` wide.
+- The interface is optimized for desktop computers, laptops, and Windows tablets that behave like normal desktop browser environments.
+- Phones, mobile navigation, touch-first interactions, and small-screen responsive layouts are not supported targets.
+- Below `1100px`, the application keeps its desktop minimum width and displays a clear request to enlarge the browser window.
+- Multi-column layouts remain intact at supported widths. Dense tables may scroll within their own surface when their intrinsic desktop width is needed.
 
-- `1100px`
-- `900px`
-- `768px`
-- `720px`
-- `700px`
-- `520px`
-- `480px`
-
-Rules:
-
-- Multi-column layouts must collapse cleanly on narrow viewports.
-- Training upload/preview and checkpoint rows collapse to one column at 768px; training wizard grids collapse to one column at 720px.
-- Tables should remain scrollable when width is constrained.
-- Button groups should wrap instead of overflowing.
+Desktop layouts should favor information density, horizontal space, and efficient mouse and keyboard interaction over compact viewport adaptation.
 
 ## Accessibility
 
