@@ -100,7 +100,6 @@ function Import-DotEnv {
         UI_PORT = '8001'
         RELOAD = 'false'
         BACKEND_LOGS_VISIBLE = 'true'
-        ALWAYS_REBUILD = 'true'
     }
     foreach ($entry in $defaults.GetEnumerator()) {
         [Environment]::SetEnvironmentVariable($entry.Key, $entry.Value, 'Process')
@@ -198,20 +197,36 @@ function Install-Dependencies {
     try {
         if (Test-Path -LiteralPath (Join-Path $clientDir 'package-lock.json')) { & $npmCmd ci } else { & $npmCmd install }
         if ($LASTEXITCODE -ne 0) { throw "npm dependency installation failed with exit code $LASTEXITCODE." }
-        if ($env:ALWAYS_REBUILD -eq 'true') {
-            Write-Step 'Building frontend.'
-            & $npmCmd run build
-            if ($LASTEXITCODE -ne 0) { throw "Frontend build failed with exit code $LASTEXITCODE." }
-        } else {
-            Write-Info 'Skipping frontend build because ALWAYS_REBUILD=false.'
-        }
     } finally { Pop-Location }
 
     if ($PruneCache -and (Test-Path -LiteralPath $uvCacheDir)) {
         Write-Step 'Pruning uv cache.'
         Remove-Item -LiteralPath $uvCacheDir -Recurse -Force
     }
-    Write-Ok 'Dependencies are installed and the frontend build is ready.'
+    Write-Ok 'Dependencies are installed.'
+}
+
+function Build-Frontend {
+    Write-Step 'Building frontend.'
+    Push-Location $clientDir
+    try {
+        & $npmCmd run build
+        if ($LASTEXITCODE -ne 0) { throw "Frontend build failed with exit code $LASTEXITCODE." }
+    } finally { Pop-Location }
+}
+
+function Test-FrontendBuildReady {
+    $frontendEntry = Join-Path $clientDir 'dist\index.html'
+    $frontendAssets = Join-Path $clientDir 'dist\assets'
+    if (-not (Test-Path -LiteralPath $frontendEntry -PathType Leaf) -or
+        -not (Test-Path -LiteralPath $frontendAssets -PathType Container)) {
+        return $false
+    }
+    if ((Get-Item -LiteralPath $frontendEntry).Length -eq 0) { return $false }
+    if (-not (Get-ChildItem -LiteralPath $frontendAssets -File -ErrorAction SilentlyContinue | Select-Object -First 1)) {
+        return $false
+    }
+    return $true
 }
 
 function Test-DependenciesReady {
@@ -244,6 +259,8 @@ function Test-DependenciesReady {
     & $venvPython -c 'import fastapi, uvicorn' *> $null
     if ($LASTEXITCODE -ne 0) { return $false }
 
+    if (-not (Test-FrontendBuildReady)) { return $false }
+
     return $true
 }
 
@@ -274,8 +291,9 @@ function Start-Application {
     $env:UV_LINK_MODE = 'copy'
     Remove-Item Env:PYTHONHOME, Env:PYTHONPATH, Env:PYTHONNOUSERSITE -ErrorAction SilentlyContinue
     if (-not (Test-DependenciesReady)) {
-        Write-Step 'Required application environments are missing or unusable; installing dependencies.'
+        Write-Step 'Required application environments or the frontend build are missing or unusable; recovering.'
         Install-Dependencies -InstallationType 'Standard'
+        Build-Frontend
     }
     else {
         Write-Ok 'Application environments are ready; skipped dependency installation.'
@@ -433,36 +451,39 @@ function Show-Menu {
         Write-Host ''
         Write-Host '  SETUP & MAINTENANCE' -ForegroundColor DarkCyan
         Write-MenuItem '2' 'Install / update dependencies' 'Prepare local runtimes and build the frontend' Yellow
-        Write-MenuItem '3' 'Initialize database' 'Create the selected database and schema' Yellow
-        Write-MenuItem '4' 'Run test suite' 'Execute automated checks' Yellow
+        Write-MenuItem '3' 'Rebuild frontend' 'Build the frontend without updating dependencies' Yellow
+        Write-MenuItem '4' 'Initialize database' 'Create the selected database and schema' Yellow
+        Write-MenuItem '5' 'Run test suite' 'Execute automated checks' Yellow
         Write-Host ''
         Write-Host '  CLEANUP' -ForegroundColor DarkCyan
-        Write-MenuItem '5' 'Remove logs' 'Delete application log files' DarkYellow
-        Write-MenuItem '6' 'Clear cache' 'Remove Python and uv caches' DarkYellow
-        Write-MenuItem '7' 'Uninstall application' 'Remove local runtimes and build outputs' Red
+        Write-MenuItem '6' 'Remove logs' 'Delete application log files' DarkYellow
+        Write-MenuItem '7' 'Clear cache' 'Remove Python and uv caches' DarkYellow
+        Write-MenuItem '8' 'Uninstall application' 'Remove local runtimes and build outputs' Red
         Write-Host ''
         Write-Host '  -----------------------------------------------------' -ForegroundColor DarkCyan
-        Write-MenuItem '8' 'Exit' 'Close this launcher' DarkGray
+        Write-MenuItem '9' 'Exit' 'Close this launcher' DarkGray
         Write-Host ''
-        $selection = Read-Host '  Select an option (1-8)'
-        if ($selection -notmatch '^[1-8]$') {
-            Write-Fatal 'Invalid option. Select a number from 1 through 8.'
+        $selection = Read-Host '  Select an option (1-9)'
+        if ($selection -notmatch '^[1-9]$') {
+            Write-Fatal 'Invalid option. Select a number from 1 through 9.'
             Wait-ForMenu
             continue
         }
-        if ($selection -eq '8') { break }
+        if ($selection -eq '9') { break }
         try {
             switch ($selection) {
                 '1' { Start-Application; exit 0 }
                 '2' {
                     $installationType = Read-InstallationType
                     Install-Dependencies -PruneCache -InstallationType $installationType
+                    Build-Frontend
                 }
-                '3' { Initialize-Database }
-                '4' { Invoke-TestSuite }
-                '5' { Remove-Logs }
-                '6' { Clear-Cache }
-                '7' { Uninstall-Application }
+                '3' { Build-Frontend }
+                '4' { Initialize-Database }
+                '5' { Invoke-TestSuite }
+                '6' { Remove-Logs }
+                '7' { Clear-Cache }
+                '8' { Uninstall-Application }
             }
             if ([Console]::IsInputRedirected) { break }
         } catch {

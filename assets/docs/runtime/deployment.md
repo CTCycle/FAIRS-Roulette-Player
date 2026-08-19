@@ -1,6 +1,6 @@
 ## Deployment
 
-Last updated: 2026-08-13
+Last updated: 2026-08-19
 
 ## Supported Distribution
 
@@ -11,7 +11,7 @@ FAIRS is distributed as source and run locally from its repository through `star
 - portable Python `3.14.2`, uv, and Node.js `22.13.0` are prepared under `runtimes/`
 - backend dependencies are synchronized into `app/server/.venv`
 - frontend dependencies are installed in `app/client/node_modules`
-- `npm run build` produces the frontend used by `npm run preview`; the launcher invokes this during dependency installation when `ALWAYS_REBUILD=true`
+- `npm run build` produces the frontend used by `npm run preview`; the launcher invokes this after dependency installation in option 2, directly through option 3, and during option 1 recovery when the environment or build is unusable
 
 ## Constraints
 
