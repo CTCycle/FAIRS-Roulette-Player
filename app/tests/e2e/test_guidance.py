@@ -5,7 +5,6 @@ from playwright.sync_api import Page, expect
 
 GUIDANCE_KEY = "fairs.guidance"
 
-
 ###############################################################################
 def _prepare_training_guidance(page: Page, base_url: str) -> None:
     page.goto(f"{base_url}/training")
@@ -13,7 +12,6 @@ def _prepare_training_guidance(page: Page, base_url: str) -> None:
     page.evaluate(f"localStorage.removeItem('{GUIDANCE_KEY}')")
     page.reload()
     page.wait_for_timeout(300)
-
 
 ###############################################################################
 class TestGuidance:
