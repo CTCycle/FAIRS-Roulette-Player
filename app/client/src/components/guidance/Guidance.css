@@ -463,38 +463,6 @@
     border-color: var(--border-color);
 }
 
-@media (max-width: 720px) {
-    .guidance-tip-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .guidance-dialog {
-        padding: 1rem;
-    }
-
-    .guidance-tour-footer {
-        align-items: stretch;
-        flex-direction: column;
-    }
-
-    .guidance-tour-actions {
-        justify-content: flex-end;
-    }
-}
-
-@media (max-width: 900px) {
-    .app-shell-actions {
-        align-items: flex-end;
-        flex-direction: column;
-        gap: 0.35rem;
-    }
-
-    .app-shell-help {
-        min-height: 32px;
-        padding-inline: 0.65rem;
-    }
-}
-
 @media (prefers-reduced-motion: reduce) {
     .guidance-media-track {
         animation: none;
