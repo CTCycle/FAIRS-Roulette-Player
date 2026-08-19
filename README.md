@@ -1,5 +1,5 @@
 # FAIRS: Fabulous Automated Intelligent Roulette System
-Last updated: 2026-08-19
+Last updated: 2026-08-20
 
 [![Release](https://img.shields.io/github/v/release/CTCycle/FAIRS-Roulette-Player?display_name=tag)](https://github.com/CTCycle/FAIRS-Roulette-Player/releases) [![Python](https://img.shields.io/badge/python-%3E%3D3.14-3776AB?logo=python&logoColor=white)](./app/server/pyproject.toml) [![Node.js](https://img.shields.io/badge/node.js-22.13.0-339933?logo=node.js&logoColor=white)](./start_on_windows.ps1) [![React](https://img.shields.io/badge/react-19.2.0-61DAFB?logo=react&logoColor=black)](./app/client/package.json) [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE) [![CI](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml?query=branch%3Adevelop)
 [![CTCycle Portfolio](https://img.shields.io/badge/CTCycle-Portfolio-58a6ff?style=flat-square)](https://ctcycle.github.io/CTCycle/)
@@ -14,6 +14,7 @@ FAIRS is an experimental research tool. Model suggestions are not guaranteed pre
 - The first setup needs outbound network access so the launcher can download runtimes and dependencies. Later starts reuse the prepared environment when its readiness checks pass.
 - The normal runtime uses the CPU. GPU, mixed precision, and JIT options are available in the training wizard but require a compatible local ML environment.
 - Roulette outcomes use the canonical single-zero range `0..36`. Inspect and validate uploaded CSV/XLSX data in the dataset preview before committing it to a training run.
+- The web UI is desktop-only and requires a browser viewport at least 1100px wide. Phones and mobile layouts are unsupported; Windows tablets are supported only when they provide a normal desktop browser environment.
 
 ## What FAIRS helps with
 

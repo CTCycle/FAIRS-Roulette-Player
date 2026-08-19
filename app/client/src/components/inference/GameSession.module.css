@@ -396,19 +396,3 @@
     color: var(--text-secondary);
     opacity: 0.45;
 }
-
-@media (max-width: 1100px) {
-    .sessionContainer {
-        grid-template-columns: 1fr;
-    }
-
-    .leftPanel {
-        height: auto;
-    }
-
-    .tableCard {
-        min-height: 420px;
-    }
-}
-
-
