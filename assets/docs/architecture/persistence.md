@@ -34,7 +34,7 @@ The schema enforces roulette outcome ranges, positive session/step values, bound
 - Application startup uses different lifecycle rules for the selected backend.
 - Embedded SQLite checks only whether the configured database file exists. A missing file is created through SQLAlchemy metadata; an existing file is not initialized, reseeded, reset, or schema-validated during normal startup.
 - PostgreSQL is not created or initialized during normal startup. Startup only runs a non-mutating connection probe against the configured database.
-- The explicit initializer creates or ensures the PostgreSQL database and schema after the user selects option 3 in `start_on_windows.ps1`.
+- The explicit initializer creates or ensures the PostgreSQL database and schema after the user selects option 4 in `start_on_windows.ps1`.
 - The current schema has no applicable seed workflow; initialization does not add or reseed catalog data.
 
 ## Persistence Boundaries

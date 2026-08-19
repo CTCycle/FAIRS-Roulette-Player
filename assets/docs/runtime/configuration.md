@@ -65,7 +65,7 @@ The backend creates timestamped `FAIRS_*.log` files in `FAIRS_LOG_DIR` when set,
   - does not cross-validate an existing database during normal startup
 - `EMBEDDED_DATABASE=false`
   - uses PostgreSQL and requires explicit connection settings
-  - requires launcher option 3 to create or initialize the database and schema
+  - requires launcher option 4 to create or initialize the database and schema
   - normal startup only probes the existing database connection
 
 ### Backend Log Visibility
