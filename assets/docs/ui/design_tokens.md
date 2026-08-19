@@ -1,6 +1,6 @@
 ## Design Tokens
 
-Last updated: 2026-08-02
+Last updated: 2026-08-20
 
 ## Typography
 
@@ -15,7 +15,7 @@ Last updated: 2026-08-02
   - `--font-size-2xl: 1.75rem`
 - Default line height:
   - `--line-height-default: 1.5`
-- Page titles use responsive `clamp(...)` scaling.
+- Page titles use the established desktop-scale type system; no mobile-specific type scaling is required.
 - Control and icon sizing:
   - `--control-height: 2.25rem`
   - `--icon-button-size: 2rem`
@@ -25,6 +25,7 @@ Last updated: 2026-08-02
 - Main app shell is route-based with sticky header and navigation.
 - The app shell uses a sticky branded header; content scrolls inside the main layout.
 - Global page container is constrained through `.page-shell` to a maximum width of 1680px.
+- The desktop shell minimum is `--desktop-min-width: 1100px`.
 - Spacing tokens:
   - `--spacing-xs: 0.25rem`
   - `--spacing-sm: 0.5rem`
@@ -78,4 +79,4 @@ The current UI uses a dark-first tokenized palette defined in `app/client/src/st
 ## Related Files
 
 - Read `components_and_patterns.md` for how these tokens are applied in components.
-- Read `experience.md` for layout and responsiveness expectations.
+- Read `experience.md` for desktop layout and support expectations.

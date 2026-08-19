@@ -11,10 +11,3 @@
 .inference-workspace {
     min-height: 0;
 }
-
-@media (max-width: 700px) {
-    .inference-page {
-        padding: 1rem;
-        padding-bottom: 1.25rem;
-    }
-}
