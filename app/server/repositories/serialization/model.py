@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
 from datetime import datetime
 from typing import Any
 
@@ -108,6 +109,12 @@ class CheckpointStorage:
                 model_folders.append(entry.name)
 
         return model_folders
+
+    # -------------------------------------------------------------------------
+    def delete_checkpoint(self, checkpoint_path: str) -> None:
+        path = shared_paths.as_path(checkpoint_path)
+        shutil.rmtree(path)
+        logger.debug("Deleted checkpoint folder at %s", path)
 
     # -------------------------------------------------------------------------
     def load_checkpoint(

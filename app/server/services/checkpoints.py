@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import shutil
 from typing import Any
 
 from keras import Model
@@ -126,4 +125,4 @@ class CheckpointService:
     # -------------------------------------------------------------------------
     def delete_checkpoint(self, checkpoint_name: str) -> None:
         _, checkpoint_path = self.resolve_existing_checkpoint(checkpoint_name)
-        shutil.rmtree(checkpoint_path)
+        self.checkpoint_storage.delete_checkpoint(checkpoint_path)
