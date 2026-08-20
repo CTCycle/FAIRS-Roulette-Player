@@ -7,12 +7,32 @@ set "APP_DIR=%PROJECT_ROOT%\app"
 set "SERVER_DIR=%APP_DIR%\server"
 set "CLIENT_DIR=%APP_DIR%\client"
 set "TESTS_DIR=%APP_DIR%\tests"
+set "RUNTIME_CACHE_DIR=%PROJECT_ROOT%\runtimes\cache"
+set "TEST_CACHE_DIR=%TESTS_DIR%\cache"
+set "PYTEST_CACHE_DIR=%TEST_CACHE_DIR%\pytest"
+set "RUFF_CACHE_DIR=%TEST_CACHE_DIR%\ruff"
 set "SETTINGS_ENV=%PROJECT_ROOT%\settings\.env"
 set "VENV_PYTHON=%SERVER_DIR%\.venv\Scripts\python.exe"
 set "RUNTIME_NPM=%PROJECT_ROOT%\runtimes\nodejs\npm.cmd"
 set "RUNTIME_UV=%PROJECT_ROOT%\runtimes\uv\uv.exe"
-set "UV_CACHE_DIR=%TEMP%\fairs-uv-cache"
+set "UV_CACHE_DIR=%RUNTIME_CACHE_DIR%"
+set "NPM_CONFIG_CACHE=%RUNTIME_CACHE_DIR%\npm"
+set "PIP_CACHE_DIR=%RUNTIME_CACHE_DIR%\pip"
+set "PYTHONPYCACHEPREFIX=%RUNTIME_CACHE_DIR%\python"
+set "MYPY_CACHE_DIR=%TEST_CACHE_DIR%\mypy"
+set "COVERAGE_FILE=%TEST_CACHE_DIR%\.coverage"
+set "PLAYWRIGHT_BROWSERS_PATH=%TEST_CACHE_DIR%\playwright-browsers"
 set "UV_LINK_MODE=copy"
+
+if not exist "%RUNTIME_CACHE_DIR%" mkdir "%RUNTIME_CACHE_DIR%"
+if not exist "%NPM_CONFIG_CACHE%" mkdir "%NPM_CONFIG_CACHE%"
+if not exist "%PIP_CACHE_DIR%" mkdir "%PIP_CACHE_DIR%"
+if not exist "%PYTHONPYCACHEPREFIX%" mkdir "%PYTHONPYCACHEPREFIX%"
+if not exist "%TEST_CACHE_DIR%" mkdir "%TEST_CACHE_DIR%"
+if not exist "%PYTEST_CACHE_DIR%" mkdir "%PYTEST_CACHE_DIR%"
+if not exist "%RUFF_CACHE_DIR%" mkdir "%RUFF_CACHE_DIR%"
+if not exist "%MYPY_CACHE_DIR%" mkdir "%MYPY_CACHE_DIR%"
+if not exist "%PLAYWRIGHT_BROWSERS_PATH%" mkdir "%PLAYWRIGHT_BROWSERS_PATH%"
 
 set "FASTAPI_HOST=127.0.0.1"
 set "FASTAPI_PORT=8000"
@@ -194,7 +214,7 @@ if /i "%STANDARD_TEST_SKIP_LIVE_SERVERS%"=="false" if "%HAS_E2E%"=="1" (
 )
 
 echo [STEP] Running Python tests...
-"%PYTHON_CMD%" -m pytest "%PYTEST_TARGET%" -v --tb=short %*
+"%PYTHON_CMD%" -m pytest "%PYTEST_TARGET%" -v --tb=short -o "cache_dir=%PYTEST_CACHE_DIR%" %*
 set "PYTEST_RC=%ERRORLEVEL%"
 if "%PYTEST_RC%"=="0" (
   set "PYTEST_PHASE=PASS"
