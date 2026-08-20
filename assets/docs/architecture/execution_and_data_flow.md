@@ -102,8 +102,8 @@ flowchart TD
 
 1. Resolves server settings.
 2. Runs startup validations and creates required storage directories.
-3. Creates a missing SQLite schema, or probes the configured PostgreSQL connection.
-4. Constructs `FAIRSDatabase`, validates the existing schema without migration/reset, then constructs dataset/inference repositories and the `DataStore` persistence facade.
+3. Runs the shared Alembic create/upgrade runner for SQLite or PostgreSQL, including revision, lock, legacy-adoption, and strict metadata checks.
+4. Constructs `FAIRSDatabase`, then constructs dataset/inference repositories and the `DataStore` persistence facade. The application engine is disposed during lifespan cleanup.
 5. Constructs `JobManager`, `CheckpointService`, `DatasetService`, `TrainingService`, and `InferenceService`.
 6. Stores those runtime objects on `application.state` for FastAPI dependency providers.
 

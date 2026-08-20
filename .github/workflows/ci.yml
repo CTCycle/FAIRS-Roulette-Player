@@ -39,6 +39,9 @@ jobs:
         run: uv --project app/server run ruff check app/server app/tests
       - name: Unit tests
         run: uv --project app/server run pytest -q app/tests/unit
+      - name: Alembic history and model consistency
+        working-directory: app/server
+        run: uv run alembic -c alembic.ini heads
       - name: OpenAPI snapshot check
         run: uv --project app/server run python app/scripts/export_openapi.py --check
       - name: Persistence contract

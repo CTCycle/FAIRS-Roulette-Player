@@ -12,11 +12,18 @@ from server.configurations import DatabaseSettings
 
 ###############################################################################
 def set_sqlite_pragma(dbapi_connection: Any, _connection_record: Any) -> None:
+    previous_autocommit = getattr(dbapi_connection, "autocommit", None)
+    if previous_autocommit is not None:
+        dbapi_connection.autocommit = True
     cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.execute("PRAGMA busy_timeout=30000")
-    cursor.execute("PRAGMA journal_mode=WAL")
-    cursor.close()
+    try:
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.execute("PRAGMA busy_timeout=30000")
+        cursor.execute("PRAGMA journal_mode=WAL")
+    finally:
+        cursor.close()
+        if previous_autocommit is not None:
+            dbapi_connection.autocommit = previous_autocommit
 
 ###############################################################################
 def build_sqlite_engine(
@@ -29,7 +36,7 @@ def build_sqlite_engine(
         f"sqlite:///{db_path}",
         echo=False,
         future=True,
-        connect_args={"check_same_thread": False},
+        connect_args={"autocommit": False, "check_same_thread": False},
     )
     event.listen(engine, "connect", set_sqlite_pragma)
     return engine

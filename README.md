@@ -58,7 +58,7 @@ The active ports come from `settings/.env`. The launcher also provides maintenan
 | `1` | Launch the backend and web UI. |
 | `2` | Install or update dependencies; choose `Standard` or `Development`. |
 | `3` | Rebuild the frontend from current source without updating dependencies. |
-| `4` | Explicitly initialize the configured database, including PostgreSQL. |
+| `4` | Create or upgrade the configured database, including PostgreSQL. |
 | `5` | Run the repository test suite. |
 | `6` | Remove application log files. |
 | `7` | Clear Python and uv caches. |
@@ -84,8 +84,22 @@ Database settings belong in `settings/.env`; a `database` block in `configuratio
 
 ### Database modes
 
-- `EMBEDDED_DATABASE=true` uses SQLite. The application creates the configured database only when the file is missing and does not reset an existing database during normal startup.
-- `EMBEDDED_DATABASE=false` uses PostgreSQL. Normal startup performs a non-mutating connection check. Use the launcher’s `Initialize database` option to create or initialize the database explicitly.
+- `EMBEDDED_DATABASE=true` uses SQLite. FastAPI startup and launcher option 4 run the shared Alembic create/upgrade runner against the configured database without resetting or repairing drift.
+- `EMBEDDED_DATABASE=false` uses PostgreSQL. The runner first tries the configured target and creates it only when that connection returns SQLSTATE `3D000`; automatic creation requires `CREATEDB`. Target migrations use a transaction advisory lock.
+- Empty databases upgrade to Alembic `head`. Exact unversioned legacy databases are stamped at `head` without recreating objects or changing rows. Partial, drifted, unknown, ahead, or multi-head states fail unchanged before services start.
+
+### Database migration workflow
+
+Alembic is the authoritative schema-evolution mechanism. The immutable baseline is under `app/server/alembic/versions/`; `app/server/alembic.ini` contains no credentials. From `app/server`, generate candidate revisions, review the generated operations manually, then check and apply them:
+
+```powershell
+uv run alembic -c alembic.ini revision --autogenerate -m "describe schema change"
+uv run alembic -c alembic.ini check
+uv run alembic -c alembic.ini current --check-heads
+uv run alembic -c alembic.ini upgrade head
+```
+
+Use `uv run alembic -c alembic.ini upgrade head --sql` for offline SQL output. Future constraints must be explicitly named; existing unnamed foreign keys retain their current semantics and are not renamed for dialect-specific consistency. SQLite initialization serializes with `BEGIN IMMEDIATE` and PostgreSQL initialization uses deterministic advisory locks with bounded waits. Resolve lock timeouts or migration errors before retrying; automatic repair is intentionally disabled.
 
 `FAIRS_DATA_DIR` can override the mutable database, logs, and checkpoint root. `FAIRS_LOG_DIR` can override the log directory for isolated runs.
 

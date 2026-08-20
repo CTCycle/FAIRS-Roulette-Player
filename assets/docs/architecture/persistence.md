@@ -4,7 +4,7 @@ Last updated: 2026-08-20
 
 ## Current Persistence Model
 
-The relational schema is defined directly by SQLAlchemy models in `app/server/repositories/schemas/models.py`. The repository contains no Alembic or other migration history. `Base.metadata.create_all()` creates a missing schema during explicit initialization; normal startup performs a non-destructive structural compatibility check but does not migrate an existing database. SQLite schema creation records version `1` with `PRAGMA user_version`; a newer unsupported version fails fast.
+The relational schema is defined by SQLAlchemy models in `app/server/repositories/schemas/models.py`, and Alembic is the authoritative schema-evolution mechanism. The immutable baseline is `app/server/alembic/versions/0001_initial_schema.py`; runtime initialization never calls `Base.metadata.create_all()` and never uses a native SQLite schema marker.
 
 ```mermaid
 erDiagram
@@ -97,13 +97,29 @@ erDiagram
 
 The checkpoint configuration stores values such as `dataset_id`, but the database cannot enforce a relationship to a checkpoint directory. Dataset deletion therefore scans checkpoint metadata and returns a conflict when a readable checkpoint references the dataset; unreadable metadata also blocks deletion. Immutable dataset snapshots remain deferred.
 
-## Initialization Rules
+## Initialization and Migration Rules
 
-- SQLite startup creates the schema only when the configured database file is missing. An existing file is not reset, reseeded, or migrated; it is structurally validated during normal startup.
-- PostgreSQL startup does not create the database or schema. It executes a non-mutating connection probe followed by structural validation.
-- The explicit launcher/database initializer creates or ensures the configured schema.
-- The current marker is a compatibility check, not a migration runner; future incompatible changes still require an explicit migration workflow.
+- `server.repositories.database.initializer.initialize_database()` is the single shared create/upgrade runner used by FastAPI lifespan, the CLI, and launcher actions.
+- SQLite creates the parent directory as needed, uses Python 3.14 transaction control with `autocommit=False`, preserves foreign-key/WAL/busy-timeout pragmas, and serializes the migration transaction with `BEGIN IMMEDIATE`.
+- PostgreSQL first connects to the configured target. Only SQLSTATE `3D000` triggers an AUTOCOMMIT connection to `postgres`; database creation is rechecked under a deterministic advisory lock and requires the configured role to have `CREATEDB`. Target migrations use a transaction-level advisory lock and a bounded lock timeout.
+- An empty database upgrades to `head`. An unversioned database containing application tables is adopted only when strict Alembic metadata comparison and exact structural comparison match the baseline; adoption stamps `head` without recreating objects or changing rows.
+- Partial, unknown, or drifted unversioned schemas fail unchanged. Unknown/ahead revisions, multiple database heads, multiple script heads, and post-upgrade drift fail before services start. Automatic repair is intentionally disabled.
+- A known revision behind `head` upgrades in order. A database already at `head` performs strict drift validation and then a no-op.
+- Application startup runs this state machine before constructing repositories/services. The explicit launcher/CLI path is idempotent and means create/upgrade.
 - There is no seed/catalog workflow.
+
+## Development Migration Workflow
+
+From `app/server`, generate a candidate revision, review it manually, and apply it only after checking the SQL and both upgrade/downgrade paths:
+
+```powershell
+uv run alembic -c alembic.ini revision --autogenerate -m "describe schema change"
+uv run alembic -c alembic.ini check
+uv run alembic -c alembic.ini current --check-heads
+uv run alembic -c alembic.ini upgrade head
+```
+
+Use `uv run alembic -c alembic.ini upgrade head --sql` for offline SQL generation. `alembic.ini` contains no credentials; commands resolve the configured database from the normal environment settings or receive a URL through the command configuration. Future constraints must have explicit names. Do not rename the existing unnamed foreign-key constraints for dialect-specific consistency.
 
 ## Persistence Boundaries
 
