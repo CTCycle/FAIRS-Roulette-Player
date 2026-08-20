@@ -11,7 +11,7 @@ The current application is a layered monolith with an explicit composition root.
 - **Application services:** `app/server/services/*` coordinates dataset import, checkpoints, training lifecycle, inference sessions, startup checks, and in-process job/session state.
 - **Learning execution:** `app/server/learning/*` contains roulette betting rules, neural models, training algorithms, inference players, and process worker entrypoints.
 - **Persistence adapters:** `app/server/repositories/*` owns SQLAlchemy schema, engines, transaction scopes, dataset/inference repositories, training queries, and checkpoint/model serialization.
-- **Configuration:** `app/server/configurations/*` resolves `.env` and JSON settings; startup and selected ML classes read the resolved settings.
+- **Configuration:** `app/server/bootstrap.py` explicitly loads `.env`, resolves mutable paths, and configures logging before the composition root imports Keras-backed modules; `app/server/configurations/*` then resolves `.env` and JSON settings.
 - **Shared primitives:** `app/server/common/*` contains paths, constants, logging, normalization, error mapping, and the shared roulette feature transformation.
 
 ## Current Module Dependency Diagram
@@ -19,6 +19,7 @@ The current application is a layered monolith with an explicit composition root.
 ```mermaid
 flowchart TD
     Root[app.py\ncomposition root]
+    Bootstrap[bootstrap.py\nexplicit runtime bootstrap]
     API[api]
     Contracts[contracts]
     Config[configurations]
@@ -31,6 +32,7 @@ flowchart TD
     ThirdParty[FastAPI, Pydantic, SQLAlchemy, Keras, Torch, pandas]
 
     Root --> API
+    Root --> Bootstrap
     Root --> Config
     Root --> Services
     Root --> Repos
@@ -43,7 +45,6 @@ flowchart TD
     Services --> Learning
     Services --> Repos
     Services --> Common
-    Learning --> Config
     Learning --> Repos
     Learning --> Common
     Repos --> Config
@@ -57,7 +58,7 @@ flowchart TD
     Repos --> Files
 ```
 
-The `Learning --> Repos`, `Learning --> Config`, and `Repos --> Learning` edges are the remaining coupling points to address incrementally. The `Repos --> Learning` edge is currently used to register custom Keras layers when loading checkpoints; it is not a database relationship.
+The `Learning --> Repos` and `Repos --> Learning` edges are the remaining coupling points to address incrementally. The `Repos --> Learning` edge is currently used to register custom Keras layers when loading checkpoints; it is not a database relationship.
 
 ## Pragmatic Target Dependency Diagram
 
@@ -102,11 +103,11 @@ flowchart TD
 1. Resolves server settings.
 2. Runs startup validations and creates required storage directories.
 3. Creates a missing SQLite schema, or probes the configured PostgreSQL connection.
-4. Constructs `FAIRSDatabase`, dataset/inference repositories, and the `DataSerializer` persistence facade.
+4. Constructs `FAIRSDatabase`, validates the existing schema without migration/reset, then constructs dataset/inference repositories and the `DataStore` persistence facade.
 5. Constructs `JobManager`, `CheckpointService`, `DatasetService`, `TrainingService`, and `InferenceService`.
 6. Stores those runtime objects on `application.state` for FastAPI dependency providers.
 
-The `server` package currently loads the environment during import, and path/logger modules read environment-derived values at import time. This is a documented P1 migration concern because it makes import order observable; changing it requires a deliberate bootstrap refactor.
+The `server` package itself is import-safe. `server.app` calls `bootstrap_runtime()` before importing Keras-backed application modules; the bootstrap loads/creates `.env`, resolves `FAIRS_DATA_DIR`, and configures logging from `FAIRS_LOG_DIR`. Direct imports of common path/logger modules do not create files or configure the global logging tree.
 
 ## Training Flow
 
@@ -119,7 +120,7 @@ sequenceDiagram
     participant Jobs as JobManager
     participant Worker as ProcessWorker
     participant ML as DQNTraining
-    participant Data as Training data adapter
+    participant Data as TrainingDataService
     participant DB as SQLite/PostgreSQL
     participant Files as Checkpoint files
 
@@ -132,7 +133,7 @@ sequenceDiagram
     API-->>Client: job_id and poll interval
     Service->>Worker: start training process
     Worker->>ML: run configured training
-    ML->>Data: load dataset or generate series
+    Worker->>Data: load dataset or generate series
     Data->>DB: Read training outcomes when dataset-backed
     DB-->>Data: rows and roulette features
     loop While job is active
@@ -157,8 +158,8 @@ sequenceDiagram
     participant API as FastAPI inference router
     participant Service as InferenceService
     participant Checkpoint as CheckpointService
-    participant Model as ModelSerializer
-    participant Data as DataSerializer facade
+    participant Model as CheckpointStorage
+    participant Data as DataStore
     participant Dataset as DatasetRepository
     participant Player as RoulettePlayer
     participant Repo as InferenceRepository
@@ -224,10 +225,10 @@ classDiagram
     class DQNTraining {
         +train()
     }
-    class DataSerializerExtension {
+    class TrainingDataService {
         +get_training_series(config)
     }
-    class TrainingDataSerializer {
+    class TrainingSeriesLoader {
         +load_training_series()
     }
     class TrainingRepositoryQueries {
@@ -252,8 +253,8 @@ classDiagram
         +update_with_true_extraction()
     }
     class CheckpointService
-    class ModelSerializer
-    class DataSerializer
+    class CheckpointStorage
+    class DataStore
     class DatasetRepository
     class InferenceRepository
     class FAIRSDatabase
@@ -263,19 +264,19 @@ classDiagram
     TrainingService --> ProcessWorker
     JobManager *-- JobState
     ProcessWorker --> DQNTraining
-    DQNTraining --> DataSerializerExtension
-    DataSerializerExtension --> TrainingDataSerializer
-    TrainingDataSerializer --> TrainingRepositoryQueries
+    ProcessWorker --> TrainingDataService
+    TrainingDataService --> TrainingSeriesLoader
+    TrainingSeriesLoader --> TrainingRepositoryQueries
     TrainingRepositoryQueries --> FAIRSDatabase
     InferenceService *-- InferenceState
     InferenceState *-- InferenceSession
     InferenceSession *-- RoulettePlayer
     InferenceService --> CheckpointService
-    InferenceService --> DataSerializer
+    InferenceService --> DataStore
     InferenceService --> InferenceRepository
-    CheckpointService --> ModelSerializer
-    DataSerializer --> DatasetRepository
-    DataSerializer --> InferenceRepository
+    CheckpointService --> CheckpointStorage
+    DataStore --> DatasetRepository
+    DataStore --> InferenceRepository
     DatasetRepository --> FAIRSDatabase
     InferenceRepository --> FAIRSDatabase
 ```
@@ -284,7 +285,9 @@ classDiagram
 
 - Validation at the API boundary, service boundary, and database constraint boundary is intentional defense in depth; it is not automatically accidental duplication.
 - Roulette feature derivation is now one shared transformation in `server.common.roulette`.
-- `DataSerializer` is a pass-through facade over dataset and inference repositories. It is useful as a narrow service dependency today but is a P2 candidate for consolidation or renaming.
+- `DataStore` is a narrow coordinator over dataset and inference repositories; its role-specific name avoids calling repository coordination “serialization.”
+- `TrainingDataService` owns stored/synthetic training-series selection and passes concrete database settings/path into a worker-local `TrainingSeriesLoader`.
+- `CheckpointStorage` owns checkpoint filesystem I/O. The checkpoint service scans its JSON metadata before allowing dataset deletion.
 - `TrainingService` and `InferenceService` are broad because they own lifecycle state and orchestration; split them only when a concrete change isolates a cohesive responsibility.
 - Frontend feature components currently combine network calls, parsing, local state, and rendering. Extract feature API hooks incrementally when those areas change; a wholesale rewrite is not justified by the current local runtime.
 
@@ -293,7 +296,7 @@ classDiagram
 - Most handlers are synchronous `def` handlers; file upload is asynchronous for file reads.
 - Training runs outside the request thread in a worker process monitored by a job thread.
 - Inference is synchronous and stateful per active process.
-- Logs are timestamped `FAIRS_*.log` files under the configured data/log root.
+- Logs are timestamped `FAIRS_*.log` files under the configured data/log root; logging is configured by the explicit bootstrap boundary.
 - `GET /api/health` is a lightweight readiness check exposing version and runtime mode.
 
 ## Related Files

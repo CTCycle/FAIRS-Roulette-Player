@@ -12,7 +12,7 @@ from server.contracts.inference import (
 )
 from server.learning.inference.player import RoulettePlayer
 from server.learning.training.device import DeviceConfig
-from server.repositories.serialization.data import DataSerializer
+from server.repositories.serialization.data import DataStore
 from server.services.checkpoints import CheckpointService
 
 ###############################################################################
@@ -122,10 +122,10 @@ class InferenceService:
     # -------------------------------------------------------------------------
     def __init__(
         self,
-        serializer: DataSerializer,
+        data_store: DataStore,
         checkpoint_service: CheckpointService,
     ) -> None:
-        self.serializer = serializer
+        self.data_store = data_store
         self.checkpoint_service = checkpoint_service
         self.state = InferenceState()
 
@@ -139,7 +139,7 @@ class InferenceService:
             "started_at": session.started_at,
             "ended_at": None,
         }
-        self.serializer.upsert_inference_session(row)
+        self.data_store.upsert_inference_session(row)
 
     # -------------------------------------------------------------------------
     def persist_session_step(
@@ -162,7 +162,7 @@ class InferenceService:
             "capital_after": capital_after,
             "recorded_at": datetime.now(timezone.utc),
         }
-        self.serializer.upsert_inference_session_step(row)
+        self.data_store.upsert_inference_session_step(row)
 
     # -------------------------------------------------------------------------
     def start_session(self, payload: InferenceStartRequest) -> dict[str, Any]:
@@ -175,7 +175,7 @@ class InferenceService:
         if payload.session_id:
             self.state.delete_session(payload.session_id)
 
-        dataset = self.serializer.load_dataset(dataset_id)
+        dataset = self.data_store.load_dataset(dataset_id)
         if dataset is None:
             raise FileNotFoundError(f"Dataset '{dataset_id}' was not found.")
 
@@ -225,7 +225,7 @@ class InferenceService:
             configuration=configuration,
             session_id=session_id,
             dataset_id=dataset_id,
-            serializer=self.serializer,
+            data_store=self.data_store,
             dataset_source=payload.dataset_source,
             strategy_model=strategy_model,
         )
@@ -326,16 +326,16 @@ class InferenceService:
 
     # -------------------------------------------------------------------------
     def shutdown_session(self, session_id: str) -> dict[str, Any]:
-        self.serializer.mark_inference_session_ended(session_id)
+        self.data_store.mark_inference_session_ended(session_id)
         self.state.delete_session(session_id)
         return {"session_id": session_id, "status": "closed"}
 
     # -------------------------------------------------------------------------
     def clear_session_rows(self, session_id: str) -> dict[str, Any]:
-        self.serializer.clear_inference_session_steps(session_id)
+        self.data_store.clear_inference_session_steps(session_id)
         return {"session_id": session_id, "status": "cleared"}
 
     # -------------------------------------------------------------------------
     def clear_context(self) -> dict[str, str]:
-        self.serializer.clear_datasets("inference")
+        self.data_store.clear_datasets("inference")
         return {"status": "cleared"}

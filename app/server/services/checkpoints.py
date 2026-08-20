@@ -9,7 +9,7 @@ from server.common.checkpoints import (
     normalize_checkpoint_identifier,
     resolve_checkpoint_path,
 )
-from server.repositories.serialization.model import ModelSerializer
+from server.repositories.serialization.model import CheckpointStorage
 
 ###############################################################################
 def get_last_history_value(values: Any) -> float | None:
@@ -20,15 +20,19 @@ def get_last_history_value(values: Any) -> float | None:
     return None
 
 ###############################################################################
+class CheckpointReferenceError(RuntimeError):
+    """Raised when dataset deletion would invalidate checkpoint metadata."""
+
+
 class CheckpointService:
 
     # -------------------------------------------------------------------------
-    def __init__(self, model_serializer: ModelSerializer | None = None) -> None:
-        self.model_serializer = model_serializer or ModelSerializer()
+    def __init__(self, checkpoint_storage: CheckpointStorage | None = None) -> None:
+        self.checkpoint_storage = checkpoint_storage or CheckpointStorage()
 
     # -------------------------------------------------------------------------
     def list_checkpoints(self) -> list[str]:
-        return self.model_serializer.scan_checkpoints_folder()
+        return self.checkpoint_storage.scan_checkpoints_folder()
 
     # -------------------------------------------------------------------------
     def resolve_existing_checkpoint(self, checkpoint_name: str) -> tuple[str, str]:
@@ -42,7 +46,7 @@ class CheckpointService:
     # -------------------------------------------------------------------------
     def get_metadata(self, checkpoint_name: str) -> dict[str, Any]:
         checkpoint, checkpoint_path = self.resolve_existing_checkpoint(checkpoint_name)
-        configuration, session = self.model_serializer.load_training_configuration(
+        configuration, session = self.checkpoint_storage.load_training_configuration(
             checkpoint_path
         )
         history = session.get("history", {}) if isinstance(session, dict) else {}
@@ -70,23 +74,54 @@ class CheckpointService:
         return {"checkpoint": checkpoint, "summary": summary}
 
     # -------------------------------------------------------------------------
+    def find_dataset_references(self, dataset_id: int) -> list[str]:
+        """Return checkpoints whose persisted configuration uses ``dataset_id``."""
+        references: list[str] = []
+        for checkpoint in self.list_checkpoints():
+            try:
+                _, checkpoint_path = self.resolve_existing_checkpoint(checkpoint)
+                configuration, _ = self.checkpoint_storage.load_training_configuration(
+                    checkpoint_path
+                )
+            except (OSError, TypeError, ValueError) as exc:
+                raise CheckpointReferenceError(
+                    f"Unable to inspect checkpoint '{checkpoint}' before deleting a dataset."
+                ) from exc
+
+            if not isinstance(configuration, dict):
+                raise CheckpointReferenceError(
+                    f"Unable to inspect checkpoint '{checkpoint}' before deleting a dataset."
+                )
+            reference = configuration.get("dataset_id")
+            if isinstance(reference, bool):
+                continue
+            if isinstance(reference, int) and reference == dataset_id:
+                references.append(checkpoint)
+                continue
+            if isinstance(reference, str) and reference.strip() == str(dataset_id):
+                references.append(checkpoint)
+        return references
+
+    # -------------------------------------------------------------------------
     def load_checkpoint(
         self, checkpoint_name: str
     ) -> tuple[Model | Any, dict[str, Any], dict[str, Any], str]:
         normalized = normalize_checkpoint_identifier(checkpoint_name)
-        return self.model_serializer.load_checkpoint(normalized)
+        return self.checkpoint_storage.load_checkpoint(normalized)
 
     # -------------------------------------------------------------------------
     def load_training_configuration(
         self, checkpoint_path: str
     ) -> tuple[dict[str, Any], dict[str, Any]]:
-        return self.model_serializer.load_training_configuration(checkpoint_path)
+        return self.checkpoint_storage.load_training_configuration(checkpoint_path)
 
     # -------------------------------------------------------------------------
     def load_strategy_model(
         self, checkpoint_path: str, required: bool = False
     ) -> Model | Any | None:
-        return self.model_serializer.load_strategy_model(checkpoint_path, required=required)
+        return self.checkpoint_storage.load_strategy_model(
+            checkpoint_path, required=required
+        )
 
     # -------------------------------------------------------------------------
     def delete_checkpoint(self, checkpoint_name: str) -> None:

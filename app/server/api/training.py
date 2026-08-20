@@ -2,10 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from server.common.api_errors import (
-    ExceptionStatusMap,
-    http_exception_for_exception,
-)
+from server.common.api_errors import ExceptionStatusMap, http_exception_for_exception
 from server.configurations.dependencies import get_training_service
 from server.contracts.jobs import JobCancelResponse, JobStartResponse, JobStatusResponse
 from server.contracts.training import (
@@ -22,16 +19,20 @@ from server.services.training import TrainingService
 
 router = APIRouter(prefix="/training", tags=["training"])
 
-TRAINING_BAD_REQUEST_STATUS: ExceptionStatusMap = (
+TRAINING_EXCEPTION_STATUS: ExceptionStatusMap = (
+    (FileExistsError, status.HTTP_409_CONFLICT),
+    (RuntimeError, status.HTTP_409_CONFLICT),
+    (FileNotFoundError, status.HTTP_404_NOT_FOUND),
+    (KeyError, status.HTTP_404_NOT_FOUND),
     (ValueError, status.HTTP_400_BAD_REQUEST),
 )
 
 ###############################################################################
-def _to_bad_request(exc: Exception) -> HTTPException:
+def _map_training_exception(exc: Exception) -> HTTPException:
     return http_exception_for_exception(
         exc,
-        TRAINING_BAD_REQUEST_STATUS,
-        default_detail=str(exc),
+        TRAINING_EXCEPTION_STATUS,
+        default_detail="Unable to process training request.",
     )
 
 ###############################################################################
@@ -46,18 +47,8 @@ def start_training(
 ) -> JobStartResponse:
     try:
         return JobStartResponse.model_validate(service.start_training(config))
-    except FileExistsError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=str(exc),
-        ) from exc
-    except RuntimeError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=str(exc),
-        ) from exc
-    except ValueError as exc:
-        raise _to_bad_request(exc) from exc
+    except Exception as exc:
+        raise _map_training_exception(exc) from exc
 
 ###############################################################################
 @router.post(
@@ -71,23 +62,8 @@ def resume_training(
 ) -> JobStartResponse:
     try:
         return JobStartResponse.model_validate(service.resume_training(config))
-    except RuntimeError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=str(exc),
-        ) from exc
-    except FileNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
-    except ValueError as exc:
-        raise _to_bad_request(exc) from exc
-    except KeyError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
+    except Exception as exc:
+        raise _map_training_exception(exc) from exc
 
 ###############################################################################
 @router.get(
@@ -111,8 +87,8 @@ def stop_training(
 ) -> TrainingStopResponse:
     try:
         return TrainingStopResponse.model_validate(service.stop())
-    except ValueError as exc:
-        raise _to_bad_request(exc) from exc
+    except Exception as exc:
+        raise _map_training_exception(exc) from exc
 
 ###############################################################################
 @router.get(
@@ -139,13 +115,8 @@ def get_checkpoint_metadata(
         return TrainingCheckpointMetadataResponse.model_validate(
             service.get_checkpoint_metadata(checkpoint)
         )
-    except ValueError as exc:
-        raise _to_bad_request(exc) from exc
-    except FileNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
+    except Exception as exc:
+        raise _map_training_exception(exc) from exc
 
 ###############################################################################
 @router.delete(
@@ -161,13 +132,8 @@ def delete_checkpoint(
         return TrainingCheckpointDeleteResponse.model_validate(
             service.delete_checkpoint(checkpoint)
         )
-    except ValueError as exc:
-        raise _to_bad_request(exc) from exc
-    except FileNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
+    except Exception as exc:
+        raise _map_training_exception(exc) from exc
 
 ###############################################################################
 @router.get(
@@ -181,11 +147,8 @@ def get_training_job_status(
 ) -> JobStatusResponse:
     try:
         return JobStatusResponse.model_validate(service.get_job(job_id))
-    except KeyError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
+    except Exception as exc:
+        raise _map_training_exception(exc) from exc
 
 ###############################################################################
 @router.delete(
@@ -199,8 +162,5 @@ def cancel_training_job(
 ) -> JobCancelResponse:
     try:
         return JobCancelResponse.model_validate(service.delete_job(job_id))
-    except KeyError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
+    except Exception as exc:
+        raise _map_training_exception(exc) from exc

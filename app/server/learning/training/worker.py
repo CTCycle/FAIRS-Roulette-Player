@@ -8,6 +8,7 @@ import queue
 import signal
 import subprocess
 import time
+from pathlib import Path
 from typing import Any
 
 from collections.abc import Callable
@@ -17,8 +18,7 @@ from server.learning.training.device import DeviceConfig
 from server.learning.training.fitting import DQNTraining
 from server.learning.models.qnet import FAIRSnet
 from server.learning.models.strategy import StrategyNet
-from server.learning.training.serializer import DataSerializerExtension
-from server.repositories.serialization.model import ModelSerializer
+from server.repositories.serialization.model import CheckpointStorage
 
 ###############################################################################
 class QueueProgressReporter:
@@ -228,9 +228,18 @@ async def run_training_async(
     configuration: dict[str, Any],
     reporter: QueueProgressReporter,
     stop_event: Any,
+    training_data_loader: Callable[..., tuple[Any, bool]],
+    database_settings: Any = None,
+    database_path: str | Path | None = None,
+    jit_compile: bool = False,
+    jit_backend: str = "inductor",
+    polling_interval_seconds: float = 1.0,
 ) -> tuple[Any, Any | None, dict[str, Any], str]:
-    data_serializer = DataSerializerExtension()
-    dataset, synthetic = data_serializer.get_training_series(configuration)
+    dataset, synthetic = training_data_loader(
+        configuration,
+        database_settings,
+        database_path,
+    )
     if synthetic:
         logger.info(
             "Synthetic roulette series generated (%s extractions)", len(dataset)
@@ -242,13 +251,17 @@ async def run_training_async(
     device = DeviceConfig(configuration)
     device.set_device()
 
-    model_serializer = ModelSerializer()
-    checkpoint_path = model_serializer.create_checkpoint_folder(
+    checkpoint_storage = CheckpointStorage()
+    checkpoint_path = checkpoint_storage.create_checkpoint_folder(
         configuration.get("checkpoint_name")
     )
 
     logger.info("Building FAIRS reinforcement learning model")
-    learner = FAIRSnet(configuration)
+    learner = FAIRSnet(
+        configuration,
+        jit_compile=jit_compile,
+        jit_backend=jit_backend,
+    )
     q_model = learner.get_model(model_summary=True)
     target_model = learner.get_model(model_summary=False)
     dynamic_enabled = bool(configuration.get("dynamic_betting_enabled", False))
@@ -261,7 +274,11 @@ async def run_training_async(
         strategy_model = strategy_learner.get_model(model_summary=True)
         target_strategy_model = strategy_learner.get_model(model_summary=False)
 
-    trainer = DQNTraining(configuration, stop_event=stop_event)
+    trainer = DQNTraining(
+        configuration,
+        stop_event=stop_event,
+        polling_interval_seconds=polling_interval_seconds,
+    )
     progress_callback = functools.partial(queue_training_update, reporter=reporter)
 
     model, history = await trainer.train_model(
@@ -283,9 +300,13 @@ async def run_resume_training_async(
     additional_episodes: int,
     reporter: QueueProgressReporter,
     stop_event: Any,
+    training_data_loader: Callable[..., tuple[Any, bool]],
+    database_settings: Any = None,
+    database_path: str | Path | None = None,
+    polling_interval_seconds: float = 1.0,
 ) -> tuple[Any, Any | None, dict[str, Any], dict[str, Any], str]:
-    model_serializer = ModelSerializer()
-    model, train_config, session, checkpoint_path = model_serializer.load_checkpoint(
+    checkpoint_storage = CheckpointStorage()
+    model, train_config, session, checkpoint_path = checkpoint_storage.load_checkpoint(
         checkpoint
     )
     train_config["additional_episodes"] = additional_episodes
@@ -294,15 +315,18 @@ async def run_resume_training_async(
     strategy_model: Any | None = None
     target_strategy_model: Any | None = None
     if dynamic_enabled and strategy_enabled:
-        strategy_model = model_serializer.load_strategy_model(
+        strategy_model = checkpoint_storage.load_strategy_model(
             checkpoint_path, required=True
         )
-        target_strategy_model = model_serializer.load_strategy_model(
+        target_strategy_model = checkpoint_storage.load_strategy_model(
             checkpoint_path, required=True
         )
 
-    data_serializer = DataSerializerExtension()
-    dataset, synthetic = data_serializer.get_training_series(train_config)
+    dataset, synthetic = training_data_loader(
+        train_config,
+        database_settings,
+        database_path,
+    )
     if synthetic:
         logger.info(
             "Synthetic roulette series generated (%s extractions)", len(dataset)
@@ -314,7 +338,12 @@ async def run_resume_training_async(
     device = DeviceConfig(train_config)
     device.set_device()
 
-    trainer = DQNTraining(train_config, session=session, stop_event=stop_event)
+    trainer = DQNTraining(
+        train_config,
+        session=session,
+        stop_event=stop_event,
+        polling_interval_seconds=polling_interval_seconds,
+    )
     progress_callback = functools.partial(queue_training_update, reporter=reporter)
 
     model, history = await trainer.resume_training(
@@ -335,6 +364,12 @@ async def run_resume_training_async(
 ###############################################################################
 def run_training_process(
     configuration: dict[str, Any],
+    training_data_loader: Callable[..., tuple[Any, bool]],
+    database_settings: Any,
+    database_path: str | Path | None,
+    polling_interval_seconds: float,
+    jit_compile: bool,
+    jit_backend: str,
     worker: Any,
 ) -> None:
     progress_queue = worker.progress_queue
@@ -348,14 +383,24 @@ def run_training_process(
             return
 
         model, strategy_model, history, checkpoint_path = asyncio.run(
-            run_training_async(configuration, reporter, stop_event)
+            run_training_async(
+                configuration,
+                reporter,
+                stop_event,
+                training_data_loader,
+                database_settings,
+                database_path,
+                jit_compile,
+                jit_backend,
+                polling_interval_seconds,
+            )
         )
 
-        model_serializer = ModelSerializer()
-        model_serializer.save_pretrained_model(model, checkpoint_path)
+        checkpoint_storage = CheckpointStorage()
+        checkpoint_storage.save_pretrained_model(model, checkpoint_path)
         if strategy_model is not None:
-            model_serializer.save_strategy_model(strategy_model, checkpoint_path)
-        model_serializer.save_training_configuration(
+            checkpoint_storage.save_strategy_model(strategy_model, checkpoint_path)
+        checkpoint_storage.save_training_configuration(
             checkpoint_path, history, configuration
         )
 
@@ -382,6 +427,10 @@ def run_training_process(
 def run_resume_training_process(
     checkpoint: str,
     additional_episodes: int,
+    training_data_loader: Callable[..., tuple[Any, bool]],
+    database_settings: Any,
+    database_path: str | Path | None,
+    polling_interval_seconds: float,
     worker: Any,
 ) -> None:
     progress_queue = worker.progress_queue
@@ -396,15 +445,22 @@ def run_resume_training_process(
 
         model, strategy_model, history, train_config, checkpoint_path = asyncio.run(
             run_resume_training_async(
-                checkpoint, additional_episodes, reporter, stop_event
+                checkpoint,
+                additional_episodes,
+                reporter,
+                stop_event,
+                training_data_loader,
+                database_settings,
+                database_path,
+                polling_interval_seconds,
             )
         )
 
-        model_serializer = ModelSerializer()
-        model_serializer.save_pretrained_model(model, checkpoint_path)
+        checkpoint_storage = CheckpointStorage()
+        checkpoint_storage.save_pretrained_model(model, checkpoint_path)
         if strategy_model is not None:
-            model_serializer.save_strategy_model(strategy_model, checkpoint_path)
-        model_serializer.save_training_configuration(
+            checkpoint_storage.save_strategy_model(strategy_model, checkpoint_path)
+        checkpoint_storage.save_training_configuration(
             checkpoint_path, history, train_config
         )
 

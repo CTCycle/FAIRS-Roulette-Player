@@ -11,20 +11,28 @@ from server.configurations import DatabaseSettings
 from server.configurations.startup import get_server_settings
 from server.repositories.database.postgres import build_postgres_engine
 from server.repositories.database.sqlite import build_sqlite_engine
-from server.repositories.schemas.models import Base
+from server.repositories.database.schema import create_schema, validate_schema
 
 ###############################################################################
 class FAIRSDatabase:
     """Owns the SQLAlchemy engine, sessions, schema lifecycle, and transactions."""
 
     # -------------------------------------------------------------------------
-    def __init__(self, settings: DatabaseSettings | None = None, engine: Engine | None = None) -> None:
+    def __init__(
+        self,
+        settings: DatabaseSettings | None = None,
+        engine: Engine | None = None,
+        database_path: str | Path | None = None,
+    ) -> None:
         self.settings = settings or get_server_settings().database
         if engine is not None:
             self.engine = engine
             self.db_path = None
         elif self.settings.embedded_database:
-            self.engine = build_sqlite_engine(self.settings)
+            self.engine = build_sqlite_engine(
+                self.settings,
+                database_path=database_path,
+            )
             self.db_path = Path(str(self.engine.url.database)) if self.engine.url.database else None
         else:
             self.engine = build_postgres_engine(self.settings)
@@ -34,7 +42,11 @@ class FAIRSDatabase:
 
     # -------------------------------------------------------------------------
     def create_schema(self) -> None:
-        Base.metadata.create_all(self.engine)
+        create_schema(self.engine)
+
+    # -------------------------------------------------------------------------
+    def validate_schema(self) -> None:
+        validate_schema(self.engine)
 
     # -------------------------------------------------------------------------
     def check_connection(self) -> None:

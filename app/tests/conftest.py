@@ -21,6 +21,10 @@ TEST_LOG_DIR = Path(tempfile.gettempdir()) / "fairs-roulette-player-tests" / "lo
 TEST_LOG_DIR.mkdir(parents=True, exist_ok=True)
 os.environ.setdefault("FAIRS_LOG_DIR", str(TEST_LOG_DIR))
 
+from server.bootstrap import bootstrap_runtime  # noqa: E402
+
+bootstrap_runtime()
+
 ###############################################################################
 def _normalize_connect_host(host: str) -> str:
     if host in {"0.0.0.0", "::", "[::]"}:

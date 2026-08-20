@@ -157,7 +157,7 @@ def test_environment_force_reload_applies_updated_dotenv(
     assert os.getenv("FASTAPI_HOST") == "second"
 
 ###############################################################################
-def test_server_package_import_loads_environment_early(
+def test_server_package_import_does_not_load_environment(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     env_path = tmp_path / ".env"
@@ -166,11 +166,11 @@ def test_server_package_import_loads_environment_early(
     monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
     monkeypatch.setenv("KERAS_BACKEND", "tensorflow")
 
-    import server as server_package
+    import server
 
-    importlib.reload(server_package)
-
-    assert os.getenv("KERAS_BACKEND") == "torch"
+    importlib.reload(server)
+    assert server is not None
+    assert os.getenv("KERAS_BACKEND") == "tensorflow"
 
 ###############################################################################
 def test_server_settings_use_json_configuration_file(

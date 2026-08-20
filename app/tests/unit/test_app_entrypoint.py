@@ -83,10 +83,14 @@ def _stub_lifespan_dependencies(
         def check_connection(self) -> None:
             connection_calls.append(True)
 
+        # -------------------------------------------------------------------------
+        def validate_schema(self) -> None:
+            return None
+
     monkeypatch.setattr(app_module, "FAIRSDatabase", lambda *_args: DatabaseStub())
     monkeypatch.setattr(app_module, "DatasetRepository", lambda database: object())
     monkeypatch.setattr(app_module, "InferenceRepository", lambda database: object())
-    monkeypatch.setattr(app_module, "DataSerializer", lambda **kwargs: object())
+    monkeypatch.setattr(app_module, "DataStore", lambda **kwargs: object())
     monkeypatch.setattr(app_module, "JobManager", lambda: object())
     monkeypatch.setattr(app_module, "CheckpointService", lambda: object())
     monkeypatch.setattr(app_module, "DatasetImportService", lambda **kwargs: object())

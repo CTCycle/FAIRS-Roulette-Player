@@ -1,6 +1,6 @@
 ## Startup
 
-Last updated: 2026-08-19
+Last updated: 2026-08-20
 
 ## Local Application Startup
 
@@ -42,6 +42,9 @@ Database behavior:
 - SQLite is created automatically only when its configured `.db` file is missing.
 - PostgreSQL is never created or initialized by normal application startup. Select option 4, `Initialize database`, after configuring PostgreSQL.
 - Option 4 is non-destructive for an existing SQLite database and is the explicit PostgreSQL initialization path.
+- After the database is available, startup validates the required SQLAlchemy table/column structure without resetting or migrating it. SQLite stores schema marker `PRAGMA user_version=1`; a newer marker or missing required structure stops startup with an actionable error.
+
+Before the FastAPI composition root imports Keras-backed modules, `server.bootstrap.bootstrap_runtime()` explicitly loads `settings/.env`, resolves the runtime data/log paths, and configures logging. Importing the `server` package or common path/logging utilities alone has no filesystem or global-logging side effects.
 
 If the readiness check passes, normal application start skips dependency installation and proceeds directly to the two services. If the environment or built frontend is missing or unusable, option 1 recovers dependencies and rebuilds the frontend. Use option 2 when source changes require a deliberate dependency sync, or option 3 when only the frontend needs rebuilding and its dependencies are already installed.
 

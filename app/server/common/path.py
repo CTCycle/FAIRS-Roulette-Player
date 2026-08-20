@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parents[3]
@@ -8,13 +7,8 @@ APP_DIR = ROOT_DIR / "app"
 SERVER_DIR = APP_DIR / "server"
 CLIENT_DIR = APP_DIR / "client"
 SETTINGS_DIR = ROOT_DIR / "settings"
-_configured_data_dir = os.getenv("FAIRS_DATA_DIR")
-DATA_DIR = (
-    Path(_configured_data_dir).expanduser().resolve()
-    if _configured_data_dir
-    else None
-)
-RESOURCES_PATH = DATA_DIR if DATA_DIR is not None else APP_DIR / "resources"
+DATA_DIR: Path | None = None
+RESOURCES_PATH = APP_DIR / "resources"
 LOGS_PATH = RESOURCES_PATH / "logs"
 CHECKPOINT_PATH = RESOURCES_PATH / "checkpoints"
 ENV_FILE_PATH = SETTINGS_DIR / ".env"
@@ -31,6 +25,18 @@ CHECKPOINT_SESSION_HISTORY_FILE_NAME = "session_history.json"
 CHECKPOINT_REPLAY_MEMORY_FILE_NAME = "replay_memory.pkl"
 CHECKPOINT_SAVED_MODEL_FILE_NAME = "saved_model.keras"
 CHECKPOINT_STRATEGY_MODEL_FILE_NAME = "strategy.keras"
+
+###############################################################################
+def configure_runtime_paths(data_dir: str | Path | None = None) -> None:
+    """Resolve mutable runtime paths after environment loading."""
+    global CHECKPOINT_PATH, DATABASE_PATH, DATA_DIR, LOGS_PATH, RESOURCES_PATH
+
+    configured = str(data_dir).strip() if data_dir is not None else ""
+    DATA_DIR = Path(configured).expanduser().resolve() if configured else None
+    RESOURCES_PATH = DATA_DIR if DATA_DIR is not None else APP_DIR / "resources"
+    LOGS_PATH = RESOURCES_PATH / "logs"
+    CHECKPOINT_PATH = RESOURCES_PATH / "checkpoints"
+    DATABASE_PATH = RESOURCES_PATH / "database.db"
 
 ###############################################################################
 def as_path(value: str | Path) -> Path:
@@ -75,3 +81,6 @@ def checkpoint_strategy_model_file(
     filename: str = CHECKPOINT_STRATEGY_MODEL_FILE_NAME,
 ) -> Path:
     return as_path(checkpoint_path) / filename
+
+
+configure_runtime_paths()

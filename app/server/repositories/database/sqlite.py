@@ -19,8 +19,11 @@ def set_sqlite_pragma(dbapi_connection: Any, _connection_record: Any) -> None:
     cursor.close()
 
 ###############################################################################
-def build_sqlite_engine(settings: DatabaseSettings) -> Engine:
-    db_path = Path(shared_paths.DATABASE_PATH)
+def build_sqlite_engine(
+    settings: DatabaseSettings,
+    database_path: str | Path | None = None,
+) -> Engine:
+    db_path = Path(database_path) if database_path is not None else Path(shared_paths.DATABASE_PATH)
     db_path.parent.mkdir(parents=True, exist_ok=True)
     engine = sqlalchemy.create_engine(
         f"sqlite:///{db_path}",
