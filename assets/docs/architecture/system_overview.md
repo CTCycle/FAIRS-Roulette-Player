@@ -28,13 +28,12 @@ flowchart LR
     Services --> Learning
     Services --> Repos
     Services --> Files
-    Learning --> Repos
     Repos --> DB
     DB -.-> External
     Config --> Files
 ```
 
-The diagram reflects the current implementation. The `Learning --> Repos` edge is a remaining checkpoint/custom-layer coupling point; training data and runtime configuration now reach learning execution through application-owned services and explicit worker arguments. See `findings_and_remediation.md`.
+The diagram reflects the current implementation. Application services own process orchestration and pass explicit data/configuration into learning execution; learning modules do not import persistence adapters. Checkpoint deserialization remains a repository-owned custom-layer concern documented in `execution_and_data_flow.md`.
 
 ## Source Tree
 
@@ -94,8 +93,8 @@ The structure below is source-focused and excludes dependency, cache, and genera
 - `app/server/bootstrap.py` is the explicit environment/path/logging bootstrap. `app/server/app.py` then creates the FastAPI application, mounts routers, configures SPA fallback routes, validates schema compatibility, and wires runtime services during lifespan startup.
 - `app/server/api` contains transport handlers, request validation, response validation, and HTTP exception translation. It does not access SQLAlchemy directly.
 - `app/server/contracts` contains Pydantic request/response contracts and validated runtime settings. These are boundary contracts, not persistent entities or a separate domain model.
-- `app/server/services` owns application orchestration: dataset import, checkpoint lifecycle, training jobs, inference sessions, startup checks, and in-process job state.
-- `app/server/learning` owns roulette betting logic, neural models, environments, training algorithms, inference players, and the worker entrypoints that execute ML workloads. Training data selection and injected persistence/configuration values are coordinated by `app/server/services/training_data.py`.
+- `app/server/services` owns application orchestration: dataset import, checkpoint lifecycle, training jobs, inference sessions, startup checks, in-process job state, and the training worker process orchestration.
+- `app/server/learning` owns roulette betting logic, neural models, environments, training algorithms, and inference players. Learning receives prepared data and explicit runtime inputs rather than constructing persistence adapters.
 - `app/server/repositories` owns SQLAlchemy schema definitions, database engines/transactions, dataset and inference persistence, training queries, and checkpoint/model serialization.
 - `app/server/common` contains narrowly scoped cross-cutting primitives such as paths, constants, error mapping, logging, session/checkpoint normalization, and roulette feature encoding.
 - `app/server/configurations` resolves environment and JSON settings and exposes the runtime configuration used by composition and selected ML components.

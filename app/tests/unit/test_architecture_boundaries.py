@@ -16,7 +16,7 @@ BOUNDARY_RULES: dict[str, tuple[str, ...]] = {
     ),
     "server.api": ("server.repositories", "server.learning"),
     "server.repositories": ("server.api", "server.services"),
-    "server.learning": ("server.api", "server.services"),
+    "server.learning": ("server.api", "server.services", "server.repositories"),
 }
 
 
