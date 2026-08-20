@@ -1,6 +1,6 @@
 ## Quick Start
 
-Last updated: 2026-08-02
+Last updated: 2026-08-20
 
 ## Fastest Path
 
@@ -10,7 +10,7 @@ Last updated: 2026-08-02
 .\start_on_windows.ps1
 ```
 
-2. On first use, allow the launcher to prepare its portable runtimes and install Standard dependencies. Later starts reuse the environment when its readiness checks pass.
+2. On first use, allow the launcher to prepare its portable runtimes, install Standard dependencies, and run the idempotent database create/upgrade step. Later starts reuse the environment when its readiness checks pass and still validate the database through Alembic during FastAPI lifespan.
 3. Open the UI at the configured frontend URL from `UI_HOST:UI_PORT`.
 4. Use the top navigation to switch between:
    - `Training`
@@ -27,6 +27,8 @@ Start the app:
 ```
 
 Choose option 2 and then `Development` when browser/test dependencies are required; choose `Standard` for the normal application environment.
+
+Use option 4 to run the database create/upgrade workflow directly. Use option 3 only when the frontend needs rebuilding and dependencies/database state should not be touched.
 
 Run the automated test entry point:
 

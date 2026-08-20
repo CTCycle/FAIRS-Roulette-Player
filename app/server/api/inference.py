@@ -9,7 +9,7 @@ from server.common.api_errors import (
     http_exception_for_exception,
 )
 from server.configurations.dependencies import get_inference_service
-from server.domain.inference import (
+from server.contracts.inference import (
     InferenceBetUpdateRequest,
     InferenceBetUpdateResponse,
     InferenceContextClearResponse,
@@ -98,9 +98,12 @@ def shutdown(
     session_id: str,
     service: Annotated[InferenceService, Depends(get_inference_service)],
 ) -> InferenceShutdownResponse:
-    return InferenceShutdownResponse.model_validate(
-        service.shutdown_session(session_id)
-    )
+    try:
+        return InferenceShutdownResponse.model_validate(
+            service.shutdown_session(session_id)
+        )
+    except Exception as exc:
+        raise _map_inference_exception(exc) from exc
 
 ###############################################################################
 @router.post(
@@ -130,9 +133,12 @@ def clear_session_rows(
     session_id: str,
     service: Annotated[InferenceService, Depends(get_inference_service)],
 ) -> InferenceRowsClearResponse:
-    return InferenceRowsClearResponse.model_validate(
-        service.clear_session_rows(session_id)
-    )
+    try:
+        return InferenceRowsClearResponse.model_validate(
+            service.clear_session_rows(session_id)
+        )
+    except Exception as exc:
+        raise _map_inference_exception(exc) from exc
 
 ###############################################################################
 @router.post(
@@ -143,4 +149,7 @@ def clear_session_rows(
 def clear_inference_context(
     service: Annotated[InferenceService, Depends(get_inference_service)],
 ) -> InferenceContextClearResponse:
-    return InferenceContextClearResponse.model_validate(service.clear_context())
+    try:
+        return InferenceContextClearResponse.model_validate(service.clear_context())
+    except Exception as exc:
+        raise _map_inference_exception(exc) from exc

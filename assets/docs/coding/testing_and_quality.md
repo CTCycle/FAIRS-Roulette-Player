@@ -1,6 +1,6 @@
 ## Testing And Quality
 
-Last updated: 2026-08-02
+Last updated: 2026-08-20
 
 ## Quality Baseline
 
@@ -21,6 +21,7 @@ Last updated: 2026-08-02
 - Keep parser logic defensive where backend payloads can drift.
 - Validate UI behavior visually when user-facing layout or interaction changes are involved.
 - The current frontend package provides build and lint scripts but no standalone frontend test scripts.
+- CI enforces the frontend gate in `.github/workflows/ci.yml` with Node 22: `npm ci`, `npm run lint`, and `npm run build` from `app/client`.
 
 ## Test Layout
 
@@ -33,7 +34,13 @@ Primary automated test surfaces live under `app/tests`:
 - `app/tests/run_tests.bat`
   - repository-standard Windows test entry point
 - `.github/workflows/ci.yml`
-  - Linux CI currently runs Ruff, backend unit tests, OpenAPI generation, and the PostgreSQL persistence contract.
+  - Linux CI runs the backend Ruff/unit/Alembic/OpenAPI/PostgreSQL checks and a separate frontend lint/build job.
+
+## Migration Validation
+
+- Keep the immutable baseline aligned with all four current SQLAlchemy tables, indexes, named checks/unique constraints, and foreign-key cascade semantics.
+- Use test-only synthetic revisions for behind-version and rollback cases; do not add failure-only revisions to production history.
+- Validate clean, current, legacy adoption, partial/drift rejection, unknown/ahead revision rejection, rollback, and concurrent SQLite initialization. Run PostgreSQL persistence migration coverage when the service is available.
 
 ## Change Expectations
 

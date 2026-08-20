@@ -5,16 +5,17 @@ from unittest.mock import Mock
 import pandas as pd
 import pytest
 
-from server.domain.upload import UploadRequest
+from server.contracts.upload import UploadRequest
+from server.services.checkpoints import CheckpointReferenceError
 from server.services.datasets import DatasetService
 
 ###############################################################################
 def build_dataset_service() -> tuple[DatasetService, Mock, Mock, Mock]:
-    serializer = Mock()
+    data_store = Mock()
     importer = Mock()
     loader = Mock()
-    service = DatasetService(serializer=serializer, importer=importer, loader=loader)
-    return service, serializer, importer, loader
+    service = DatasetService(data_store=data_store, importer=importer, loader=loader)
+    return service, data_store, importer, loader
 
 ###############################################################################
 def test_import_upload_normalizes_filename_separator_and_sheet_name() -> None:
@@ -49,9 +50,9 @@ def test_import_upload_rejects_oversized_payload() -> None:
         )
 
 ###############################################################################
-def test_dataset_list_and_delete_delegate_to_serializer() -> None:
-    service, serializer, _, _ = build_dataset_service()
-    serializer.list_datasets.return_value = [
+def test_dataset_list_and_delete_delegate_to_data_store() -> None:
+    service, data_store, _, _ = build_dataset_service()
+    data_store.list_datasets.return_value = [
         {
             "dataset_id": 1,
             "dataset_name": "a",
@@ -59,7 +60,7 @@ def test_dataset_list_and_delete_delegate_to_serializer() -> None:
             "created_at": None,
         }
     ]
-    serializer.list_datasets_summary.return_value = [
+    data_store.list_datasets_summary.return_value = [
         {
             "dataset_id": 1,
             "dataset_name": "a",
@@ -76,4 +77,16 @@ def test_dataset_list_and_delete_delegate_to_serializer() -> None:
     assert len(list_response.datasets) == 1
     assert len(summary_response.datasets) == 1
     assert delete_response.status == "deleted"
-    serializer.delete_dataset.assert_called_once_with(1)
+    data_store.delete_dataset.assert_called_once_with(1)
+
+
+def test_dataset_delete_blocks_checkpoint_references() -> None:
+    service, data_store, _, _ = build_dataset_service()
+    checkpoint_service = Mock()
+    checkpoint_service.find_dataset_references.return_value = ["FAIRS_20260820"]
+    service.checkpoint_service = checkpoint_service
+
+    with pytest.raises(CheckpointReferenceError, match="referenced"):
+        service.delete_training_dataset(1)
+
+    data_store.delete_dataset.assert_not_called()

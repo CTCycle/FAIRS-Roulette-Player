@@ -2,11 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { InferenceSetupState } from '../context/AppStateContext';
 import { useCheckpointOptions } from './useCheckpointOptions';
 import {
-    parseCheckpointMetadataResponse,
     parseCheckpointOptionMetadata,
-    parseDatasetSummaryItems,
 } from '../utils/frontendApiParsers';
 import type { CheckpointOptionMetadata } from '../types/frontendApi';
+import {
+    fetchCheckpointMetadata,
+    fetchTrainingDatasetSummaries,
+} from '../utils/trainingApi';
 
 export interface InferenceDatasetOption {
     dataset_id: string;
@@ -51,12 +53,7 @@ export const useInferenceSetupOptions = ({
     useEffect(() => {
         const loadDatasets = async () => {
             try {
-            const summaryResponse = await fetch('/api/datasets/training/summary');
-                if (!summaryResponse.ok) {
-                    return;
-                }
-                const payload = await summaryResponse.json();
-                const values = parseDatasetSummaryItems(payload).map((entry) => ({
+                const values = (await fetchTrainingDatasetSummaries()).map((entry) => ({
                     dataset_id: entry.datasetId,
                     dataset_name: entry.datasetName,
                     row_count: entry.rowCount,
@@ -88,12 +85,7 @@ export const useInferenceSetupOptions = ({
             const entries = await Promise.all(
                 checkpoints.map(async (checkpoint) => {
                     try {
-                        const response = await fetch(`/api/training/checkpoints/${encodeURIComponent(checkpoint)}/metadata`);
-                        if (!response.ok) {
-                            return [checkpoint, { datasetId: '', perceptiveFieldSize: null }] as const;
-                        }
-                        const payload = await response.json();
-                        const metadata = parseCheckpointMetadataResponse(payload);
+                        const metadata = await fetchCheckpointMetadata(checkpoint);
                         return [checkpoint, parseCheckpointOptionMetadata(metadata.summary)] as const;
                     } catch {
                         return [checkpoint, { datasetId: '', perceptiveFieldSize: null }] as const;

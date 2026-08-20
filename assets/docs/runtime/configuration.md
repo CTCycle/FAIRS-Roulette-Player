@@ -1,6 +1,6 @@
 ## Configuration
 
-Last updated: 2026-08-19
+Last updated: 2026-08-20
 
 ## Environment Variables
 
@@ -43,6 +43,8 @@ For external PostgreSQL mode, `DATABASE_ENGINE` must be `postgresql+psycopg`. Le
 
 The backend creates timestamped `FAIRS_*.log` files in `FAIRS_LOG_DIR` when set, or in the active data `logs` directory otherwise.
 
+The application entry point calls `server.bootstrap.bootstrap_runtime()` explicitly before importing Keras-backed application modules. Direct imports of `server`, common path helpers, and logging helpers do not load `.env`, resolve mutable paths from the environment, create directories, or configure the global logging tree.
+
 ## Structured Settings
 
 `settings/configurations.json` contains non-env technical settings such as:
@@ -61,12 +63,14 @@ The backend creates timestamped `FAIRS_*.log` files in `FAIRS_LOG_DIR` when set,
 ### Database Mode
 
 - `EMBEDDED_DATABASE=true`
-  - uses SQLite and creates the embedded database file only when it is missing
-  - does not cross-validate an existing database during normal startup
+  - uses SQLite and runs the Alembic create/upgrade runner against the configured data-root database
+  - uses an immediate migration lock and strict metadata validation; it never resets or repairs drift automatically
 - `EMBEDDED_DATABASE=false`
   - uses PostgreSQL and requires explicit connection settings
-  - requires launcher option 4 to create or initialize the database and schema
-  - normal startup only probes the existing database connection
+  - first tries the configured database and creates it only after SQLSTATE `3D000`, under an admin advisory lock
+  - requires `CREATEDB` for automatic database creation; migrations then run under a target transaction advisory lock
+
+The application and launcher use the same idempotent runner. The runner adopts only an exact unversioned baseline, preserves its rows when stamping `head`, and fails before service construction for partial/drifted/unknown/ahead states.
 
 ### Backend Log Visibility
 
@@ -78,7 +82,7 @@ The backend creates timestamped `FAIRS_*.log` files in `FAIRS_LOG_DIR` when set,
 
 - The launcher checks runtime readiness before installing dependencies.
 - The checked-in `settings/.env.example` template defaults to API port `8890` and UI port `8051`; override them in `settings/.env` when needed.
-- Launcher option 2 selects `Standard` or `Development` installation, installs dependencies, and rebuilds the frontend; `Development` adds the backend's test extra.
+- Launcher option 2 selects `Standard` or `Development` installation, installs dependencies, rebuilds the frontend, and runs database create/upgrade; `Development` adds the backend's test extra.
 - Normal application startup skips installation and rebuilding when the environment and frontend build are ready. If either is missing or unusable, option 1 recovers dependencies and rebuilds the frontend; option 2 remains the explicit install/update and rebuild path.
 
 When `FAIRS_DATA_DIR` is absent, the application uses `app/resources`.

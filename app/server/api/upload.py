@@ -2,12 +2,16 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 
+from server.common.api_errors import ExceptionStatusMap, http_exception_for_exception
 from server.configurations.dependencies import get_dataset_service
-from server.domain.upload import DatasetKind, UploadRequest, UploadResponse
+from server.contracts.upload import DatasetKind, UploadRequest, UploadResponse
 from server.services.datasets import DatasetService
 
 
 router = APIRouter(prefix="/data", tags=["data"])
+UPLOAD_EXCEPTION_STATUS: ExceptionStatusMap = (
+    (ValueError, status.HTTP_400_BAD_REQUEST),
+)
 
 ###############################################################################
 @router.post(
@@ -44,7 +48,8 @@ async def upload(
                 status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                 detail=message,
             ) from exc
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=message,
+        raise http_exception_for_exception(
+            exc,
+            UPLOAD_EXCEPTION_STATUS,
+            default_detail=message,
         ) from exc

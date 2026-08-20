@@ -1,7 +1,7 @@
 # FAIRS: Fabulous Automated Intelligent Roulette System
 Last updated: 2026-08-20
 
-[![Release](https://img.shields.io/github/v/release/CTCycle/FAIRS-Roulette-Player?display_name=tag)](https://github.com/CTCycle/FAIRS-Roulette-Player/releases) [![Python](https://img.shields.io/badge/python-%3E%3D3.14-3776AB?logo=python&logoColor=white)](./app/server/pyproject.toml) [![Node.js](https://img.shields.io/badge/node.js-22.13.0-339933?logo=node.js&logoColor=white)](./start_on_windows.ps1) [![React](https://img.shields.io/badge/react-19.2.0-61DAFB?logo=react&logoColor=black)](./app/client/package.json) [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE) [![CI](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml?query=branch%3Adevelop)
+[![Release](https://img.shields.io/github/v/release/CTCycle/FAIRS-Roulette-Player?display_name=tag)](https://github.com/CTCycle/FAIRS-Roulette-Player/releases) [![Python](https://img.shields.io/badge/python-%3E%3D3.14-3776AB?logo=python&logoColor=white)](./app/server/pyproject.toml) [![Node.js](https://img.shields.io/badge/node.js-22.13.0-339933?logo=node.js&logoColor=white)](./start_on_windows.ps1) [![React](https://img.shields.io/badge/react-19.2.8-61DAFB?logo=react&logoColor=black)](./app/client/package.json) [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE) [![CI](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml?query=branch%3Adevelop)
 [![CTCycle Portfolio](https://img.shields.io/badge/CTCycle-Portfolio-58a6ff?style=flat-square)](https://ctcycle.github.io/CTCycle/)
 
 FAIRS is a Windows-first local web workspace for roulette training and inference experiments. A FastAPI backend manages datasets, training jobs, checkpoints, inference sessions, and persistence while a React 19 + TypeScript frontend provides the interactive workspace.
@@ -29,7 +29,7 @@ The backend is the source of truth for API behavior, background jobs, session st
 
 ## Get the source
 
-The current source release is `v2.9.0`. Download a versioned source archive from the [GitHub Releases page](https://github.com/CTCycle/FAIRS-Roulette-Player/releases). FAIRS is intended for local launcher-based operation from an extracted repository.
+The current source release is `v3.0.0`. Download a versioned source archive from the [GitHub Releases page](https://github.com/CTCycle/FAIRS-Roulette-Player/releases). FAIRS is intended for local launcher-based operation from an extracted repository.
 
 ## Set up and start the application
 
@@ -58,7 +58,7 @@ The active ports come from `settings/.env`. The launcher also provides maintenan
 | `1` | Launch the backend and web UI. |
 | `2` | Install or update dependencies; choose `Standard` or `Development`. |
 | `3` | Rebuild the frontend from current source without updating dependencies. |
-| `4` | Explicitly initialize the configured database, including PostgreSQL. |
+| `4` | Create or upgrade the configured database, including PostgreSQL. |
 | `5` | Run the repository test suite. |
 | `6` | Remove application log files. |
 | `7` | Clear Python and uv caches. |
@@ -84,8 +84,22 @@ Database settings belong in `settings/.env`; a `database` block in `configuratio
 
 ### Database modes
 
-- `EMBEDDED_DATABASE=true` uses SQLite. The application creates the configured database only when the file is missing and does not reset an existing database during normal startup.
-- `EMBEDDED_DATABASE=false` uses PostgreSQL. Normal startup performs a non-mutating connection check. Use the launcher’s `Initialize database` option to create or initialize the database explicitly.
+- `EMBEDDED_DATABASE=true` uses SQLite. FastAPI startup and launcher option 4 run the shared Alembic create/upgrade runner against the configured database without resetting or repairing drift.
+- `EMBEDDED_DATABASE=false` uses PostgreSQL. The runner first tries the configured target and creates it only when that connection returns SQLSTATE `3D000`; automatic creation requires `CREATEDB`. Target migrations use a transaction advisory lock.
+- Empty databases upgrade to Alembic `head`. Exact unversioned legacy databases are stamped at `head` without recreating objects or changing rows. Partial, drifted, unknown, ahead, or multi-head states fail unchanged before services start.
+
+### Database migration workflow
+
+Alembic is the authoritative schema-evolution mechanism. The immutable baseline is under `app/server/alembic/versions/`; `app/server/alembic.ini` contains no credentials. From `app/server`, generate candidate revisions, review the generated operations manually, then check and apply them:
+
+```powershell
+uv run alembic -c alembic.ini revision --autogenerate -m "describe schema change"
+uv run alembic -c alembic.ini check
+uv run alembic -c alembic.ini current --check-heads
+uv run alembic -c alembic.ini upgrade head
+```
+
+Use `uv run alembic -c alembic.ini upgrade head --sql` for offline SQL output. Future constraints must be explicitly named; existing unnamed foreign keys retain their current semantics and are not renamed for dialect-specific consistency. SQLite initialization serializes with `BEGIN IMMEDIATE` and PostgreSQL initialization uses deterministic advisory locks with bounded waits. Resolve lock timeouts or migration errors before retrying; automatic repair is intentionally disabled.
 
 `FAIRS_DATA_DIR` can override the mutable database, logs, and checkpoint root. `FAIRS_LOG_DIR` can override the log directory for isolated runs.
 
@@ -170,6 +184,7 @@ Start with [`assets/docs/project_index.md`](assets/docs/project_index.md), then 
 - [`assets/docs/runtime/startup.md`](assets/docs/runtime/startup.md) — launcher behavior and database lifecycle.
 - [`assets/docs/runtime/configuration.md`](assets/docs/runtime/configuration.md) — environment and settings.
 - [`assets/docs/architecture/system_overview.md`](assets/docs/architecture/system_overview.md) — source tree and runtime surfaces.
+- [`assets/docs/architecture/findings_and_remediation.md`](assets/docs/architecture/findings_and_remediation.md) — current architecture findings, target state, and prioritized remediation.
 
 ## License
 

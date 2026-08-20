@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from server.domain.configuration import (
+from server.contracts.configuration import (
     DatabaseSettings,
     DeviceSettings,
     JobsSettings,
     ServerSettings,
 )
-from server.domain.training import TrainingConfig, ResumeConfig
-from server.domain.jobs import (
+from server.contracts.training import TrainingConfig, ResumeConfig
+from server.contracts.jobs import (
     JobStartResponse,
     JobStatusResponse,
     JobCancelResponse,

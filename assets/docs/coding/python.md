@@ -1,6 +1,6 @@
 ## Python
 
-Last updated: 2026-08-02
+Last updated: 2026-08-20
 
 ## Runtime Baseline
 
@@ -24,7 +24,7 @@ Last updated: 2026-08-02
 
 ## Validation And API Rules
 
-- Use domain and Pydantic models for request and response validation.
+- Use `server.contracts` Pydantic models for request/response validation and runtime settings. These are boundary contracts, not ORM entities or a general-purpose domain layer.
 - Avoid ad-hoc manual validation when a model can encode the constraint.
 - Return explicit HTTP status codes and stable response shapes.
 - Do not expose raw internal traces in API payloads.
@@ -49,10 +49,16 @@ Last updated: 2026-08-02
 - Respect the existing backend module boundaries:
   - `api`
   - `services`
-  - `domain`
+  - `contracts`
   - `repositories`
   - `learning`
   - `configurations`
+- Keep dependency direction explicit:
+  - contracts do not depend on API, services, repositories, configuration loaders, or learning;
+  - API handlers do not access repositories or learning directly;
+  - repositories do not depend on API or services;
+  - learning code does not depend on API, services, or repositories.
+- Put shared roulette transformations in the named `common.roulette` module rather than duplicating feature derivation in repositories and learning code.
 - Avoid unrelated stylistic churn.
 - Keep imports at file top.
 - Avoid nested functions unless locality clearly improves the code.
@@ -60,7 +66,7 @@ Last updated: 2026-08-02
 
 ## Persistence And Settings Rules
 
-- Route data access through repository queries and serializers.
+- Route data access through repository queries and serializers; do not construct databases inside API handlers.
 - Keep schema, serializer, and API contracts synchronized.
 - Runtime flags come from environment variables.
 - Structured non-env settings live in `settings/configurations.json`.

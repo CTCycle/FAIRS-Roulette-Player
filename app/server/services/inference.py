@@ -5,14 +5,14 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from server.domain.inference import (
+from server.contracts.inference import (
     InferenceBetUpdateRequest,
     InferenceStartRequest,
     InferenceStepRequest,
 )
 from server.learning.inference.player import RoulettePlayer
 from server.learning.training.device import DeviceConfig
-from server.repositories.serialization.data import DataSerializer
+from server.repositories.serialization.data import DataStore
 from server.services.checkpoints import CheckpointService
 
 ###############################################################################
@@ -92,9 +92,9 @@ class InferenceState:
         self.max_sessions = 16
 
     # -------------------------------------------------------------------------
-    def create_session(self, session: InferenceSession) -> None:
+    def create_session(self, session: InferenceSession) -> list[InferenceSession]:
         self.sessions[session.session_id] = session
-        self.cleanup()
+        return self.cleanup()
 
     # -------------------------------------------------------------------------
     def get_session(self, session_id: str) -> InferenceSession:
@@ -104,17 +104,15 @@ class InferenceState:
         return session
 
     # -------------------------------------------------------------------------
-    def delete_session(self, session_id: str) -> None:
-        if session_id in self.sessions:
-            del self.sessions[session_id]
+    def delete_session(self, session_id: str) -> InferenceSession | None:
+        return self.sessions.pop(session_id, None)
 
     # -------------------------------------------------------------------------
-    def cleanup(self) -> None:
+    def cleanup(self) -> list[InferenceSession]:
         if len(self.sessions) <= self.max_sessions:
-            return
+            return []
         ordered = sorted(self.sessions.values(), key=lambda item: item.last_seen)
-        for stale in ordered[: max(0, len(ordered) - self.max_sessions)]:
-            del self.sessions[stale.session_id]
+        return ordered[: max(0, len(ordered) - self.max_sessions)]
 
 ###############################################################################
 class InferenceService:
@@ -122,10 +120,10 @@ class InferenceService:
     # -------------------------------------------------------------------------
     def __init__(
         self,
-        serializer: DataSerializer,
+        data_store: DataStore,
         checkpoint_service: CheckpointService,
     ) -> None:
-        self.serializer = serializer
+        self.data_store = data_store
         self.checkpoint_service = checkpoint_service
         self.state = InferenceState()
 
@@ -139,7 +137,7 @@ class InferenceService:
             "started_at": session.started_at,
             "ended_at": None,
         }
-        self.serializer.upsert_inference_session(row)
+        self.data_store.upsert_inference_session(row)
 
     # -------------------------------------------------------------------------
     def persist_session_step(
@@ -162,7 +160,19 @@ class InferenceService:
             "capital_after": capital_after,
             "recorded_at": datetime.now(timezone.utc),
         }
-        self.serializer.upsert_inference_session_step(row)
+        self.data_store.upsert_inference_session_step(row)
+
+    # -------------------------------------------------------------------------
+    def _close_session(self, session_id: str, *, mark_missing: bool = False) -> None:
+        session = (
+            self.state.get_session(session_id)
+            if session_id in self.state.sessions
+            else None
+        )
+        if session is not None or mark_missing:
+            self.data_store.mark_inference_session_ended(session_id)
+        if session is not None:
+            self.state.delete_session(session_id)
 
     # -------------------------------------------------------------------------
     def start_session(self, payload: InferenceStartRequest) -> dict[str, Any]:
@@ -173,11 +183,12 @@ class InferenceService:
         dataset_id = int(payload.dataset_id)
         session_id = uuid.uuid4().hex
         if payload.session_id:
-            self.state.delete_session(payload.session_id)
+            self._close_session(payload.session_id)
 
-        dataset = self.serializer.load_dataset(dataset_id)
+        dataset = self.data_store.load_dataset(dataset_id)
         if dataset is None:
             raise FileNotFoundError(f"Dataset '{dataset_id}' was not found.")
+        dataset_context = self.data_store.load_dataset_outcomes(dataset_id)
 
         model, train_config, _, _ = self.checkpoint_service.load_checkpoint(checkpoint)
         configuration = {
@@ -224,8 +235,7 @@ class InferenceService:
             model=model,
             configuration=configuration,
             session_id=session_id,
-            dataset_id=dataset_id,
-            serializer=self.serializer,
+            dataset_context=dataset_context,
             dataset_source=payload.dataset_source,
             strategy_model=strategy_model,
         )
@@ -242,7 +252,9 @@ class InferenceService:
         session.last_prediction = prediction
         session.prediction_pending = True
         session.prediction_step = 1
-        self.state.create_session(session)
+        evicted_sessions = self.state.create_session(session)
+        for evicted in evicted_sessions:
+            self._close_session(evicted.session_id)
         self.persist_session_header(session)
         self.persist_session_step(
             session,
@@ -326,16 +338,19 @@ class InferenceService:
 
     # -------------------------------------------------------------------------
     def shutdown_session(self, session_id: str) -> dict[str, Any]:
-        self.serializer.mark_inference_session_ended(session_id)
-        self.state.delete_session(session_id)
+        self._close_session(session_id, mark_missing=True)
         return {"session_id": session_id, "status": "closed"}
 
     # -------------------------------------------------------------------------
     def clear_session_rows(self, session_id: str) -> dict[str, Any]:
-        self.serializer.clear_inference_session_steps(session_id)
+        self.data_store.clear_inference_session_steps(session_id)
         return {"session_id": session_id, "status": "cleared"}
 
     # -------------------------------------------------------------------------
     def clear_context(self) -> dict[str, str]:
-        self.serializer.clear_datasets("inference")
+        if self.state.sessions:
+            raise RuntimeError(
+                "Cannot clear inference context while an inference session is active."
+            )
+        self.data_store.clear_datasets("inference")
         return {"status": "cleared"}

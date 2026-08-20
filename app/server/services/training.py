@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from pathlib import Path
 from typing import Any
 
 from server.common.checkpoints import normalize_checkpoint_identifier
@@ -9,15 +10,16 @@ from server.common.utils.trainingstats import (
     sanitize_training_stats,
 )
 from server.common.utils.types import coerce_finite_float, coerce_finite_int
-from server.configurations.startup import get_poll_interval_seconds
-from server.domain.training import ResumeConfig, TrainingConfig
-from server.learning.training.worker import (
+from server.contracts.configuration import DatabaseSettings
+from server.contracts.training import ResumeConfig, TrainingConfig
+from server.services.training_worker import (
     ProcessWorker,
     run_resume_training_process,
     run_training_process,
 )
 from server.services.checkpoints import CheckpointService
 from server.services.jobs import JobManager
+from server.services.training_data import load_training_series
 
 TRAINING_STATUSES = {
     "idle",
@@ -241,9 +243,19 @@ class TrainingService:
         self,
         job_manager: JobManager,
         checkpoint_service: CheckpointService,
+        database_settings: DatabaseSettings | None = None,
+        database_path: str | Path | None = None,
+        polling_interval_seconds: float = 1.0,
+        jit_compile: bool = False,
+        jit_backend: str = "inductor",
     ) -> None:
         self.job_manager = job_manager
         self.checkpoint_service = checkpoint_service
+        self.database_settings = database_settings
+        self.database_path = database_path
+        self.polling_interval_seconds = polling_interval_seconds
+        self.jit_compile = jit_compile
+        self.jit_backend = jit_backend
         self.training_state = TrainingState()
 
     # -------------------------------------------------------------------------
@@ -319,7 +331,15 @@ class TrainingService:
         try:
             worker.start(
                 target=run_training_process,
-                kwargs={"configuration": configuration},
+                kwargs={
+                    "configuration": configuration,
+                    "training_data_loader": load_training_series,
+                    "database_settings": self.database_settings,
+                    "database_path": self.database_path,
+                    "polling_interval_seconds": self.polling_interval_seconds,
+                    "jit_compile": self.jit_compile,
+                    "jit_backend": self.jit_backend,
+                },
             )
             result = self._monitor_training_process(
                 job_id, worker, stop_timeout_seconds=5.0
@@ -363,6 +383,10 @@ class TrainingService:
                 kwargs={
                     "checkpoint": checkpoint,
                     "additional_episodes": additional_episodes,
+                    "training_data_loader": load_training_series,
+                    "database_settings": self.database_settings,
+                    "database_path": self.database_path,
+                    "polling_interval_seconds": self.polling_interval_seconds,
                 },
             )
             result = self._monitor_training_process(
@@ -441,7 +465,7 @@ class TrainingService:
             "message": "Training started successfully",
             "job_id": job_id,
             "job_type": self.JOB_TYPE,
-            "poll_interval": get_poll_interval_seconds(),
+            "poll_interval": self.polling_interval_seconds,
         }
 
     # -------------------------------------------------------------------------
@@ -494,7 +518,7 @@ class TrainingService:
             "message": f"Resuming training from {checkpoint}",
             "job_id": job_id,
             "job_type": self.JOB_TYPE,
-            "poll_interval": get_poll_interval_seconds(),
+            "poll_interval": self.polling_interval_seconds,
         }
 
     # -------------------------------------------------------------------------
@@ -505,7 +529,7 @@ class TrainingService:
             "latest_stats": self.training_state.latest_stats,
             "history": self.training_state.history_points,
             "latest_env": self.training_state.latest_env,
-            "poll_interval": get_poll_interval_seconds(),
+            "poll_interval": self.polling_interval_seconds,
         }
 
     # -------------------------------------------------------------------------
@@ -536,8 +560,10 @@ class TrainingService:
         job_status = self.job_manager.get_job_status(job_id)
         if job_status is None:
             raise KeyError(f"Job not found: {job_id}")
-        poll_interval = get_poll_interval_seconds()
-        return {**job_status, "poll_interval": poll_interval}
+        return {
+            **job_status,
+            "poll_interval": self.polling_interval_seconds,
+        }
 
     # -------------------------------------------------------------------------
     def delete_job(self, job_id: str) -> dict[str, Any]:

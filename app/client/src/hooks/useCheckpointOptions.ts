@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { parseCheckpointList } from '../utils/frontendApiParsers';
+import { fetchTrainingCheckpoints } from '../utils/trainingApi';
 
 interface UseCheckpointOptionsParams {
     selectedCheckpoint: string;
@@ -27,17 +27,11 @@ export const useCheckpointOptions = ({
 
         const loadCheckpoints = async (): Promise<void> => {
             try {
-                const response = await fetch('/api/training/checkpoints');
-                if (!response.ok) {
-                    return;
-                }
-
-                const data = await response.json();
+                const normalized = await fetchTrainingCheckpoints();
                 if (!mounted) {
                     return;
                 }
 
-                const normalized = parseCheckpointList(data);
                 setCheckpoints(normalized);
 
                 if (normalized.length > 0 && !latestCheckpointRef.current) {

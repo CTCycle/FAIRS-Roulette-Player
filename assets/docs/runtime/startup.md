@@ -1,6 +1,6 @@
 ## Startup
 
-Last updated: 2026-08-19
+Last updated: 2026-08-20
 
 ## Local Application Startup
 
@@ -39,9 +39,14 @@ What the launcher does:
 
 Database behavior:
 
-- SQLite is created automatically only when its configured `.db` file is missing.
-- PostgreSQL is never created or initialized by normal application startup. Select option 4, `Initialize database`, after configuring PostgreSQL.
-- Option 4 is non-destructive for an existing SQLite database and is the explicit PostgreSQL initialization path.
+- FastAPI lifespan and the explicit CLI/launcher initializer run the same Alembic create/upgrade state machine before repositories and services are constructed.
+- Empty SQLite databases upgrade to Alembic `head`; existing exact unversioned model databases are stamped at `head` without recreating tables or changing rows.
+- Partial, unknown, drifted, or ahead schemas fail unchanged with an actionable error. Known revisions behind `head` are upgraded in order; current `head` is a strict-validation no-op.
+- SQLite migration locking uses `BEGIN IMMEDIATE`; PostgreSQL database creation uses a deterministic admin advisory lock and target migrations use a transaction advisory lock with a bounded timeout.
+- PostgreSQL startup may create a missing configured database only when the initial target connection returns SQLSTATE `3D000`; the configured role must have `CREATEDB`, or an administrator must pre-create the database.
+- Option 4 is **Create / upgrade database** and is idempotent. Option 2 runs it after dependency installation and frontend setup. Option 3 remains frontend-only.
+
+Before the FastAPI composition root imports Keras-backed modules, `server.bootstrap.bootstrap_runtime()` explicitly loads `settings/.env`, resolves the runtime data/log paths, and configures logging. Importing the `server` package or common path/logging utilities alone has no filesystem or global-logging side effects.
 
 If the readiness check passes, normal application start skips dependency installation and proceeds directly to the two services. If the environment or built frontend is missing or unusable, option 1 recovers dependencies and rebuilds the frontend. Use option 2 when source changes require a deliberate dependency sync, or option 3 when only the frontend needs rebuilding and its dependencies are already installed.
 

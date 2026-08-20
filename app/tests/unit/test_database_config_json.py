@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from server.domain.configuration import EnvDatabaseSettings, JsonServerSettings
+from server.contracts.configuration import EnvDatabaseSettings, JsonServerSettings
 
 DATABASE_ENV_KEYS = (
     "EMBEDDED_DATABASE",
