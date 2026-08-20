@@ -71,6 +71,7 @@ def test_session_lifecycle_and_prediction_flow(monkeypatch) -> None:
     start = service.start_session(InferenceStartRequest(checkpoint="cp1", dataset_id=1))
     session_id = start["session_id"]
     assert start["checkpoint"] == "cp1"
+    data_store.load_dataset_outcomes.assert_called_once_with(1)
 
     with pytest.raises(RuntimeError):
         service.next_prediction(session_id)
