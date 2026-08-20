@@ -35,6 +35,7 @@ def start_inference_session(
     dataset_id: int,
     game_capital: int = 1000,
     game_bet: int = 10,
+    session_id: str | None = None,
 ) -> dict:
     response = api_context.post(
         "/api/inference/sessions/start",
@@ -43,6 +44,7 @@ def start_inference_session(
             "dataset_id": dataset_id,
             "game_capital": game_capital,
             "game_bet": game_bet,
+            "session_id": session_id,
         },
     )
     if not response.ok:
@@ -290,3 +292,23 @@ class TestInferenceSessionFlow:
         start_payload = start_response.json()
         assert "detail" in start_payload
         assert "dataset" in str(start_payload["detail"]).lower()
+
+    # -------------------------------------------------------------------------
+    def test_clear_inference_context_rejects_active_session(
+        self, api_context: APIRequestContext
+    ):
+        checkpoint_name = require_checkpoint(api_context)
+        dataset_id = require_dataset_id(api_context)
+        start_data = start_inference_session(api_context, checkpoint_name, dataset_id)
+        session_id = start_data["session_id"]
+
+        try:
+            clear_response = api_context.post("/api/inference/context/clear")
+            assert clear_response.status == 409
+            payload = clear_response.json()
+            assert "active" in str(payload.get("detail", "")).lower()
+        finally:
+            shutdown_response = api_context.post(
+                f"/api/inference/sessions/{session_id}/shutdown"
+            )
+            assert shutdown_response.ok
