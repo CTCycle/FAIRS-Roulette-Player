@@ -1,6 +1,6 @@
 ## Testing And Quality
 
-Last updated: 2026-08-02
+Last updated: 2026-08-20
 
 ## Quality Baseline
 
@@ -33,7 +33,13 @@ Primary automated test surfaces live under `app/tests`:
 - `app/tests/run_tests.bat`
   - repository-standard Windows test entry point
 - `.github/workflows/ci.yml`
-  - Linux CI currently runs Ruff, backend unit tests, OpenAPI generation, and the PostgreSQL persistence contract.
+  - Linux CI runs Ruff, backend unit tests, Alembic history/model consistency checks, OpenAPI generation, and the PostgreSQL persistence contract.
+
+## Migration Validation
+
+- Keep the immutable baseline aligned with all four current SQLAlchemy tables, indexes, named checks/unique constraints, and foreign-key cascade semantics.
+- Use test-only synthetic revisions for behind-version and rollback cases; do not add failure-only revisions to production history.
+- Validate clean, current, legacy adoption, partial/drift rejection, unknown/ahead revision rejection, rollback, and concurrent SQLite initialization. Run PostgreSQL persistence migration coverage when the service is available.
 
 ## Change Expectations
 

@@ -367,7 +367,7 @@ function Initialize-Database {
             $env:PYTHONPATH = $previousPythonPath
         }
     }
-    Write-Ok 'Database initialization completed.'
+    Write-Ok 'Database create/upgrade completed.'
 }
 
 function Invoke-TestSuite {
@@ -452,7 +452,7 @@ function Show-Menu {
         Write-Host '  SETUP & MAINTENANCE' -ForegroundColor DarkCyan
         Write-MenuItem '2' 'Install / update dependencies' 'Prepare local runtimes and build the frontend' Yellow
         Write-MenuItem '3' 'Rebuild frontend' 'Build the frontend without updating dependencies' Yellow
-        Write-MenuItem '4' 'Initialize database' 'Create the selected database and schema' Yellow
+        Write-MenuItem '4' 'Create / upgrade database' 'Create the selected database and apply migrations' Yellow
         Write-MenuItem '5' 'Run test suite' 'Execute automated checks' Yellow
         Write-Host ''
         Write-Host '  CLEANUP' -ForegroundColor DarkCyan
@@ -477,6 +477,7 @@ function Show-Menu {
                     $installationType = Read-InstallationType
                     Install-Dependencies -PruneCache -InstallationType $installationType
                     Build-Frontend
+                    Initialize-Database
                 }
                 '3' { Build-Frontend }
                 '4' { Initialize-Database }

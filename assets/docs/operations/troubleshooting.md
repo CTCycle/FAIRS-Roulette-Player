@@ -24,9 +24,10 @@ Last updated: 2026-08-20
 ## Configuration Problems
 
 - If database startup fails, confirm the embedded-vs-external database settings are internally consistent.
-- If PostgreSQL mode is enabled, select option 4 in `start_on_windows.ps1` once to create or initialize the configured database and schema. Normal startup probes and structurally validates the existing database; it never creates or resets it. Invalid or unavailable connection settings therefore stop startup and must be corrected before relaunching.
+- If PostgreSQL mode is enabled, select option 4 in `start_on_windows.ps1` to create or upgrade the configured database. FastAPI startup runs the same idempotent runner. A missing target is created only for SQLSTATE `3D000`, and the configured role needs `CREATEDB`.
 - If startup reports an unsupported database engine, set external PostgreSQL configuration to `DATABASE_ENGINE=postgresql+psycopg`; legacy aliases are not accepted.
-- If startup reports an incompatible schema, compare the configured database with the current SQLAlchemy models and run the explicit database initialization/migration workflow. Startup does not reset or migrate an existing database; a newer SQLite `PRAGMA user_version` is also rejected.
+- If startup reports schema drift, a partial legacy schema, or an unknown/ahead revision, do not delete or reset the database. Review the Alembic revision and database state, make an explicit reviewed migration or restore the matching revision scripts, then retry. Automatic repair is disabled.
+- For migration lock timeouts, stop the competing initializer/session and retry. SQLite uses `BEGIN IMMEDIATE`; PostgreSQL reports a bounded advisory-lock timeout.
 - If training dataset deletion reports a checkpoint conflict, inspect the listed checkpoint metadata and either retain the dataset or remove/update the referencing checkpoint through the normal checkpoint workflow. Unreadable checkpoint metadata is treated as a conflict for safety.
 
 ## Related Files

@@ -15,7 +15,6 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy.exc import SQLAlchemyError
 
 from server.common.constants import (
     FASTAPI_API_PREFIX,
@@ -36,7 +35,7 @@ from server.api.system import router as system_router
 from server.configurations import get_server_settings
 from server.contracts.system import RootStatusResponse
 from server.repositories.database.backend import FAIRSDatabase
-from server.repositories.database.initializer import initialize_sqlite_database_if_missing
+from server.repositories.database.initializer import initialize_database
 from server.repositories.datasets import DatasetRepository
 from server.repositories.inference import InferenceRepository
 from server.repositories.serialization.data import DataStore
@@ -96,51 +95,42 @@ async def app_lifespan(application: FastAPI) -> AsyncIterator[None]:
     settings = get_server_settings()
 
     run_startup_validations(settings)
+    initialize_database(settings.database)
+    database = FAIRSDatabase(settings.database)
+    try:
+        data_store = DataStore(
+            datasets=DatasetRepository(database),
+            inference=InferenceRepository(database),
+        )
+        job_manager = JobManager()
+        checkpoint_service = CheckpointService()
 
-    if settings.database.embedded_database:
-        initialize_sqlite_database_if_missing(settings.database)
-        database = FAIRSDatabase(settings.database)
-    else:
-        database = FAIRSDatabase(settings.database)
-        try:
-            database.check_connection()
-        except SQLAlchemyError as exc:
-            raise RuntimeError(
-                "Unable to connect to the configured PostgreSQL database. "
-                "Run the launcher's database initialization command and verify the connection settings."
-            ) from exc
-    database.validate_schema()
-    data_store = DataStore(
-        datasets=DatasetRepository(database),
-        inference=InferenceRepository(database),
-    )
-    job_manager = JobManager()
-    checkpoint_service = CheckpointService()
+        application.state.database = database
+        application.state.data_store = data_store
+        application.state.dataset_service = DatasetService(
+            data_store=data_store,
+            importer=DatasetImportService(data_store=data_store),
+            loader=TabularFileLoader(),
+            checkpoint_service=checkpoint_service,
+        )
+        application.state.job_manager = job_manager
+        application.state.training_service = TrainingService(
+            job_manager=job_manager,
+            checkpoint_service=checkpoint_service,
+            database_settings=settings.database,
+            database_path=shared_paths.DATABASE_PATH,
+            polling_interval_seconds=settings.jobs.polling_interval,
+            jit_compile=settings.device.jit_compile,
+            jit_backend=settings.device.jit_backend,
+        )
+        application.state.inference_service = InferenceService(
+            data_store=data_store,
+            checkpoint_service=checkpoint_service,
+        )
 
-    application.state.database = database
-    application.state.data_store = data_store
-    application.state.dataset_service = DatasetService(
-        data_store=data_store,
-        importer=DatasetImportService(data_store=data_store),
-        loader=TabularFileLoader(),
-        checkpoint_service=checkpoint_service,
-    )
-    application.state.job_manager = job_manager
-    application.state.training_service = TrainingService(
-        job_manager=job_manager,
-        checkpoint_service=checkpoint_service,
-        database_settings=settings.database,
-        database_path=shared_paths.DATABASE_PATH,
-        polling_interval_seconds=settings.jobs.polling_interval,
-        jit_compile=settings.device.jit_compile,
-        jit_backend=settings.device.jit_backend,
-    )
-    application.state.inference_service = InferenceService(
-        data_store=data_store,
-        checkpoint_service=checkpoint_service,
-    )
-
-    yield
+        yield
+    finally:
+        database.dispose()
 
 ###############################################################################
 def include_api_routers(application: FastAPI) -> None:

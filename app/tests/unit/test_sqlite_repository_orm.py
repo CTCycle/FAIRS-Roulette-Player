@@ -4,6 +4,7 @@ import pandas as pd
 from sqlalchemy import create_engine, event, text
 
 from server.contracts.configuration import DatabaseSettings
+from server.repositories.database.initializer import run_migrations_on_engine
 from server.repositories.database.backend import FAIRSDatabase
 from server.repositories.datasets import DatasetRepository
 from server.repositories.inference import InferenceRepository
@@ -17,7 +18,7 @@ def test_sqlite_persistence_contract() -> None:
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
     event.listen(engine, "connect", lambda connection, _: connection.execute("PRAGMA foreign_keys=ON"))
     database = FAIRSDatabase(build_sqlite_settings(), engine=engine)
-    database.create_schema()
+    run_migrations_on_engine(engine)
     datasets = DatasetRepository(database)
     inference = InferenceRepository(database)
 
