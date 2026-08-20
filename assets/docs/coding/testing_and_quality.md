@@ -33,6 +33,8 @@ Primary automated test surfaces live under `app/tests`:
   - API and workflow coverage
 - `app/tests/run_tests.bat`
   - repository-standard Windows test entry point
+- `app/tests/pytest.ini`
+  - keeps pytest's cache under `app/tests/cache/pytest`; Ruff and other test tooling use sibling paths below `app/tests/cache`
 - `.github/workflows/ci.yml`
   - Linux CI runs the backend Ruff/unit/Alembic/OpenAPI/PostgreSQL checks and a separate frontend lint/build job.
 

@@ -18,7 +18,7 @@ From repository root in PowerShell:
 - initializing the database
 - running the test suite
 - removing logs
-- clearing Python and uv caches
+- clearing Python, uv, and tool caches
 - uninstalling local runtimes and build outputs
 - exiting the launcher
 
@@ -36,6 +36,12 @@ What the launcher does:
 - launches the backend with `uvicorn` and the built frontend with Vite preview
 - opens the configured frontend URL in the default browser
 - verifies backend health and frontend preview readiness before reporting success
+
+Cache layout and cleanup:
+
+- uv, npm, pip, Python bytecode, and other runtime caches are rooted at `runtimes/cache`
+- pytest, Ruff, coverage, mypy, Playwright, and other test-tool caches are rooted at `app/tests/cache`
+- option 7 removes both cache roots and known legacy cache locations item by item; locked or administrator-protected entries are reported and skipped so the remaining artifacts are still removed
 
 Database behavior:
 

@@ -7,6 +7,7 @@ app/client/dist/
 app/client/dist-ssr/
 app/client/logs/
 app/client/*.local
+app/tests/cache/
 assets/QA/**
 
 # Python
