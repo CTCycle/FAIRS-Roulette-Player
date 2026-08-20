@@ -170,6 +170,17 @@ def _alembic_diffs(connection: Any) -> list[Any]:
 ###############################################################################
 def _normalize_sql_expression(value: object) -> str:
     expression = re.sub(r"\s+", " ", str(value)).strip().lower()
+    expression = re.sub(
+        r"::(?:bigint|character varying|double precision|integer|numeric|real|smallint|text)(?:\[\])?",
+        "",
+        expression,
+    )
+    expression = re.sub(
+        r"\b([a-z_][a-z0-9_]*)\s*=\s*any\s*\(\s*array\[(.*?)\]\s*\)",
+        r"\1 in (\2)",
+        expression,
+    )
+    expression = re.sub(r"\(\s*([^()]*\band\s+[^()]*)\s*\)", r"\1", expression)
     while expression.startswith("(") and expression.endswith(")"):
         depth = 0
         balanced = True
@@ -197,7 +208,10 @@ def _type_signature(value: Any, *, dialect_name: str | None = None) -> tuple[Any
     if isinstance(implementation, Integer):
         return ("integer",)
     if isinstance(implementation, Float):
-        return ("float", implementation.precision, implementation.asdecimal)
+        precision = implementation.precision
+        if precision is None and dialect_name == "postgresql":
+            precision = 53
+        return ("float", precision, implementation.asdecimal)
     if isinstance(implementation, DateTime):
         timezone = False if dialect_name == "sqlite" else implementation.timezone
         return ("datetime", timezone)
@@ -288,6 +302,11 @@ def _database_signature(connection: Any) -> dict[str, Any]:
         for name in inspector.get_table_names()
         if name != ALEMBIC_VERSION_TABLE
     ):
+        unique_constraint_names = {
+            constraint.get("name")
+            for constraint in inspector.get_unique_constraints(table_name)
+            if constraint.get("name")
+        }
         columns = tuple(
             (
                 column["name"],
@@ -307,7 +326,7 @@ def _database_signature(connection: Any) -> dict[str, Any]:
                     bool(index.get("unique")),
                 )
                 for index in inspector.get_indexes(table_name)
-                if index.get("name")
+                if index.get("name") and index.get("name") not in unique_constraint_names
             )
         )
         unique_constraints = tuple(
