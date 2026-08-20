@@ -11,7 +11,9 @@ from server.services import training as training_module
 from server.services.training import TrainingService
 
 ###############################################################################
-def build_service() -> tuple[TrainingService, Mock, Mock]:
+def build_service(
+    polling_interval_seconds: float = 1.0,
+) -> tuple[TrainingService, Mock, Mock]:
     job_manager = Mock()
     job_manager.is_job_running.return_value = False
     job_manager.start_job.return_value = "job123"
@@ -23,7 +25,9 @@ def build_service() -> tuple[TrainingService, Mock, Mock]:
         {"total_episodes": 2, "history": {"episode": [1, 2], "time_step": [1, 2]}},
     )
     service = TrainingService(
-        job_manager=job_manager, checkpoint_service=checkpoint_service
+        job_manager=job_manager,
+        checkpoint_service=checkpoint_service,
+        polling_interval_seconds=polling_interval_seconds,
     )
     return service, job_manager, checkpoint_service
 
@@ -42,6 +46,15 @@ def test_start_training_requires_dataset_without_generator() -> None:
         service.start_training(
             TrainingConfig(use_data_generator=False, dataset_id=None)
         )
+
+###############################################################################
+def test_training_responses_use_injected_polling_interval() -> None:
+    service, _, _ = build_service(polling_interval_seconds=2.5)
+
+    started = service.start_training(TrainingConfig(use_data_generator=True))
+
+    assert started["poll_interval"] == 2.5
+    assert service.get_status()["poll_interval"] == 2.5
 
 ###############################################################################
 def test_resume_training_starts_resume_job() -> None:

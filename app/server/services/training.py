@@ -10,8 +10,7 @@ from server.common.utils.trainingstats import (
     sanitize_training_stats,
 )
 from server.common.utils.types import coerce_finite_float, coerce_finite_int
-from server.configurations import DatabaseSettings
-from server.configurations.startup import get_poll_interval_seconds
+from server.contracts.configuration import DatabaseSettings
 from server.contracts.training import ResumeConfig, TrainingConfig
 from server.services.training_worker import (
     ProcessWorker,
@@ -466,7 +465,7 @@ class TrainingService:
             "message": "Training started successfully",
             "job_id": job_id,
             "job_type": self.JOB_TYPE,
-            "poll_interval": get_poll_interval_seconds(),
+            "poll_interval": self.polling_interval_seconds,
         }
 
     # -------------------------------------------------------------------------
@@ -519,7 +518,7 @@ class TrainingService:
             "message": f"Resuming training from {checkpoint}",
             "job_id": job_id,
             "job_type": self.JOB_TYPE,
-            "poll_interval": get_poll_interval_seconds(),
+            "poll_interval": self.polling_interval_seconds,
         }
 
     # -------------------------------------------------------------------------
@@ -530,7 +529,7 @@ class TrainingService:
             "latest_stats": self.training_state.latest_stats,
             "history": self.training_state.history_points,
             "latest_env": self.training_state.latest_env,
-            "poll_interval": get_poll_interval_seconds(),
+            "poll_interval": self.polling_interval_seconds,
         }
 
     # -------------------------------------------------------------------------
@@ -561,8 +560,10 @@ class TrainingService:
         job_status = self.job_manager.get_job_status(job_id)
         if job_status is None:
             raise KeyError(f"Job not found: {job_id}")
-        poll_interval = get_poll_interval_seconds()
-        return {**job_status, "poll_interval": poll_interval}
+        return {
+            **job_status,
+            "poll_interval": self.polling_interval_seconds,
+        }
 
     # -------------------------------------------------------------------------
     def delete_job(self, job_id: str) -> dict[str, Any]:
