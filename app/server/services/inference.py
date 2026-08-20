@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from server.domain.inference import (
+from server.contracts.inference import (
     InferenceBetUpdateRequest,
     InferenceStartRequest,
     InferenceStepRequest,

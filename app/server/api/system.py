@@ -5,7 +5,7 @@ import os
 from fastapi import APIRouter, status
 
 from server.common.constants import FASTAPI_VERSION
-from server.domain.system import HealthResponse
+from server.contracts.system import HealthResponse
 
 router = APIRouter(tags=["system"])
 

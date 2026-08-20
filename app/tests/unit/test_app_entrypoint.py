@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import SQLAlchemyError
 
-from server.domain.configuration import (
+from server.contracts.configuration import (
     DatabaseSettings,
     DeviceSettings,
     JobsSettings,

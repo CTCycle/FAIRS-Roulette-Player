@@ -1,13 +1,13 @@
 ## TypeScript
 
-Last updated: 2026-08-02
+Last updated: 2026-08-20
 
 ## Baseline
 
 - Keep strict TypeScript settings enabled through the project `tsconfig` files.
 - The current frontend baseline is React `19.2`, React Router `7.10`, TypeScript `5.9`, and Vite `7.2`.
 - Avoid `any`.
-- Define domain-level types in `app/client/src/types` or the closest feature module.
+- Define frontend state and API contract types in `app/client/src/types` or the closest feature module. These are client contracts, not shared Python domain entities.
 - Keep API payload parsing defensive through the existing parser and normalizer utilities.
 
 ## Frontend Architecture Rules
@@ -17,6 +17,8 @@ Last updated: 2026-08-02
 - Page orchestration belongs in `app/client/src/pages`.
 - Reusable view units belong in `app/client/src/components`.
 - Keep API requests scoped to the consuming feature unless extraction clearly reduces duplication.
+- Keep fetch, response parsing, loading, and error state together in a feature hook/helper when extracting them reduces duplication; do not create a generic client layer for one endpoint.
+- Treat `app/shared/openapi.json` as the backend contract source for route and payload review, while keeping defensive parsing at the browser boundary.
 
 ## React Patterns
 

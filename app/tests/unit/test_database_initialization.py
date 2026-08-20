@@ -5,7 +5,7 @@ from pathlib import Path
 
 from sqlalchemy import create_engine, inspect
 
-from server.domain.configuration import DatabaseSettings
+from server.contracts.configuration import DatabaseSettings
 from server.repositories.database import initializer
 from server.repositories.schemas.models import Base
 

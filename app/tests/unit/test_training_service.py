@@ -4,7 +4,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from server.domain.training import ResumeConfig, TrainingConfig
+from server.contracts.training import ResumeConfig, TrainingConfig
 from server.services.training import TrainingService
 
 ###############################################################################

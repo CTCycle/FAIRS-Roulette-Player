@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from server.domain.upload import DatasetKind
+from server.contracts.upload import DatasetKind
 from server.repositories.serialization.data import DataSerializer
 
 ###############################################################################

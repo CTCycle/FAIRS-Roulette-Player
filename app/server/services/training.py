@@ -10,7 +10,7 @@ from server.common.utils.trainingstats import (
 )
 from server.common.utils.types import coerce_finite_float, coerce_finite_int
 from server.configurations.startup import get_poll_interval_seconds
-from server.domain.training import ResumeConfig, TrainingConfig
+from server.contracts.training import ResumeConfig, TrainingConfig
 from server.learning.training.worker import (
     ProcessWorker,
     run_resume_training_process,

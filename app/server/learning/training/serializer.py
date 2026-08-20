@@ -4,18 +4,17 @@ from typing import Any
 
 import pandas as pd
 
+from server.common.roulette import encode_roulette_series
 from server.learning.training.generator import RouletteSyntheticGenerator
 from server.repositories.database.backend import FAIRSDatabase
 from server.repositories.queries.training import TrainingRepositoryQueries
 from server.repositories.serialization.training import TrainingDataSerializer
-from server.services.process import RouletteSeriesEncoder
 
 ###############################################################################
 class DataSerializerExtension:
 
     # -------------------------------------------------------------------------
     def __init__(self) -> None:
-        self.encoder = RouletteSeriesEncoder()
         database = FAIRSDatabase()
         queries = TrainingRepositoryQueries(database)
         self.training_serializer = TrainingDataSerializer(queries)
@@ -33,7 +32,7 @@ class DataSerializerExtension:
         use_generator = configuration.get("use_data_generator", False)
         if use_generator:
             dataset = self.generate_synthetic_dataset(configuration)
-            dataset = self.encoder.encode(dataset)
+            dataset = encode_roulette_series(dataset)
             dataset = dataset.rename(columns={"outcome": "extraction"})
             return dataset, True
 

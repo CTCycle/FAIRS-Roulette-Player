@@ -1,143 +1,303 @@
 ## Execution And Data Flow
 
-Last updated: 2026-08-13
+Last updated: 2026-08-20
 
-## Backend Layers
+## Current Layering
 
-- API layer:
-  - `app/server/api/*`
-  - validates payloads, maps exceptions, and delegates orchestration
-- Service layer:
-  - `app/server/services/*`
-  - coordinates jobs, training, inference, dataset import, and checkpoint lifecycle
-- Domain layer:
-  - `app/server/domain/*`
-  - defines request, response, system-status, and configuration contracts
-- Repository layer:
-  - `app/server/repositories/queries/*`
-  - `app/server/repositories/serialization/*`
-  - handles persistence access and data transformation
-- Database backend layer:
-  - `app/server/repositories/database/*`
-  - abstracts SQLite and PostgreSQL behavior
-- ML execution layer:
-  - `app/server/learning/*`
-  - executes training and inference logic
+The current application is a layered monolith with an explicit composition root. The names below describe ownership, not a claim that every package is framework-independent.
 
-## Application Startup Flow
+- **Interface:** `app/server/api/*` validates HTTP input, calls an application service, validates the response, and translates selected exceptions to HTTP status codes.
+- **Contracts:** `app/server/contracts/*` contains Pydantic request/response contracts and validated settings dataclasses/models shared between interface and application code.
+- **Application services:** `app/server/services/*` coordinates dataset import, checkpoints, training lifecycle, inference sessions, startup checks, and in-process job/session state.
+- **Learning execution:** `app/server/learning/*` contains roulette betting rules, neural models, training algorithms, inference players, and process worker entrypoints.
+- **Persistence adapters:** `app/server/repositories/*` owns SQLAlchemy schema, engines, transaction scopes, dataset/inference repositories, training queries, and checkpoint/model serialization.
+- **Configuration:** `app/server/configurations/*` resolves `.env` and JSON settings; startup and selected ML classes read the resolved settings.
+- **Shared primitives:** `app/server/common/*` contains paths, constants, logging, normalization, error mapping, and the shared roulette feature transformation.
 
-`app/server/app.py` constructs the app with routers and client routes, then its lifespan performs runtime startup in this order:
+## Current Module Dependency Diagram
 
-1. Resolve server settings.
-2. Run startup validations.
-3. In SQLite mode, create the database only when its configured file is missing; in PostgreSQL mode, probe the existing connection with `SELECT 1`.
-4. Construct the database handle.
-5. Construct the serializers, job manager, checkpoint service, and domain services, then attach them and the database to `application.state`.
+```mermaid
+flowchart TD
+    Root[app.py\ncomposition root]
+    API[api]
+    Contracts[contracts]
+    Config[configurations]
+    Services[services]
+    Learning[learning]
+    Repos[repositories]
+    Common[common]
+    DB[database adapters + schemas]
+    Files[checkpoint/log/data files]
+    ThirdParty[FastAPI, Pydantic, SQLAlchemy, Keras, Torch, pandas]
 
-Router mounting and SPA/docs route configuration happen during app construction before the lifespan runs.
+    Root --> API
+    Root --> Config
+    Root --> Services
+    Root --> Repos
+    API --> Contracts
+    API --> Config
+    API --> Services
+    API --> Common
+    Services --> Contracts
+    Services --> Config
+    Services --> Learning
+    Services --> Repos
+    Services --> Common
+    Learning --> Config
+    Learning --> Repos
+    Learning --> Common
+    Repos --> Config
+    Repos --> DB
+    Repos --> Learning
+    Repos --> Common
+    DB --> ThirdParty
+    API --> ThirdParty
+    Learning --> ThirdParty
+    Services --> Files
+    Repos --> Files
+```
 
-## Typical Orchestration Chains
+The `Learning --> Repos`, `Learning --> Config`, and `Repos --> Learning` edges are the remaining coupling points to address incrementally. The `Repos --> Learning` edge is currently used to register custom Keras layers when loading checkpoints; it is not a database relationship.
 
-- Dataset upload:
-  - `api/upload.py`
-  - `DatasetService`
-  - `DatasetImportService`
-  - `DataSerializer`
-  - `DatasetRepository`
-  - `FAIRSDatabase`
-- Synthetic training data:
-  - `DataSerializerExtension`
-  - `RouletteSyntheticGenerator` emits canonical `outcome` values in the range `0..36`
-  - `RouletteSeriesEncoder` adds wheel and color features
-  - the training serializer normalizes the encoded outcome column to `extraction`, matching the training environment contract
-- Training start or resume:
-  - `api/training.py`
-  - `TrainingService`
-  - `JobManager`
-  - `ProcessWorker`
-  - learning training modules
-  - checkpoint serializer
-- Inference session:
-  - `api/inference.py`
-  - `InferenceService`
-  - `RoulettePlayer`
-  - `CheckpointService`
-  - `DataSerializer`
-- Dataset list or delete:
-  - `api/datasets.py`
-  - `DatasetService`
-  - `DataSerializer`
-  - `DatasetRepository`
+## Pragmatic Target Dependency Diagram
 
-## Core Module Responsibilities
+The target keeps the single-process application and existing packages. It moves orchestration and adapter construction toward application composition without introducing generic ports or speculative layers.
 
-- `app/server/app.py`
-  - FastAPI construction, dependency wiring, router mounting, and SPA serving
-- `app/server/domain/system.py`
-  - typed health and root-status response contracts
-- `app/server/common/api_errors.py`
-  - shared HTTP exception mapping helpers
-- `app/server/common/constants.py`
-  - shared constants including roulette wheel maps (position, color, color code)
-- `app/server/common/session.py`
-  - session identifier normalization and validation
-- `app/server/configurations/startup.py`
-  - cached settings and configuration access
-- `app/server/services/jobs.py`
-  - in-process job registry, `JobState` dataclass, progress tracking, and cancellation
-- `app/server/services/training.py`
-  - training lifecycle, worker management, and resume behavior
-- `app/server/services/inference.py`
-  - session state machine and session-step persistence
-- `app/server/services/checkpoints.py`
-  - checkpoint resolution, metadata, listing, deletion, model loading, and strategy model loading
-- `app/server/services/startup_validation.py`
-  - runtime pre-flight checks and storage directory creation
-- `app/server/repositories/schemas/models.py`
-  - SQLAlchemy schema definitions and constraints
-- `app/server/repositories/database/initializer.py`
-  - database initialization and embedded-vs-external setup rules
-- `app/server/repositories/database/utils.py`
-  - database utility functions: engine normalization, datetime coercion, Postgres connect-arg builder
-- `app/server/repositories/datasets.py`
-  - atomic dataset replacement, summaries, reads, and cascade deletion
-- `app/server/repositories/inference.py`
-  - inference session and step persistence
-- `app/server/repositories/queries/training.py`
-  - training-oriented database queries and checkpoint-adjacent persistence operations
-- `app/server/repositories/serialization/model.py`
-  - model and checkpoint serialization helpers
-- `app/server/repositories/serialization/training.py`
-  - training configuration and result serialization helpers
-- `app/server/learning/training/generator.py`
-  - deterministic synthetic roulette-series generation from the training configuration
-- `app/server/learning/training/serializer.py`
-  - synthetic/data-backed series selection and canonical training-column normalization
+```mermaid
+flowchart TD
+    Root[Composition root]
+    API[HTTP interface]
+    Contracts[Boundary contracts]
+    Services[Application services]
+    LearningCore[Learning core\nmodels, betting, environment]
+    Worker[Application-owned training worker]
+    Persistence[Persistence and checkpoint adapters]
+    Config[Explicit runtime configuration]
+    External[Frameworks and external systems]
 
-## Concurrency Model
+    Root --> API
+    Root --> Services
+    Root --> Persistence
+    Root --> Config
+    API --> Contracts
+    API --> Services
+    Services --> Contracts
+    Services --> LearningCore
+    Services --> Persistence
+    Services --> Config
+    Worker --> LearningCore
+    Worker --> Persistence
+    Worker --> Config
+    LearningCore --> Contracts
+    Persistence --> External
+    Config --> External
+```
 
-- Most FastAPI handlers are synchronous `def` handlers.
-- File upload is asynchronous only where non-blocking file reads matter.
-- Long-running training is isolated from request handling:
-  - `JobManager` tracks jobs in background threads
-  - heavy training work runs in a separate process managed by `TrainingService`
-- Inference is synchronous and stateful per active session.
-- No async database driver or event-loop-based persistence model is used.
+`Worker` represents a future ownership move for process-specific data/configuration orchestration. It is a recommendation, not an implementation in this change. The current code remains valid for local execution and is documented as such.
 
-## Runtime Observability
+## Startup Flow
 
-- The backend writes timestamped `FAIRS_*.log` files under the configured log directory.
-- `FAIRS_LOG_DIR` can isolate logs for tests or diagnostics.
-- `GET /api/health` exposes a lightweight readiness check with application version and mode.
+`app/server/app.py` constructs the FastAPI object and routes before lifespan startup. The lifespan then:
 
-## Frontend Interaction Pattern
+1. Resolves server settings.
+2. Runs startup validations and creates required storage directories.
+3. Creates a missing SQLite schema, or probes the configured PostgreSQL connection.
+4. Constructs `FAIRSDatabase`, dataset/inference repositories, and the `DataSerializer` persistence facade.
+5. Constructs `JobManager`, `CheckpointService`, `DatasetService`, `TrainingService`, and `InferenceService`.
+6. Stores those runtime objects on `application.state` for FastAPI dependency providers.
 
-- The frontend talks to the backend through `/api/*`.
-- Route composition lives in `app/client/src/App.tsx`.
-- Shared app state is context-driven through `AppStateContext`.
-- Feature-local hooks and components own most request and view orchestration.
+The `server` package currently loads the environment during import, and path/logger modules read environment-derived values at import time. This is a documented P1 migration concern because it makes import order observable; changing it requires a deliberate bootstrap refactor.
+
+## Training Flow
+
+```mermaid
+sequenceDiagram
+    participant Browser
+    participant Client as React client
+    participant API as FastAPI training router
+    participant Service as TrainingService
+    participant Jobs as JobManager
+    participant Worker as ProcessWorker
+    participant ML as DQNTraining
+    participant Data as Training data adapter
+    participant DB as SQLite/PostgreSQL
+    participant Files as Checkpoint files
+
+    Browser->>Client: Configure training
+    Client->>API: POST /api/training/start
+    API->>Service: start_training(TrainingConfig)
+    Service->>Jobs: start_job(run_training_job)
+    Jobs-->>Service: job_id
+    Service-->>API: 202 JobStartResponse
+    API-->>Client: job_id and poll interval
+    Service->>Worker: start training process
+    Worker->>ML: run configured training
+    ML->>Data: load dataset or generate series
+    Data->>DB: Read training outcomes when dataset-backed
+    DB-->>Data: rows and roulette features
+    loop While job is active
+        Client->>API: GET /api/training/status
+        API->>Service: get_status()
+        Service->>Jobs: read progress/result
+        Service-->>API: status and history
+        API-->>Client: TrainingStatusResponse
+        Worker-->>Service: progress messages
+    end
+    ML->>Files: Save model/configuration/history
+    Worker-->>Service: result or error
+```
+
+Training is not an event-queue system: a `JobManager` thread monitors a separate worker process, and the browser polls status endpoints. No WebSocket or durable job table exists.
+
+## Inference Flow
+
+```mermaid
+sequenceDiagram
+    participant Client as React client
+    participant API as FastAPI inference router
+    participant Service as InferenceService
+    participant Checkpoint as CheckpointService
+    participant Model as ModelSerializer
+    participant Data as DataSerializer facade
+    participant Dataset as DatasetRepository
+    participant Player as RoulettePlayer
+    participant Repo as InferenceRepository
+    participant DB as SQLite/PostgreSQL
+
+    Client->>API: POST /api/inference/sessions/start
+    API->>Service: start_session(InferenceStartRequest)
+    Service->>Checkpoint: resolve and load checkpoint
+    Checkpoint->>Model: load model/configuration
+    Model-->>Checkpoint: model and configuration
+    Service->>Data: load dataset
+    Data->>Dataset: get(dataset_id)
+    Dataset->>DB: SELECT dataset
+    DB-->>Dataset: dataset metadata
+    Service->>Player: construct player with model and data facade
+    Player->>Data: load context outcomes as needed
+    Service->>Repo: persist session header and initial prediction
+    Repo->>DB: upsert session and step
+    Service-->>API: session and prediction
+    API-->>Client: InferenceStartResponse
+    Client->>API: POST next, step, bet, clear, or shutdown
+    API->>Service: apply session command
+    Service->>Player: predict or apply observed extraction
+    Service->>Repo: persist resulting step/state
+    Service-->>API: typed response
+    API-->>Client: response
+```
+
+Active sessions are held in `InferenceState` with a bounded in-memory session count. Database rows provide history, not a rehydration mechanism for the live `RoulettePlayer` object.
+
+## Important Class Relationships
+
+```mermaid
+classDiagram
+    class TrainingService {
+        +start_training(config)
+        +resume_training(config)
+        +get_status()
+        +stop()
+    }
+    class TrainingState {
+        +latest_stats
+        +history_points
+        +current_job_id
+    }
+    class JobManager {
+        +start_job()
+        +get_job_status()
+        +cancel_job()
+    }
+    class JobState {
+        +job_id
+        +status
+        +progress
+        +result
+    }
+    class ProcessWorker {
+        +start()
+        +poll()
+        +stop()
+        +terminate()
+    }
+    class DQNTraining {
+        +train()
+    }
+    class DataSerializerExtension {
+        +get_training_series(config)
+    }
+    class TrainingDataSerializer {
+        +load_training_series()
+    }
+    class TrainingRepositoryQueries {
+        +load_training_dataset()
+    }
+    class InferenceService {
+        +start_session(payload)
+        +next_prediction(session_id)
+        +step_session(session_id, payload)
+    }
+    class InferenceState {
+        +sessions
+        +max_sessions
+    }
+    class InferenceSession {
+        +predict()
+        +step(extraction)
+        +update_bet(amount)
+    }
+    class RoulettePlayer {
+        +predict_next()
+        +update_with_true_extraction()
+    }
+    class CheckpointService
+    class ModelSerializer
+    class DataSerializer
+    class DatasetRepository
+    class InferenceRepository
+    class FAIRSDatabase
+
+    TrainingService *-- TrainingState
+    TrainingService --> JobManager
+    TrainingService --> ProcessWorker
+    JobManager *-- JobState
+    ProcessWorker --> DQNTraining
+    DQNTraining --> DataSerializerExtension
+    DataSerializerExtension --> TrainingDataSerializer
+    TrainingDataSerializer --> TrainingRepositoryQueries
+    TrainingRepositoryQueries --> FAIRSDatabase
+    InferenceService *-- InferenceState
+    InferenceState *-- InferenceSession
+    InferenceSession *-- RoulettePlayer
+    InferenceService --> CheckpointService
+    InferenceService --> DataSerializer
+    InferenceService --> InferenceRepository
+    CheckpointService --> ModelSerializer
+    DataSerializer --> DatasetRepository
+    DataSerializer --> InferenceRepository
+    DatasetRepository --> FAIRSDatabase
+    InferenceRepository --> FAIRSDatabase
+```
+
+## Responsibility and Duplication Notes
+
+- Validation at the API boundary, service boundary, and database constraint boundary is intentional defense in depth; it is not automatically accidental duplication.
+- Roulette feature derivation is now one shared transformation in `server.common.roulette`.
+- `DataSerializer` is a pass-through facade over dataset and inference repositories. It is useful as a narrow service dependency today but is a P2 candidate for consolidation or renaming.
+- `TrainingService` and `InferenceService` are broad because they own lifecycle state and orchestration; split them only when a concrete change isolates a cohesive responsibility.
+- Frontend feature components currently combine network calls, parsing, local state, and rendering. Extract feature API hooks incrementally when those areas change; a wholesale rewrite is not justified by the current local runtime.
+
+## Concurrency and Observability
+
+- Most handlers are synchronous `def` handlers; file upload is asynchronous for file reads.
+- Training runs outside the request thread in a worker process monitored by a job thread.
+- Inference is synchronous and stateful per active process.
+- Logs are timestamped `FAIRS_*.log` files under the configured data/log root.
+- `GET /api/health` is a lightweight readiness check exposing version and runtime mode.
 
 ## Related Files
 
-- Read `backend_api.md` for the endpoint inventory.
-- Read `persistence.md` for storage surfaces used by these flows.
+- Read `backend_api.md` for the endpoint inventory and transport contract.
+- Read `persistence.md` for relational tables and filesystem storage.
+- Read `findings_and_remediation.md` for evidence, priorities, and migration steps.

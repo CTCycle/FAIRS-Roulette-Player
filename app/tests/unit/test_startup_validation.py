@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from server.domain.configuration import (
+from server.contracts.configuration import (
     DatabaseSettings,
     DeviceSettings,
     JobsSettings,

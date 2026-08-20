@@ -5,7 +5,7 @@ from functools import lru_cache
 from server.common import path as shared_paths
 from server.configurations.environment import load_environment
 from server.configurations.management import ConfigurationManager
-from server.domain.configuration import ServerSettings
+from server.contracts.configuration import ServerSettings
 
 ###############################################################################
 @lru_cache(maxsize=1)

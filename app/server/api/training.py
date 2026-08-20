@@ -7,8 +7,8 @@ from server.common.api_errors import (
     http_exception_for_exception,
 )
 from server.configurations.dependencies import get_training_service
-from server.domain.jobs import JobCancelResponse, JobStartResponse, JobStatusResponse
-from server.domain.training import (
+from server.contracts.jobs import JobCancelResponse, JobStartResponse, JobStatusResponse
+from server.contracts.training import (
     TrainingCheckpointListResponse,
     ResumeConfig,
     TrainingCheckpointDeleteResponse,
