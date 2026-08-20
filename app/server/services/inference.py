@@ -188,6 +188,7 @@ class InferenceService:
         dataset = self.data_store.load_dataset(dataset_id)
         if dataset is None:
             raise FileNotFoundError(f"Dataset '{dataset_id}' was not found.")
+        dataset_context = self.data_store.load_dataset_outcomes(dataset_id)
 
         model, train_config, _, _ = self.checkpoint_service.load_checkpoint(checkpoint)
         configuration = {
@@ -234,8 +235,7 @@ class InferenceService:
             model=model,
             configuration=configuration,
             session_id=session_id,
-            dataset_id=dataset_id,
-            data_store=self.data_store,
+            dataset_context=dataset_context,
             dataset_source=payload.dataset_source,
             strategy_model=strategy_model,
         )

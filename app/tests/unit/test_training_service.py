@@ -6,7 +6,7 @@ from unittest.mock import Mock
 import pytest
 
 from server.contracts.training import ResumeConfig, TrainingConfig
-from server.learning.training.worker import run_training_process
+from server.services.training_worker import run_training_process
 from server.services import training as training_module
 from server.services.training import TrainingService
 

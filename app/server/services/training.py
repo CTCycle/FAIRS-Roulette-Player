@@ -13,7 +13,7 @@ from server.common.utils.types import coerce_finite_float, coerce_finite_int
 from server.configurations import DatabaseSettings
 from server.configurations.startup import get_poll_interval_seconds
 from server.contracts.training import ResumeConfig, TrainingConfig
-from server.learning.training.worker import (
+from server.services.training_worker import (
     ProcessWorker,
     run_resume_training_process,
     run_training_process,

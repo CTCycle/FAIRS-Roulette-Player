@@ -24,17 +24,6 @@ class EmptyLogitsModel:
         return np.zeros((1, 0), dtype=np.float32)
 
 ###############################################################################
-class DummyDataStore:
-
-    # -------------------------------------------------------------------------
-    def __init__(self, outcomes: list[int]) -> None:
-        self._frame = pd.DataFrame({"outcome": outcomes})
-
-    # -------------------------------------------------------------------------
-    def load_dataset_outcomes(self, dataset_id: int) -> pd.DataFrame:  # noqa: ARG002
-        return self._frame
-
-###############################################################################
 def test_fallback_strategy_is_deterministic_when_model_disabled() -> None:
     os.environ.setdefault("KERAS_BACKEND", "torch")
     from server.learning.inference.player import RoulettePlayer
@@ -53,8 +42,7 @@ def test_fallback_strategy_is_deterministic_when_model_disabled() -> None:
         model=DummyModel(),  # type: ignore[arg-type]
         configuration=config,
         session_id="session",
-        dataset_id=1,
-        data_store=DummyDataStore([1, 2, 3, 4, 5, 6, 7, 8]),
+        dataset_context=pd.DataFrame({"outcome": [1, 2, 3, 4, 5, 6, 7, 8]}),
     )
 
     prediction = player.predict_next()
@@ -80,8 +68,7 @@ def test_predict_next_raises_when_model_returns_empty_logits() -> None:
         model=EmptyLogitsModel(),  # type: ignore[arg-type]
         configuration=config,
         session_id="session",
-        dataset_id=1,
-        data_store=DummyDataStore([1, 2, 3, 4, 5, 6, 7, 8]),
+        dataset_context=pd.DataFrame({"outcome": [1, 2, 3, 4, 5, 6, 7, 8]}),
     )
     with pytest.raises(ValueError, match="empty logits"):
         player.predict_next()
@@ -102,8 +89,7 @@ def test_predict_next_requires_minimum_context_length() -> None:
         model=DummyModel(),  # type: ignore[arg-type]
         configuration=config,
         session_id="session",
-        dataset_id=1,
-        data_store=DummyDataStore([1, 2, 3]),
+        dataset_context=pd.DataFrame({"outcome": [1, 2, 3]}),
     )
     with pytest.raises(ValueError, match="at least the perceptive field size"):
         player.predict_next()
@@ -124,8 +110,7 @@ def test_update_with_true_extraction_validates_input() -> None:
         model=DummyModel(),  # type: ignore[arg-type]
         configuration=config,
         session_id="session",
-        dataset_id=1,
-        data_store=DummyDataStore([1, 2, 3, 4, 5, 6, 7, 8]),
+        dataset_context=pd.DataFrame({"outcome": [1, 2, 3, 4, 5, 6, 7, 8]}),
     )
     player.predict_next()
 
