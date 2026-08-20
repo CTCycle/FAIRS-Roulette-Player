@@ -13,7 +13,6 @@ import pandas as pd
 from keras import Model
 from keras.utils import set_random_seed
 
-from server.configurations.startup import get_poll_interval_seconds
 from server.common.utils.logger import logger
 from server.common.utils.trainingstats import (
     coerce_optional_finite_float,
@@ -53,6 +52,7 @@ class DQNTraining:
         configuration: dict[str, Any],
         session: dict | None = None,
         stop_event: Any | None = None,
+        polling_interval_seconds: float = 1.0,
     ) -> None:
         set_random_seed(configuration.get("training_seed", 42))
         self.batch_size = configuration.get("batch_size", 32)
@@ -136,7 +136,7 @@ class DQNTraining:
             }
 
         # Progress update related
-        self.polling_interval_ms = int(get_poll_interval_seconds() * 1000)
+        self.polling_interval_ms = int(max(0.25, float(polling_interval_seconds)) * 1000)
         self.last_ws_update_time = 0.0
         self.is_cancelled = False
         self.stop_event = stop_event

@@ -4,7 +4,7 @@ Last updated: 2026-08-20
 
 ## Current Persistence Model
 
-The relational schema is defined directly by SQLAlchemy models in `app/server/repositories/schemas/models.py`. The repository contains no Alembic or other migration history. `Base.metadata.create_all()` creates a missing schema during explicit initialization; normal startup does not validate or migrate an existing database.
+The relational schema is defined directly by SQLAlchemy models in `app/server/repositories/schemas/models.py`. The repository contains no Alembic or other migration history. `Base.metadata.create_all()` creates a missing schema during explicit initialization; normal startup performs a non-destructive structural compatibility check but does not migrate an existing database. SQLite schema creation records version `1` with `PRAGMA user_version`; a newer unsupported version fails fast.
 
 ```mermaid
 erDiagram
@@ -91,30 +91,31 @@ erDiagram
 ## Storage Surfaces
 
 - **Embedded relational data:** `app/resources/database.db` by default, or `<FAIRS_DATA_DIR>/database.db` when a custom data root is configured.
-- **External relational data:** PostgreSQL selected through `settings/.env` and validated at startup with a connection probe.
+- **External relational data:** PostgreSQL selected through `settings/.env`, validated at startup with a connection probe and required table/column check.
 - **Checkpoints:** `<data-root>/checkpoints/<checkpoint_id>/` containing model files and JSON configuration/history.
 - **Logs:** `<data-root>/logs/*.log`.
 
-The checkpoint configuration stores values such as `dataset_id`, but the database cannot enforce a relationship to a checkpoint directory. This is a deliberate cross-storage boundary today and creates a lifecycle risk if a dataset is deleted while a checkpoint still expects it.
+The checkpoint configuration stores values such as `dataset_id`, but the database cannot enforce a relationship to a checkpoint directory. Dataset deletion therefore scans checkpoint metadata and returns a conflict when a readable checkpoint references the dataset; unreadable metadata also blocks deletion. Immutable dataset snapshots remain deferred.
 
 ## Initialization Rules
 
-- SQLite startup creates the schema only when the configured database file is missing. An existing file is not reset, reseeded, migrated, or schema-validated during normal startup.
-- PostgreSQL startup does not create the database or schema. It only executes a non-mutating connection probe.
+- SQLite startup creates the schema only when the configured database file is missing. An existing file is not reset, reseeded, or migrated; it is structurally validated during normal startup.
+- PostgreSQL startup does not create the database or schema. It executes a non-mutating connection probe followed by structural validation.
 - The explicit launcher/database initializer creates or ensures the configured schema.
+- The current marker is a compatibility check, not a migration runner; future incompatible changes still require an explicit migration workflow.
 - There is no seed/catalog workflow.
 
 ## Persistence Boundaries
 
 - API modules do not embed direct database logic.
-- Dataset and inference operations flow through `DatasetRepository` and `InferenceRepository`, exposed to services through the `DataSerializer` facade.
-- Training reads use `TrainingRepositoryQueries` and `TrainingDataSerializer`.
-- Model/checkpoint files use `ModelSerializer` and `CheckpointService`, outside the relational schema.
+- Dataset and inference operations flow through `DatasetRepository` and `InferenceRepository`, coordinated for services by `DataStore`.
+- Training reads use `TrainingRepositoryQueries` and `TrainingSeriesLoader`, constructed by the application-owned `TrainingDataService` inside the worker process.
+- Model/checkpoint files use `CheckpointStorage` and `CheckpointService`, outside the relational schema.
 - Schema, serializer, and API contract changes should be reviewed together.
 
 ## Architectural Assessment
 
-The relational ownership and cascade rules are coherent for datasets, outcomes, sessions, and steps. The main persistence risks are the absence of migration/version checks for existing databases and the unenforced relationship between filesystem checkpoints and dataset lifecycle. Both are documented as incremental P1 recommendations; no schema change is included in this review.
+The relational ownership and cascade rules are coherent for datasets, outcomes, sessions, and steps. Current startup checks make stale/newer schema state observable, and checkpoint-aware dataset deletion prevents the known cross-storage reference hazard. Migration history, immutable dataset snapshots, and a relational checkpoint reference remain deferred; no schema or persisted checkpoint format change is included in this review.
 
 ## Related Files
 

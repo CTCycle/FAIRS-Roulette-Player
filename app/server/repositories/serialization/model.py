@@ -13,7 +13,7 @@ from server.common import path as shared_paths
 from server.common.utils.logger import logger
 
 ###############################################################################
-class ModelSerializer:
+class CheckpointStorage:
 
     # -------------------------------------------------------------------------
     def __init__(self) -> None:

@@ -1,6 +1,5 @@
-from __future__ import annotations
+"""FAIRS backend package.
 
-from server.configurations.environment import load_environment
-
-
-load_environment()
+Runtime configuration is loaded by an explicit application entry point rather
+than as a package-import side effect.
+"""

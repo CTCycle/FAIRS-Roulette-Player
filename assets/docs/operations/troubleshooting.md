@@ -1,6 +1,6 @@
 ## Troubleshooting
 
-Last updated: 2026-08-19
+Last updated: 2026-08-20
 
 ## Startup Problems
 
@@ -24,8 +24,10 @@ Last updated: 2026-08-19
 ## Configuration Problems
 
 - If database startup fails, confirm the embedded-vs-external database settings are internally consistent.
-- If PostgreSQL mode is enabled, select option 4 in `start_on_windows.ps1` once to create or initialize the configured database and schema. Normal startup only probes the existing database; it never creates or resets it. Invalid or unavailable connection settings therefore stop startup and must be corrected before relaunching.
+- If PostgreSQL mode is enabled, select option 4 in `start_on_windows.ps1` once to create or initialize the configured database and schema. Normal startup probes and structurally validates the existing database; it never creates or resets it. Invalid or unavailable connection settings therefore stop startup and must be corrected before relaunching.
 - If startup reports an unsupported database engine, set external PostgreSQL configuration to `DATABASE_ENGINE=postgresql+psycopg`; legacy aliases are not accepted.
+- If startup reports an incompatible schema, compare the configured database with the current SQLAlchemy models and run the explicit database initialization/migration workflow. Startup does not reset or migrate an existing database; a newer SQLite `PRAGMA user_version` is also rejected.
+- If training dataset deletion reports a checkpoint conflict, inspect the listed checkpoint metadata and either retain the dataset or remove/update the referencing checkpoint through the normal checkpoint workflow. Unreadable checkpoint metadata is treated as a conflict for safety.
 
 ## Related Files
 

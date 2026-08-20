@@ -16,7 +16,7 @@ from server.learning.betting.types import (
     normalize_strategy_id,
     strategy_name,
 )
-from server.repositories.serialization.data import DataSerializer
+from server.repositories.serialization.data import DataStore
 from server.learning.training.environment import BetsAndRewards
 
 ###############################################################################
@@ -29,7 +29,7 @@ class RoulettePlayer:
         configuration: dict[str, Any],
         session_id: str,
         dataset_id: int,
-        serializer: DataSerializer,
+        data_store: DataStore,
         dataset_source: str | None = None,
         strategy_model: Model | None = None,
     ) -> None:
@@ -80,8 +80,8 @@ class RoulettePlayer:
             fallback_strategy_id=self.fixed_strategy_id,
         )
 
-        self.serializer = serializer
-        self.context = self.serializer.load_dataset_outcomes(dataset_id)
+        self.data_store = data_store
+        self.context = self.data_store.load_dataset_outcomes(dataset_id)
 
     # -------------------------------------------------------------------------
     def initialize_states(self) -> None:

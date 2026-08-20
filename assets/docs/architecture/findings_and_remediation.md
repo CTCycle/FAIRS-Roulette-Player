@@ -6,7 +6,7 @@ Last updated: 2026-08-20
 
 This review traced the checked-in Python and TypeScript source, FastAPI composition/wiring, route decorators, SQLAlchemy models, repository calls, filesystem checkpoint paths, frontend imports and fetch calls, tests, CI, and existing documentation. Dependency statements below are derived from those sources. Generated bundles, dependency directories, caches, and screenshots were excluded from the structural inventory.
 
-The current baseline is healthy: backend unit tests, Ruff, frontend lint, and the frontend production build pass. No P0 issue was found, and no confirmed circular dependency exists in the meaningful application module graph.
+The current baseline is healthy: backend unit tests, Ruff, frontend lint, TypeScript compilation, and the frontend production build pass. No P0 issue was found, and no confirmed circular dependency exists in the meaningful application module graph.
 
 ## Current State
 
@@ -39,21 +39,21 @@ See `system_overview.md`, `execution_and_data_flow.md`, and `persistence.md` for
 | --- | --- | --- | --- | --- | --- |
 | F-01 | P1 | `app/server/domain/*` (renamed to `contracts/*`) | The package contained Pydantic transport/configuration contracts, not framework-independent domain entities. The name made dependency direction and ownership ambiguous for new contributors. | Use `server.contracts` and describe these objects as boundary contracts. Do not create a speculative domain layer. | Resolved now |
 | F-02 | P1 | Former `services/process.py`, `learning/training/serializer.py`, `repositories/queries/training.py` | Roulette wheel/color feature derivation existed in both learning-adjacent and repository code. Drift could produce different training features for generated versus persisted data. | Use one narrow `common.roulette.encode_roulette_series` transformation. | Resolved now |
-| F-03 | P1 | `server/__init__.py`, `common/path.py`, `common/utils/logger.py`, `configurations/environment.py` | Importing the package loads/creates `.env` and initializes paths/logging from environment variables. Import order therefore has observable filesystem and configuration side effects. | Introduce an explicit bootstrap boundary: load environment and construct runtime paths/logging from the composition root, then pass settings to consumers. Preserve launcher behavior and migrate tests incrementally. | Incremental |
-| F-04 | P1 | `learning/training/serializer.py`, `learning/training/worker.py`, `learning/models/qnet.py`, `learning/training/fitting.py` | ML execution code constructs `FAIRSDatabase` and repository queries and reads global server settings. This couples computation to persistence/configuration and makes isolated learning tests harder. | Move process/data orchestration toward an application-owned worker and inject storage/configuration values; keep learning core focused on models, betting, and environments. | Incremental |
-| F-05 | P1 | `repositories/database/backend.py`, `initializer.py`, `schemas/models.py` | SQLAlchemy metadata is the schema source of truth, but existing databases are not version-checked or migrated during normal startup. A future model change can leave an existing SQLite/PostgreSQL schema stale. | Adopt an explicit schema-version/migration policy before the next incompatible schema change; keep normal startup non-destructive and make upgrades observable. | Incremental |
-| F-06 | P1 | `repositories/serialization/model.py`, checkpoint JSON, `services/datasets.py` | Checkpoint configuration can retain a `dataset_id`, while dataset deletion cascades relational rows without inspecting checkpoint directories. A retained checkpoint may become unusable or misleading after its dataset is deleted. | Add a checkpoint-reference scan or explicit delete policy and return a conflict with affected checkpoints; later consider storing an immutable dataset snapshot only if the workflow requires it. | Incremental |
-| F-07 | P2 | `repositories/serialization/data.py`, `repositories/serialization/training.py` | `DataSerializer` is primarily a pass-through facade over repositories, while `TrainingDataSerializer` performs sampling and `ModelSerializer` performs filesystem I/O. The shared “serialization” name obscures different responsibilities. | Rename or consolidate only when a service is next changed; keep domain-specific repository methods rather than adding generic repositories. | Incremental |
-| F-08 | P2 | `api/training.py`, `api/inference.py`, `api/upload.py`, `common/api_errors.py` | Exception-to-HTTP translation is partly shared and partly repeated inline, so equivalent failures can acquire different response behavior. | Centralize only stable exception categories in the existing error helper; retain endpoint-specific status semantics for upload size and resource conflicts. | Incremental |
+| F-03 | P1 | `server/__init__.py`, `bootstrap.py`, `common/path.py`, `common/utils/logger.py`, `configurations/environment.py` | Importing the package no longer loads/creates `.env` or configures paths/logging. The composition entry point performs those actions explicitly before importing Keras-backed application modules. | Keep `server.bootstrap.bootstrap_runtime()` as the only application bootstrap boundary; direct utility imports remain filesystem-free. | Resolved now |
+| F-04 | P1 | `services/training_data.py`, `learning/training/worker.py`, `learning/models/qnet.py`, `learning/training/fitting.py` | Training data/configuration orchestration was coupled to learning code, which constructed `FAIRSDatabase` and read global server settings. | Data loading now lives in `TrainingDataService`, and the worker receives a top-level loader plus concrete database/path/device/polling values. The process entrypoint and checkpoint loading remain in `learning.training.worker` for now; relocating that entrypoint is deferred. | Resolved incrementally; worker relocation deferred |
+| F-05 | P1 | `repositories/database/schema.py`, `backend.py`, `initializer.py`, `schemas/models.py` | SQLAlchemy metadata is the schema source of truth, but existing databases previously were not checked during normal startup. | Startup now performs a non-destructive structural compatibility check for SQLite/PostgreSQL. SQLite initialization records schema version `1` with `PRAGMA user_version`; newer versions fail fast. A migration runner for future incompatible changes remains deferred. | Resolved incrementally; migrations deferred |
+| F-06 | P1 | `repositories/serialization/model.py`, checkpoint JSON, `services/checkpoints.py`, `services/datasets.py` | Checkpoint configuration can retain a `dataset_id`, while dataset deletion cascades relational rows without inspecting checkpoint directories. | Dataset deletion scans checkpoint metadata and returns a `409` conflict listing affected checkpoints; unreadable checkpoint metadata also blocks deletion. Immutable dataset snapshots remain deferred. | Resolved now; immutable snapshots deferred |
+| F-07 | P2 | `repositories/serialization/data.py`, `repositories/serialization/training.py`, `repositories/serialization/model.py` | The old serializer names obscured that one facade coordinated repositories, one loader sampled training data, and one adapter owned checkpoint files. | Renamed the concrete roles to `DataStore`, `TrainingSeriesLoader`, and `CheckpointStorage`. The existing serialization directory and narrow `DataStore` facade remain intentionally unchanged; generic repository consolidation is deferred. | Resolved incrementally |
+| F-08 | P2 | `api/training.py`, `api/inference.py`, `api/upload.py`, `api/datasets.py`, `common/api_errors.py` | Exception-to-HTTP translation was partly shared and partly repeated inline, so equivalent failures could acquire different response behavior. | Stable categories now use the existing error helper across training, inference lifecycle, upload, and dataset deletion; upload size and dataset/checkpoint conflicts retain endpoint-specific status semantics. | Resolved incrementally |
 | F-09 | P2 | `services/training.py`, `services/inference.py` | These services are large because they combine lifecycle state, orchestration, and response-shaped dictionaries. They are cohesive enough for the current application but expensive to unit-test at fine granularity. | Extract a cohesive state machine/monitor only when a behavior change creates a natural seam; do not split by arbitrary method count. | Incremental |
-| F-10 | P2 | `client/src/components/inference/GameSession.tsx`, Training preview/dashboard components | Feature components combine fetch calls, payload parsing, local state, workflow orchestration, and rendering. Repeated dataset/checkpoint requests can drift in loading/error behavior. | Add narrow feature API hooks/client helpers during future UI changes, keeping route composition and state ownership unchanged. | Incremental |
+| F-10 | P2 | `client/src/components/inference/GameSession.tsx`, Training preview/dashboard components | Feature components combine fetch calls, payload parsing, local state, workflow orchestration, and rendering. Repeated dataset/checkpoint requests can drift in loading/error behavior. | Added `client/src/utils/trainingApi.ts` and reused it from checkpoint options, inference setup, and the Training checkpoint preview. `GameSession` and the training dashboard still own their workflow-specific requests; broader hook extraction is deferred. | Resolved incrementally |
 | F-11 | P3 | `app/client/README.md` | The file was the untouched Vite template and did not explain the actual Training/Inference frontend. | Replace it with project-specific module and development guidance. | Resolved now |
 
 ## Dependency Direction Assessment
 
-The current graph has a sound outer direction from composition/API toward services and persistence. The main violations are not API-to-database leaks or circular imports; they are lower-level learning modules reaching into repositories/configuration and repository checkpoint loading importing learning model registration. These edges are explicit and testable, but they reduce substitution and isolated testing.
+The current graph has a sound outer direction from composition/API toward services and persistence. The main remaining coupling is the inference player’s `DataStore` dependency and checkpoint storage’s custom-layer registration import. Training data/configuration no longer reaches global settings or constructs persistence from the learning algorithm classes; the worker entrypoint still lives in the learning package for process-local reasons.
 
-The new `test_architecture_boundaries.py` protects the boundaries that can be enforced without inventing new interfaces. It intentionally does not pretend that F-03 through F-06 are already solved.
+The new `test_architecture_boundaries.py` plus focused bootstrap, schema, checkpoint-lifecycle, and API-service tests protect the boundaries that can be enforced without inventing new interfaces.
 
 ## Target State
 
@@ -72,27 +72,27 @@ This target does not require microservices, event queues, generic repositories, 
 
 ## Remediation Roadmap
 
-### Phase 0 — Completed in this review
+### Phase 0 — Completed at the pushed checkpoint
 
 - Rename `server.domain` to `server.contracts`.
 - Consolidate roulette feature derivation.
 - Add import-boundary regression coverage.
 - Refresh architecture, persistence, API, coding, project-index, README, and frontend documentation.
 
-### Phase 1 — Next high-value runtime work
+### Phase 1 — Implemented incrementally in this change
 
 - Define explicit environment/path/logger bootstrap while preserving launcher behavior.
-- Move training worker/data-access orchestration out of learning modules and pass concrete configuration/storage collaborators.
-- Establish schema versioning before changing relational models.
+- Move training data/configuration orchestration out of learning modules and pass concrete configuration/storage collaborators.
+- Establish a non-destructive schema version marker and structural compatibility check before future relational changes.
 - Add a checkpoint/dataset deletion policy and API conflict behavior.
 
-### Phase 2 — Opportunistic maintainability work
+### Phase 2 — Implemented selectively; remaining work deferred
 
-- Clarify repository/serializer ownership and reduce pass-through facades.
+- Clarify repository/serializer ownership through role-specific names.
 - Consolidate stable HTTP error mapping.
-- Extract feature-level frontend API hooks from the largest components.
-- Split service state machines only at tested behavioral seams.
+- Add a narrow shared frontend training API helper.
+- Keep service state-machine extraction, full learning-worker relocation, immutable dataset snapshots, migration execution, and broader frontend hooks deferred until a natural behavior seam requires them.
 
 ## Validation Boundaries
 
-The implementation must preserve the checked-in OpenAPI snapshot, all route paths/statuses, database table/constraint behavior, checkpoint file layout, and frontend routes. Mermaid diagrams are source documentation and should be parsed/rendered in a temporary location when a Mermaid CLI is available. PostgreSQL contract validation is conditional on an available PostgreSQL service; it must not be reported as passed when unavailable.
+The implementation must preserve the checked-in OpenAPI snapshot, all route paths/statuses for successful operations, database table/constraint behavior, checkpoint file layout, and frontend routes. Dataset deletion now has an explicit `409` conflict for referenced checkpoints without changing the successful response shape. Mermaid diagrams are source documentation and should be parsed/rendered in a temporary location when a Mermaid CLI is available. PostgreSQL contract validation is conditional on an available PostgreSQL service; it must not be reported as passed when unavailable.

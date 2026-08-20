@@ -1,6 +1,6 @@
 ## Configuration
 
-Last updated: 2026-08-19
+Last updated: 2026-08-20
 
 ## Environment Variables
 
@@ -43,6 +43,8 @@ For external PostgreSQL mode, `DATABASE_ENGINE` must be `postgresql+psycopg`. Le
 
 The backend creates timestamped `FAIRS_*.log` files in `FAIRS_LOG_DIR` when set, or in the active data `logs` directory otherwise.
 
+The application entry point calls `server.bootstrap.bootstrap_runtime()` explicitly before importing Keras-backed application modules. Direct imports of `server`, common path helpers, and logging helpers do not load `.env`, resolve mutable paths from the environment, create directories, or configure the global logging tree.
+
 ## Structured Settings
 
 `settings/configurations.json` contains non-env technical settings such as:
@@ -62,11 +64,12 @@ The backend creates timestamped `FAIRS_*.log` files in `FAIRS_LOG_DIR` when set,
 
 - `EMBEDDED_DATABASE=true`
   - uses SQLite and creates the embedded database file only when it is missing
-  - does not cross-validate an existing database during normal startup
+  - validates an existing database structurally during normal startup without resetting or migrating it
+  - records SQLite schema version `1` during explicit schema creation; a newer unsupported version stops startup
 - `EMBEDDED_DATABASE=false`
   - uses PostgreSQL and requires explicit connection settings
   - requires launcher option 4 to create or initialize the database and schema
-  - normal startup only probes the existing database connection
+  - normal startup probes the existing database connection and validates the required table/column structure
 
 ### Backend Log Visibility
 

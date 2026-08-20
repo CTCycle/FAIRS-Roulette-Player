@@ -3,13 +3,13 @@ from __future__ import annotations
 import pandas as pd
 
 from server.common.roulette import encode_roulette_series
-from server.learning.training.serializer import DataSerializerExtension
+from server.services.training_data import TrainingDataService
 
 ###############################################################################
 def test_generated_training_series_matches_environment_contract() -> None:
-    serializer = object.__new__(DataSerializerExtension)
+    service = TrainingDataService(database_settings=None)
 
-    dataset, synthetic = serializer.get_training_series(
+    dataset, synthetic = service.get_training_series(
         {
             "use_data_generator": True,
             "num_generated_samples": 100,

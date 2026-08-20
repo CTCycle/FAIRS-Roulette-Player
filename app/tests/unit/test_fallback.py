@@ -24,7 +24,7 @@ class EmptyLogitsModel:
         return np.zeros((1, 0), dtype=np.float32)
 
 ###############################################################################
-class DummySerializer:
+class DummyDataStore:
 
     # -------------------------------------------------------------------------
     def __init__(self, outcomes: list[int]) -> None:
@@ -54,7 +54,7 @@ def test_fallback_strategy_is_deterministic_when_model_disabled() -> None:
         configuration=config,
         session_id="session",
         dataset_id=1,
-        serializer=DummySerializer([1, 2, 3, 4, 5, 6, 7, 8]),
+        data_store=DummyDataStore([1, 2, 3, 4, 5, 6, 7, 8]),
     )
 
     prediction = player.predict_next()
@@ -81,7 +81,7 @@ def test_predict_next_raises_when_model_returns_empty_logits() -> None:
         configuration=config,
         session_id="session",
         dataset_id=1,
-        serializer=DummySerializer([1, 2, 3, 4, 5, 6, 7, 8]),
+        data_store=DummyDataStore([1, 2, 3, 4, 5, 6, 7, 8]),
     )
     with pytest.raises(ValueError, match="empty logits"):
         player.predict_next()
@@ -103,7 +103,7 @@ def test_predict_next_requires_minimum_context_length() -> None:
         configuration=config,
         session_id="session",
         dataset_id=1,
-        serializer=DummySerializer([1, 2, 3]),
+        data_store=DummyDataStore([1, 2, 3]),
     )
     with pytest.raises(ValueError, match="at least the perceptive field size"):
         player.predict_next()
@@ -125,7 +125,7 @@ def test_update_with_true_extraction_validates_input() -> None:
         configuration=config,
         session_id="session",
         dataset_id=1,
-        serializer=DummySerializer([1, 2, 3, 4, 5, 6, 7, 8]),
+        data_store=DummyDataStore([1, 2, 3, 4, 5, 6, 7, 8]),
     )
     player.predict_next()
 

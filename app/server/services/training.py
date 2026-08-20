@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from pathlib import Path
 from typing import Any
 
 from server.common.checkpoints import normalize_checkpoint_identifier
@@ -9,6 +10,7 @@ from server.common.utils.trainingstats import (
     sanitize_training_stats,
 )
 from server.common.utils.types import coerce_finite_float, coerce_finite_int
+from server.configurations import DatabaseSettings
 from server.configurations.startup import get_poll_interval_seconds
 from server.contracts.training import ResumeConfig, TrainingConfig
 from server.learning.training.worker import (
@@ -18,6 +20,7 @@ from server.learning.training.worker import (
 )
 from server.services.checkpoints import CheckpointService
 from server.services.jobs import JobManager
+from server.services.training_data import load_training_series
 
 TRAINING_STATUSES = {
     "idle",
@@ -241,9 +244,19 @@ class TrainingService:
         self,
         job_manager: JobManager,
         checkpoint_service: CheckpointService,
+        database_settings: DatabaseSettings | None = None,
+        database_path: str | Path | None = None,
+        polling_interval_seconds: float = 1.0,
+        jit_compile: bool = False,
+        jit_backend: str = "inductor",
     ) -> None:
         self.job_manager = job_manager
         self.checkpoint_service = checkpoint_service
+        self.database_settings = database_settings
+        self.database_path = database_path
+        self.polling_interval_seconds = polling_interval_seconds
+        self.jit_compile = jit_compile
+        self.jit_backend = jit_backend
         self.training_state = TrainingState()
 
     # -------------------------------------------------------------------------
@@ -319,7 +332,15 @@ class TrainingService:
         try:
             worker.start(
                 target=run_training_process,
-                kwargs={"configuration": configuration},
+                kwargs={
+                    "configuration": configuration,
+                    "training_data_loader": load_training_series,
+                    "database_settings": self.database_settings,
+                    "database_path": self.database_path,
+                    "polling_interval_seconds": self.polling_interval_seconds,
+                    "jit_compile": self.jit_compile,
+                    "jit_backend": self.jit_backend,
+                },
             )
             result = self._monitor_training_process(
                 job_id, worker, stop_timeout_seconds=5.0
@@ -363,6 +384,10 @@ class TrainingService:
                 kwargs={
                     "checkpoint": checkpoint,
                     "additional_episodes": additional_episodes,
+                    "training_data_loader": load_training_series,
+                    "database_settings": self.database_settings,
+                    "database_path": self.database_path,
+                    "polling_interval_seconds": self.polling_interval_seconds,
                 },
             )
             result = self._monitor_training_process(

@@ -3,10 +3,13 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 
+import pytest
 from sqlalchemy import create_engine, inspect
 
 from server.contracts.configuration import DatabaseSettings
 from server.repositories.database import initializer
+from server.repositories.database.backend import FAIRSDatabase
+from server.repositories.database.schema import CURRENT_SCHEMA_VERSION
 from server.repositories.schemas.models import Base
 
 ###############################################################################
@@ -54,6 +57,11 @@ def test_sqlite_initialization_only_creates_missing_database(
     engine = create_engine(f"sqlite:///{database_path}")
     try:
         assert set(inspect(engine).get_table_names()) == set(Base.metadata.tables)
+        with engine.connect() as connection:
+            assert (
+                connection.exec_driver_sql("PRAGMA user_version").scalar_one()
+                == CURRENT_SCHEMA_VERSION
+            )
     finally:
         engine.dispose()
 
@@ -122,3 +130,27 @@ def test_explicit_postgres_initialization_creates_database_and_schema(monkeypatc
         'CREATE DATABASE "fairs" WITH ENCODING \'UTF8\' TEMPLATE template0'
     ]
     assert schema_calls == [True]
+
+
+def test_schema_validation_reports_missing_tables(tmp_path: Path) -> None:
+    database_path = tmp_path / "database.db"
+    database = FAIRSDatabase(_sqlite_settings(), database_path=database_path)
+    try:
+        with pytest.raises(RuntimeError, match="incompatible with version"):
+            database.validate_schema()
+    finally:
+        database.dispose()
+
+
+def test_schema_validation_rejects_newer_sqlite_version(tmp_path: Path) -> None:
+    database_path = tmp_path / "database.db"
+    database = FAIRSDatabase(_sqlite_settings(), database_path=database_path)
+    try:
+        database.create_schema()
+        with database.engine.begin() as connection:
+            connection.exec_driver_sql("PRAGMA user_version = 2")
+
+        with pytest.raises(RuntimeError, match="newer than the supported version"):
+            database.validate_schema()
+    finally:
+        database.dispose()
