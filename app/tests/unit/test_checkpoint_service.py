@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from server.common import checkpoints as checkpoint_common
+from server.repositories.serialization.model import CheckpointStorage
 from server.services.checkpoints import CheckpointReferenceError, CheckpointService
 
 ###############################################################################
@@ -11,6 +12,7 @@ class DummyCheckpointStorage:
     # -------------------------------------------------------------------------
     def __init__(self) -> None:
         self._checkpoints = ["cp1"]
+        self.deleted_paths: list[str] = []
 
     # -------------------------------------------------------------------------
     def scan_checkpoints_folder(self) -> list[str]:
@@ -27,6 +29,10 @@ class DummyCheckpointStorage:
             },
             {"total_episodes": 3, "history": {"loss": [0.2], "metrics": [0.3]}},
         )
+
+    # -------------------------------------------------------------------------
+    def delete_checkpoint(self, path: str) -> None:
+        self.deleted_paths.append(path)
 
 
 class InvalidCheckpointStorage(DummyCheckpointStorage):
@@ -74,3 +80,24 @@ def test_find_dataset_references_blocks_malformed_configuration(
 
     with pytest.raises(CheckpointReferenceError, match="Unable to inspect checkpoint"):
         service.find_dataset_references(7)
+
+###############################################################################
+def test_delete_checkpoint_delegates_filesystem_ownership(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(checkpoint_common.shared_paths, "CHECKPOINT_PATH", tmp_path)
+    (tmp_path / "cp1").mkdir()
+    storage = DummyCheckpointStorage()
+    service = CheckpointService(checkpoint_storage=storage)
+
+    service.delete_checkpoint("cp1")
+
+    assert storage.deleted_paths == [str(tmp_path / "cp1")]
+
+###############################################################################
+def test_checkpoint_storage_deletes_checkpoint_folder(tmp_path) -> None:
+    checkpoint_path = tmp_path / "cp1"
+    checkpoint_path.mkdir()
+    (checkpoint_path / "model.keras").write_text("model", encoding="utf-8")
+
+    CheckpointStorage().delete_checkpoint(str(checkpoint_path))
+
+    assert not checkpoint_path.exists()
