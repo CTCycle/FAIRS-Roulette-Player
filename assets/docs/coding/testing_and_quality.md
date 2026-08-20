@@ -21,6 +21,7 @@ Last updated: 2026-08-20
 - Keep parser logic defensive where backend payloads can drift.
 - Validate UI behavior visually when user-facing layout or interaction changes are involved.
 - The current frontend package provides build and lint scripts but no standalone frontend test scripts.
+- CI enforces the frontend gate in `.github/workflows/ci.yml` with Node 22: `npm ci`, `npm run lint`, and `npm run build` from `app/client`.
 
 ## Test Layout
 
@@ -33,7 +34,7 @@ Primary automated test surfaces live under `app/tests`:
 - `app/tests/run_tests.bat`
   - repository-standard Windows test entry point
 - `.github/workflows/ci.yml`
-  - Linux CI runs Ruff, backend unit tests, Alembic history/model consistency checks, OpenAPI generation, and the PostgreSQL persistence contract.
+  - Linux CI runs the backend Ruff/unit/Alembic/OpenAPI/PostgreSQL checks and a separate frontend lint/build job.
 
 ## Migration Validation
 
