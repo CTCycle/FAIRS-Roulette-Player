@@ -92,9 +92,9 @@ class InferenceState:
         self.max_sessions = 16
 
     # -------------------------------------------------------------------------
-    def create_session(self, session: InferenceSession) -> None:
+    def create_session(self, session: InferenceSession) -> list[InferenceSession]:
         self.sessions[session.session_id] = session
-        self.cleanup()
+        return self.cleanup()
 
     # -------------------------------------------------------------------------
     def get_session(self, session_id: str) -> InferenceSession:
@@ -104,17 +104,15 @@ class InferenceState:
         return session
 
     # -------------------------------------------------------------------------
-    def delete_session(self, session_id: str) -> None:
-        if session_id in self.sessions:
-            del self.sessions[session_id]
+    def delete_session(self, session_id: str) -> InferenceSession | None:
+        return self.sessions.pop(session_id, None)
 
     # -------------------------------------------------------------------------
-    def cleanup(self) -> None:
+    def cleanup(self) -> list[InferenceSession]:
         if len(self.sessions) <= self.max_sessions:
-            return
+            return []
         ordered = sorted(self.sessions.values(), key=lambda item: item.last_seen)
-        for stale in ordered[: max(0, len(ordered) - self.max_sessions)]:
-            del self.sessions[stale.session_id]
+        return ordered[: max(0, len(ordered) - self.max_sessions)]
 
 ###############################################################################
 class InferenceService:
@@ -165,6 +163,18 @@ class InferenceService:
         self.data_store.upsert_inference_session_step(row)
 
     # -------------------------------------------------------------------------
+    def _close_session(self, session_id: str, *, mark_missing: bool = False) -> None:
+        session = (
+            self.state.get_session(session_id)
+            if session_id in self.state.sessions
+            else None
+        )
+        if session is not None or mark_missing:
+            self.data_store.mark_inference_session_ended(session_id)
+        if session is not None:
+            self.state.delete_session(session_id)
+
+    # -------------------------------------------------------------------------
     def start_session(self, payload: InferenceStartRequest) -> dict[str, Any]:
         checkpoint, checkpoint_path = (
             self.checkpoint_service.resolve_existing_checkpoint(payload.checkpoint)
@@ -173,7 +183,7 @@ class InferenceService:
         dataset_id = int(payload.dataset_id)
         session_id = uuid.uuid4().hex
         if payload.session_id:
-            self.state.delete_session(payload.session_id)
+            self._close_session(payload.session_id)
 
         dataset = self.data_store.load_dataset(dataset_id)
         if dataset is None:
@@ -242,7 +252,9 @@ class InferenceService:
         session.last_prediction = prediction
         session.prediction_pending = True
         session.prediction_step = 1
-        self.state.create_session(session)
+        evicted_sessions = self.state.create_session(session)
+        for evicted in evicted_sessions:
+            self._close_session(evicted.session_id)
         self.persist_session_header(session)
         self.persist_session_step(
             session,
@@ -326,8 +338,7 @@ class InferenceService:
 
     # -------------------------------------------------------------------------
     def shutdown_session(self, session_id: str) -> dict[str, Any]:
-        self.data_store.mark_inference_session_ended(session_id)
-        self.state.delete_session(session_id)
+        self._close_session(session_id, mark_missing=True)
         return {"session_id": session_id, "status": "closed"}
 
     # -------------------------------------------------------------------------
@@ -337,5 +348,9 @@ class InferenceService:
 
     # -------------------------------------------------------------------------
     def clear_context(self) -> dict[str, str]:
+        if self.state.sessions:
+            raise RuntimeError(
+                "Cannot clear inference context while an inference session is active."
+            )
         self.data_store.clear_datasets("inference")
         return {"status": "cleared"}
