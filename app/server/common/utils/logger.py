@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import logging.config
-import os
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -10,15 +9,8 @@ from typing import Any
 from server.common import path as shared_paths
 
 ###############################################################################
-def _build_log_config() -> dict[str, Any]:
+def _build_log_config(log_directory: Path) -> dict[str, Any]:
     current_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    configured_log_dir = os.getenv("FAIRS_LOG_DIR")
-    log_directory = (
-        Path(configured_log_dir).expanduser()
-        if configured_log_dir
-        else shared_paths.LOGS_PATH
-    )
-    log_directory.mkdir(parents=True, exist_ok=True)
     log_filename = log_directory / f"FAIRS_{current_timestamp}.log"
     return {
         "version": 1,
@@ -66,5 +58,25 @@ def _build_log_config() -> dict[str, Any]:
     }
 
 
-logging.config.dictConfig(_build_log_config())
 logger = logging.getLogger()
+_configured = False
+
+###############################################################################
+def configure_logging(
+    log_directory: str | Path | None = None,
+    *,
+    force: bool = False,
+) -> None:
+    """Configure application logging at an explicit runtime boundary."""
+    global _configured
+    if _configured and not force:
+        return
+
+    resolved_directory = (
+        Path(log_directory).expanduser()
+        if log_directory is not None and str(log_directory).strip()
+        else shared_paths.LOGS_PATH
+    )
+    resolved_directory.mkdir(parents=True, exist_ok=True)
+    logging.config.dictConfig(_build_log_config(resolved_directory))
+    _configured = True

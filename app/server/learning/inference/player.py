@@ -16,7 +16,6 @@ from server.learning.betting.types import (
     normalize_strategy_id,
     strategy_name,
 )
-from server.repositories.serialization.data import DataSerializer
 from server.learning.training.environment import BetsAndRewards
 
 ###############################################################################
@@ -28,15 +27,13 @@ class RoulettePlayer:
         model: Model,
         configuration: dict[str, Any],
         session_id: str,
-        dataset_id: int,
-        serializer: DataSerializer,
+        dataset_context: pd.DataFrame,
         dataset_source: str | None = None,
         strategy_model: Model | None = None,
     ) -> None:
         set_random_seed(configuration.get("seed", 42))
 
         self.session_id = session_id
-        self.dataset_id = dataset_id
         self.perceptive_size = int(configuration.get("perceptive_field_size", 64))
         self.initial_capital = int(configuration.get("game_capital", 100))
         self.bet_amount = int(configuration.get("game_bet", 1))
@@ -80,8 +77,7 @@ class RoulettePlayer:
             fallback_strategy_id=self.fixed_strategy_id,
         )
 
-        self.serializer = serializer
-        self.context = self.serializer.load_dataset_outcomes(dataset_id)
+        self.context = dataset_context
 
     # -------------------------------------------------------------------------
     def initialize_states(self) -> None:

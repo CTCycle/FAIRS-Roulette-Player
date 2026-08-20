@@ -6,10 +6,10 @@ import { useWizardStep } from '../../../hooks/useWizardStep';
 import { WizardActions } from './WizardActions';
 import { parseApiErrorDetail, parseDatasetId } from '../../../utils/apiParsers';
 import {
-    parseCheckpointList,
-    parseCheckpointMetadataResponse,
-    parseDatasetSummaryItems,
-} from '../../../utils/frontendApiParsers';
+    fetchCheckpointMetadata,
+    fetchTrainingCheckpoints,
+    fetchTrainingDatasetSummaries,
+} from '../../../utils/trainingApi';
 import type { CheckpointMetadataResponse } from '../../../types/frontendApi';
 import { WizardSummaryRows, type WizardSummaryRow } from '../../../components/wizard/WizardSummaryRows';
 import { FeatureTip } from '../../../components/guidance/FeatureTip';
@@ -70,12 +70,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
         setError(null);
         setNotice(null);
         try {
-            const response = await fetch('/api/training/checkpoints');
-            if (!response.ok) {
-                throw new Error('Failed to load checkpoints');
-            }
-            const data = await response.json();
-            const checkpointList = parseCheckpointList(data);
+            const checkpointList = await fetchTrainingCheckpoints();
             setCheckpoints(checkpointList);
         } catch {
             setError('Unable to load checkpoints.');
@@ -89,12 +84,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
         setDatasetsLoading(true);
         setDatasetsError(null);
         try {
-            const response = await fetch('/api/datasets/training/summary');
-            if (!response.ok) {
-                throw new Error('Failed to load datasets');
-            }
-            const payload = await response.json();
-            const datasetList = parseDatasetSummaryItems(payload)
+            const datasetList = (await fetchTrainingDatasetSummaries())
                 .map((entry) => ({
                     datasetId: entry.datasetId,
                     datasetName: entry.datasetName,
@@ -153,13 +143,15 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
     };
 
     const loadCheckpointMetadata = useCallback(async (checkpointName: string) => {
-        const response = await fetch(`/api/training/checkpoints/${encodeURIComponent(checkpointName)}/metadata`);
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => null);
-            throw new Error(parseApiErrorDetail(errorData, 'Failed to load checkpoint metadata'));
+        try {
+            return await fetchCheckpointMetadata(checkpointName);
+        } catch (error) {
+            throw new Error(
+                error instanceof Error
+                    ? error.message
+                    : 'Failed to load checkpoint metadata',
+            );
         }
-        const payload = await response.json();
-        return parseCheckpointMetadataResponse(payload);
     }, []);
 
     const cacheCheckpointMetadata = useCallback((checkpointName: string, payload: CheckpointMetadataResponse) => {

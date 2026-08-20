@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "fairs-server"
-version = "2.9.0"
+version = "3.0.0"
 requires-python = ">=3.14"
 
 dependencies = [
@@ -15,6 +15,7 @@ dependencies = [
     "torch==2.9.0+cu130",    
     "keras==3.13.2",
     "SQLAlchemy==2.0.51",
+    "alembic==1.19.0",
     "psycopg[binary]==3.3.4",
     "python-dotenv==1.2.1", 
     "python-multipart>=0.0.21", 

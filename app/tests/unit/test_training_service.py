@@ -1,14 +1,19 @@
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
 
-from server.domain.training import ResumeConfig, TrainingConfig
+from server.contracts.training import ResumeConfig, TrainingConfig
+from server.services.training_worker import run_training_process
+from server.services import training as training_module
 from server.services.training import TrainingService
 
 ###############################################################################
-def build_service() -> tuple[TrainingService, Mock, Mock]:
+def build_service(
+    polling_interval_seconds: float = 1.0,
+) -> tuple[TrainingService, Mock, Mock]:
     job_manager = Mock()
     job_manager.is_job_running.return_value = False
     job_manager.start_job.return_value = "job123"
@@ -20,7 +25,9 @@ def build_service() -> tuple[TrainingService, Mock, Mock]:
         {"total_episodes": 2, "history": {"episode": [1, 2], "time_step": [1, 2]}},
     )
     service = TrainingService(
-        job_manager=job_manager, checkpoint_service=checkpoint_service
+        job_manager=job_manager,
+        checkpoint_service=checkpoint_service,
+        polling_interval_seconds=polling_interval_seconds,
     )
     return service, job_manager, checkpoint_service
 
@@ -39,6 +46,15 @@ def test_start_training_requires_dataset_without_generator() -> None:
         service.start_training(
             TrainingConfig(use_data_generator=False, dataset_id=None)
         )
+
+###############################################################################
+def test_training_responses_use_injected_polling_interval() -> None:
+    service, _, _ = build_service(polling_interval_seconds=2.5)
+
+    started = service.start_training(TrainingConfig(use_data_generator=True))
+
+    assert started["poll_interval"] == 2.5
+    assert service.get_status()["poll_interval"] == 2.5
 
 ###############################################################################
 def test_resume_training_starts_resume_job() -> None:
@@ -76,3 +92,65 @@ def test_get_and_delete_job_contracts() -> None:
     cancel = service.delete_job("job123")
     assert job["job_id"] == "job123"
     assert cancel["job_id"] == "job123"
+
+
+def test_training_worker_receives_explicit_runtime_dependencies(monkeypatch) -> None:
+    started: dict[str, object] = {}
+
+    class FakeWorker:
+
+        # ---------------------------------------------------------------------
+        def start(self, target, kwargs) -> None:
+            started["target"] = target
+            started["kwargs"] = kwargs
+
+        # ---------------------------------------------------------------------
+        def is_alive(self) -> bool:
+            return False
+
+        # ---------------------------------------------------------------------
+        @property
+        def exitcode(self) -> None:
+            return None
+
+        # ---------------------------------------------------------------------
+        def join(self, timeout: float | None = None) -> None:  # noqa: ARG002
+            return None
+
+        # ---------------------------------------------------------------------
+        def read_result(self) -> None:
+            return None
+
+        # ---------------------------------------------------------------------
+        def poll(self, timeout: float = 0.0) -> None:  # noqa: ARG002
+            return None
+
+        # ---------------------------------------------------------------------
+        def cleanup(self) -> None:
+            return None
+
+    monkeypatch.setattr(training_module, "ProcessWorker", FakeWorker)
+    job_manager = Mock()
+    job_manager.should_stop.return_value = False
+    service = TrainingService(
+        job_manager=job_manager,
+        checkpoint_service=Mock(),
+        database_settings=object(),
+        database_path=Path("isolated.db"),
+        polling_interval_seconds=2.5,
+        jit_compile=True,
+        jit_backend="eager",
+    )
+
+    service.run_training_job({}, "job123")
+
+    assert started["target"] is run_training_process
+    assert started["kwargs"] == {
+        "configuration": {},
+        "training_data_loader": training_module.load_training_series,
+        "database_settings": service.database_settings,
+        "database_path": Path("isolated.db"),
+        "polling_interval_seconds": 2.5,
+        "jit_compile": True,
+        "jit_backend": "eager",
+    }

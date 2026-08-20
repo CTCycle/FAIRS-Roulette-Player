@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy.exc import SQLAlchemyError
+from server.repositories.database.initializer import DatabaseInitializationError
 
-from server.domain.configuration import (
+from server.contracts.configuration import (
     DatabaseSettings,
     DeviceSettings,
     JobsSettings,
@@ -65,13 +65,13 @@ def _stub_lifespan_dependencies(
     settings: ServerSettings | None = None,
 ) -> tuple[list[object], list[bool]]:
     initialize_calls: list[object] = []
-    connection_calls: list[bool] = []
+    dispose_calls: list[bool] = []
     settings = settings or _build_settings()
 
     monkeypatch.setattr(app_module, "get_server_settings", lambda: settings)
     monkeypatch.setattr(
         app_module,
-        "initialize_sqlite_database_if_missing",
+        "initialize_database",
         lambda database_settings: initialize_calls.append(database_settings),
     )
     monkeypatch.setattr(app_module, "run_startup_validations", lambda settings: None)
@@ -80,13 +80,13 @@ def _stub_lifespan_dependencies(
     class DatabaseStub:
 
         # -------------------------------------------------------------------------
-        def check_connection(self) -> None:
-            connection_calls.append(True)
+        def dispose(self) -> None:
+            dispose_calls.append(True)
 
     monkeypatch.setattr(app_module, "FAIRSDatabase", lambda *_args: DatabaseStub())
     monkeypatch.setattr(app_module, "DatasetRepository", lambda database: object())
     monkeypatch.setattr(app_module, "InferenceRepository", lambda database: object())
-    monkeypatch.setattr(app_module, "DataSerializer", lambda **kwargs: object())
+    monkeypatch.setattr(app_module, "DataStore", lambda **kwargs: object())
     monkeypatch.setattr(app_module, "JobManager", lambda: object())
     monkeypatch.setattr(app_module, "CheckpointService", lambda: object())
     monkeypatch.setattr(app_module, "DatasetImportService", lambda **kwargs: object())
@@ -95,13 +95,13 @@ def _stub_lifespan_dependencies(
     monkeypatch.setattr(app_module, "TrainingService", lambda **kwargs: object())
     monkeypatch.setattr(app_module, "InferenceService", lambda **kwargs: object())
 
-    return initialize_calls, connection_calls
+    return initialize_calls, dispose_calls
 
 ###############################################################################
 def test_root_redirects_to_docs_when_client_build_is_missing(monkeypatch) -> None:
     import server.app as app_module
 
-    initialize_calls, connection_calls = _stub_lifespan_dependencies(monkeypatch, app_module)
+    initialize_calls, dispose_calls = _stub_lifespan_dependencies(monkeypatch, app_module)
     monkeypatch.setenv("ENABLE_API_DOCS", "true")
     monkeypatch.setattr(app_module, "_client_build_available", lambda: False)
 
@@ -113,13 +113,13 @@ def test_root_redirects_to_docs_when_client_build_is_missing(monkeypatch) -> Non
     assert response.status_code == 307
     assert response.headers["location"] == "/docs"
     assert len(initialize_calls) == 1
-    assert connection_calls == []
+    assert dispose_calls == [True]
 
 ###############################################################################
 def test_root_returns_status_when_api_docs_are_disabled(monkeypatch) -> None:
     import server.app as app_module
 
-    initialize_calls, connection_calls = _stub_lifespan_dependencies(monkeypatch, app_module)
+    initialize_calls, dispose_calls = _stub_lifespan_dependencies(monkeypatch, app_module)
     monkeypatch.setenv("ENABLE_API_DOCS", "false")
     monkeypatch.setattr(app_module, "_client_build_available", lambda: False)
 
@@ -131,7 +131,7 @@ def test_root_returns_status_when_api_docs_are_disabled(monkeypatch) -> None:
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
     assert len(initialize_calls) == 1
-    assert connection_calls == []
+    assert dispose_calls == [True]
 
 ###############################################################################
 def test_root_and_nested_routes_serve_built_client_when_available(
@@ -140,7 +140,7 @@ def test_root_and_nested_routes_serve_built_client_when_available(
 ) -> None:
     import server.app as app_module
 
-    initialize_calls, connection_calls = _stub_lifespan_dependencies(monkeypatch, app_module)
+    initialize_calls, dispose_calls = _stub_lifespan_dependencies(monkeypatch, app_module)
 
     client_dist = tmp_path / "dist"
     assets_dir = client_dist / "assets"
@@ -166,13 +166,13 @@ def test_root_and_nested_routes_serve_built_client_when_available(
     assert "FAIRS client" in nested_response.text
     assert "console.log('fairs');" in asset_response.text
     assert len(initialize_calls) == 1
-    assert connection_calls == []
+    assert dispose_calls == [True]
 
 ###############################################################################
-def test_postgresql_startup_only_checks_existing_connection(monkeypatch) -> None:
+def test_postgresql_startup_runs_the_shared_initializer(monkeypatch) -> None:
     import server.app as app_module
 
-    initialize_calls, connection_calls = _stub_lifespan_dependencies(
+    initialize_calls, dispose_calls = _stub_lifespan_dependencies(
         monkeypatch,
         app_module,
         _build_external_settings(),
@@ -185,8 +185,8 @@ def test_postgresql_startup_only_checks_existing_connection(monkeypatch) -> None
         response = client.get("/", follow_redirects=False)
 
     assert response.status_code == 307
-    assert initialize_calls == []
-    assert connection_calls == [True]
+    assert initialize_calls == [_build_external_settings().database]
+    assert dispose_calls == [True]
 
 ###############################################################################
 def test_postgresql_startup_reports_connection_failure(monkeypatch) -> None:
@@ -195,17 +195,17 @@ def test_postgresql_startup_reports_connection_failure(monkeypatch) -> None:
     _stub_lifespan_dependencies(monkeypatch, app_module, _build_external_settings())
 
     ###############################################################################
-    class FailingDatabase:
-
-        # -------------------------------------------------------------------------
-        def check_connection(self) -> None:
-            raise SQLAlchemyError("connection refused")
-
-    monkeypatch.setattr(app_module, "FAIRSDatabase", lambda *_args: FailingDatabase())
+    monkeypatch.setattr(
+        app_module,
+        "initialize_database",
+        lambda *_args: (_ for _ in ()).throw(
+            DatabaseInitializationError("migration failed")
+        ),
+    )
     monkeypatch.setattr(app_module, "_client_build_available", lambda: False)
 
     application = app_module.create_app()
 
-    with pytest.raises(RuntimeError, match="Unable to connect to the configured PostgreSQL database"):
+    with pytest.raises(DatabaseInitializationError, match="migration failed"):
         with TestClient(application):
             pass

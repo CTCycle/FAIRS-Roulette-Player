@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from pathlib import PurePath
 
-from server.domain.datasets import (
+from server.contracts.datasets import (
     DatasetDeleteResponse,
     DatasetListResponse,
     DatasetSummaryResponse,
 )
-from server.domain.upload import UploadRequest, UploadResponse
-from server.repositories.serialization.data import DataSerializer
+from server.contracts.upload import UploadRequest, UploadResponse
+from server.repositories.serialization.data import DataStore
+from server.services.checkpoints import CheckpointReferenceError, CheckpointService
 from server.services.importer import DatasetImportService
 from server.services.loader import TabularFileLoader
 
@@ -62,13 +63,15 @@ class DatasetService:
     # -------------------------------------------------------------------------
     def __init__(
         self,
-        serializer: DataSerializer,
+        data_store: DataStore,
         importer: DatasetImportService,
         loader: TabularFileLoader,
+        checkpoint_service: CheckpointService | None = None,
     ) -> None:
-        self.serializer = serializer
+        self.data_store = data_store
         self.importer = importer
         self.loader = loader
+        self.checkpoint_service = checkpoint_service
 
     # -------------------------------------------------------------------------
     def import_upload(
@@ -115,15 +118,23 @@ class DatasetService:
 
     # -------------------------------------------------------------------------
     def list_training_datasets(self) -> DatasetListResponse:
-        datasets = self.serializer.list_datasets(dataset_kind="training")
+        datasets = self.data_store.list_datasets(dataset_kind="training")
         return DatasetListResponse(datasets=datasets)
 
     # -------------------------------------------------------------------------
     def list_training_dataset_summaries(self) -> DatasetSummaryResponse:
-        datasets = self.serializer.list_datasets_summary(dataset_kind="training")
+        datasets = self.data_store.list_datasets_summary(dataset_kind="training")
         return DatasetSummaryResponse(datasets=datasets)
 
     # -------------------------------------------------------------------------
     def delete_training_dataset(self, dataset_id: int) -> DatasetDeleteResponse:
-        self.serializer.delete_dataset(dataset_id)
+        if self.checkpoint_service is not None:
+            references = self.checkpoint_service.find_dataset_references(dataset_id)
+            if references:
+                joined = ", ".join(references)
+                raise CheckpointReferenceError(
+                    f"Dataset '{dataset_id}' is referenced by checkpoint(s): {joined}. "
+                    "Delete those checkpoints before deleting the dataset."
+                )
+        self.data_store.delete_dataset(dataset_id)
         return DatasetDeleteResponse(status="deleted", dataset_id=dataset_id)

@@ -9,8 +9,8 @@ from server.repositories.datasets import DatasetRepository
 from server.repositories.inference import InferenceRepository
 
 ###############################################################################
-class DataSerializer:
-    """Converts repository results to the dictionaries and frames used by services."""
+class DataStore:
+    """Coordinates the domain-specific dataset and inference repositories."""
 
     # -------------------------------------------------------------------------
     def __init__(self, datasets: DatasetRepository, inference: InferenceRepository) -> None:

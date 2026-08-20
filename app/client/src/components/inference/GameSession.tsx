@@ -5,7 +5,17 @@ import type { InferenceSetupState } from '../../context/AppStateContext';
 import styles from './GameSession.module.css';
 import { Check, History, Pencil, Play, Square, Trash2 } from 'lucide-react';
 import { useInferenceSetupOptions } from '../../hooks/useInferenceSetupOptions';
-import { isRecord, parseApiErrorDetail } from '../../utils/apiParsers';
+import {
+    clearInferenceContext,
+    clearInferenceSessionRows,
+    normalizePrediction,
+    requestNextInferencePrediction,
+    shutdownInferenceSession,
+    startInferenceSession,
+    submitInferenceStep,
+    updateInferenceBet,
+    uploadInferenceDataset,
+} from '../../utils/inferenceApi';
 import { FeatureTip } from '../guidance/FeatureTip';
 import { HelpPopover } from '../guidance/HelpPopover';
 
@@ -29,43 +39,6 @@ const cleanObserved = (val: string) => {
     if (num < 0) return '0';
     if (num > 36) return '36';
     return String(num);
-};
-
-const maybeNumber = (value: unknown): number | undefined => {
-    if (value === null || value === undefined || value === '') {
-        return undefined;
-    }
-    if (typeof value === 'boolean') {
-        return undefined;
-    }
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed)) {
-        return undefined;
-    }
-    return parsed;
-};
-
-const normalizePrediction = (value: unknown): PredictionResult => {
-    const payload = isRecord(value) ? value : {};
-    const action = maybeNumber(payload.action) ?? 0;
-    const description = typeof payload.description === 'string' ? payload.description : 'Unknown';
-    const confidence = maybeNumber(payload.confidence);
-    const betStrategyId = maybeNumber(payload.bet_strategy_id ?? payload.betStrategyId);
-    const betStrategyName = typeof payload.bet_strategy_name === 'string'
-        ? payload.bet_strategy_name
-        : (typeof payload.betStrategyName === 'string' ? payload.betStrategyName : undefined);
-    const suggestedBetAmount = maybeNumber(payload.suggested_bet_amount ?? payload.suggestedBetAmount);
-    const currentBetAmount = maybeNumber(payload.current_bet_amount ?? payload.currentBetAmount);
-
-    return {
-        action,
-        description,
-        confidence,
-        betStrategyId,
-        betStrategyName,
-        suggestedBetAmount,
-        currentBetAmount,
-    };
 };
 
 export const GameSession: React.FC<GameSessionProps> = ({
@@ -114,41 +87,11 @@ export const GameSession: React.FC<GameSessionProps> = ({
             return;
         }
         try {
-            const response = await fetch(`/api/inference/sessions/${config.sessionId}/bet`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ bet_amount: value }),
-            });
-            if (!response.ok) {
-                const payload = await response.json().catch(() => null);
-                const detail = parseApiErrorDetail(payload, 'Bet update failed.');
-                throw new Error(detail);
-            }
+            await updateInferenceBet(config.sessionId, value);
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Unable to update bet amount.';
             setError(message);
         }
-    };
-
-    const uploadDataset = async (file: File): Promise<{ dataset_id: number }> => {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const response = await fetch('/api/data/upload?dataset_kind=inference', {
-            method: 'POST',
-            body: formData,
-        });
-
-        if (!response.ok) {
-            const payload = await response.json().catch(() => null);
-            const detail = parseApiErrorDetail(payload, 'Upload failed.');
-                throw new Error(detail);
-        }
-        return await response.json();
-    };
-
-    const clearInferenceContext = async () => {
-        await fetch('/api/inference/context/clear', { method: 'POST' });
     };
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -164,7 +107,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
             setError(null);
             setIsUploading(true);
             try {
-                const uploadPayload = await uploadDataset(file);
+                const uploadPayload = await uploadInferenceDataset(file);
                 const uploadedId = String(uploadPayload.dataset_id || '');
                 if (!uploadedId) {
                     throw new Error('Upload completed but dataset_id was not returned.');
@@ -212,31 +155,14 @@ export const GameSession: React.FC<GameSessionProps> = ({
         }
         const gameCapital = overrides?.initialCapital ?? setup.initialCapital;
         const gameBet = overrides?.betAmount ?? setup.betAmount;
-        const startPayload = {
-            session_id: sessionId,
+        return startInferenceSession({
+            sessionId,
             checkpoint: setup.checkpoint,
-            dataset_id: resolvedDatasetId,
-            dataset_source: setup.datasetSource,
-            game_capital: gameCapital,
-            game_bet: gameBet,
-        };
-        console.info('[Inference] Starting session request', startPayload);
-
-        const response = await fetch('/api/inference/sessions/start', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(startPayload),
+            datasetId: resolvedDatasetId,
+            datasetSource: setup.datasetSource,
+            gameCapital,
+            gameBet,
         });
-
-        if (!response.ok) {
-            const payload = await response.json().catch(() => null);
-            const detail = parseApiErrorDetail(payload, 'Session start failed.');
-            throw new Error(detail);
-        }
-
-        const payload = await response.json();
-        const prediction = normalizePrediction(payload?.prediction);
-        return { ...payload, prediction };
     };
 
     const handlePlay = async () => {
@@ -317,14 +243,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
         setIsStopping(true);
         setError(null);
         try {
-            const response = await fetch(`/api/inference/sessions/${config.sessionId}/shutdown`, {
-                method: 'POST',
-            });
-            if (!response.ok) {
-                const payload = await response.json().catch(() => null);
-                const detail = parseApiErrorDetail(payload, 'Stop failed.');
-                throw new Error(detail);
-            }
+            await shutdownInferenceSession(config.sessionId);
             onSessionStateChange({ isActive: false });
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Unable to stop session.';
@@ -338,9 +257,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
         if (!config) {
             return;
         }
-        await fetch(`/api/inference/sessions/${config.sessionId}/rows/clear`, {
-            method: 'POST',
-        });
+        await clearInferenceSessionRows(config.sessionId);
     };
 
     const handleClear = async () => {
@@ -349,38 +266,6 @@ export const GameSession: React.FC<GameSessionProps> = ({
         }
         await clearPersistedSession();
         onClearSession();
-    };
-
-    const requestNextPrediction = async (sessionId: string) => {
-        const response = await fetch(`/api/inference/sessions/${sessionId}/next`, {
-            method: 'POST',
-        });
-
-        if (!response.ok) {
-            const payload = await response.json().catch(() => null);
-            const detail = parseApiErrorDetail(payload, 'Prediction failed.');
-            throw new Error(detail);
-        }
-
-        const payload = await response.json();
-        const prediction = normalizePrediction(payload?.prediction);
-        return { ...payload, prediction };
-    };
-
-    const submitStep = async (sessionId: string, extraction: number) => {
-        const response = await fetch(`/api/inference/sessions/${sessionId}/step`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ extraction }),
-        });
-
-        if (!response.ok) {
-            const payload = await response.json().catch(() => null);
-            const detail = parseApiErrorDetail(payload, 'Step failed.');
-            throw new Error(detail);
-        }
-
-        return await response.json();
     };
 
     const handleObservedChange = (index: number, value: string) => {
@@ -400,7 +285,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
         setError(null);
 
         try {
-            await fetch(`/api/inference/sessions/${config.sessionId}/shutdown`, { method: 'POST' });
+            await shutdownInferenceSession(config.sessionId);
             await clearPersistedSession();
 
             const session = await startSession(config.sessionId, {
@@ -452,7 +337,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
                     activeBet = row.betAmount;
                 }
 
-                const result = await submitStep(String(session.session_id), row.observed);
+                const result = await submitInferenceStep(String(session.session_id), row.observed);
                 const capitalAfter = Number(result.capital_after);
                 const outcome = Number(result.reward);
                 const stepIndex = Number(result.step);
@@ -481,7 +366,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
                         await updateBetAmount(nextRowBet, true);
                         activeBet = nextRowBet;
                     }
-                    const nextPayload = await requestNextPrediction(String(session.session_id));
+                    const nextPayload = await requestNextInferencePrediction(String(session.session_id));
                     const nextPrediction: PredictionResult = normalizePrediction(nextPayload.prediction);
                     const nextBet = nextPrediction.currentBetAmount ?? nextRowBet;
                     updatedHistory.push({
@@ -526,7 +411,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
         }
         setError(null);
         try {
-            const result = await submitStep(config.sessionId, extraction);
+            const result = await submitInferenceStep(config.sessionId, extraction);
             const capitalAfter = Number(result.capital_after);
             const outcome = Number(result.reward);
             const stepIndex = Number(result.step);
@@ -603,7 +488,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
         }
         setError(null);
         try {
-            const nextPayload = await requestNextPrediction(config.sessionId);
+            const nextPayload = await requestNextInferencePrediction(config.sessionId);
             const prediction: PredictionResult = normalizePrediction(nextPayload.prediction);
             const nextStep = sessionState.totalSteps + 1;
             const activeBet = prediction.currentBetAmount ?? sessionState.currentBet;

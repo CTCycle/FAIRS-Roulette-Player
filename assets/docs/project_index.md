@@ -1,13 +1,13 @@
 ## Project Overview
 
-Last updated: 2026-08-19
+Last updated: 2026-08-20
 
 ## Purpose
 
 This file is the root index for `assets/docs`.
 Read it first, then open the smallest leaf document that matches the task.
 
-The documentation set is synchronized with the current `2.9.0` codebase: local Windows web runtime, portable Python `3.14.2`, Node.js `22.13.0`, FastAPI backend, and React/Vite frontend.
+The documentation set is synchronized with the current `3.0.0` codebase: local Windows web runtime, portable Python `3.14.2`, Node.js `22.13.0`, FastAPI backend, and React/Vite frontend.
 
 ## Navigation Rules
 
@@ -41,6 +41,8 @@ The documentation set is synchronized with the current `2.9.0` codebase: local W
   - Backend layering, orchestration chains, core module responsibilities, and concurrency model.
 - `architecture/persistence.md`
   - Database backends, tables, persisted files, and runtime storage surfaces.
+- `architecture/findings_and_remediation.md`
+  - Evidence-backed architecture findings, target state, and prioritized remediation roadmap.
 
 ### Coding
 

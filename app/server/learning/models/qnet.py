@@ -5,7 +5,6 @@ from typing import Any
 from keras import Model, layers, losses, metrics, optimizers
 from torch import compile as torch_compile
 
-from server.configurations.startup import get_server_settings
 from server.common.constants import NUMBERS, STATES
 from server.learning.models.embeddings import RouletteEmbedding
 from server.learning.models.logits import AddNorm, BatchNormDense, QScoreNet
@@ -14,14 +13,18 @@ from server.learning.models.logits import AddNorm, BatchNormDense, QScoreNet
 class FAIRSnet:
 
     # -------------------------------------------------------------------------
-    def __init__(self, configuration: dict[str, Any]) -> None:
+    def __init__(
+        self,
+        configuration: dict[str, Any],
+        *,
+        jit_compile: bool = False,
+        jit_backend: str = "inductor",
+    ) -> None:
         self.perceptive_size = configuration.get("perceptive_field_size", 64)
         self.embedding_dims = configuration.get("embedding_dimensions", 200)
         self.neurons = configuration.get("qnet_neurons", 64)
-        server_settings = get_server_settings()
-        # JIT settings come from server config, not the request
-        self.jit_compile = server_settings.device.jit_compile
-        self.jit_backend = server_settings.device.jit_backend
+        self.jit_compile = bool(jit_compile)
+        self.jit_backend = jit_backend.strip() or "inductor"
         self.learning_rate = configuration.get("learning_rate", 0.0001)
         self.seed = configuration.get("training_seed", 42)
         self.q_neurons = self.neurons * 2

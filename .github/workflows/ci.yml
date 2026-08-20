@@ -39,9 +39,31 @@ jobs:
         run: uv --project app/server run ruff check app/server app/tests
       - name: Unit tests
         run: uv --project app/server run pytest -q app/tests/unit
+      - name: Alembic history and model consistency
+        working-directory: app/server
+        run: uv run alembic -c alembic.ini heads
       - name: OpenAPI snapshot check
         run: uv --project app/server run python app/scripts/export_openapi.py --check
       - name: Persistence contract
         env:
           TEST_POSTGRES_URL: postgresql+psycopg://fairs:fairs@localhost:5432/fairs
         run: uv --project app/server run pytest -q app/tests/e2e/test_persistence_contract.py
+
+  frontend-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.13.0"
+          cache: npm
+          cache-dependency-path: app/client/package-lock.json
+      - name: Install dependencies
+        working-directory: app/client
+        run: npm ci
+      - name: Lint
+        working-directory: app/client
+        run: npm run lint
+      - name: Production build
+        working-directory: app/client
+        run: npm run build

@@ -1,6 +1,6 @@
 ## Backend API
 
-Last updated: 2026-08-18
+Last updated: 2026-08-20
 
 ## Mounting Model
 
@@ -68,10 +68,13 @@ Router prefix: `/inference`
 
 ## API Design Notes
 
-- Endpoints use explicit domain identifiers such as `job_id` and `session_id`.
+- Endpoints use explicit resource identifiers such as `job_id` and `session_id`.
 - Training start and resume requests return `202 Accepted` because work is tracked as a background job.
 - Upload, dataset, checkpoint, inference, and job-management operations return `200 OK` on success unless a documented validation or conflict error applies.
-- HTTP handlers validate and marshal payloads at the API boundary, then delegate orchestration to services.
+- `DELETE /api/datasets/training/{dataset_id}` returns `409 Conflict` when checkpoint metadata still references the dataset; the successful response contract and route are unchanged.
+- `POST /api/inference/context/clear` returns `409 Conflict` while an inference session is active, preventing removal of data still used by the live player. It returns `200 OK` when no active session exists.
+- HTTP handlers validate and marshal payloads using `app/server/contracts/*` at the API boundary, then delegate orchestration to services.
+- API modules do not access SQLAlchemy, checkpoint files, or learning models directly; those concerns remain behind services and their collaborators.
 - API docs exposure is controlled by `ENABLE_API_DOCS`.
 
 ## Shared Contract
@@ -84,3 +87,4 @@ Router prefix: `/inference`
 
 - Read `execution_and_data_flow.md` for endpoint-to-service chains.
 - Read `../../runtime/configuration.md` for the flags that change API visibility and backend behavior.
+- Read `findings_and_remediation.md` for the API boundary assessment and incremental remediation priorities.

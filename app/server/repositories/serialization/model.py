@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
 from datetime import datetime
 from typing import Any
 
@@ -13,7 +14,7 @@ from server.common import path as shared_paths
 from server.common.utils.logger import logger
 
 ###############################################################################
-class ModelSerializer:
+class CheckpointStorage:
 
     # -------------------------------------------------------------------------
     def __init__(self) -> None:
@@ -108,6 +109,12 @@ class ModelSerializer:
                 model_folders.append(entry.name)
 
         return model_folders
+
+    # -------------------------------------------------------------------------
+    def delete_checkpoint(self, checkpoint_path: str) -> None:
+        path = shared_paths.as_path(checkpoint_path)
+        shutil.rmtree(path)
+        logger.debug("Deleted checkpoint folder at %s", path)
 
     # -------------------------------------------------------------------------
     def load_checkpoint(
