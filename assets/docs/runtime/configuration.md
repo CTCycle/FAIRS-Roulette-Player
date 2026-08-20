@@ -32,6 +32,10 @@ The runtime scripts and backend consume these environment keys:
 
 - `UV_PROJECT_ENVIRONMENT`
   - set by the launcher to target the runtime virtual environment
+- `UV_CACHE_DIR`, `NPM_CONFIG_CACHE`, `PIP_CACHE_DIR`, and `PYTHONPYCACHEPREFIX`
+  - set by the launcher below `runtimes/cache`
+- `RUFF_CACHE_DIR`, `MYPY_CACHE_DIR`, `COVERAGE_FILE`, and `PLAYWRIGHT_BROWSERS_PATH`
+  - set by the launcher below `app/tests/cache`
 - `FAIRS_DATA_DIR`
   - overrides the mutable database, logs, and checkpoints directory
 - `FAIRS_LOG_DIR`

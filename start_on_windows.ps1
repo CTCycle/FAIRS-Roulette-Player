@@ -14,11 +14,16 @@ $nodeExe = Join-Path $nodeDir 'node.exe'
 $npmCmd = Join-Path $nodeDir 'npm.cmd'
 $serverDir = Join-Path $repoRoot 'app\server'
 $clientDir = Join-Path $repoRoot 'app\client'
+$testsDir = Join-Path $repoRoot 'app\tests'
 $venvDir = Join-Path $serverDir '.venv'
 $venvPython = Join-Path $venvDir 'Scripts\python.exe'
 $envFile = Join-Path $repoRoot 'settings\.env'
 $envExample = Join-Path $repoRoot 'settings\.env.example'
-$uvCacheDir = Join-Path $runtimeRoot '.uv-cache'
+$runtimeCacheDir = Join-Path $runtimeRoot 'cache'
+$testCacheDir = Join-Path $testsDir 'cache'
+$pytestCacheDir = Join-Path $testCacheDir 'pytest'
+$ruffCacheDir = Join-Path $testCacheDir 'ruff'
+$legacyUvCacheDir = Join-Path $runtimeRoot '.uv-cache'
 
 
 $pythonVersion = '3.14.2'
@@ -36,6 +41,64 @@ function Write-Step([string]$Message) { Write-Host "[STEP] $Message" -Foreground
 function Write-Ok([string]$Message) { Write-Host "[OK] $Message" -ForegroundColor Green }
 function Write-Info([string]$Message) { Write-Host "[INFO] $Message" -ForegroundColor DarkCyan }
 function Write-Fatal([string]$Message) { Write-Host "[FATAL] $Message" -ForegroundColor Red }
+
+function Set-CacheEnvironment {
+    $runtimeCachePaths = @(
+        $runtimeCacheDir,
+        (Join-Path $runtimeCacheDir 'npm'),
+        (Join-Path $runtimeCacheDir 'pip'),
+        (Join-Path $runtimeCacheDir 'python')
+    )
+    $testCachePaths = @(
+        $testCacheDir,
+        $pytestCacheDir,
+        $ruffCacheDir,
+        (Join-Path $testCacheDir 'mypy'),
+        (Join-Path $testCacheDir 'playwright-browsers')
+    )
+    New-Item -ItemType Directory -Path ($runtimeCachePaths + $testCachePaths) -Force | Out-Null
+
+    $env:UV_CACHE_DIR = $runtimeCacheDir
+    $env:NPM_CONFIG_CACHE = Join-Path $runtimeCacheDir 'npm'
+    $env:PIP_CACHE_DIR = Join-Path $runtimeCacheDir 'pip'
+    $env:PYTHONPYCACHEPREFIX = Join-Path $runtimeCacheDir 'python'
+    $env:RUFF_CACHE_DIR = $ruffCacheDir
+    $env:MYPY_CACHE_DIR = Join-Path $testCacheDir 'mypy'
+    $env:COVERAGE_FILE = Join-Path $testCacheDir '.coverage'
+    $env:PLAYWRIGHT_BROWSERS_PATH = Join-Path $testCacheDir 'playwright-browsers'
+}
+
+function Remove-PathBestEffort([string]$Path) {
+    if (-not (Test-Path -LiteralPath $Path)) { return $true }
+
+    $item = $null
+    try {
+        $item = Get-Item -LiteralPath $Path -Force -ErrorAction Stop
+    } catch {
+        Write-Info "Skipped inaccessible path: $Path"
+        return $false
+    }
+
+    if ($item.PSIsContainer) {
+        $children = @()
+        try {
+            $children = @(Get-ChildItem -LiteralPath $Path -Force -ErrorAction Stop)
+        } catch {
+            Write-Info "Skipped inaccessible children under: $Path"
+        }
+        foreach ($child in $children) {
+            Remove-PathBestEffort $child.FullName | Out-Null
+        }
+    }
+
+    try {
+        Remove-Item -LiteralPath $Path -Force -ErrorAction Stop
+        return $true
+    } catch {
+        Write-Info "Skipped locked or protected path: $Path"
+        return $false
+    }
+}
 
 function Invoke-DownloadAndExtract([string]$Uri, [string]$ArchivePath, [string]$DestinationPath) {
     $ProgressPreference = 'SilentlyContinue'
@@ -171,7 +234,7 @@ function Install-Dependencies {
     Import-DotEnv
     Ensure-PortableRuntimes
 
-    $env:UV_CACHE_DIR = $uvCacheDir
+    Set-CacheEnvironment
     $env:UV_PROJECT_ENVIRONMENT = $venvDir
     $env:UV_LINK_MODE = 'copy'
     Remove-Item Env:PYTHONHOME, Env:PYTHONPATH, Env:PYTHONNOUSERSITE -ErrorAction SilentlyContinue
@@ -199,9 +262,10 @@ function Install-Dependencies {
         if ($LASTEXITCODE -ne 0) { throw "npm dependency installation failed with exit code $LASTEXITCODE." }
     } finally { Pop-Location }
 
-    if ($PruneCache -and (Test-Path -LiteralPath $uvCacheDir)) {
-        Write-Step 'Pruning uv cache.'
-        Remove-Item -LiteralPath $uvCacheDir -Recurse -Force
+    if ($PruneCache -and (Test-Path -LiteralPath $runtimeCacheDir)) {
+        Write-Step 'Pruning runtime cache.'
+        Remove-PathBestEffort $runtimeCacheDir | Out-Null
+        Set-CacheEnvironment
     }
     Write-Ok 'Dependencies are installed.'
 }
@@ -286,7 +350,7 @@ function Clear-Port([int]$Port) {
 function Start-Application {
     Import-DotEnv
     Ensure-PortableRuntimes
-    $env:UV_CACHE_DIR = $uvCacheDir
+    Set-CacheEnvironment
     $env:UV_PROJECT_ENVIRONMENT = $venvDir
     $env:UV_LINK_MODE = 'copy'
     Remove-Item Env:PYTHONHOME, Env:PYTHONPATH, Env:PYTHONNOUSERSITE -ErrorAction SilentlyContinue
@@ -352,7 +416,7 @@ function Start-Application {
 function Initialize-Database {
     Import-DotEnv
     Ensure-PortableRuntimes
-    $env:UV_CACHE_DIR = $uvCacheDir
+    Set-CacheEnvironment
     $env:UV_PROJECT_ENVIRONMENT = $venvDir
     $previousPythonPath = $env:PYTHONPATH
     Remove-Item Env:PYTHONHOME, Env:PYTHONPATH, Env:PYTHONNOUSERSITE -ErrorAction SilentlyContinue
@@ -371,6 +435,7 @@ function Initialize-Database {
 }
 
 function Invoke-TestSuite {
+    Set-CacheEnvironment
     & (Join-Path $repoRoot 'app\tests\run_tests.bat')
     if ($LASTEXITCODE -ne 0) { throw "Test suite failed with exit code $LASTEXITCODE." }
     Write-Ok 'Test suite completed.'
@@ -378,20 +443,41 @@ function Invoke-TestSuite {
 
 function Remove-Logs {
     $logDir = Join-Path $repoRoot 'app\resources\logs'
-    if (Test-Path -LiteralPath $logDir) { Get-ChildItem -LiteralPath $logDir -Filter '*.log' -File -Recurse | Remove-Item -Force }
+    if (Test-Path -LiteralPath $logDir) {
+        $logFiles = @(Get-ChildItem -LiteralPath $logDir -Filter '*.log' -File -Recurse -Force -ErrorAction SilentlyContinue)
+        foreach ($logFile in $logFiles) { Remove-PathBestEffort $logFile.FullName | Out-Null }
+    }
     Write-Ok 'Log files removed.'
 }
 
 function Remove-PythonCaches {
-    Get-ChildItem -LiteralPath $repoRoot -Directory -Recurse -Force -ErrorAction SilentlyContinue |
-        Where-Object Name -eq '__pycache__' |
-        Remove-Item -Recurse -Force
+    $pythonCacheDirs = @(Get-ChildItem -LiteralPath $repoRoot -Directory -Recurse -Force -ErrorAction SilentlyContinue |
+        Where-Object Name -eq '__pycache__')
+    foreach ($pythonCacheDir in $pythonCacheDirs) {
+        Remove-PathBestEffort $pythonCacheDir.FullName | Out-Null
+    }
 }
 
 function Clear-Cache {
+    $legacyCachePaths = @(
+        $legacyUvCacheDir,
+        (Join-Path $repoRoot '.pytest_cache'),
+        (Join-Path $repoRoot '.ruff_cache'),
+        (Join-Path $repoRoot '.mypy_cache'),
+        (Join-Path $serverDir '.pytest_cache'),
+        (Join-Path $serverDir '.ruff_cache'),
+        (Join-Path $serverDir '.mypy_cache'),
+        (Join-Path $testsDir '.pytest_cache'),
+        (Join-Path $testsDir '.ruff_cache'),
+        (Join-Path $testsDir '.mypy_cache'),
+        (Join-Path $clientDir 'node_modules\.vite')
+    )
+    foreach ($cachePath in @($runtimeCacheDir, $testCacheDir) + $legacyCachePaths) {
+        Remove-PathBestEffort $cachePath | Out-Null
+    }
     Remove-PythonCaches
-    if (Test-Path -LiteralPath $uvCacheDir) { Remove-Item -LiteralPath $uvCacheDir -Recurse -Force }
-    Write-Ok 'Python and uv caches cleared.'
+    Set-CacheEnvironment
+    Write-Ok 'Python, uv, and tool caches cleared. Locked or protected entries were skipped.'
 }
 
 function Uninstall-Application {
@@ -404,7 +490,7 @@ function Uninstall-Application {
         (Join-Path $clientDir 'dist')
     )
     foreach ($path in $paths) {
-        if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Recurse -Force }
+        Remove-PathBestEffort $path | Out-Null
     }
     New-Item -ItemType Directory -Path $runtimeRoot -Force | Out-Null
     New-Item -ItemType File -Path (Join-Path $runtimeRoot '.gitkeep') -Force | Out-Null
@@ -457,7 +543,7 @@ function Show-Menu {
         Write-Host ''
         Write-Host '  CLEANUP' -ForegroundColor DarkCyan
         Write-MenuItem '6' 'Remove logs' 'Delete application log files' DarkYellow
-        Write-MenuItem '7' 'Clear cache' 'Remove Python and uv caches' DarkYellow
+        Write-MenuItem '7' 'Clear cache' 'Remove Python, uv, and tool caches' DarkYellow
         Write-MenuItem '8' 'Uninstall application' 'Remove local runtimes and build outputs' Red
         Write-Host ''
         Write-Host '  -----------------------------------------------------' -ForegroundColor DarkCyan
@@ -495,4 +581,5 @@ function Show-Menu {
     }
 }
 
+Set-CacheEnvironment
 Show-Menu

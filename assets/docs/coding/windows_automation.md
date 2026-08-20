@@ -21,6 +21,7 @@ This file covers repository-specific conventions for the PowerShell launcher and
 - Local launch relies on a prepared virtual environment and a built frontend.
 - Startup checks the runtime executables, the backend environment, the Vite runner, and the built frontend before deciding whether dependency installation or rebuild is needed.
 - The launcher clears its configured FastAPI and UI ports before starting services and clears the configured UI port before replacing frontend dependencies.
+- Cache cleanup is best-effort: cleanup walks cache contents item by item, reports locked or protected paths, and continues removing entries it can access.
 - Any changes to runtime staging should be reflected in both the scripts and the runtime documentation.
 
 ## Related Files
