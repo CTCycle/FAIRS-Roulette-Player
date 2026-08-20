@@ -7,7 +7,7 @@ Last updated: 2026-08-20
 This file is the root index for `assets/docs`.
 Read it first, then open the smallest leaf document that matches the task.
 
-The documentation set is synchronized with the current `2.9.0` codebase: local Windows web runtime, portable Python `3.14.2`, Node.js `22.13.0`, FastAPI backend, and React/Vite frontend.
+The documentation set is synchronized with the current `3.0.0` codebase: local Windows web runtime, portable Python `3.14.2`, Node.js `22.13.0`, FastAPI backend, and React/Vite frontend.
 
 ## Navigation Rules
 
