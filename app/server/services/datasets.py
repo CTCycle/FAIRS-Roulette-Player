@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from pathlib import PurePath
 
-from server.domain.datasets import (
+from server.contracts.datasets import (
     DatasetDeleteResponse,
     DatasetListResponse,
     DatasetSummaryResponse,
 )
-from server.domain.upload import UploadRequest, UploadResponse
+from server.contracts.upload import UploadRequest, UploadResponse
 from server.repositories.serialization.data import DataSerializer
 from server.services.importer import DatasetImportService
 from server.services.loader import TabularFileLoader

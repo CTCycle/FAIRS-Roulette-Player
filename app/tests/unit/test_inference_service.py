@@ -4,7 +4,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from server.domain.inference import (
+from server.contracts.inference import (
     InferenceBetUpdateRequest,
     InferenceStartRequest,
     InferenceStepRequest,

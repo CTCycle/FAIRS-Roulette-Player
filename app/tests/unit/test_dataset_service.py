@@ -5,7 +5,7 @@ from unittest.mock import Mock
 import pandas as pd
 import pytest
 
-from server.domain.upload import UploadRequest
+from server.contracts.upload import UploadRequest
 from server.services.datasets import DatasetService
 
 ###############################################################################

@@ -1,20 +1,45 @@
 ## System Overview
 
-Last updated: 2026-08-19
+Last updated: 2026-08-20
 
-## Summary
+## Current State
 
-FAIRS is a Windows-first roulette research application for local web-mode roulette training and inference experiments. It has two main runtime surfaces:
+FAIRS is a Windows-first local web application for roulette training and inference experiments. The repository contains a React/Vite client and a FastAPI server; the server is the system of record for API behavior, training orchestration, inference session state, persistence, and startup readiness.
 
-- FastAPI backend in `app/server`
-- React 19 + TypeScript frontend in `app/client/src`
-- Current application version: `2.9.0`
+The application is intentionally a single local deployment. Training is isolated in a worker process, while jobs and active inference sessions remain in memory. SQLite is the embedded default; PostgreSQL is supported as an explicitly configured external backend. Checkpoints and logs are filesystem data rather than database entities.
 
-The backend is the system of record for API behavior, training orchestration, inference sessions, persistence, and startup readiness. The repository does not include a desktop installer, container deployment, or packaged executable path.
+```mermaid
+flowchart LR
+    User[User in browser]
+    Client[React/Vite client\napp/client/src]
+    API[FastAPI interface\napp/server/api]
+    Services[Application services\napp/server/services]
+    Learning[ML execution\napp/server/learning]
+    Repos[Persistence adapters\napp/server/repositories]
+    DB[(SQLite or PostgreSQL)]
+    Files[(Datasets, checkpoints, logs\nfilesystem data root)]
+    Config[Configuration and startup\napp/server/configurations]
+    External[External PostgreSQL\nwhen selected]
+
+    User --> Client
+    Client -->|/api/*| API
+    API --> Services
+    API --> Config
+    Services --> Learning
+    Services --> Repos
+    Services --> Files
+    Learning --> Repos
+    Learning --> Config
+    Repos --> DB
+    DB -.-> External
+    Config --> Files
+```
+
+The diagram reflects the current implementation. The `Learning --> Repos` and `Learning --> Config` edges are documented coupling points, not target-state recommendations; see `findings_and_remediation.md`.
 
 ## Source Tree
 
-The structure below is source-focused and excludes dependency, cache, and generated folders such as `node_modules`, `dist`, `target`, `__pycache__`, and `.pytest_cache`.
+The structure below is source-focused and excludes dependency, cache, and generated folders.
 
 ```text
 .
@@ -22,16 +47,16 @@ The structure below is source-focused and excludes dependency, cache, and genera
 │  ├─ client/
 │  │  ├─ package.json
 │  │  ├─ vite.config.ts
-│  │  ├─ src/
-│  │  │  ├─ App.tsx
-│  │  │  ├─ main.tsx
-│  │  │  ├─ components/
-│  │  │  ├─ context/
-│  │  │  ├─ hooks/
-│  │  │  ├─ pages/
-│  │  │  ├─ styles/
-│  │  │  ├─ types/
-│  │  │  └─ utils/
+│  │  └─ src/
+│  │     ├─ App.tsx
+│  │     ├─ main.tsx
+│  │     ├─ components/
+│  │     ├─ context/
+│  │     ├─ hooks/
+│  │     ├─ pages/
+│  │     ├─ styles/
+│  │     ├─ types/
+│  │     └─ utils/
 │  ├─ resources/
 │  │  ├─ checkpoints/
 │  │  ├─ logs/
@@ -45,7 +70,7 @@ The structure below is source-focused and excludes dependency, cache, and genera
 │  │  ├─ api/
 │  │  ├─ common/
 │  │  ├─ configurations/
-│  │  ├─ domain/
+│  │  ├─ contracts/
 │  │  ├─ learning/
 │  │  ├─ repositories/
 │  │  └─ services/
@@ -53,7 +78,6 @@ The structure below is source-focused and excludes dependency, cache, and genera
 │  │  └─ openapi.json
 │  └─ tests/
 │     ├─ conftest.py
-│     ├─ run_tests.bat
 │     ├─ e2e/
 │     └─ unit/
 ├─ assets/
@@ -65,33 +89,40 @@ The structure below is source-focused and excludes dependency, cache, and genera
 └─ start_on_windows.ps1
 ```
 
+## Backend Ownership
+
+- `app/server/app.py` is the composition root. It creates the FastAPI application, mounts routers, configures SPA fallback routes, and wires runtime services during lifespan startup.
+- `app/server/api` contains transport handlers, request validation, response validation, and HTTP exception translation. It does not access SQLAlchemy directly.
+- `app/server/contracts` contains Pydantic request/response contracts and validated runtime settings. These are boundary contracts, not persistent entities or a separate domain model.
+- `app/server/services` owns application orchestration: dataset import, checkpoint lifecycle, training jobs, inference sessions, startup checks, and in-process job state.
+- `app/server/learning` owns roulette betting logic, neural models, environments, training algorithms, inference players, and the worker entrypoints that execute ML workloads.
+- `app/server/repositories` owns SQLAlchemy schema definitions, database engines/transactions, dataset and inference persistence, training queries, and checkpoint/model serialization.
+- `app/server/common` contains narrowly scoped cross-cutting primitives such as paths, constants, error mapping, logging, session/checkpoint normalization, and roulette feature encoding.
+- `app/server/configurations` resolves environment and JSON settings and exposes the runtime configuration used by composition and selected ML components.
+
+## Frontend Ownership
+
+- `src/App.tsx` composes `BrowserRouter`, providers, and the two application routes.
+- `src/pages` owns route-level composition for Training and Inference.
+- `src/components` owns reusable layout, guidance, upload, wizard, dashboard, and session views.
+- `src/context` and `src/hooks` own shared state and feature-local state/request orchestration.
+- `src/types` defines frontend state and response shapes; `src/utils` contains defensive API parsing and upload helpers.
+- Styling is token-driven through `src/styles/global.css`, feature stylesheets, and CSS modules.
+
 ## Entry Points
 
-- Backend app entry:
-  - `app/server/app.py`
-- Local launcher:
-  - `start_on_windows.ps1`
-- Frontend entry:
-  - `app/client/src/main.tsx`
-- Frontend route composition:
-  - `app/client/src/App.tsx`
+- Backend app: `app/server/app.py`
+- Frontend entry: `app/client/src/main.tsx`
+- Frontend routes: `app/client/src/App.tsx`
+- Windows launcher: `start_on_windows.ps1`
 
-## Frontend Structure
+## Runtime Boundary
 
-- App shell uses `BrowserRouter` with `MainLayout` as the shared route frame.
-- The root route redirects to `/training`.
-- Primary pages are:
-  - `/training`
-  - `/inference`
-- The shared header includes the FAIRS logo, workspace subtitle, and icon-backed Training/Inference navigation.
-- Shared application state lives in `src/context`.
-- Feature logic is split between `src/hooks`, `src/pages`, and `src/components`.
-- Styling is token-driven through `src/styles/global.css` plus feature CSS files and CSS modules.
-- Training includes dataset/checkpoint previews, a clickable six-step configuration wizard, and a live monitor with metric cards, progress, and history charts.
-- Inference uses a setup/statistics/suggestion panel beside a session-history table with Play, Stop, Clear, and row-edit controls.
+The repository provides local web mode. It does not contain a desktop installer, packaged executable path, container deployment, WebSocket API, or distributed job/session store.
 
 ## Related Files
 
 - Read `backend_api.md` for the mounted HTTP surface.
-- Read `execution_and_data_flow.md` for service layering and orchestration chains.
-- Read `persistence.md` for stored data, checkpoints, and logs.
+- Read `execution_and_data_flow.md` for current and target dependency direction and critical flows.
+- Read `persistence.md` for relational and filesystem storage.
+- Read `findings_and_remediation.md` for evidence-backed architectural findings and priorities.

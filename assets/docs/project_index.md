@@ -1,6 +1,6 @@
 ## Project Overview
 
-Last updated: 2026-08-19
+Last updated: 2026-08-20
 
 ## Purpose
 
@@ -41,6 +41,8 @@ The documentation set is synchronized with the current `2.9.0` codebase: local W
   - Backend layering, orchestration chains, core module responsibilities, and concurrency model.
 - `architecture/persistence.md`
   - Database backends, tables, persisted files, and runtime storage surfaces.
+- `architecture/findings_and_remediation.md`
+  - Evidence-backed architecture findings, target state, and prioritized remediation roadmap.
 
 ### Coding
 

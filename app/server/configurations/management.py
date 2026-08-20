@@ -6,7 +6,7 @@ from threading import RLock
 from typing import Any
 
 from server.common import path as shared_paths
-from server.domain.configuration import JsonServerSettings, ServerSettings
+from server.contracts.configuration import JsonServerSettings, ServerSettings
 
 ###############################################################################
 class ConfigurationManager:

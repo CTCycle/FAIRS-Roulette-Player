@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 
 from server.configurations.dependencies import get_dataset_service
-from server.domain.upload import DatasetKind, UploadRequest, UploadResponse
+from server.contracts.upload import DatasetKind, UploadRequest, UploadResponse
 from server.services.datasets import DatasetService
 
 

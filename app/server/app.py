@@ -28,7 +28,7 @@ from server.api.training import router as training_router
 from server.api.upload import router as upload_router
 from server.api.system import router as system_router
 from server.configurations import get_server_settings
-from server.domain.system import RootStatusResponse
+from server.contracts.system import RootStatusResponse
 from server.repositories.database.backend import FAIRSDatabase
 from server.repositories.database.initializer import initialize_sqlite_database_if_missing
 from server.repositories.datasets import DatasetRepository

@@ -8,7 +8,7 @@ from server.configurations.startup import (
     reload_settings_for_tests,
     get_poll_interval_seconds,
 )
-from server.domain.configuration import (
+from server.contracts.configuration import (
     DatabaseSettings,
     DeviceSettings,
     EnvDatabaseSettings,

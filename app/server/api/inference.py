@@ -9,7 +9,7 @@ from server.common.api_errors import (
     http_exception_for_exception,
 )
 from server.configurations.dependencies import get_inference_service
-from server.domain.inference import (
+from server.contracts.inference import (
     InferenceBetUpdateRequest,
     InferenceBetUpdateResponse,
     InferenceContextClearResponse,

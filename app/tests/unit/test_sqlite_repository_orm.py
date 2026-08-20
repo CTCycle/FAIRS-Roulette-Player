@@ -3,7 +3,7 @@ from __future__ import annotations
 import pandas as pd
 from sqlalchemy import create_engine, event, text
 
-from server.domain.configuration import DatabaseSettings
+from server.contracts.configuration import DatabaseSettings
 from server.repositories.database.backend import FAIRSDatabase
 from server.repositories.datasets import DatasetRepository
 from server.repositories.inference import InferenceRepository

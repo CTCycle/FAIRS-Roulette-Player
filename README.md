@@ -1,7 +1,7 @@
 # FAIRS: Fabulous Automated Intelligent Roulette System
 Last updated: 2026-08-20
 
-[![Release](https://img.shields.io/github/v/release/CTCycle/FAIRS-Roulette-Player?display_name=tag)](https://github.com/CTCycle/FAIRS-Roulette-Player/releases) [![Python](https://img.shields.io/badge/python-%3E%3D3.14-3776AB?logo=python&logoColor=white)](./app/server/pyproject.toml) [![Node.js](https://img.shields.io/badge/node.js-22.13.0-339933?logo=node.js&logoColor=white)](./start_on_windows.ps1) [![React](https://img.shields.io/badge/react-19.2.0-61DAFB?logo=react&logoColor=black)](./app/client/package.json) [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE) [![CI](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml?query=branch%3Adevelop)
+[![Release](https://img.shields.io/github/v/release/CTCycle/FAIRS-Roulette-Player?display_name=tag)](https://github.com/CTCycle/FAIRS-Roulette-Player/releases) [![Python](https://img.shields.io/badge/python-%3E%3D3.14-3776AB?logo=python&logoColor=white)](./app/server/pyproject.toml) [![Node.js](https://img.shields.io/badge/node.js-22.13.0-339933?logo=node.js&logoColor=white)](./start_on_windows.ps1) [![React](https://img.shields.io/badge/react-19.2.8-61DAFB?logo=react&logoColor=black)](./app/client/package.json) [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE) [![CI](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml?query=branch%3Adevelop)
 [![CTCycle Portfolio](https://img.shields.io/badge/CTCycle-Portfolio-58a6ff?style=flat-square)](https://ctcycle.github.io/CTCycle/)
 
 FAIRS is a Windows-first local web workspace for roulette training and inference experiments. A FastAPI backend manages datasets, training jobs, checkpoints, inference sessions, and persistence while a React 19 + TypeScript frontend provides the interactive workspace.
@@ -170,6 +170,7 @@ Start with [`assets/docs/project_index.md`](assets/docs/project_index.md), then 
 - [`assets/docs/runtime/startup.md`](assets/docs/runtime/startup.md) — launcher behavior and database lifecycle.
 - [`assets/docs/runtime/configuration.md`](assets/docs/runtime/configuration.md) — environment and settings.
 - [`assets/docs/architecture/system_overview.md`](assets/docs/architecture/system_overview.md) — source tree and runtime surfaces.
+- [`assets/docs/architecture/findings_and_remediation.md`](assets/docs/architecture/findings_and_remediation.md) — current architecture findings, target state, and prioritized remediation.
 
 ## License
 
