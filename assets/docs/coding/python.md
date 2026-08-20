@@ -57,7 +57,7 @@ Last updated: 2026-08-20
   - contracts do not depend on API, services, repositories, configuration loaders, or learning;
   - API handlers do not access repositories or learning directly;
   - repositories do not depend on API or services;
-  - learning code does not depend on API or services.
+  - learning code does not depend on API, services, or repositories.
 - Put shared roulette transformations in the named `common.roulette` module rather than duplicating feature derivation in repositories and learning code.
 - Avoid unrelated stylistic churn.
 - Keep imports at file top.
