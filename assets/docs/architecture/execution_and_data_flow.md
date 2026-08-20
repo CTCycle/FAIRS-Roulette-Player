@@ -9,7 +9,7 @@ The current application is a layered monolith with an explicit composition root.
 - **Interface:** `app/server/api/*` validates HTTP input, calls an application service, validates the response, and translates selected exceptions to HTTP status codes.
 - **Contracts:** `app/server/contracts/*` contains Pydantic request/response contracts and validated settings dataclasses/models shared between interface and application code.
 - **Application services:** `app/server/services/*` coordinates dataset import, checkpoints, training lifecycle, inference sessions, startup checks, and in-process job/session state.
-- **Learning execution:** `app/server/learning/*` contains roulette betting rules, neural models, training algorithms, inference players, and process worker entrypoints.
+- **Learning execution:** `app/server/learning/*` contains roulette betting rules, neural models, training algorithms, and inference players. It receives prepared data and explicit runtime inputs from application services.
 - **Persistence adapters:** `app/server/repositories/*` owns SQLAlchemy schema, engines, transaction scopes, dataset/inference repositories, training queries, and checkpoint/model serialization.
 - **Configuration:** `app/server/bootstrap.py` explicitly loads `.env`, resolves mutable paths, and configures logging before the composition root imports Keras-backed modules; `app/server/configurations/*` then resolves `.env` and JSON settings.
 - **Shared primitives:** `app/server/common/*` contains paths, constants, logging, normalization, error mapping, and the shared roulette feature transformation.
@@ -45,7 +45,6 @@ flowchart TD
     Services --> Learning
     Services --> Repos
     Services --> Common
-    Learning --> Repos
     Learning --> Common
     Repos --> Config
     Repos --> DB
@@ -58,7 +57,7 @@ flowchart TD
     Repos --> Files
 ```
 
-The `Learning --> Repos` and `Repos --> Learning` edges are the remaining coupling points to address incrementally. The `Repos --> Learning` edge is currently used to register custom Keras layers when loading checkpoints; it is not a database relationship.
+The remaining cross-layer edge is `Repos --> Learning`, which is currently used to register custom Keras layers when loading checkpoints; it is not a database relationship. `Learning --> Repos` has been removed: the application worker and inference service supply persistence-derived inputs.
 
 ## Pragmatic Target Dependency Diagram
 
@@ -94,7 +93,7 @@ flowchart TD
     Config --> External
 ```
 
-`Worker` represents a future ownership move for process-specific data/configuration orchestration. It is a recommendation, not an implementation in this change. The current code remains valid for local execution and is documented as such.
+`Worker` represents the implemented `server.services.training_worker` process orchestration module. It owns process channels and coordinates learning execution with explicit data/configuration and checkpoint storage collaborators.
 
 ## Startup Flow
 
@@ -118,7 +117,7 @@ sequenceDiagram
     participant API as FastAPI training router
     participant Service as TrainingService
     participant Jobs as JobManager
-    participant Worker as ProcessWorker
+    participant Worker as TrainingWorker
     participant ML as DQNTraining
     participant Data as TrainingDataService
     participant DB as SQLite/PostgreSQL
@@ -170,12 +169,16 @@ sequenceDiagram
     Service->>Checkpoint: resolve and load checkpoint
     Checkpoint->>Model: load model/configuration
     Model-->>Checkpoint: model and configuration
-    Service->>Data: load dataset
+    Service->>Data: load dataset metadata
     Data->>Dataset: get(dataset_id)
     Dataset->>DB: SELECT dataset
     DB-->>Dataset: dataset metadata
-    Service->>Player: construct player with model and data facade
-    Player->>Data: load context outcomes as needed
+    Service->>Data: load_dataset_outcomes(dataset_id)
+    Data->>Dataset: get outcome rows
+    Dataset->>DB: SELECT outcomes
+    DB-->>Dataset: outcome rows
+    Data-->>Service: prepared dataframe context
+    Service->>Player: construct player with model and prepared context
     Service->>Repo: persist session header and initial prediction
     Repo->>DB: upsert session and step
     Service-->>API: session and prediction
@@ -249,6 +252,7 @@ classDiagram
         +update_bet(amount)
     }
     class RoulettePlayer {
+        +dataset_context
         +predict_next()
         +update_with_true_extraction()
     }
@@ -274,6 +278,7 @@ classDiagram
     InferenceService --> CheckpointService
     InferenceService --> DataStore
     InferenceService --> InferenceRepository
+    InferenceService --> RoulettePlayer : injects prepared context
     CheckpointService --> CheckpointStorage
     DataStore --> DatasetRepository
     DataStore --> InferenceRepository
