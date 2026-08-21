@@ -39,7 +39,7 @@ From the extracted repository root, open PowerShell and run:
 .\start_on_windows.ps1
 ```
 
-On the first run, choose **2 — Install / update dependencies** if you want to prepare the environment explicitly. Select `Standard` for normal use or `Development` when you need the test dependencies. Then choose **1 — Launch application**. If the environment is missing, option 1 can prepare the Standard environment automatically.
+On the first run, choose **4 — Install / update dependencies** if you want to prepare the environment explicitly. Select `Standard` for normal use or `Development` when you need the test dependencies. Then choose **1 — Launch application**. If the environment is missing, option 1 can prepare the Standard environment automatically.
 
 The launcher creates `settings/.env` from `settings/.env.example` when needed, starts the FastAPI backend, and serves the built React frontend through Vite preview. Later starts reuse the environment when its readiness checks pass.
 
@@ -49,21 +49,25 @@ With the checked-in default settings, open:
 - API health: `http://127.0.0.1:8890/api/health`
 - API documentation: `http://127.0.0.1:8890/docs`
 
-The active ports come from `settings/.env`. The launcher also provides maintenance actions for dependency installation, database initialization, tests, logs, caches, and local runtime cleanup.
+The active ports come from `settings/.env`. The launcher also provides maintenance actions for application updates, dependency installation, database initialization, tests, logs, checkpoints, user data, caches, and local runtime cleanup.
 
 ### Launcher menu
 
 | Option | Use |
 | --- | --- |
 | `1` | Launch the backend and web UI. |
-| `2` | Install or update dependencies; choose `Standard` or `Development`. |
-| `3` | Rebuild the frontend from current source without updating dependencies. |
-| `4` | Create or upgrade the configured database, including PostgreSQL. |
-| `5` | Run the repository test suite. |
-| `6` | Remove application log files. |
-| `7` | Clear Python and uv caches. |
-| `8` | Remove local runtimes and build outputs so the environment can be rebuilt. |
-| `9` | Exit the launcher. |
+| `2` | Update the application from the `main` branch with `git pull`. |
+| `3` | Check the locally known `origin/main` status without fetching, downloading, or applying updates. |
+| `4` | Install or update dependencies; choose `Standard` or `Development`. |
+| `5` | Rebuild the frontend from current source without updating dependencies. |
+| `6` | Create or upgrade the configured database, including PostgreSQL. |
+| `7` | Run the repository test suite. |
+| `8` | Remove application log files. |
+| `9` | Clear Python and uv caches. |
+| `10` | Remove saved checkpoints only. |
+| `11` | Remove local database and log data while preserving checkpoints and application files. |
+| `12` | Remove local runtimes and build outputs so the environment can be rebuilt. |
+| `13` | Exit the launcher. |
 
 ## Tips & Tricks
 
@@ -84,7 +88,7 @@ Database settings belong in `settings/.env`; a `database` block in `configuratio
 
 ### Database modes
 
-- `EMBEDDED_DATABASE=true` uses SQLite. FastAPI startup and launcher option 4 run the shared Alembic create/upgrade runner against the configured database without resetting or repairing drift.
+- `EMBEDDED_DATABASE=true` uses SQLite. FastAPI startup and launcher option 6 run the shared Alembic create/upgrade runner against the configured database without resetting or repairing drift.
 - `EMBEDDED_DATABASE=false` uses PostgreSQL. The runner first tries the configured target and creates it only when that connection returns SQLSTATE `3D000`; automatic creation requires `CREATEDB`. Target migrations use a transaction advisory lock.
 - Empty databases upgrade to Alembic `head`. Exact unversioned legacy databases are stamped at `head` without recreating objects or changing rows. Partial, drifted, unknown, ahead, or multi-head states fail unchanged before services start.
 
@@ -163,7 +167,7 @@ Run the repository test entry point from the root:
 app\tests\run_tests.bat
 ```
 
-Use launcher option 2 with `Development` selected before running tests if the test extra has not been installed.
+Use launcher option 4 with `Development` selected before running tests if the test extra has not been installed.
 
 For focused backend runs, enter the server project directory and target the relevant suite:
 
