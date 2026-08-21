@@ -30,7 +30,7 @@ Choose option 4 and then `Development` when browser/test dependencies are requir
 
 Use option 6 to run the database create/upgrade workflow directly. Use option 5 only when the frontend needs rebuilding and dependencies/database state should not be touched.
 
-Use option 2 to pull application changes from `main`. Use option 3 to check the locally known `origin/main` status without fetching or applying updates. Use option 10 to remove checkpoints separately, or option 11 to remove local database and log data while preserving checkpoints.
+Use option 2 to pull application changes from `main`. Use option 3 to check the locally known `origin/main` status without fetching or applying updates. Options 8 through 12 are destructive cleanup actions and require the exact passphrase `DELETE`; option 10 removes checkpoints separately, while option 11 removes local database and log data while preserving checkpoints.
 
 Run the automated test entry point:
 

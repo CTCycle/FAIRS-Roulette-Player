@@ -467,7 +467,18 @@ function Invoke-TestSuite {
 # -----------------------------------------------------------------------------
 # Cleanup and data management
 # -----------------------------------------------------------------------------
+function Confirm-Delete([string]$Description) {
+    $confirmation = (Read-Host "Type DELETE to $Description").Trim()
+    if ($confirmation -cne 'DELETE') {
+        Write-Info "Operation cancelled. No data was deleted."
+        return $false
+    }
+    return $true
+}
+
 function Remove-Logs {
+    if (-not (Confirm-Delete 'remove application log files')) { return }
+
     $logDir = (Get-UserDataTargets).LogRoot
     Remove-UserLogFiles $logDir
     Write-Ok 'Log files removed.'
@@ -488,6 +499,8 @@ function Remove-PythonCaches {
 }
 
 function Clear-Cache {
+    if (-not (Confirm-Delete 'clear Python, uv, and tool caches')) { return }
+
     $legacyCachePaths = @(
         $legacyUvCacheDir,
         (Join-Path $repoRoot '.pytest_cache'),
@@ -552,11 +565,7 @@ function Remove-UserDataDirectory([string]$Path) {
 }
 
 function Remove-Checkpoints {
-    $confirmation = (Read-Host 'Type REMOVE CHECKPOINTS to delete all saved checkpoints').Trim()
-    if ($confirmation -cne 'REMOVE CHECKPOINTS') {
-        Write-Info 'Checkpoint removal cancelled. No checkpoints were changed.'
-        return
-    }
+    if (-not (Confirm-Delete 'delete all saved checkpoints')) { return }
 
     $targets = Get-UserDataTargets
     Remove-UserDataDirectory $targets.CheckpointRoot
@@ -565,11 +574,7 @@ function Remove-Checkpoints {
 }
 
 function Remove-AllData {
-    $confirmation = (Read-Host 'Type REMOVE ALL DATA to delete local user data').Trim()
-    if ($confirmation -cne 'REMOVE ALL DATA') {
-        Write-Info 'Remove All Data cancelled. No user data was changed.'
-        return
-    }
+    if (-not (Confirm-Delete 'delete local user data')) { return }
 
     $targets = Get-UserDataTargets
     foreach ($databaseFile in $targets.DatabaseFiles) {
@@ -587,6 +592,8 @@ function Remove-AllData {
 }
 
 function Uninstall-Application {
+    if (-not (Confirm-Delete 'remove local runtimes and build outputs')) { return }
+
     $paths = @(
         $runtimeRoot,
         (Join-Path $serverDir '.venv'),
