@@ -17,6 +17,7 @@ def test_training_exception_mapping_preserves_conflict_category() -> None:
     assert mapped.detail == "training is already running"
 
 
+###############################################################################
 def test_dataset_delete_route_maps_checkpoint_reference_to_conflict() -> None:
     service = Mock()
     service.delete_training_dataset.side_effect = CheckpointReferenceError(

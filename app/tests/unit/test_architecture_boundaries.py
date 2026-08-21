@@ -20,6 +20,7 @@ BOUNDARY_RULES: dict[str, tuple[str, ...]] = {
 }
 
 
+###############################################################################
 def _module_name(path: Path) -> str:
     relative = path.relative_to(SERVER_ROOT).with_suffix("")
     parts = list(relative.parts)
@@ -28,6 +29,7 @@ def _module_name(path: Path) -> str:
     return ".".join(("server", *parts))
 
 
+###############################################################################
 def _imported_modules(tree: ast.AST) -> set[str]:
     imported: set[str] = set()
     for node in ast.walk(tree):
@@ -38,6 +40,7 @@ def _imported_modules(tree: ast.AST) -> set[str]:
     return {name for name in imported if name.startswith("server.")}
 
 
+###############################################################################
 def test_backend_module_boundaries_remain_explicit() -> None:
     violations: list[str] = []
 

@@ -23,6 +23,7 @@ class CheckpointReferenceError(RuntimeError):
     """Raised when dataset deletion would invalidate checkpoint metadata."""
 
 
+###############################################################################
 class CheckpointService:
 
     # -------------------------------------------------------------------------

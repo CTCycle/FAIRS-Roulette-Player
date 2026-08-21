@@ -11,6 +11,7 @@ from server.configurations import DatabaseSettings
 from server.configurations.startup import get_server_settings
 from server.repositories.database.postgres import build_postgres_engine
 from server.repositories.database.sqlite import build_sqlite_engine
+
 ###############################################################################
 class FAIRSDatabase:
     """Owns the application SQLAlchemy engine, sessions, and transactions."""
