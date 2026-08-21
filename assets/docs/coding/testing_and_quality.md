@@ -21,7 +21,7 @@ Last updated: 2026-08-20
 - Keep parser logic defensive where backend payloads can drift.
 - Validate UI behavior visually when user-facing layout or interaction changes are involved.
 - The current frontend package provides build and lint scripts but no standalone frontend test scripts.
-- CI enforces the frontend gate in `.github/workflows/ci.yml` with Node 22: `npm ci`, `npm run lint`, and `npm run build` from `app/client`.
+- CI enforces the frontend gate in `.github/workflows/ci.yml` with Node 22: `npm install`, `npm run lint`, and `npm run build` from `app/client`. The install resolves from `package.json` when `package-lock.json` is absent.
 
 ## Test Layout
 
@@ -36,7 +36,7 @@ Primary automated test surfaces live under `app/tests`:
 - `app/tests/pytest.ini`
   - keeps pytest's cache under `app/tests/cache/pytest`; Ruff and other test tooling use sibling paths below `app/tests/cache`
 - `.github/workflows/ci.yml`
-  - Linux CI runs the backend Ruff/unit/Alembic/OpenAPI/PostgreSQL checks and a separate frontend lint/build job.
+  - Linux CI runs the backend Ruff/unit/Alembic/OpenAPI/PostgreSQL checks and a separate frontend lint/build job. Python dependencies resolve from `app/server/pyproject.toml` when `uv.lock` is absent, and Ruff reads that same project file directly; neither a committed lockfile nor a standalone `ruff.toml` is required by the workflow.
 
 ## Migration Validation
 
