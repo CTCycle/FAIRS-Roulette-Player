@@ -86,8 +86,8 @@ The application and launcher use the same idempotent runner. The runner adopts o
 
 - The launcher checks runtime readiness before installing dependencies.
 - The checked-in `settings/.env.example` template defaults to API port `8890` and UI port `8051`; override them in `settings/.env` when needed.
-- Launcher option 2 selects `Standard` or `Development` installation, installs dependencies, rebuilds the frontend, and runs database create/upgrade; `Development` adds the backend's test extra.
-- Normal application startup skips installation and rebuilding when the environment and frontend build are ready. If either is missing or unusable, option 1 recovers dependencies and rebuilds the frontend; option 2 remains the explicit install/update and rebuild path.
+- Launcher option 4 selects `Standard` or `Development` installation, installs dependencies, rebuilds the frontend, and runs database create/upgrade; `Development` adds the backend's test extra.
+- Normal application startup skips installation and rebuilding when the environment and frontend build are ready. If either is missing or unusable, option 1 recovers dependencies and rebuilds the frontend; option 4 remains the explicit install/update and rebuild path.
 
 When `FAIRS_DATA_DIR` is absent, the application uses `app/resources`.
 
