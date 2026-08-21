@@ -27,6 +27,7 @@ target_metadata = Base.metadata
 VERSION_TABLE = "alembic_version"
 
 
+###############################################################################
 def _include_object(
     _object: Any,
     name: str,
@@ -37,6 +38,7 @@ def _include_object(
     return not (object_type == "table" and name == VERSION_TABLE)
 
 
+###############################################################################
 def _resolved_url() -> str:
     configured = (config.get_main_option("sqlalchemy.url") or "").strip()
     if configured:
@@ -50,6 +52,7 @@ def _resolved_url() -> str:
     return str(build_postgres_url(settings, settings.database_name))
 
 
+###############################################################################
 def _configure_kwargs(connection: Any | None = None) -> dict[str, Any]:
     dialect_name = connection.dialect.name if connection is not None else make_url(_resolved_url()).get_backend_name()
     return {
@@ -63,6 +66,7 @@ def _configure_kwargs(connection: Any | None = None) -> dict[str, Any]:
     }
 
 
+###############################################################################
 def run_migrations_offline() -> None:
     context.configure(
         url=_resolved_url(),
@@ -74,6 +78,7 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
+###############################################################################
 def run_migrations_online() -> None:
     connectable = config.attributes.get("connection")
     owns_connectable = connectable is None

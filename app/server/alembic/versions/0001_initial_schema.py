@@ -17,6 +17,7 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
+###############################################################################
 def upgrade() -> None:
     # This revision is the immutable representation of the pre-Alembic schema.
     op.create_table(
@@ -144,6 +145,7 @@ def upgrade() -> None:
     )
 
 
+###############################################################################
 def downgrade() -> None:
     op.drop_index(
         "ix_inference_steps_session_recorded",

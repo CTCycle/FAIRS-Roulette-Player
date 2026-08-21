@@ -24,7 +24,6 @@ def _enable_write_ahead_logging(cursor: Any) -> None:
                 raise
             time.sleep(min(0.05 * (2**attempt), 1.0))
 
-
 ###############################################################################
 def set_sqlite_pragma(dbapi_connection: Any, _connection_record: Any) -> None:
     previous_autocommit = getattr(dbapi_connection, "autocommit", None)

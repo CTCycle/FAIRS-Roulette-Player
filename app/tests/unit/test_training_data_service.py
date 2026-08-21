@@ -28,6 +28,7 @@ def test_generated_training_series_matches_environment_contract() -> None:
     assert dataset["extraction"].between(0, 36).all()
 
 
+###############################################################################
 def test_roulette_encoding_isolated_from_input_frame() -> None:
     source = pd.DataFrame({"outcome": [0, 1, 32]})
 
