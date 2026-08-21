@@ -46,6 +46,7 @@ Cache layout and cleanup:
 - uv, npm, pip, Python bytecode, and other runtime caches are rooted at `runtimes/cache`
 - pytest, Ruff, coverage, mypy, Playwright, and other test-tool caches are rooted at `app/tests/cache`
 - option 9 removes both cache roots and known legacy cache locations item by item; locked or administrator-protected entries are reported and skipped so the remaining artifacts are still removed
+- options 8 through 12 require the exact case-sensitive passphrase `DELETE` before removing logs, caches, checkpoints, local user data, runtimes, dependencies, or build outputs
 
 Database behavior:
 
@@ -57,6 +58,7 @@ Database behavior:
 - Option 6 is **Create / upgrade database** and is idempotent. Option 4 runs it after dependency installation and frontend setup. Option 5 remains frontend-only.
 - Option 2 runs `git pull origin main` in the current checkout. Option 3 compares the current checkout with the locally known `origin/main` reference only; it does not fetch, download, or apply updates.
 - Option 10 removes saved checkpoint files separately. Option 11 removes the local embedded database, SQLite sidecars, and log files while preserving checkpoints and tracked application files. An externally configured PostgreSQL database is not deleted by the local launcher.
+- Options 8 through 12 cancel without changes unless `DELETE` is entered exactly at the confirmation prompt.
 
 Before the FastAPI composition root imports Keras-backed modules, `server.bootstrap.bootstrap_runtime()` explicitly loads `settings/.env`, resolves the runtime data/log paths, and configures logging. Importing the `server` package or common path/logging utilities alone has no filesystem or global-logging side effects.
 
