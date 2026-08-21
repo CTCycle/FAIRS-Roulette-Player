@@ -1,6 +1,6 @@
 ## Quick Start
 
-Last updated: 2026-08-20
+Last updated: 2026-08-21
 
 ## Fastest Path
 
@@ -26,9 +26,11 @@ Start the app:
 .\start_on_windows.ps1
 ```
 
-Choose option 2 and then `Development` when browser/test dependencies are required; choose `Standard` for the normal application environment.
+Choose option 4 and then `Development` when browser/test dependencies are required; choose `Standard` for the normal application environment.
 
-Use option 4 to run the database create/upgrade workflow directly. Use option 3 only when the frontend needs rebuilding and dependencies/database state should not be touched.
+Use option 6 to run the database create/upgrade workflow directly. Use option 5 only when the frontend needs rebuilding and dependencies/database state should not be touched.
+
+Use option 2 to pull application changes from `main`. Use option 3 to check the locally known `origin/main` status without fetching or applying updates. Options 8 through 12 are destructive cleanup actions and require the exact passphrase `DELETE`; option 10 removes checkpoints separately, while option 11 removes local database and log data while preserving checkpoints.
 
 Run the automated test entry point:
 
