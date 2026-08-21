@@ -1,3 +1,6 @@
+# -----------------------------------------------------------------------------
+# Launcher paths and runtime locations
+# -----------------------------------------------------------------------------
 [CmdletBinding()]
 param()
 
@@ -25,7 +28,9 @@ $pytestCacheDir = Join-Path $testCacheDir 'pytest'
 $ruffCacheDir = Join-Path $testCacheDir 'ruff'
 $legacyUvCacheDir = Join-Path $runtimeRoot '.uv-cache'
 
-
+# -----------------------------------------------------------------------------
+# Portable runtime versions and download sources
+# -----------------------------------------------------------------------------
 $pythonVersion = '3.14.2'
 $pythonUrl = "https://www.python.org/ftp/python/$pythonVersion/python-$pythonVersion-embed-amd64.zip"
 $nodeVersion = '22.13.0'
@@ -37,11 +42,17 @@ $uvUrl = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') {
     'https://github.com/astral-sh/uv/releases/latest/download/uv-x86_64-pc-windows-msvc.zip'
 }
 
+# -----------------------------------------------------------------------------
+# Output helpers
+# -----------------------------------------------------------------------------
 function Write-Step([string]$Message) { Write-Host "[STEP] $Message" -ForegroundColor Cyan }
 function Write-Ok([string]$Message) { Write-Host "[OK] $Message" -ForegroundColor Green }
 function Write-Info([string]$Message) { Write-Host "[INFO] $Message" -ForegroundColor DarkCyan }
 function Write-Fatal([string]$Message) { Write-Host "[FATAL] $Message" -ForegroundColor Red }
 
+# -----------------------------------------------------------------------------
+# Filesystem and cache helpers
+# -----------------------------------------------------------------------------
 function Set-CacheEnvironment {
     $runtimeCachePaths = @(
         $runtimeCacheDir,
@@ -100,6 +111,9 @@ function Remove-PathBestEffort([string]$Path) {
     }
 }
 
+# -----------------------------------------------------------------------------
+# Runtime setup helpers
+# -----------------------------------------------------------------------------
 function Invoke-DownloadAndExtract([string]$Uri, [string]$ArchivePath, [string]$DestinationPath) {
     $ProgressPreference = 'SilentlyContinue'
     New-Item -ItemType Directory -Path (Split-Path -Parent $ArchivePath), $DestinationPath -Force | Out-Null
@@ -225,6 +239,9 @@ function Ensure-PortableRuntimes {
     Write-Ok "Node.js ready: $(& $nodeExe --version)"
 }
 
+# -----------------------------------------------------------------------------
+# Dependency installation and frontend build
+# -----------------------------------------------------------------------------
 function Install-Dependencies {
     param(
         [switch]$PruneCache,
@@ -347,6 +364,9 @@ function Clear-Port([int]$Port) {
     throw "Port $Port is still occupied."
 }
 
+# -----------------------------------------------------------------------------
+# Application lifecycle
+# -----------------------------------------------------------------------------
 function Start-Application {
     Import-DotEnv
     Ensure-PortableRuntimes
@@ -413,6 +433,9 @@ function Start-Application {
     Write-Host "Frontend: $uiUrl (PID $frontendPid)"
 }
 
+# -----------------------------------------------------------------------------
+# Database and validation operations
+# -----------------------------------------------------------------------------
 function Initialize-Database {
     Import-DotEnv
     Ensure-PortableRuntimes
@@ -441,13 +464,30 @@ function Invoke-TestSuite {
     Write-Ok 'Test suite completed.'
 }
 
-function Remove-Logs {
-    $logDir = Join-Path $repoRoot 'app\resources\logs'
-    if (Test-Path -LiteralPath $logDir) {
-        $logFiles = @(Get-ChildItem -LiteralPath $logDir -Filter '*.log' -File -Recurse -Force -ErrorAction SilentlyContinue)
-        foreach ($logFile in $logFiles) { Remove-PathBestEffort $logFile.FullName | Out-Null }
+# -----------------------------------------------------------------------------
+# Cleanup and data management
+# -----------------------------------------------------------------------------
+function Confirm-Delete([string]$Description) {
+    $confirmation = (Read-Host "Type DELETE to $Description").Trim()
+    if ($confirmation -cne 'DELETE') {
+        Write-Info "Operation cancelled. No data was deleted."
+        return $false
     }
+    return $true
+}
+
+function Remove-Logs {
+    if (-not (Confirm-Delete 'remove application log files')) { return }
+
+    $logDir = (Get-UserDataTargets).LogRoot
+    Remove-UserLogFiles $logDir
     Write-Ok 'Log files removed.'
+}
+
+function Remove-UserLogFiles([string]$Path) {
+    if (-not (Test-Path -LiteralPath $Path -PathType Container)) { return }
+    $logFiles = @(Get-ChildItem -LiteralPath $Path -Filter '*.log' -File -Recurse -Force -ErrorAction SilentlyContinue)
+    foreach ($logFile in $logFiles) { Remove-PathBestEffort $logFile.FullName | Out-Null }
 }
 
 function Remove-PythonCaches {
@@ -459,6 +499,8 @@ function Remove-PythonCaches {
 }
 
 function Clear-Cache {
+    if (-not (Confirm-Delete 'clear Python, uv, and tool caches')) { return }
+
     $legacyCachePaths = @(
         $legacyUvCacheDir,
         (Join-Path $repoRoot '.pytest_cache'),
@@ -480,7 +522,78 @@ function Clear-Cache {
     Write-Ok 'Python, uv, and tool caches cleared. Locked or protected entries were skipped.'
 }
 
+function Resolve-LauncherPath([string]$Path) {
+    if ([IO.Path]::IsPathRooted($Path)) {
+        return [IO.Path]::GetFullPath($Path)
+    }
+    return [IO.Path]::GetFullPath((Join-Path $repoRoot $Path))
+}
+
+function Get-UserDataTargets {
+    Import-DotEnv
+
+    $dataRoot = if ($env:FAIRS_DATA_DIR -and $env:FAIRS_DATA_DIR.Trim()) {
+        Resolve-LauncherPath $env:FAIRS_DATA_DIR.Trim()
+    } else {
+        Join-Path $repoRoot 'app\resources'
+    }
+    $logRoot = if ($env:FAIRS_LOG_DIR -and $env:FAIRS_LOG_DIR.Trim()) {
+        Resolve-LauncherPath $env:FAIRS_LOG_DIR.Trim()
+    } else {
+        Join-Path $dataRoot 'logs'
+    }
+
+    return [pscustomobject]@{
+        DatabaseFiles = @(
+            (Join-Path $dataRoot 'database.db'),
+            (Join-Path $dataRoot 'database.db-shm'),
+            (Join-Path $dataRoot 'database.db-wal')
+        )
+        CheckpointRoot = Join-Path $dataRoot 'checkpoints'
+        LogRoot = $logRoot
+        ExternalDatabase = $env:EMBEDDED_DATABASE -eq 'false'
+    }
+}
+
+function Remove-UserDataDirectory([string]$Path) {
+    if (-not (Test-Path -LiteralPath $Path -PathType Container)) { return }
+    $children = @(Get-ChildItem -LiteralPath $Path -Force -ErrorAction SilentlyContinue)
+    foreach ($child in $children) {
+        if ($child.Name -eq '.gitkeep') { continue }
+        Remove-PathBestEffort $child.FullName | Out-Null
+    }
+}
+
+function Remove-Checkpoints {
+    if (-not (Confirm-Delete 'delete all saved checkpoints')) { return }
+
+    $targets = Get-UserDataTargets
+    Remove-UserDataDirectory $targets.CheckpointRoot
+    New-Item -ItemType Directory -Path $targets.CheckpointRoot -Force | Out-Null
+    Write-Ok 'All saved checkpoints were removed.'
+}
+
+function Remove-AllData {
+    if (-not (Confirm-Delete 'delete local user data')) { return }
+
+    $targets = Get-UserDataTargets
+    foreach ($databaseFile in $targets.DatabaseFiles) {
+        Remove-PathBestEffort $databaseFile | Out-Null
+    }
+    Remove-UserLogFiles $targets.LogRoot
+
+    if (-not (Test-Path -LiteralPath $targets.LogRoot -PathType Container)) {
+        New-Item -ItemType Directory -Path $targets.LogRoot -Force | Out-Null
+    }
+    if ($targets.ExternalDatabase) {
+        Write-Info 'An external database is configured. Its remote data was not changed.'
+    }
+    Write-Ok 'Local database and user-generated log data were removed. Saved checkpoints were preserved.'
+}
+
 function Uninstall-Application {
+    if (-not (Confirm-Delete 'remove local runtimes and build outputs')) { return }
+
     $paths = @(
         $runtimeRoot,
         (Join-Path $serverDir '.venv'),
@@ -498,6 +611,62 @@ function Uninstall-Application {
     Write-Ok 'Application runtimes, dependencies, and build outputs removed. Dependency lockfiles and user data were preserved.'
 }
 
+# -----------------------------------------------------------------------------
+# Repository maintenance
+# -----------------------------------------------------------------------------
+function Update-Application {
+    Push-Location $repoRoot
+    try {
+        $currentBranch = (& git branch --show-current).Trim()
+        if ($LASTEXITCODE -ne 0) { throw 'Unable to determine the current Git branch.' }
+        $branchLabel = if ($currentBranch) { $currentBranch } else { 'the detached checkout' }
+
+        Write-Step "Pulling application updates from origin/main into $branchLabel."
+        $gitOutput = @(& git pull origin main 2>&1)
+        $gitExitCode = $LASTEXITCODE
+        $gitOutput | ForEach-Object { Write-Host $_ }
+        if ($gitExitCode -ne 0) { throw "Application update failed with exit code $gitExitCode." }
+        Write-Ok 'Application update completed from origin/main.'
+    } finally {
+        Pop-Location
+    }
+}
+
+function Check-ForUpdates {
+    Push-Location $repoRoot
+    try {
+        & git show-ref --verify --quiet 'refs/remotes/origin/main'
+        if ($LASTEXITCODE -ne 0) {
+            Write-Info 'Update status is unavailable because no local origin/main reference exists.'
+            Write-Info 'No fetch, download, or update was performed.'
+            return
+        }
+
+        $currentBranch = (& git branch --show-current).Trim()
+        if ($LASTEXITCODE -ne 0) { throw 'Unable to determine the current Git branch.' }
+        $branchLabel = if ($currentBranch) { $currentBranch } else { 'the detached checkout' }
+        $incomingCount = [int]((& git rev-list --count 'HEAD..origin/main').Trim())
+        if ($LASTEXITCODE -ne 0) { throw 'Unable to compare the checkout with origin/main.' }
+        $localCount = [int]((& git rev-list --count 'origin/main..HEAD').Trim())
+        if ($LASTEXITCODE -ne 0) { throw 'Unable to compare the checkout with origin/main.' }
+
+        if ($incomingCount -gt 0) {
+            Write-Info "Update available: origin/main has $incomingCount newer commit(s) than $branchLabel."
+        } else {
+            Write-Ok "No newer version is available from the local origin/main reference for $branchLabel."
+        }
+        if ($localCount -gt 0) {
+            Write-Info "The current checkout also has $localCount commit(s) not present in origin/main."
+        }
+        Write-Info 'Status check only: no fetch, download, or update was performed.'
+    } finally {
+        Pop-Location
+    }
+}
+
+# -----------------------------------------------------------------------------
+# Menu presentation and dispatch
+# -----------------------------------------------------------------------------
 function Wait-ForMenu {
     if ([Console]::IsInputRedirected) { return }
     Write-Host ''
@@ -535,42 +704,54 @@ function Show-Menu {
         Write-Host '  START' -ForegroundColor DarkCyan
         Write-MenuItem '1' 'Launch application' 'Start the backend and player' Cyan
         Write-Host ''
-        Write-Host '  SETUP & MAINTENANCE' -ForegroundColor DarkCyan
-        Write-MenuItem '2' 'Install / update dependencies' 'Prepare local runtimes and build the frontend' Yellow
-        Write-MenuItem '3' 'Rebuild frontend' 'Build the frontend without updating dependencies' Yellow
-        Write-MenuItem '4' 'Create / upgrade database' 'Create the selected database and apply migrations' Yellow
-        Write-MenuItem '5' 'Run test suite' 'Execute automated checks' Yellow
+        Write-Host '  APPLICATION UPDATES' -ForegroundColor DarkCyan
+        Write-MenuItem '2' 'Update application' 'Pull application changes from the main branch' Yellow
+        Write-MenuItem '3' 'Check for updates' 'Report local main-branch update status only' Yellow
         Write-Host ''
-        Write-Host '  CLEANUP' -ForegroundColor DarkCyan
-        Write-MenuItem '6' 'Remove logs' 'Delete application log files' DarkYellow
-        Write-MenuItem '7' 'Clear cache' 'Remove Python, uv, and tool caches' DarkYellow
-        Write-MenuItem '8' 'Uninstall application' 'Remove local runtimes and build outputs' Red
+        Write-Host '  SETUP & VALIDATION' -ForegroundColor DarkCyan
+        Write-MenuItem '4' 'Install / update dependencies' 'Prepare local runtimes and build the frontend' Yellow
+        Write-MenuItem '5' 'Rebuild frontend' 'Build the frontend without updating dependencies' Yellow
+        Write-MenuItem '6' 'Create / upgrade database' 'Create the selected database and apply migrations' Yellow
+        Write-MenuItem '7' 'Run test suite' 'Execute automated checks' Yellow
+        Write-Host ''
+        Write-Host '  CLEANUP & DATA' -ForegroundColor DarkCyan
+        Write-MenuItem '8' 'Remove logs' 'Delete application log files' DarkYellow
+        Write-MenuItem '9' 'Clear cache' 'Remove Python, uv, and tool caches' DarkYellow
+        Write-MenuItem '10' 'Remove checkpoints' 'Delete saved checkpoints only' Red
+        Write-MenuItem '11' 'Remove All Data' 'Delete local database and logs, preserving checkpoints' Red
+        Write-Host ''
+        Write-Host '  APPLICATION FILES' -ForegroundColor DarkCyan
+        Write-MenuItem '12' 'Uninstall application' 'Remove local runtimes and build outputs' Red
         Write-Host ''
         Write-Host '  -----------------------------------------------------' -ForegroundColor DarkCyan
-        Write-MenuItem '9' 'Exit' 'Close this launcher' DarkGray
+        Write-MenuItem '13' 'Exit' 'Close this launcher' DarkGray
         Write-Host ''
-        $selection = Read-Host '  Select an option (1-9)'
-        if ($selection -notmatch '^[1-9]$') {
-            Write-Fatal 'Invalid option. Select a number from 1 through 9.'
+        $selection = Read-Host '  Select an option (1-13)'
+        if ($selection -notmatch '^(?:[1-9]|1[0-3])$') {
+            Write-Fatal 'Invalid option. Select a number from 1 through 13.'
             Wait-ForMenu
             continue
         }
-        if ($selection -eq '9') { break }
+        if ($selection -eq '13') { break }
         try {
             switch ($selection) {
                 '1' { Start-Application; exit 0 }
-                '2' {
+                '2' { Update-Application }
+                '3' { Check-ForUpdates }
+                '4' {
                     $installationType = Read-InstallationType
                     Install-Dependencies -PruneCache -InstallationType $installationType
                     Build-Frontend
                     Initialize-Database
                 }
-                '3' { Build-Frontend }
-                '4' { Initialize-Database }
-                '5' { Invoke-TestSuite }
-                '6' { Remove-Logs }
-                '7' { Clear-Cache }
-                '8' { Uninstall-Application }
+                '5' { Build-Frontend }
+                '6' { Initialize-Database }
+                '7' { Invoke-TestSuite }
+                '8' { Remove-Logs }
+                '9' { Clear-Cache }
+                '10' { Remove-Checkpoints }
+                '11' { Remove-AllData }
+                '12' { Uninstall-Application }
             }
             if ([Console]::IsInputRedirected) { break }
         } catch {
