@@ -29,7 +29,7 @@ The backend is the source of truth for API behavior, background jobs, session st
 
 ## Get the source
 
-The current source release is `v3.0.0`. Download a versioned source archive from the [GitHub Releases page](https://github.com/CTCycle/FAIRS-Roulette-Player/releases). FAIRS is intended for local launcher-based operation from an extracted repository.
+The current source release is `v3.1.0`. Download a versioned source archive from the [GitHub Releases page](https://github.com/CTCycle/FAIRS-Roulette-Player/releases). FAIRS is intended for local launcher-based operation from an extracted repository.
 
 ## Set up and start the application
 
