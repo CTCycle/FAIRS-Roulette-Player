@@ -6,10 +6,46 @@ on:
       - main
       - develop
   pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   backend-validation:
     runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      PYTHONPATH: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.30"
+          enable-cache: true
+          cache-dependency-glob: app/server/uv.lock
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Install dependencies
+        working-directory: app/server
+        run: uv sync --locked --extra test
+      - name: Ruff
+        run: uv --project app/server run ruff check --config app/server/pyproject.toml app/server app/tests
+      - name: Unit tests
+        run: uv --project app/server run pytest -q app/tests/unit
+      - name: Alembic history and model consistency
+        working-directory: app/server
+        run: uv run alembic -c alembic.ini heads
+      - name: OpenAPI snapshot check
+        run: uv --project app/server run python app/scripts/export_openapi.py --check
+  persistence-conformance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:17
@@ -24,41 +60,37 @@ jobs:
           --health-interval=5s
           --health-timeout=5s
           --health-retries=12
-    env:
-      PYTHONPATH: app
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.30"
+          enable-cache: true
+          cache-dependency-glob: app/server/uv.lock
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
-      - name: Install dependencies
+      - name: Install locked dependencies
         working-directory: app/server
-        run: uv sync --extra test
-      - name: Ruff
-        run: uv --project app/server run ruff check --config app/server/pyproject.toml app/server app/tests
-      - name: Unit tests
-        run: uv --project app/server run pytest -q app/tests/unit
-      - name: Alembic history and model consistency
-        working-directory: app/server
-        run: uv run alembic -c alembic.ini heads
-      - name: OpenAPI snapshot check
-        run: uv --project app/server run python app/scripts/export_openapi.py --check
+        run: uv sync --locked --extra test
       - name: Persistence contract
         env:
           TEST_POSTGRES_URL: postgresql+psycopg://fairs:fairs@localhost:5432/fairs
-        run: uv --project app/server run pytest -q app/tests/e2e/test_persistence_contract.py
+        run: uv run --project app/server pytest -q app/tests/e2e/test_persistence_contract.py
 
   frontend-validation:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "22.13.0"
+          cache: npm
+          cache-dependency-path: app/client/package-lock.json
       - name: Install dependencies
         working-directory: app/client
-        run: npm install
+        run: npm ci --no-audit --no-fund
       - name: Lint
         working-directory: app/client
         run: npm run lint
