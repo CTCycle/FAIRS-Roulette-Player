@@ -34,7 +34,6 @@ class DummyCheckpointStorage:
     def delete_checkpoint(self, path: str) -> None:
         self.deleted_paths.append(path)
 
-
 ###############################################################################
 class InvalidCheckpointStorage(DummyCheckpointStorage):
 
@@ -60,7 +59,6 @@ def test_get_metadata_returns_summary_shape(tmp_path, monkeypatch) -> None:
     assert metadata["summary"]["episodes"] == 3
     assert metadata["summary"]["neurons"] == 16
 
-
 ###############################################################################
 def test_find_dataset_references_reads_checkpoint_configuration(
     tmp_path, monkeypatch
@@ -71,7 +69,6 @@ def test_find_dataset_references_reads_checkpoint_configuration(
 
     assert service.find_dataset_references(7) == ["cp1"]
     assert service.find_dataset_references(8) == []
-
 
 ###############################################################################
 def test_find_dataset_references_blocks_malformed_configuration(

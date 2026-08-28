@@ -30,26 +30,21 @@ ALEMBIC_CONFIG_PATH = Path(__file__).resolve().parents[2] / "alembic.ini"
 ALEMBIC_VERSION_TABLE = "alembic_version"
 MIGRATION_LOCK_TIMEOUT_SECONDS = 30
 
-
 ###############################################################################
 class DatabaseInitializationError(RuntimeError):
     """Base error raised when the database cannot be initialized safely."""
-
 
 ###############################################################################
 class DatabaseMigrationError(DatabaseInitializationError):
     """Raised when Alembic cannot apply or validate a migration state."""
 
-
 ###############################################################################
 class DatabaseSchemaDriftError(DatabaseMigrationError):
     """Raised when a database schema differs from the current model metadata."""
 
-
 ###############################################################################
 class DatabaseRevisionError(DatabaseMigrationError):
     """Raised when database or script revisions are not a supported linear state."""
-
 
 ###############################################################################
 class DatabaseMigrationLockError(DatabaseMigrationError):

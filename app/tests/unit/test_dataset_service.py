@@ -79,7 +79,6 @@ def test_dataset_list_and_delete_delegate_to_data_store() -> None:
     assert delete_response.status == "deleted"
     data_store.delete_dataset.assert_called_once_with(1)
 
-
 ###############################################################################
 def test_dataset_delete_blocks_checkpoint_references() -> None:
     service, data_store, _, _ = build_dataset_service()

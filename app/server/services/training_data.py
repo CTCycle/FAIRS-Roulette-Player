@@ -84,7 +84,6 @@ class TrainingDataService:
             raise ValueError("No roulette dataset available for training.")
         return dataset, False
 
-
 ###############################################################################
 def load_training_series(
     configuration: dict[str, Any],

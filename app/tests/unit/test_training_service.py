@@ -93,7 +93,6 @@ def test_get_and_delete_job_contracts() -> None:
     assert job["job_id"] == "job123"
     assert cancel["job_id"] == "job123"
 
-
 ###############################################################################
 def test_training_worker_receives_explicit_runtime_dependencies(monkeypatch) -> None:
     started: dict[str, object] = {}
