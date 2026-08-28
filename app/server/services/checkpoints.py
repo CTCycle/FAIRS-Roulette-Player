@@ -22,7 +22,6 @@ def get_last_history_value(values: Any) -> float | None:
 class CheckpointReferenceError(RuntimeError):
     """Raised when dataset deletion would invalidate checkpoint metadata."""
 
-
 ###############################################################################
 class CheckpointService:
 
