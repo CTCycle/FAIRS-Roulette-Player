@@ -6,7 +6,6 @@ from server.common.checkpoints import (
     MAX_CHECKPOINT_NAME_LENGTH,
     normalize_checkpoint_identifier,
 )
-from server.common.session import normalize_session_id
 
 ###############################################################################
 class InferenceStartRequest(BaseModel):
@@ -25,12 +24,6 @@ class InferenceStartRequest(BaseModel):
     @classmethod
     def validate_checkpoint(cls, value: str) -> str:
         return normalize_checkpoint_identifier(value)
-
-    # -------------------------------------------------------------------------
-    @field_validator("session_id")
-    @classmethod
-    def validate_session_id(cls, value: str | None) -> str | None:
-        return normalize_session_id(value)
 
 ###############################################################################
 class PredictionResponse(BaseModel):
