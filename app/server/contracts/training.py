@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field, RootModel, field_validator
+from pydantic import BaseModel, ConfigDict, Field, RootModel, StrictInt, field_validator
 
 from server.common.checkpoints import (
     MAX_CHECKPOINT_NAME_LENGTH,
@@ -39,7 +39,7 @@ class TrainingConfig(BaseModel):
     bet_enforce_capital: bool = True
 
     # Dataset parameters
-    dataset_id: int | None = Field(None, ge=1)
+    dataset_id: StrictInt | None = Field(None, ge=1)
     use_data_generator: bool = False
     num_generated_samples: int = Field(10000, ge=100)
     sample_size: float = Field(1.0, gt=0.0, le=1.0)
@@ -92,6 +92,15 @@ class ResumeConfig(BaseModel):
         return normalize_checkpoint_identifier(value)
 
 ###############################################################################
+class CheckpointConfiguration(TrainingConfig):
+    """Validated configuration persisted in a current checkpoint."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        str_strip_whitespace=True,
+    )
+
+###############################################################################
 class TrainingStatusResponse(BaseModel):
     job_id: str | None
     is_training: bool
@@ -110,9 +119,33 @@ class TrainingCheckpointListResponse(RootModel[list[str]]):
     pass
 
 ###############################################################################
+class TrainingCheckpointSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    dataset_id: StrictInt | None = None
+    sample_size: float | None = None
+    seed: int | None = None
+    episodes: int | None = None
+    batch_size: int | None = None
+    learning_rate: float | None = None
+    perceptive_field_size: int | None = None
+    neurons: int | None = None
+    embedding_dimensions: int | None = None
+    exploration_rate: float | None = None
+    exploration_rate_decay: float | None = None
+    discount_rate: float | None = None
+    model_update_frequency: int | None = None
+    bet_amount: int | None = None
+    initial_capital: int | None = None
+    final_loss: float | None = None
+    final_rmse: float | None = None
+    final_val_loss: float | None = None
+    final_val_rmse: float | None = None
+
+###############################################################################
 class TrainingCheckpointMetadataResponse(BaseModel):
     checkpoint: str
-    summary: dict[str, object]
+    summary: TrainingCheckpointSummary
 
 ###############################################################################
 class TrainingCheckpointDeleteResponse(BaseModel):

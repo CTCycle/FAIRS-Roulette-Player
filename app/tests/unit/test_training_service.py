@@ -14,9 +14,17 @@ from server.services.training import TrainingService
 def build_service(
     polling_interval_seconds: float = 1.0,
 ) -> tuple[TrainingService, Mock, Mock]:
-    job_manager = Mock()
-    job_manager.is_job_running.return_value = False
-    job_manager.start_job.return_value = "job123"
+    training_run_manager = Mock()
+    training_run_manager.is_job_running.return_value = False
+    training_run_manager.start_job.return_value = "job123"
+    training_run_manager.training_status.return_value = {
+        "job_id": "job123",
+        "is_training": True,
+        "latest_stats": {"total_epochs": 10},
+        "history": [],
+        "latest_env": {},
+        "poll_interval": polling_interval_seconds,
+    }
     checkpoint_service = Mock()
     checkpoint_service.list_checkpoints.return_value = []
     checkpoint_service.resolve_existing_checkpoint.return_value = ("cp1", "path/cp1")
@@ -25,19 +33,19 @@ def build_service(
         {"total_episodes": 2, "history": {"episode": [1, 2], "time_step": [1, 2]}},
     )
     service = TrainingService(
-        job_manager=job_manager,
+        training_run_manager=training_run_manager,
         checkpoint_service=checkpoint_service,
         polling_interval_seconds=polling_interval_seconds,
     )
-    return service, job_manager, checkpoint_service
+    return service, training_run_manager, checkpoint_service
 
 ###############################################################################
 def test_start_training_starts_job_and_returns_contract() -> None:
-    service, job_manager, _ = build_service()
+    service, training_run_manager, _ = build_service()
     payload = service.start_training(TrainingConfig(use_data_generator=True))
     assert payload["status"] == "started"
     assert payload["job_id"] == "job123"
-    job_manager.start_job.assert_called_once()
+    training_run_manager.start_job.assert_called_once()
 
 ###############################################################################
 def test_start_training_requires_dataset_without_generator() -> None:
@@ -58,27 +66,25 @@ def test_training_responses_use_injected_polling_interval() -> None:
 
 ###############################################################################
 def test_resume_training_starts_resume_job() -> None:
-    service, job_manager, _ = build_service()
+    service, training_run_manager, _ = build_service()
     payload = service.resume_training(
         ResumeConfig(checkpoint="cp1", additional_episodes=1)
     )
     assert payload["status"] == "started"
     assert payload["job_type"] == "training"
-    job_manager.start_job.assert_called_once()
+    training_run_manager.start_job.assert_called_once()
 
 ###############################################################################
 def test_stop_sets_cancellation_on_current_job() -> None:
-    service, job_manager, _ = build_service()
-    service.training_state.is_training = True
-    service.training_state.current_job_id = "job123"
+    service, training_run_manager, _ = build_service()
     payload = service.stop()
     assert payload["status"] == "stopping"
-    job_manager.cancel_job.assert_called_once_with("job123")
+    training_run_manager.cancel_job.assert_called_once_with("job123")
 
 ###############################################################################
 def test_get_and_delete_job_contracts() -> None:
-    service, job_manager, _ = build_service()
-    job_manager.get_job_status.return_value = {
+    service, training_run_manager, _ = build_service()
+    training_run_manager.get_job_status.return_value = {
         "job_id": "job123",
         "job_type": "training",
         "status": "running",
@@ -131,10 +137,13 @@ def test_training_worker_receives_explicit_runtime_dependencies(monkeypatch) -> 
             return None
 
     monkeypatch.setattr(training_module, "ProcessWorker", FakeWorker)
-    job_manager = Mock()
-    job_manager.should_stop.return_value = False
+    training_run_manager = Mock()
+    training_run_manager.should_stop.return_value = False
+    training_run_manager.training_status.return_value = {
+        "latest_stats": {"total_epochs": 0},
+    }
     service = TrainingService(
-        job_manager=job_manager,
+        training_run_manager=training_run_manager,
         checkpoint_service=Mock(),
         database_settings=object(),
         database_path=Path("isolated.db"),

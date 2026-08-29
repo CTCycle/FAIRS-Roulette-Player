@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 import os
 from typing import Any
-from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -44,7 +43,6 @@ class ServerSettings:
 ###############################################################################
 class EnvDatabaseSettings(BaseModel):
     embedded_database: bool = True
-    database_url: str | None = None
     engine: str = "postgresql+psycopg"
     host: str | None = None
     port: int = Field(default=5432, ge=1, le=65535)
@@ -58,7 +56,6 @@ class EnvDatabaseSettings(BaseModel):
 
     # -------------------------------------------------------------------------
     @field_validator(
-        "database_url",
         "host",
         "database_name",
         "username",
@@ -84,9 +81,13 @@ class EnvDatabaseSettings(BaseModel):
     @classmethod
     def from_environment(cls) -> "EnvDatabaseSettings":
         raw: dict[str, Any] = {}
+        if "DATABASE_URL" in os.environ:
+            raise ValueError(
+                "DATABASE_URL is unsupported. Configure the individual DATABASE_* values."
+            )
+
         env_to_field = {
             "EMBEDDED_DATABASE": "embedded_database",
-            "DATABASE_URL": "database_url",
             "DATABASE_ENGINE": "engine",
             "DATABASE_HOST": "host",
             "DATABASE_PORT": "port",
@@ -102,22 +103,6 @@ class EnvDatabaseSettings(BaseModel):
             value = os.getenv(env_name)
             if value is not None:
                 raw[field_name] = value
-
-        database_url = raw.get("database_url")
-        if isinstance(database_url, str) and database_url.strip():
-            parsed = urlparse(database_url)
-            if parsed.scheme:
-                raw.setdefault("engine", parsed.scheme)
-            if parsed.hostname:
-                raw.setdefault("host", parsed.hostname)
-            if parsed.port is not None:
-                raw.setdefault("port", parsed.port)
-            if parsed.path and parsed.path != "/":
-                raw.setdefault("database_name", parsed.path.lstrip("/"))
-            if parsed.username:
-                raw.setdefault("username", parsed.username)
-            if parsed.password is not None:
-                raw.setdefault("password", parsed.password)
 
         return cls.model_validate(raw)
 

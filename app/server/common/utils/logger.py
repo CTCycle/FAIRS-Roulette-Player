@@ -62,21 +62,13 @@ logger = logging.getLogger()
 _configured = False
 
 ###############################################################################
-def configure_logging(
-    log_directory: str | Path | None = None,
-    *,
-    force: bool = False,
-) -> None:
+def configure_logging(*, force: bool = False) -> None:
     """Configure application logging at an explicit runtime boundary."""
     global _configured
     if _configured and not force:
         return
 
-    resolved_directory = (
-        Path(log_directory).expanduser()
-        if log_directory is not None and str(log_directory).strip()
-        else shared_paths.LOGS_PATH
-    )
+    resolved_directory = Path(shared_paths.LOGS_PATH)
     resolved_directory.mkdir(parents=True, exist_ok=True)
     logging.config.dictConfig(_build_log_config(resolved_directory))
     _configured = True

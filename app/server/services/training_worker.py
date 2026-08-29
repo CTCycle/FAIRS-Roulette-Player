@@ -20,7 +20,7 @@ from server.learning.training.device import DeviceConfig
 from server.learning.training.fitting import DQNTraining
 from server.learning.models.qnet import FAIRSnet
 from server.learning.models.strategy import StrategyNet
-from server.repositories.serialization.model import CheckpointStorage
+from server.repositories.checkpoints import CheckpointRepository
 
 ###############################################################################
 class QueueProgressReporter:
@@ -253,8 +253,8 @@ async def run_training_async(
     device = DeviceConfig(configuration)
     device.set_device()
 
-    checkpoint_storage = CheckpointStorage()
-    checkpoint_path = checkpoint_storage.create_checkpoint_folder(
+    checkpoint_repository = CheckpointRepository()
+    checkpoint_path = checkpoint_repository.create_checkpoint_folder(
         configuration.get("checkpoint_name")
     )
 
@@ -307,20 +307,19 @@ async def run_resume_training_async(
     database_path: str | Path | None = None,
     polling_interval_seconds: float = 1.0,
 ) -> tuple[Any, Any | None, dict[str, Any], dict[str, Any], str]:
-    checkpoint_storage = CheckpointStorage()
-    model, train_config, session, checkpoint_path = checkpoint_storage.load_checkpoint(
+    checkpoint_repository = CheckpointRepository()
+    model, train_config, session, checkpoint_path = checkpoint_repository.load_checkpoint(
         checkpoint
     )
-    train_config["additional_episodes"] = additional_episodes
     dynamic_enabled = bool(train_config.get("dynamic_betting_enabled", False))
     strategy_enabled = bool(train_config.get("bet_strategy_model_enabled", False))
     strategy_model: Any | None = None
     target_strategy_model: Any | None = None
     if dynamic_enabled and strategy_enabled:
-        strategy_model = checkpoint_storage.load_strategy_model(
+        strategy_model = checkpoint_repository.load_strategy_model(
             checkpoint_path, required=True
         )
-        target_strategy_model = checkpoint_storage.load_strategy_model(
+        target_strategy_model = checkpoint_repository.load_strategy_model(
             checkpoint_path, required=True
         )
 
@@ -398,11 +397,11 @@ def run_training_process(
             )
         )
 
-        checkpoint_storage = CheckpointStorage()
-        checkpoint_storage.save_pretrained_model(model, checkpoint_path)
+        checkpoint_repository = CheckpointRepository()
+        checkpoint_repository.save_pretrained_model(model, checkpoint_path)
         if strategy_model is not None:
-            checkpoint_storage.save_strategy_model(strategy_model, checkpoint_path)
-        checkpoint_storage.save_training_configuration(
+            checkpoint_repository.save_strategy_model(strategy_model, checkpoint_path)
+        checkpoint_repository.save_training_configuration(
             checkpoint_path, history, configuration
         )
 
@@ -458,11 +457,11 @@ def run_resume_training_process(
             )
         )
 
-        checkpoint_storage = CheckpointStorage()
-        checkpoint_storage.save_pretrained_model(model, checkpoint_path)
+        checkpoint_repository = CheckpointRepository()
+        checkpoint_repository.save_pretrained_model(model, checkpoint_path)
         if strategy_model is not None:
-            checkpoint_storage.save_strategy_model(strategy_model, checkpoint_path)
-        checkpoint_storage.save_training_configuration(
+            checkpoint_repository.save_strategy_model(strategy_model, checkpoint_path)
+        checkpoint_repository.save_training_configuration(
             checkpoint_path, history, train_config
         )
 

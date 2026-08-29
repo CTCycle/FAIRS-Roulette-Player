@@ -126,7 +126,7 @@ def test_at_head_rerun_is_idempotent_and_preserves_rows(tmp_path: Path) -> None:
         engine.dispose()
 
 ###############################################################################
-def test_populated_legacy_database_is_adopted_without_recreating_objects(
+def test_populated_unversioned_database_is_rejected_without_mutation(
     tmp_path: Path,
 ) -> None:
     database_path = tmp_path / "legacy.db"
@@ -145,13 +145,14 @@ def test_populated_legacy_database_is_adopted_without_recreating_objects(
     finally:
         legacy_engine.dispose()
 
-    initialize_database(_sqlite_settings(), database_path=database_path)
+    with pytest.raises(DatabaseRevisionError, match="non-empty database has no Alembic revision"):
+        initialize_database(_sqlite_settings(), database_path=database_path)
 
     engine = _engine(database_path)
     try:
         with engine.connect() as connection:
             assert connection.execute(text("SELECT COUNT(*) FROM datasets")).scalar_one() == 1
-            assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0001_initial_schema"
+            assert "alembic_version" not in inspect(engine).get_table_names()
     finally:
         engine.dispose()
 
@@ -165,7 +166,7 @@ def test_partial_legacy_schema_is_rejected_unchanged(tmp_path: Path) -> None:
     finally:
         legacy_engine.dispose()
 
-    with pytest.raises(DatabaseSchemaDriftError, match="metadata comparison|exactly match"):
+    with pytest.raises(DatabaseRevisionError, match="non-empty database has no Alembic revision"):
         initialize_database(_sqlite_settings(), database_path=database_path)
 
     assert _table_names(database_path) == {"datasets"}

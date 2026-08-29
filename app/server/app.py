@@ -24,9 +24,9 @@ from server.common.constants import (
     FASTAPI_ROOT_ENDPOINT,
     FASTAPI_SPA_FALLBACK_ENDPOINT,
     FASTAPI_TITLE,
-    FASTAPI_VERSION,
 )
 from server.common import path as shared_paths
+from server.common.version import get_application_version
 from server.api.datasets import router as datasets_router
 from server.api.inference import router as inference_router
 from server.api.training import router as training_router
@@ -38,15 +38,14 @@ from server.repositories.database.backend import FAIRSDatabase
 from server.repositories.database.initializer import initialize_database
 from server.repositories.datasets import DatasetRepository
 from server.repositories.inference import InferenceRepository
-from server.repositories.serialization.data import DataStore
 from server.services.checkpoints import CheckpointService
 from server.services.datasets import DatasetService
 from server.services.importer import DatasetImportService
 from server.services.inference import InferenceService
-from server.services.jobs import JobManager
 from server.services.loader import TabularFileLoader
 from server.services.startup_validation import run_startup_validations
 from server.services.training import TrainingService
+from server.services.training_run import TrainingRunManager
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
@@ -98,24 +97,23 @@ async def app_lifespan(application: FastAPI) -> AsyncIterator[None]:
     initialize_database(settings.database)
     database = FAIRSDatabase(settings.database)
     try:
-        data_store = DataStore(
-            datasets=DatasetRepository(database),
-            inference=InferenceRepository(database),
-        )
-        job_manager = JobManager()
+        dataset_repository = DatasetRepository(database)
+        inference_repository = InferenceRepository(database)
+        training_run_manager = TrainingRunManager()
         checkpoint_service = CheckpointService()
 
         application.state.database = database
-        application.state.data_store = data_store
+        application.state.dataset_repository = dataset_repository
+        application.state.inference_repository = inference_repository
         application.state.dataset_service = DatasetService(
-            data_store=data_store,
-            importer=DatasetImportService(data_store=data_store),
+            dataset_repository=dataset_repository,
+            importer=DatasetImportService(dataset_repository=dataset_repository),
             loader=TabularFileLoader(),
             checkpoint_service=checkpoint_service,
         )
-        application.state.job_manager = job_manager
+        application.state.training_run_manager = training_run_manager
         application.state.training_service = TrainingService(
-            job_manager=job_manager,
+            training_run_manager=training_run_manager,
             checkpoint_service=checkpoint_service,
             database_settings=settings.database,
             database_path=shared_paths.DATABASE_PATH,
@@ -124,7 +122,8 @@ async def app_lifespan(application: FastAPI) -> AsyncIterator[None]:
             jit_backend=settings.device.jit_backend,
         )
         application.state.inference_service = InferenceService(
-            data_store=data_store,
+            dataset_repository=dataset_repository,
+            inference_repository=inference_repository,
             checkpoint_service=checkpoint_service,
         )
 
@@ -180,7 +179,7 @@ def create_app() -> FastAPI:
     enable_api_docs = is_api_docs_enabled()
     application = FastAPI(
         title=FASTAPI_TITLE,
-        version=FASTAPI_VERSION,
+        version=get_application_version(),
         description=FASTAPI_DESCRIPTION,
         docs_url="/docs" if enable_api_docs else None,
         redoc_url="/redoc" if enable_api_docs else None,

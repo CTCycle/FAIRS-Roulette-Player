@@ -16,7 +16,6 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from server.common.utils.logger import logger
 from server.configurations import DatabaseSettings
-from server.configurations.startup import get_server_settings
 from server.repositories.database.postgres import build_postgres_engine
 from server.repositories.database.sqlite import build_sqlite_engine
 from server.repositories.database.utils import (
@@ -431,14 +430,6 @@ def _assert_current_head(connection: Any, target_revision: str) -> None:
         )
 
 ###############################################################################
-def _application_tables(connection: Any) -> set[str]:
-    return {
-        name
-        for name in inspect(connection).get_table_names()
-        if name != ALEMBIC_VERSION_TABLE
-    }
-
-###############################################################################
 def _run_locked_migrations(connection: Any, config_path: Path | None = None) -> None:
     config = _alembic_config(connection, config_path)
     script, target_revision = _script_and_head(config)
@@ -459,20 +450,15 @@ def _run_locked_migrations(connection: Any, config_path: Path | None = None) -> 
     )
 
     if current_revision is None:
-        tables = _application_tables(connection)
-        if not tables:
-            logger.info("Database is empty; applying Alembic upgrade to head.")
-            command.upgrade(config, "head")
-            logger.info("Alembic migrations applied: %s", target_revision)
-        else:
-            validate_database_metadata(connection)
-            logger.info(
-                "Adopting unversioned legacy database with exact baseline metadata; "
-                "application rows will be preserved."
+        if inspect(connection).get_table_names():
+            raise DatabaseRevisionError(
+                "A non-empty database has no Alembic revision. Explicitly migrate "
+                "or stamp this database before starting the application."
             )
-            command.stamp(config, "head")
-            logger.info("Legacy database stamped at Alembic head %s", target_revision)
 
+        logger.info("Database is empty; applying Alembic upgrade to head.")
+        command.upgrade(config, "head")
+        logger.info("Alembic migrations applied: %s", target_revision)
         validate_database_metadata(connection)
         _assert_current_head(connection, target_revision)
         return
@@ -673,22 +659,21 @@ def _build_postgres_target_engine(settings: DatabaseSettings) -> Engine:
 
 ###############################################################################
 def initialize_database(
-    settings: DatabaseSettings | None = None,
+    settings: DatabaseSettings,
     *,
     database_path: str | Path | None = None,
 ) -> None:
     """Initialize or upgrade the configured database, then dispose owned resources."""
-    resolved = settings or get_server_settings().database
     engine: Engine | None = None
     try:
-        if resolved.embedded_database:
-            engine = build_sqlite_engine(resolved, database_path=database_path)
+        if settings.embedded_database:
+            engine = build_sqlite_engine(settings, database_path=database_path)
         else:
-            if not is_supported_postgres_engine(resolved.engine):
+            if not is_supported_postgres_engine(settings.engine):
                 raise DatabaseInitializationError(
-                    f"Unsupported database engine: {resolved.engine}"
+                    f"Unsupported database engine: {settings.engine}"
                 )
-            engine = _build_postgres_target_engine(resolved)
+            engine = _build_postgres_target_engine(settings)
         run_migrations_on_engine(engine)
     except DatabaseInitializationError as exc:
         logger.error("Database initialization failed: %s", _redact_error(exc))

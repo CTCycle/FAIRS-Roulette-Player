@@ -3,14 +3,14 @@ from __future__ import annotations
 import pandas as pd
 
 from server.contracts.upload import DatasetKind
-from server.repositories.serialization.data import DataStore
+from server.repositories.datasets import DatasetRepository
 
 ###############################################################################
 class DatasetImportService:
 
     # -------------------------------------------------------------------------
-    def __init__(self, data_store: DataStore) -> None:
-        self.data_store = data_store
+    def __init__(self, dataset_repository: DatasetRepository) -> None:
+        self.dataset_repository = dataset_repository
 
     # -------------------------------------------------------------------------
     def normalize(
@@ -105,7 +105,7 @@ class DatasetImportService:
             clean_name = dataset_name.strip()
         else:
             clean_name = "dataset" if dataset_kind == "training" else "context"
-        return self.data_store.import_dataset(
+        return self.dataset_repository.import_replacement(
             dataset_name=clean_name,
             dataset_kind=dataset_kind,
             outcomes=normalized,
