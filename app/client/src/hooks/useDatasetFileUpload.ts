@@ -34,7 +34,7 @@ export const useDatasetFileUpload = ({
     onReset,
     onUploadSuccess,
 }: UseDatasetFileUploadOptions): UseDatasetFileUploadResult => {
-    // Keep actual File object in local ref (not serializable for context).
+    // Keep the actual File object local; only display metadata leaves this hook.
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 

@@ -1,6 +1,8 @@
+import type { FileMetadata } from './datasetUpload';
+
 export interface GameConfig {
     checkpoint: string;
-    datasetName: string;
+    datasetId: number;
     sessionId: string;
     initialCapital: number;
     betAmount: number;
@@ -29,10 +31,21 @@ export interface GameStep {
     isEditing: boolean;
 }
 
-export interface SessionState {
+export interface InferenceSetupState {
+    initialCapital: number;
+    betAmount: number;
+    checkpoint: string;
+    selectedDataset: number | null;
+    uploadedDatasetId: number | null;
+    datasetFileMetadata: FileMetadata | null;
+}
+
+export interface InferenceSessionSnapshot {
+    config: GameConfig | null;
     isActive: boolean;
     currentCapital: number;
     currentBet: number;
     lastPrediction: PredictionResult | null;
     totalSteps: number;
+    history: GameStep[];
 }

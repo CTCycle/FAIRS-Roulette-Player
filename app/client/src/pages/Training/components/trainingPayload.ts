@@ -1,14 +1,12 @@
-import type { TrainingNewConfig } from '../../../context/AppStateContext';
+import type { TrainingNewConfig } from '../../../types/training';
 
 const MAX_CHECKPOINT_NAME_LENGTH = 128;
 
 export const buildTrainingPayload = (
     config: TrainingNewConfig,
-    datasetIdOverride?: string,
+    datasetIdOverride?: number,
 ): Record<string, unknown> => {
     const checkpointName = config.checkpointName.trim();
-    const rawDatasetId = (datasetIdOverride ?? config.datasetName ?? '').trim();
-    const datasetId = /^\d+$/.test(rawDatasetId) ? Number(rawDatasetId) : undefined;
     return ({
     // Agent
     perceptive_field_size: Number(config.perceptiveField),
@@ -30,7 +28,7 @@ export const buildTrainingPayload = (
     bet_max: config.betMaxEnabled ? Number(config.betMax) : undefined,
     bet_enforce_capital: config.betEnforceCapital,
     // Dataset
-    dataset_id: datasetId,
+    dataset_id: datasetIdOverride ?? config.datasetId,
     use_data_generator: config.useDataGen,
     num_generated_samples: Number(config.numGeneratedSamples),
     sample_size: Number(config.trainSampleSize),
@@ -71,7 +69,7 @@ const validateRange = (
 
 export const validateTrainingStep = (
     config: TrainingNewConfig,
-    datasetIdOverride: string | undefined,
+    datasetIdOverride: number | undefined,
     step: number,
 ): string | null => {
     switch (step) {
@@ -113,7 +111,7 @@ export const validateTrainingStep = (
                 return 'Validation split must be between 0 and less than 1.';
             }
             return (
-                (!datasetIdOverride ? 'Select a dataset to continue.' : null)
+                (datasetIdOverride === undefined ? 'Select a dataset to continue.' : null)
             );
         case 4:
             return (
@@ -143,7 +141,7 @@ export const validateTrainingStep = (
 
 export const validateTrainingConfig = (
     config: TrainingNewConfig,
-    datasetIdOverride?: string,
+    datasetIdOverride?: number,
 ): string | null => {
     for (let step = 0; step <= 5; step += 1) {
         const error = validateTrainingStep(config, datasetIdOverride, step);

@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Activity, Info, RefreshCw, Save, X } from 'lucide-react';
-import { useAppState } from '../../../hooks/useAppState';
 import { useWizardStep } from '../../../hooks/useWizardStep';
 import { WizardActions } from './WizardActions';
 import { parseApiErrorDetail, parseDatasetId } from '../../../utils/apiParsers';
@@ -11,15 +10,20 @@ import {
     fetchTrainingDatasetSummaries,
 } from '../../../utils/trainingApi';
 import type { CheckpointMetadataResponse } from '../../../types/frontendApi';
+import {
+    initialTrainingResumeConfig,
+    type TrainingResumeConfig,
+} from '../../../types/training';
 import { WizardSummaryRows, type WizardSummaryRow } from '../../../components/wizard/WizardSummaryRows';
 import { FeatureTip } from '../../../components/guidance/FeatureTip';
 
 interface CheckpointPreviewProps {
     refreshKey?: number;
+    isTraining: boolean;
 }
 
 interface DatasetInfo {
-    datasetId: string;
+    datasetId: number;
     datasetName: string;
     rowCount: number | null;
 }
@@ -35,10 +39,10 @@ const RESUME_STEPS = ['Resume Configuration', 'Summary'] as const;
 
 export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
     refreshKey = 0,
+    isTraining,
 }) => {
-    const { state, dispatch } = useAppState();
     const navigate = useNavigate();
-    const { resumeConfig, isTraining } = state.training;
+    const [resumeConfig, setResumeConfig] = useState<TrainingResumeConfig>(initialTrainingResumeConfig);
     const [checkpoints, setCheckpoints] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -90,9 +94,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
                     datasetName: entry.datasetName,
                     rowCount: entry.rowCount,
                 }))
-                .filter((entry) =>
-                    entry.datasetId.trim().length > 0 && entry.datasetName.trim().length > 0
-                );
+                .filter((entry) => entry.datasetName.trim().length > 0);
             setDatasets(datasetList);
         } catch {
             setDatasets([]);
@@ -243,7 +245,6 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
                 return;
             }
 
-            dispatch({ type: 'SET_TRAINING_IS_TRAINING', payload: true });
             closeResumeWizard();
         } catch {
             setResumeWizardError('Failed to connect to training server');
@@ -266,7 +267,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
             if (!metadataCache[checkpointName]) {
                 cacheCheckpointMetadata(checkpointName, payload);
             }
-            const summary = (payload.summary || {}) as CheckpointSummary;
+            const summary = payload.summary as CheckpointSummary;
             const requiredRows = parsePositiveNumber(summary.perceptive_field_size);
             const preferredDatasetId = parseDatasetId(summary.dataset_id);
             const compatibleDatasets = datasets.filter((dataset) => (
@@ -285,30 +286,18 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
             const betAmount = parsePositiveNumber(summary.bet_amount) ?? 1;
             const initialCapital = parsePositiveNumber(summary.initial_capital) ?? 100;
 
-            dispatch({ type: 'RESET_INFERENCE_SESSION' });
-            dispatch({
-                type: 'SET_INFERENCE_SETUP',
-                payload: {
+            navigate('/inference', {
+                state: {
+                    inferenceSetup: {
                     checkpoint: checkpointName,
                     selectedDataset: selectedDataset.datasetId,
-                    datasetSource: 'source',
-                    uploadedDatasetName: null,
+                    uploadedDatasetId: null,
                     datasetFileMetadata: null,
                     initialCapital: Number(initialCapital),
                     betAmount: Number(betAmount),
+                    },
                 },
             });
-            dispatch({
-                type: 'SET_INFERENCE_SESSION_STATE',
-                payload: {
-                    isActive: false,
-                    currentCapital: Number(initialCapital),
-                    currentBet: Number(betAmount),
-                    lastPrediction: null,
-                    totalSteps: 0,
-                },
-            });
-            navigate('/inference');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Unable to start evaluation.');
         }
@@ -365,7 +354,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
         resetResumeWizardStep();
         setResumeWizardError(null);
         setResumeWizardCheckpoint(checkpointName);
-        dispatch({ type: 'SET_TRAINING_RESUME_CONFIG', payload: { selectedCheckpoint: checkpointName } });
+        setResumeConfig((current) => ({ ...current, selectedCheckpoint: checkpointName }));
 
         if (!metadataCache[checkpointName]) {
             try {
@@ -388,20 +377,20 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
     };
 
     const handleResumeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        dispatch({
-            type: 'SET_TRAINING_RESUME_CONFIG',
-            payload: { numAdditionalEpisodes: Number(event.target.value) },
-        });
+        setResumeConfig((current) => ({
+            ...current,
+            numAdditionalEpisodes: Number(event.target.value),
+        }));
     };
 
     const resumeSummaryRows = useMemo<WizardSummaryRow[]>(() => {
         if (!resumeWizardCheckpoint) {
             return [];
         }
-        const summary = metadataCache[resumeWizardCheckpoint]?.summary || {};
+        const metadata = metadataCache[resumeWizardCheckpoint];
         return [
             { label: 'Checkpoint', value: resumeWizardCheckpoint },
-            ...buildMetadataRows(summary),
+            ...(metadata ? buildMetadataRows(metadata.summary) : []),
             { label: 'Additional Episodes', value: resumeConfig.numAdditionalEpisodes },
         ];
     }, [buildMetadataRows, metadataCache, resumeConfig.numAdditionalEpisodes, resumeWizardCheckpoint]);

@@ -1,36 +1,51 @@
-import React, { useCallback } from 'react';
-import { useAppState } from '../../hooks/useAppState';
+import React, { useCallback, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { GameSession } from '../../components/inference/GameSession';
-import type { GameConfig, SessionState, GameStep } from '../../types/inference';
+import type {
+    InferenceSessionSnapshot,
+    InferenceSetupState,
+} from '../../types/inference';
 import './InferencePage.css';
 
+interface InferenceNavigationState {
+    inferenceSetup?: Partial<InferenceSetupState>;
+}
+
+const initialSetup: InferenceSetupState = {
+    initialCapital: 100,
+    betAmount: 1,
+    checkpoint: '',
+    selectedDataset: null,
+    uploadedDatasetId: null,
+    datasetFileMetadata: null,
+};
+
+const createInitialSnapshot = (setup: InferenceSetupState): InferenceSessionSnapshot => ({
+    config: null,
+    isActive: false,
+    currentCapital: setup.initialCapital,
+    currentBet: setup.betAmount,
+    lastPrediction: null,
+    totalSteps: 0,
+    history: [],
+});
+
 const InferencePage: React.FC = () => {
-    const { state, dispatch } = useAppState();
-    const { gameConfig, setup, sessionState, history } = state.inference;
+    const location = useLocation();
+    const navigationSetup = (location.state as InferenceNavigationState | null)?.inferenceSetup;
+    const resolvedInitialSetup = { ...initialSetup, ...navigationSetup };
+    const [setup, setSetup] = useState<InferenceSetupState>(resolvedInitialSetup);
+    const [snapshot, setSnapshot] = useState<InferenceSessionSnapshot>(
+        () => createInitialSnapshot(resolvedInitialSetup),
+    );
 
-    const handleSessionStateChange = useCallback((updates: Partial<SessionState>) => {
-        dispatch({ type: 'SET_INFERENCE_SESSION_STATE', payload: updates });
-    }, [dispatch]);
+    const handleSetupChange = useCallback((updates: Partial<InferenceSetupState>) => {
+        setSetup((current) => ({ ...current, ...updates }));
+    }, []);
 
-    const handleAddHistoryStep = useCallback((step: GameStep) => {
-        dispatch({ type: 'ADD_INFERENCE_HISTORY_STEP', payload: step });
-    }, [dispatch]);
-
-    const handleHistoryChange = useCallback((steps: GameStep[]) => {
-        dispatch({ type: 'SET_INFERENCE_HISTORY', payload: steps });
-    }, [dispatch]);
-
-    const handleGameConfigChange = useCallback((config: GameConfig | null) => {
-        dispatch({ type: 'SET_INFERENCE_GAME_CONFIG', payload: config });
-    }, [dispatch]);
-
-    const handleSetupChange = useCallback((updates: Partial<typeof setup>) => {
-        dispatch({ type: 'SET_INFERENCE_SETUP', payload: updates });
-    }, [dispatch]);
-
-    const handleClearSession = useCallback(() => {
-        dispatch({ type: 'RESET_INFERENCE_SESSION' });
-    }, [dispatch]);
+    const handleSnapshotChange = useCallback((updates: Partial<InferenceSessionSnapshot>) => {
+        setSnapshot((current) => ({ ...current, ...updates }));
+    }, []);
 
     return (
         <div className="inference-page page-shell">
@@ -42,16 +57,10 @@ const InferencePage: React.FC = () => {
 
             <div className="inference-workspace">
                 <GameSession
-                    config={gameConfig}
                     setup={setup}
-                    sessionState={sessionState}
-                    history={history}
+                    snapshot={snapshot}
                     onSetupChange={handleSetupChange}
-                    onSessionStateChange={handleSessionStateChange}
-                    onAddHistoryStep={handleAddHistoryStep}
-                    onHistoryChange={handleHistoryChange}
-                    onGameConfigChange={handleGameConfigChange}
-                    onClearSession={handleClearSession}
+                    onSnapshotChange={handleSnapshotChange}
                 />
             </div>
         </div>
@@ -59,4 +68,3 @@ const InferencePage: React.FC = () => {
 };
 
 export default InferencePage;
-

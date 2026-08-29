@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, Database, Play, RefreshCw, X } from 'lucide-react';
-import type { TrainingNewConfig } from '../../../context/AppStateContext';
-import { useAppState } from '../../../hooks/useAppState';
+import type { TrainingNewConfig } from '../../../types/training';
+import { initialTrainingNewConfig } from '../../../types/training';
 import { useWizardStep } from '../../../hooks/useWizardStep';
 import { buildTrainingPayload, validateTrainingConfig, validateTrainingStep } from './trainingPayload';
 import { WizardActions } from './WizardActions';
@@ -13,11 +13,12 @@ import { HelpPopover } from '../../../components/guidance/HelpPopover';
 
 interface DatasetPreviewProps {
     refreshKey: number;
+    isTraining: boolean;
     onDelete?: () => void;
 }
 
 interface DatasetSummary {
-    datasetId: string;
+    datasetId: number;
     name: string;
     rowCount: number | null;
 }
@@ -60,10 +61,10 @@ const WIZARD_STEP_HELP: Partial<Record<number, { title: string; body: string }>>
 
 export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
     refreshKey,
+    isTraining,
     onDelete,
 }) => {
-    const { state, dispatch } = useAppState();
-    const { newConfig, isTraining } = state.training;
+    const [newConfig, setNewConfig] = useState<TrainingNewConfig>(initialTrainingNewConfig);
     const [datasets, setDatasets] = useState<DatasetSummary[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -78,7 +79,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
         setStep: setWizardStep,
         resetStep: resetWizardStep,
     } = useWizardStep({ totalSteps: WIZARD_STEPS.length });
-    const [wizardDatasetId, setWizardDatasetId] = useState<string | null>(null);
+    const [wizardDatasetId, setWizardDatasetId] = useState<number | null>(null);
     const [wizardDatasetLabel, setWizardDatasetLabel] = useState<string | null>(null);
     const [wizardError, setWizardError] = useState<string | null>(null);
     const [wizardSubmitting, setWizardSubmitting] = useState(false);
@@ -98,9 +99,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                     name: entry.datasetName,
                     rowCount: entry.rowCount,
                 }))
-                .filter((entry) =>
-                    entry.datasetId.trim().length > 0 && entry.name.trim().length > 0
-                );
+                .filter((entry) => entry.name.trim().length > 0);
             setDatasets(datasetList);
         } catch {
             setError('Unable to load datasets.');
@@ -117,7 +116,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
     }, [refreshKey]);
 
     const updateNewConfig = (updates: Partial<TrainingNewConfig>) => {
-        dispatch({ type: 'SET_TRAINING_NEW_CONFIG', payload: updates });
+        setNewConfig((current) => ({ ...current, ...updates }));
     };
 
     const isTrainingNewConfigKey = (value: string): value is keyof TrainingNewConfig => {
@@ -164,7 +163,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
         }
     };
 
-    const handleDelete = async (datasetId: string) => {
+    const handleDelete = async (datasetId: number) => {
         try {
             const response = await fetch(`/api/datasets/training/${encodeURIComponent(datasetId)}`, {
                 method: 'DELETE',
@@ -184,7 +183,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
     };
 
     const openWizard = (
-        datasetId: string | null,
+        datasetId: number | null,
         datasetLabel: string,
         isGenerator = false,
     ) => {
@@ -198,6 +197,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
         resetWizardStep();
         setWizardError(null);
         setWizardOpen(true);
+        updateNewConfig({ datasetId });
         if (isGenerator) {
             updateNewConfig({ useDataGen: true });
         } else {
@@ -244,7 +244,6 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                 return;
             }
 
-            dispatch({ type: 'SET_TRAINING_IS_TRAINING', payload: true });
             closeWizard();
         } catch {
             setWizardError('Failed to connect to training server');

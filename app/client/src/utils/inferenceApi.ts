@@ -1,51 +1,121 @@
 import type { PredictionResult } from '../types/inference';
-import { isRecord, parseApiErrorDetail } from './apiParsers';
+import { isRecord, parseApiErrorDetail, parseDatasetId } from './apiParsers';
 
 export interface InferenceSessionStartOptions {
-    sessionId?: string;
     checkpoint: string;
     datasetId: number;
-    datasetSource: 'source' | 'uploaded' | null;
     gameCapital: number;
     gameBet: number;
 }
 
-export type InferenceStartResponse = Record<string, unknown> & {
+export interface InferenceDatasetUploadResponse {
+    dataset_id: number | null;
+    filename: string;
+    rows_imported: number;
+    dataset_name: string | null;
+    dataset_kind: string | null;
+    columns: string[];
+}
+
+export interface InferenceStartResponse {
+    session_id: string;
+    checkpoint: string;
+    game_capital: number;
+    game_bet: number;
+    current_capital: number;
     prediction: PredictionResult;
+}
+
+export interface InferenceNextResponse {
+    session_id: string;
+    prediction: PredictionResult;
+}
+
+export interface InferenceStepResponse {
+    session_id: string;
+    step: number;
+    real_extraction: number;
+    predicted_action: number;
+    predicted_action_desc: string;
+    reward: number;
+    capital_after: number;
+}
+
+const requireRecord = (value: unknown, label: string): Record<string, unknown> => {
+    if (!isRecord(value)) {
+        throw new Error(`${label} has an invalid response shape.`);
+    }
+    return value;
 };
 
-export type InferenceNextResponse = Record<string, unknown> & {
-    prediction: PredictionResult;
+const requireString = (record: Record<string, unknown>, key: string): string => {
+    const value = record[key];
+    if (typeof value !== 'string' || !value.trim()) {
+        throw new Error(`Inference response field ${key} is invalid.`);
+    }
+    return value;
 };
 
-export type InferenceStepResponse = Record<string, unknown>;
+const requireNumber = (record: Record<string, unknown>, key: string): number => {
+    const value = record[key];
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
+        throw new Error(`Inference response field ${key} is invalid.`);
+    }
+    return value;
+};
 
-const maybeNumber = (value: unknown): number | undefined => {
-    if (value === null || value === undefined || value === '') {
+const requireInteger = (record: Record<string, unknown>, key: string): number => {
+    const value = requireNumber(record, key);
+    if (!Number.isInteger(value)) {
+        throw new Error(`Inference response field ${key} is invalid.`);
+    }
+    return value;
+};
+
+const optionalNumber = (
+    record: Record<string, unknown>,
+    key: string,
+): number | undefined => {
+    const value = record[key];
+    if (value === undefined || value === null) {
         return undefined;
     }
-    if (typeof value === 'boolean') {
-        return undefined;
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
+        throw new Error(`Inference prediction field ${key} is invalid.`);
     }
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : undefined;
+    return value;
 };
 
 const normalizePrediction = (value: unknown): PredictionResult => {
-    const payload = isRecord(value) ? value : {};
-    const betStrategyName = typeof payload.bet_strategy_name === 'string'
-        ? payload.bet_strategy_name
-        : (typeof payload.betStrategyName === 'string' ? payload.betStrategyName : undefined);
-
-    return {
-        action: maybeNumber(payload.action) ?? 0,
-        description: typeof payload.description === 'string' ? payload.description : 'Unknown',
-        confidence: maybeNumber(payload.confidence),
-        betStrategyId: maybeNumber(payload.bet_strategy_id ?? payload.betStrategyId),
-        betStrategyName,
-        suggestedBetAmount: maybeNumber(payload.suggested_bet_amount ?? payload.suggestedBetAmount),
-        currentBetAmount: maybeNumber(payload.current_bet_amount ?? payload.currentBetAmount),
+    const payload = requireRecord(value, 'Inference prediction');
+    const prediction: PredictionResult = {
+        action: requireInteger(payload, 'action'),
+        description: requireString(payload, 'description'),
     };
+    const confidence = optionalNumber(payload, 'confidence');
+    if (confidence !== undefined) {
+        prediction.confidence = confidence;
+    }
+    const betStrategyId = optionalNumber(payload, 'bet_strategy_id');
+    if (betStrategyId !== undefined) {
+        prediction.betStrategyId = betStrategyId;
+    }
+    const betStrategyName = payload.bet_strategy_name;
+    if (betStrategyName !== undefined && betStrategyName !== null) {
+        if (typeof betStrategyName !== 'string') {
+            throw new Error('Inference prediction field bet_strategy_name is invalid.');
+        }
+        prediction.betStrategyName = betStrategyName;
+    }
+    const suggestedBetAmount = optionalNumber(payload, 'suggested_bet_amount');
+    if (suggestedBetAmount !== undefined) {
+        prediction.suggestedBetAmount = suggestedBetAmount;
+    }
+    const currentBetAmount = optionalNumber(payload, 'current_bet_amount');
+    if (currentBetAmount !== undefined) {
+        prediction.currentBetAmount = currentBetAmount;
+    }
+    return prediction;
 };
 
 const readJson = async (response: Response): Promise<unknown> => (
@@ -62,17 +132,80 @@ const requestJson = async (
     if (!response.ok) {
         throw new Error(parseApiErrorDetail(payload, fallbackMessage));
     }
-    return isRecord(payload) ? payload : {};
+    return requireRecord(payload, 'API response');
 };
 
-export const uploadInferenceDataset = async (file: File): Promise<Record<string, unknown>> => {
+const parseUploadResponse = (value: unknown): InferenceDatasetUploadResponse => {
+    const payload = requireRecord(value, 'Dataset upload response');
+    const rawDatasetId = payload.dataset_id;
+    if (rawDatasetId !== null && parseDatasetId(rawDatasetId) === null) {
+        throw new Error('Dataset upload response field dataset_id is invalid.');
+    }
+    const datasetName = payload.dataset_name;
+    if (datasetName !== null && typeof datasetName !== 'string') {
+        throw new Error('Dataset upload response field dataset_name is invalid.');
+    }
+    const datasetKind = payload.dataset_kind;
+    if (datasetKind !== null && typeof datasetKind !== 'string') {
+        throw new Error('Dataset upload response field dataset_kind is invalid.');
+    }
+    if (!Array.isArray(payload.columns) || payload.columns.some((column) => typeof column !== 'string')) {
+        throw new Error('Dataset upload response field columns is invalid.');
+    }
+    return {
+        dataset_id: rawDatasetId === null ? null : parseDatasetId(rawDatasetId),
+        filename: requireString(payload, 'filename'),
+        rows_imported: requireInteger(payload, 'rows_imported'),
+        dataset_name: datasetName,
+        dataset_kind: datasetKind,
+        columns: payload.columns,
+    };
+};
+
+const parseStartResponse = (value: unknown): InferenceStartResponse => {
+    const payload = requireRecord(value, 'Inference start response');
+    return {
+        session_id: requireString(payload, 'session_id'),
+        checkpoint: requireString(payload, 'checkpoint'),
+        game_capital: requireNumber(payload, 'game_capital'),
+        game_bet: requireNumber(payload, 'game_bet'),
+        current_capital: requireNumber(payload, 'current_capital'),
+        prediction: normalizePrediction(payload.prediction),
+    };
+};
+
+const parseNextResponse = (value: unknown): InferenceNextResponse => {
+    const payload = requireRecord(value, 'Inference prediction response');
+    return {
+        session_id: requireString(payload, 'session_id'),
+        prediction: normalizePrediction(payload.prediction),
+    };
+};
+
+const parseStepResponse = (value: unknown): InferenceStepResponse => {
+    const payload = requireRecord(value, 'Inference step response');
+    return {
+        session_id: requireString(payload, 'session_id'),
+        step: requireInteger(payload, 'step'),
+        real_extraction: requireInteger(payload, 'real_extraction'),
+        predicted_action: requireInteger(payload, 'predicted_action'),
+        predicted_action_desc: requireString(payload, 'predicted_action_desc'),
+        reward: requireInteger(payload, 'reward'),
+        capital_after: requireInteger(payload, 'capital_after'),
+    };
+};
+
+export const uploadInferenceDataset = async (
+    file: File,
+): Promise<InferenceDatasetUploadResponse> => {
     const formData = new FormData();
     formData.append('file', file);
-    return requestJson(
+    const payload = await requestJson(
         '/api/data/upload?dataset_kind=inference',
         { method: 'POST', body: formData },
         'Upload failed.',
     );
+    return parseUploadResponse(payload);
 };
 
 export const clearInferenceContext = async (): Promise<Record<string, unknown>> => (
@@ -88,17 +221,15 @@ export const startInferenceSession = async (
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                session_id: options.sessionId,
                 checkpoint: options.checkpoint,
                 dataset_id: options.datasetId,
-                dataset_source: options.datasetSource,
                 game_capital: options.gameCapital,
                 game_bet: options.gameBet,
             }),
         },
         'Session start failed.',
     );
-    return { ...payload, prediction: normalizePrediction(payload.prediction) };
+    return parseStartResponse(payload);
 };
 
 export const shutdownInferenceSession = async (
@@ -144,14 +275,14 @@ export const requestNextInferencePrediction = async (
         { method: 'POST' },
         'Prediction failed.',
     );
-    return { ...payload, prediction: normalizePrediction(payload.prediction) };
+    return parseNextResponse(payload);
 };
 
 export const submitInferenceStep = async (
     sessionId: string,
     extraction: number,
-): Promise<InferenceStepResponse> => (
-    requestJson(
+): Promise<InferenceStepResponse> => {
+    const payload = await requestJson(
         `/api/inference/sessions/${sessionId}/step`,
         {
             method: 'POST',
@@ -159,7 +290,8 @@ export const submitInferenceStep = async (
             body: JSON.stringify({ extraction }),
         },
         'Step failed.',
-    )
-);
+    );
+    return parseStepResponse(payload);
+};
 
 export { normalizePrediction };

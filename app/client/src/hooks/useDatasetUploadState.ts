@@ -1,7 +1,14 @@
-import { useCallback } from 'react';
-import { useAppState } from './useAppState';
-import type { DatasetUploadState } from '../context/AppStateContext';
-import type { DatasetUploadStateUpdates } from '../types/datasetUpload';
+import { useCallback, useState } from 'react';
+import type {
+    DatasetUploadState,
+    DatasetUploadStateUpdates,
+} from '../types/datasetUpload';
+
+const initialDatasetUploadState: DatasetUploadState = {
+    files: [],
+    uploadStatus: 'idle',
+    uploadMessage: '',
+};
 
 interface UseDatasetUploadStateResult {
     datasetUpload: DatasetUploadState;
@@ -10,18 +17,18 @@ interface UseDatasetUploadStateResult {
 }
 
 export const useDatasetUploadState = (): UseDatasetUploadStateResult => {
-    const { state, dispatch } = useAppState();
+    const [datasetUpload, setDatasetUpload] = useState(initialDatasetUploadState);
 
     const updateDatasetUploadState = useCallback((updates: DatasetUploadStateUpdates) => {
-        dispatch({ type: 'SET_DATASET_UPLOAD_STATE', payload: updates });
-    }, [dispatch]);
+        setDatasetUpload((current) => ({ ...current, ...updates }));
+    }, []);
 
     const resetDatasetUploadState = useCallback(() => {
-        dispatch({ type: 'RESET_DATASET_UPLOAD' });
-    }, [dispatch]);
+        setDatasetUpload(initialDatasetUploadState);
+    }, []);
 
     return {
-        datasetUpload: state.training.datasetUpload,
+        datasetUpload,
         updateDatasetUploadState,
         resetDatasetUploadState,
     };
