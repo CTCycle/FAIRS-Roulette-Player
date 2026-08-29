@@ -12,7 +12,8 @@ from server.contracts.inference import (
 )
 from server.learning.inference.player import RoulettePlayer
 from server.learning.training.device import DeviceConfig
-from server.repositories.serialization.data import DataStore
+from server.repositories.datasets import DatasetRepository
+from server.repositories.inference import InferenceRepository
 from server.services.checkpoints import CheckpointService
 
 ###############################################################################
@@ -120,10 +121,12 @@ class InferenceService:
     # -------------------------------------------------------------------------
     def __init__(
         self,
-        data_store: DataStore,
+        dataset_repository: DatasetRepository,
+        inference_repository: InferenceRepository,
         checkpoint_service: CheckpointService,
     ) -> None:
-        self.data_store = data_store
+        self.dataset_repository = dataset_repository
+        self.inference_repository = inference_repository
         self.checkpoint_service = checkpoint_service
         self.state = InferenceState()
 
@@ -137,7 +140,7 @@ class InferenceService:
             "started_at": session.started_at,
             "ended_at": None,
         }
-        self.data_store.upsert_inference_session(row)
+        self.inference_repository.upsert_session(row)
 
     # -------------------------------------------------------------------------
     def persist_session_step(
@@ -160,7 +163,7 @@ class InferenceService:
             "capital_after": capital_after,
             "recorded_at": datetime.now(timezone.utc),
         }
-        self.data_store.upsert_inference_session_step(row)
+        self.inference_repository.upsert_step(row)
 
     # -------------------------------------------------------------------------
     def _close_session(self, session_id: str, *, mark_missing: bool = False) -> None:
@@ -170,7 +173,7 @@ class InferenceService:
             else None
         )
         if session is not None or mark_missing:
-            self.data_store.mark_inference_session_ended(session_id)
+            self.inference_repository.end_session(session_id)
         if session is not None:
             self.state.delete_session(session_id)
 
@@ -180,45 +183,19 @@ class InferenceService:
             self.checkpoint_service.resolve_existing_checkpoint(payload.checkpoint)
         )
 
-        dataset_id = int(payload.dataset_id)
+        dataset_id = payload.dataset_id
         session_id = uuid.uuid4().hex
-        if payload.session_id:
-            self._close_session(payload.session_id)
 
-        dataset = self.data_store.load_dataset(dataset_id)
+        dataset = self.dataset_repository.get(dataset_id)
         if dataset is None:
             raise FileNotFoundError(f"Dataset '{dataset_id}' was not found.")
-        dataset_context = self.data_store.load_dataset_outcomes(dataset_id)
+        dataset_context = self.dataset_repository.outcomes(dataset_id)
 
         model, train_config, _, _ = self.checkpoint_service.load_checkpoint(checkpoint)
         configuration = {
             **train_config,
             "game_capital": payload.game_capital,
             "game_bet": payload.game_bet,
-            "dynamic_betting_enabled": bool(
-                payload.dynamic_betting_enabled
-                or train_config.get("dynamic_betting_enabled", False)
-            ),
-            "bet_strategy_model_enabled": bool(
-                payload.bet_strategy_model_enabled
-                or train_config.get("bet_strategy_model_enabled", False)
-            ),
-            "bet_strategy_fixed_id": int(
-                train_config.get("bet_strategy_fixed_id", payload.bet_strategy_fixed_id)
-            ),
-            "strategy_hold_steps": int(
-                train_config.get("strategy_hold_steps", payload.strategy_hold_steps)
-            ),
-            "bet_unit": payload.bet_unit
-            if payload.bet_unit is not None
-            else train_config.get("bet_unit"),
-            "bet_max": payload.bet_max
-            if payload.bet_max is not None
-            else train_config.get("bet_max"),
-            "bet_enforce_capital": bool(
-                train_config.get("bet_enforce_capital", payload.bet_enforce_capital)
-            ),
-            "auto_apply_bet_suggestions": payload.auto_apply_bet_suggestions,
         }
 
         device = DeviceConfig(configuration)
@@ -236,7 +213,6 @@ class InferenceService:
             configuration=configuration,
             session_id=session_id,
             dataset_context=dataset_context,
-            dataset_source=payload.dataset_source,
             strategy_model=strategy_model,
         )
         prediction = player.predict_next()
@@ -343,7 +319,7 @@ class InferenceService:
 
     # -------------------------------------------------------------------------
     def clear_session_rows(self, session_id: str) -> dict[str, Any]:
-        self.data_store.clear_inference_session_steps(session_id)
+        self.inference_repository.clear_steps(session_id)
         return {"session_id": session_id, "status": "cleared"}
 
     # -------------------------------------------------------------------------
@@ -352,5 +328,5 @@ class InferenceService:
             raise RuntimeError(
                 "Cannot clear inference context while an inference session is active."
             )
-        self.data_store.clear_datasets("inference")
+        self.dataset_repository.clear("inference")
         return {"status": "cleared"}

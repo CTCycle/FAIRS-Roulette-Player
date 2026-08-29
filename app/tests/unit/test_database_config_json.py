@@ -74,30 +74,15 @@ def test_database_settings_use_env_payload_for_external_postgres_mode(
     assert settings.insert_batch_size == 250
 
 ###############################################################################
-def test_database_settings_parse_database_url_and_allow_explicit_overrides(
+def test_database_url_is_rejected(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv(
         "DATABASE_URL",
         "postgresql+psycopg://url-user:url-pass@url-host:5544/url-db",
     )
-    monkeypatch.setenv("EMBEDDED_DATABASE", "false")
-    monkeypatch.setenv("DATABASE_PORT", "5432")
-    monkeypatch.setenv("DATABASE_USERNAME", "override-user")
-
-    settings = JsonServerSettings.model_validate({}).to_server_settings().database
-
-    assert settings.embedded_database is False
-    assert settings.engine == "postgresql+psycopg"
-    assert settings.host == "url-host"
-    assert settings.port == 5432
-    assert settings.database_name == "url-db"
-    assert settings.username == "override-user"
-    assert settings.password == "url-pass"
-    assert settings.ssl is False
-    assert settings.ssl_ca is None
-    assert settings.connect_timeout == 10
-    assert settings.insert_batch_size == 1000
+    with pytest.raises(ValueError, match="DATABASE_URL is unsupported"):
+        JsonServerSettings.model_validate({}).to_server_settings()
 
 ###############################################################################
 def test_database_validation_requires_external_fields(

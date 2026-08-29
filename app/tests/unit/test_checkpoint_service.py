@@ -3,11 +3,11 @@ from __future__ import annotations
 import pytest
 
 from server.common import checkpoints as checkpoint_common
-from server.repositories.serialization.model import CheckpointStorage
+from server.repositories.checkpoints import CheckpointRepository
 from server.services.checkpoints import CheckpointReferenceError, CheckpointService
 
 ###############################################################################
-class DummyCheckpointStorage:
+class DummyCheckpointRepository:
 
     # -------------------------------------------------------------------------
     def __init__(self) -> None:
@@ -35,7 +35,7 @@ class DummyCheckpointStorage:
         self.deleted_paths.append(path)
 
 ###############################################################################
-class InvalidCheckpointStorage(DummyCheckpointStorage):
+class InvalidCheckpointRepository(DummyCheckpointRepository):
 
     # -------------------------------------------------------------------------
     def load_training_configuration(self, path: str) -> tuple[list, dict]:  # noqa: ARG002
@@ -44,7 +44,7 @@ class InvalidCheckpointStorage(DummyCheckpointStorage):
 ###############################################################################
 def test_resolve_existing_checkpoint_rejects_missing(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(checkpoint_common.shared_paths, "CHECKPOINT_PATH", tmp_path)
-    service = CheckpointService(checkpoint_storage=DummyCheckpointStorage())
+    service = CheckpointService(checkpoint_repository=DummyCheckpointRepository())
     with pytest.raises(FileNotFoundError):
         service.resolve_existing_checkpoint("missing")
 
@@ -52,7 +52,7 @@ def test_resolve_existing_checkpoint_rejects_missing(tmp_path, monkeypatch) -> N
 def test_get_metadata_returns_summary_shape(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(checkpoint_common.shared_paths, "CHECKPOINT_PATH", tmp_path)
     (tmp_path / "cp1").mkdir()
-    service = CheckpointService(checkpoint_storage=DummyCheckpointStorage())
+    service = CheckpointService(checkpoint_repository=DummyCheckpointRepository())
     metadata = service.get_metadata("cp1")
     assert metadata["checkpoint"] == "cp1"
     assert "summary" in metadata
@@ -65,7 +65,7 @@ def test_find_dataset_references_reads_checkpoint_configuration(
 ) -> None:
     monkeypatch.setattr(checkpoint_common.shared_paths, "CHECKPOINT_PATH", tmp_path)
     (tmp_path / "cp1").mkdir()
-    service = CheckpointService(checkpoint_storage=DummyCheckpointStorage())
+    service = CheckpointService(checkpoint_repository=DummyCheckpointRepository())
 
     assert service.find_dataset_references(7) == ["cp1"]
     assert service.find_dataset_references(8) == []
@@ -76,7 +76,7 @@ def test_find_dataset_references_blocks_malformed_configuration(
 ) -> None:
     monkeypatch.setattr(checkpoint_common.shared_paths, "CHECKPOINT_PATH", tmp_path)
     (tmp_path / "cp1").mkdir()
-    service = CheckpointService(checkpoint_storage=InvalidCheckpointStorage())
+    service = CheckpointService(checkpoint_repository=InvalidCheckpointRepository())
 
     with pytest.raises(CheckpointReferenceError, match="Unable to inspect checkpoint"):
         service.find_dataset_references(7)
@@ -85,12 +85,12 @@ def test_find_dataset_references_blocks_malformed_configuration(
 def test_delete_checkpoint_delegates_filesystem_ownership(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(checkpoint_common.shared_paths, "CHECKPOINT_PATH", tmp_path)
     (tmp_path / "cp1").mkdir()
-    storage = DummyCheckpointStorage()
-    service = CheckpointService(checkpoint_storage=storage)
+    repository = DummyCheckpointRepository()
+    service = CheckpointService(checkpoint_repository=repository)
 
     service.delete_checkpoint("cp1")
 
-    assert storage.deleted_paths == [str(tmp_path / "cp1")]
+    assert repository.deleted_paths == [str(tmp_path / "cp1")]
 
 ###############################################################################
 def test_checkpoint_storage_deletes_checkpoint_folder(tmp_path) -> None:
@@ -98,6 +98,6 @@ def test_checkpoint_storage_deletes_checkpoint_folder(tmp_path) -> None:
     checkpoint_path.mkdir()
     (checkpoint_path / "model.keras").write_text("model", encoding="utf-8")
 
-    CheckpointStorage().delete_checkpoint(str(checkpoint_path))
+    CheckpointRepository().delete_checkpoint(str(checkpoint_path))
 
     assert not checkpoint_path.exists()

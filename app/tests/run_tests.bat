@@ -87,36 +87,30 @@ if exist "%VENV_PYTHON%" (
   exit /b 1
 )
 
-if exist "%RUNTIME_NPM%" (
-  set "NPM_CMD=%RUNTIME_NPM%"
-) else (
-  where npm >nul 2>&1
-  if errorlevel 1 (
-    echo [ERROR] npm runtime not found.
-    exit /b 1
-  )
-  set "NPM_CMD=npm"
+if not exist "%RUNTIME_NPM%" (
+  echo [ERROR] Managed npm runtime not found: "%RUNTIME_NPM%"
+  exit /b 1
 )
+set "NPM_CMD=%RUNTIME_NPM%"
 
-if exist "%RUNTIME_UV%" (
-  set "UV_CMD=%RUNTIME_UV%"
-) else (
-  where uv >nul 2>&1
-  if errorlevel 1 (
-    echo [ERROR] uv runtime not found.
-    exit /b 1
-  )
-  set "UV_CMD=uv"
+if not exist "%RUNTIME_UV%" (
+  echo [ERROR] Managed uv runtime not found: "%RUNTIME_UV%"
+  exit /b 1
 )
+set "UV_CMD=%RUNTIME_UV%"
 
-set "UVICORN_APP=app.server.app:app"
+set "UVICORN_APP=server.app:app"
 set "BACKEND_WORKDIR=%PROJECT_ROOT%"
-set "PYTHONPATH=%PROJECT_ROOT%;%APP_DIR%"
-"%PYTHON_CMD%" -c "import importlib; importlib.import_module('app.server.app')" >nul 2>&1
+set "PYTHONPATH=%APP_DIR%"
+"%PYTHON_CMD%" -c "import importlib; importlib.import_module('server.app')" >nul 2>&1
 if errorlevel 1 (
-  set "UVICORN_APP=server.app:app"
-  set "BACKEND_WORKDIR=%SERVER_DIR%"
-  set "PYTHONPATH=%APP_DIR%"
+  echo [ERROR] Canonical backend import server.app is unavailable.
+  exit /b 1
+)
+
+if exist "%CLIENT_DIR%\package.json" if not exist "%CLIENT_DIR%\package-lock.json" (
+  echo [ERROR] Frontend package-lock.json is required.
+  exit /b 1
 )
 
 echo.
@@ -158,12 +152,7 @@ if /i "%STANDARD_TEST_SKIP_LIVE_SERVERS%"=="false" if "%HAS_E2E%"=="1" (
     if errorlevel 1 (
       if not exist "%CLIENT_DIR%\node_modules" (
         echo [INFO] Installing frontend dependencies...
-        if exist "%CLIENT_DIR%\package-lock.json" (
-          call "%NPM_CMD%" --prefix "%CLIENT_DIR%" ci
-          if errorlevel 1 call "%NPM_CMD%" --prefix "%CLIENT_DIR%" install
-        ) else (
-          call "%NPM_CMD%" --prefix "%CLIENT_DIR%" install
-        )
+        call "%NPM_CMD%" --prefix "%CLIENT_DIR%" ci
         if errorlevel 1 (
           set "LIVE_SERVER_PHASE=FAIL"
           set "TEST_RESULT=1"

@@ -11,4 +11,4 @@ def bootstrap_runtime(*, force: bool = False) -> None:
     """Load environment and configure runtime paths/logging explicitly."""
     load_environment(force=force)
     shared_paths.configure_runtime_paths(os.getenv("FAIRS_DATA_DIR"))
-    configure_logging(os.getenv("FAIRS_LOG_DIR"), force=force)
+    configure_logging(force=force)

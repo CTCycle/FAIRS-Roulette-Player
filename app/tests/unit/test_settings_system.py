@@ -216,7 +216,9 @@ def test_database_settings_are_loaded_from_env(
         env_path,
         [
             "EMBEDDED_DATABASE=false",
-            "DATABASE_URL=postgresql+psycopg://url-user:url-pass@url-host:5544/url-db",
+            "DATABASE_ENGINE=postgresql+psycopg",
+            "DATABASE_HOST=env-host",
+            "DATABASE_PORT=5544",
             "DATABASE_USERNAME=env-user",
             "DATABASE_NAME=env-name",
         ],
@@ -225,7 +227,7 @@ def test_database_settings_are_loaded_from_env(
 
     settings = startup.reload_settings_for_tests(config_path=str(config_path))
 
-    assert settings.database.host == "url-host"
+    assert settings.database.host == "env-host"
     assert settings.database.port == 5544
     assert settings.database.username == "env-user"
     assert settings.database.database_name == "env-name"
@@ -257,7 +259,7 @@ def test_manager_get_block_and_get_value(
 
     database_block = manager.get_block("database")
     assert database_block["host"] == "env-db"
-    assert database_block["database_url"] is None
+    assert "database_url" not in database_block
     assert manager.get_value("jobs", "polling_interval") == 1.0
     assert manager.get_value("device", "missing", default="fallback") == "fallback"
 

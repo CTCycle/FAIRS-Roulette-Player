@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from numbers import Integral
 from typing import Any
 
 import pandas as pd
@@ -29,6 +30,13 @@ class DatasetRepository:
     @staticmethod
     def _key(name: str) -> str:
         return name.casefold()
+
+    # -------------------------------------------------------------------------
+    @staticmethod
+    def require_dataset_id(value: Any) -> int:
+        if isinstance(value, bool) or not isinstance(value, Integral) or int(value) < 1:
+            raise ValueError(f"Invalid dataset_id: {value}")
+        return int(value)
 
     # -------------------------------------------------------------------------
     @staticmethod
@@ -95,9 +103,39 @@ class DatasetRepository:
 
     # -------------------------------------------------------------------------
     def outcomes(self, dataset_id: int) -> pd.DataFrame:
+        dataset_id = self.require_dataset_id(dataset_id)
         with self.database.Session() as session:
             rows = session.execute(select(DatasetOutcomes.dataset_id, DatasetOutcomes.sequence_index, DatasetOutcomes.outcome_id).where(DatasetOutcomes.dataset_id == dataset_id).order_by(DatasetOutcomes.sequence_index)).mappings().all()
         frame = pd.DataFrame(rows, columns=["dataset_id", "sequence_index", "outcome_id"])
+        if not frame.empty:
+            frame["outcome"] = frame["outcome_id"]
+        return frame
+
+    # -------------------------------------------------------------------------
+    def training_outcomes(self, dataset_id: int | None = None) -> pd.DataFrame:
+        if dataset_id is not None:
+            dataset_id = self.require_dataset_id(dataset_id)
+        with self.database.Session() as session:
+            stmt = (
+                select(
+                    DatasetOutcomes.dataset_id,
+                    DatasetOutcomes.sequence_index,
+                    DatasetOutcomes.outcome_id,
+                )
+                .join(Datasets, Datasets.dataset_id == DatasetOutcomes.dataset_id)
+                .where(Datasets.dataset_kind == "training")
+                .order_by(
+                    DatasetOutcomes.dataset_id,
+                    DatasetOutcomes.sequence_index,
+                )
+            )
+            if dataset_id is not None:
+                stmt = stmt.where(DatasetOutcomes.dataset_id == dataset_id)
+            rows = session.execute(stmt).mappings().all()
+        frame = pd.DataFrame(
+            rows,
+            columns=["dataset_id", "sequence_index", "outcome_id"],
+        )
         if not frame.empty:
             frame["outcome"] = frame["outcome_id"]
         return frame

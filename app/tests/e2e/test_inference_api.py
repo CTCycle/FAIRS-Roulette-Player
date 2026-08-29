@@ -35,7 +35,6 @@ def start_inference_session(
     dataset_id: int,
     game_capital: int = 1000,
     game_bet: int = 10,
-    session_id: str | None = None,
 ) -> dict:
     response = api_context.post(
         "/api/inference/sessions/start",
@@ -44,7 +43,6 @@ def start_inference_session(
             "dataset_id": dataset_id,
             "game_capital": game_capital,
             "game_bet": game_bet,
-            "session_id": session_id,
         },
     )
     if not response.ok:

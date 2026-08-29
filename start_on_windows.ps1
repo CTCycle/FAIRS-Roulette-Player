@@ -26,7 +26,6 @@ $runtimeCacheDir = Join-Path $runtimeRoot 'cache'
 $testCacheDir = Join-Path $testsDir 'cache'
 $pytestCacheDir = Join-Path $testCacheDir 'pytest'
 $ruffCacheDir = Join-Path $testCacheDir 'ruff'
-$legacyUvCacheDir = Join-Path $runtimeRoot '.uv-cache'
 
 # -----------------------------------------------------------------------------
 # Portable runtime versions and download sources
@@ -275,7 +274,11 @@ function Install-Dependencies {
     Write-Step 'Installing frontend dependencies.'
     Push-Location $clientDir
     try {
-        if (Test-Path -LiteralPath (Join-Path $clientDir 'package-lock.json')) { & $npmCmd ci } else { & $npmCmd install }
+        $frontendLock = Join-Path $clientDir 'package-lock.json'
+        if (-not (Test-Path -LiteralPath $frontendLock)) {
+            throw 'Frontend package-lock.json is required.'
+        }
+        & $npmCmd ci
         if ($LASTEXITCODE -ne 0) { throw "npm dependency installation failed with exit code $LASTEXITCODE." }
     } finally { Pop-Location }
 
@@ -501,20 +504,7 @@ function Remove-PythonCaches {
 function Clear-Cache {
     if (-not (Confirm-Delete 'clear Python, uv, and tool caches')) { return }
 
-    $legacyCachePaths = @(
-        $legacyUvCacheDir,
-        (Join-Path $repoRoot '.pytest_cache'),
-        (Join-Path $repoRoot '.ruff_cache'),
-        (Join-Path $repoRoot '.mypy_cache'),
-        (Join-Path $serverDir '.pytest_cache'),
-        (Join-Path $serverDir '.ruff_cache'),
-        (Join-Path $serverDir '.mypy_cache'),
-        (Join-Path $testsDir '.pytest_cache'),
-        (Join-Path $testsDir '.ruff_cache'),
-        (Join-Path $testsDir '.mypy_cache'),
-        (Join-Path $clientDir 'node_modules\.vite')
-    )
-    foreach ($cachePath in @($runtimeCacheDir, $testCacheDir) + $legacyCachePaths) {
+    foreach ($cachePath in @($runtimeCacheDir, $testCacheDir)) {
         Remove-PathBestEffort $cachePath | Out-Null
     }
     Remove-PythonCaches
@@ -537,11 +527,7 @@ function Get-UserDataTargets {
     } else {
         Join-Path $repoRoot 'app\resources'
     }
-    $logRoot = if ($env:FAIRS_LOG_DIR -and $env:FAIRS_LOG_DIR.Trim()) {
-        Resolve-LauncherPath $env:FAIRS_LOG_DIR.Trim()
-    } else {
-        Join-Path $dataRoot 'logs'
-    }
+    $logRoot = Join-Path $dataRoot 'logs'
 
     return [pscustomobject]@{
         DatabaseFiles = @(

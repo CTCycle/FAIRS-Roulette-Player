@@ -13,6 +13,7 @@ from server.repositories.database.backend import FAIRSDatabase
 from server.repositories.database.initializer import (
     ALEMBIC_CONFIG_PATH,
     DatabaseMigrationError,
+    DatabaseRevisionError,
     run_migrations_on_engine,
 )
 from server.repositories.datasets import DatasetRepository
@@ -98,8 +99,7 @@ def test_postgresql_clean_and_current_are_idempotent(postgres_engine) -> None:
         assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0001_initial_schema"
 
 ###############################################################################
-def test_postgresql_legacy_adoption_preserves_data(postgres_engine) -> None:
-    # Deliberately construct the pre-Alembic legacy fixture.
+def test_postgresql_unversioned_database_is_rejected_without_mutation(postgres_engine) -> None:
     Base.metadata.create_all(postgres_engine)
     with postgres_engine.begin() as connection:
         connection.execute(
@@ -110,11 +110,12 @@ def test_postgresql_legacy_adoption_preserves_data(postgres_engine) -> None:
             )
         )
 
-    run_migrations_on_engine(postgres_engine)
+    with pytest.raises(DatabaseRevisionError, match="non-empty database has no Alembic revision"):
+        run_migrations_on_engine(postgres_engine)
 
     with postgres_engine.connect() as connection:
         assert connection.execute(text("SELECT COUNT(*) FROM datasets")).scalar_one() == 1
-        assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0001_initial_schema"
+        assert not inspect(connection).has_table("alembic_version")
 
 ###############################################################################
 def test_postgresql_synthetic_rollback_and_behind_revision(

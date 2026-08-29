@@ -28,7 +28,6 @@ class RoulettePlayer:
         configuration: dict[str, Any],
         session_id: str,
         dataset_context: pd.DataFrame,
-        dataset_source: str | None = None,
         strategy_model: Model | None = None,
     ) -> None:
         set_random_seed(configuration.get("seed", 42))
@@ -42,9 +41,6 @@ class RoulettePlayer:
         )
         self.bet_strategy_model_enabled = bool(
             configuration.get("bet_strategy_model_enabled", False)
-        )
-        self.auto_apply_bet_suggestions = bool(
-            configuration.get("auto_apply_bet_suggestions", False)
         )
         self.fixed_strategy_id = normalize_strategy_id(
             configuration.get("bet_strategy_fixed_id", STRATEGY_KEEP),
@@ -171,8 +167,6 @@ class RoulettePlayer:
             suggested_bet = int(
                 self.bet_sizer.apply(resolved_strategy, capital=self.current_capital)
             )
-            if self.auto_apply_bet_suggestions:
-                self.update_bet_amount(suggested_bet, reset_strategy_state=False)
             prediction["bet_strategy_id"] = int(resolved_strategy)
             prediction["bet_strategy_name"] = strategy_name(resolved_strategy)
             prediction["suggested_bet_amount"] = int(suggested_bet)

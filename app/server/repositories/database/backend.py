@@ -8,7 +8,6 @@ from sqlalchemy import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from server.configurations import DatabaseSettings
-from server.configurations.startup import get_server_settings
 from server.repositories.database.postgres import build_postgres_engine
 from server.repositories.database.sqlite import build_sqlite_engine
 
@@ -19,11 +18,11 @@ class FAIRSDatabase:
     # -------------------------------------------------------------------------
     def __init__(
         self,
-        settings: DatabaseSettings | None = None,
+        settings: DatabaseSettings,
         engine: Engine | None = None,
         database_path: str | Path | None = None,
     ) -> None:
-        self.settings = settings or get_server_settings().database
+        self.settings = settings
         if engine is not None:
             self.engine = engine
             self.db_path = None

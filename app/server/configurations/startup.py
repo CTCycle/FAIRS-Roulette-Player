@@ -10,7 +10,6 @@ from server.contracts.configuration import ServerSettings
 ###############################################################################
 @lru_cache(maxsize=1)
 def get_configuration_manager() -> ConfigurationManager:
-    load_environment()
     return ConfigurationManager(config_path=shared_paths.CONFIGURATIONS_FILE)
 
 ###############################################################################

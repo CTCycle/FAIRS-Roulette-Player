@@ -8,7 +8,8 @@ from server.common.checkpoints import (
     normalize_checkpoint_identifier,
     resolve_checkpoint_path,
 )
-from server.repositories.serialization.model import CheckpointStorage
+from server.contracts.training import TrainingCheckpointSummary
+from server.repositories.checkpoints import CheckpointRepository
 
 ###############################################################################
 def get_last_history_value(values: Any) -> float | None:
@@ -26,12 +27,15 @@ class CheckpointReferenceError(RuntimeError):
 class CheckpointService:
 
     # -------------------------------------------------------------------------
-    def __init__(self, checkpoint_storage: CheckpointStorage | None = None) -> None:
-        self.checkpoint_storage = checkpoint_storage or CheckpointStorage()
+    def __init__(
+        self,
+        checkpoint_repository: CheckpointRepository | None = None,
+    ) -> None:
+        self.checkpoint_repository = checkpoint_repository or CheckpointRepository()
 
     # -------------------------------------------------------------------------
     def list_checkpoints(self) -> list[str]:
-        return self.checkpoint_storage.scan_checkpoints_folder()
+        return self.checkpoint_repository.scan_checkpoints_folder()
 
     # -------------------------------------------------------------------------
     def resolve_existing_checkpoint(self, checkpoint_name: str) -> tuple[str, str]:
@@ -45,12 +49,12 @@ class CheckpointService:
     # -------------------------------------------------------------------------
     def get_metadata(self, checkpoint_name: str) -> dict[str, Any]:
         checkpoint, checkpoint_path = self.resolve_existing_checkpoint(checkpoint_name)
-        configuration, session = self.checkpoint_storage.load_training_configuration(
+        configuration, session = self.checkpoint_repository.load_training_configuration(
             checkpoint_path
         )
         history = session.get("history", {}) if isinstance(session, dict) else {}
-        summary = {
-            "dataset_id": configuration.get("dataset_id") or "",
+        summary = TrainingCheckpointSummary.model_validate({
+            "dataset_id": configuration.get("dataset_id"),
             "sample_size": configuration.get("sample_size"),
             "seed": configuration.get("seed"),
             "episodes": configuration["episodes"],
@@ -69,8 +73,8 @@ class CheckpointService:
             "final_rmse": get_last_history_value(history.get("metrics")),
             "final_val_loss": get_last_history_value(history.get("val_loss")),
             "final_val_rmse": get_last_history_value(history.get("val_rmse")),
-        }
-        return {"checkpoint": checkpoint, "summary": summary}
+        })
+        return {"checkpoint": checkpoint, "summary": summary.model_dump()}
 
     # -------------------------------------------------------------------------
     def find_dataset_references(self, dataset_id: int) -> list[str]:
@@ -79,7 +83,7 @@ class CheckpointService:
         for checkpoint in self.list_checkpoints():
             try:
                 _, checkpoint_path = self.resolve_existing_checkpoint(checkpoint)
-                configuration, _ = self.checkpoint_storage.load_training_configuration(
+                configuration, _ = self.checkpoint_repository.load_training_configuration(
                     checkpoint_path
                 )
             except (OSError, TypeError, ValueError) as exc:
@@ -92,12 +96,13 @@ class CheckpointService:
                     f"Unable to inspect checkpoint '{checkpoint}' before deleting a dataset."
                 )
             reference = configuration.get("dataset_id")
-            if isinstance(reference, bool):
-                continue
-            if isinstance(reference, int) and reference == dataset_id:
-                references.append(checkpoint)
-                continue
-            if isinstance(reference, str) and reference.strip() == str(dataset_id):
+            if reference is not None and (
+                isinstance(reference, bool) or not isinstance(reference, int)
+            ):
+                raise CheckpointReferenceError(
+                    f"Unable to inspect checkpoint '{checkpoint}' before deleting a dataset."
+                )
+            if reference == dataset_id:
                 references.append(checkpoint)
         return references
 
@@ -106,23 +111,23 @@ class CheckpointService:
         self, checkpoint_name: str
     ) -> tuple[Model | Any, dict[str, Any], dict[str, Any], str]:
         normalized = normalize_checkpoint_identifier(checkpoint_name)
-        return self.checkpoint_storage.load_checkpoint(normalized)
+        return self.checkpoint_repository.load_checkpoint(normalized)
 
     # -------------------------------------------------------------------------
     def load_training_configuration(
         self, checkpoint_path: str
     ) -> tuple[dict[str, Any], dict[str, Any]]:
-        return self.checkpoint_storage.load_training_configuration(checkpoint_path)
+        return self.checkpoint_repository.load_training_configuration(checkpoint_path)
 
     # -------------------------------------------------------------------------
     def load_strategy_model(
         self, checkpoint_path: str, required: bool = False
     ) -> Model | Any | None:
-        return self.checkpoint_storage.load_strategy_model(
+        return self.checkpoint_repository.load_strategy_model(
             checkpoint_path, required=required
         )
 
     # -------------------------------------------------------------------------
     def delete_checkpoint(self, checkpoint_name: str) -> None:
         _, checkpoint_path = self.resolve_existing_checkpoint(checkpoint_name)
-        self.checkpoint_storage.delete_checkpoint(checkpoint_path)
+        self.checkpoint_repository.delete_checkpoint(checkpoint_path)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, field_validator
 
 from server.common.checkpoints import (
     MAX_CHECKPOINT_NAME_LENGTH,
@@ -16,19 +16,9 @@ class InferenceStartRequest(BaseModel):
     )
 
     checkpoint: str = Field(..., min_length=1, max_length=MAX_CHECKPOINT_NAME_LENGTH)
-    dataset_id: int = Field(..., ge=1)
-    dataset_source: str | None = Field(None, pattern="^(source|uploaded)$")
-    session_id: str | None = None
+    dataset_id: StrictInt = Field(..., ge=1)
     game_capital: int = Field(100, ge=1)
     game_bet: int = Field(1, ge=1)
-    dynamic_betting_enabled: bool = False
-    bet_strategy_model_enabled: bool = False
-    bet_strategy_fixed_id: int = Field(0, ge=0, le=4)
-    strategy_hold_steps: int = Field(1, ge=1)
-    bet_unit: int | None = Field(None, ge=1)
-    bet_max: int | None = Field(None, ge=1)
-    bet_enforce_capital: bool = True
-    auto_apply_bet_suggestions: bool = False
 
     # -------------------------------------------------------------------------
     @field_validator("checkpoint")

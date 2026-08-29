@@ -8,7 +8,7 @@ from server.contracts.datasets import (
     DatasetSummaryResponse,
 )
 from server.contracts.upload import UploadRequest, UploadResponse
-from server.repositories.serialization.data import DataStore
+from server.repositories.datasets import DatasetRepository
 from server.services.checkpoints import CheckpointReferenceError, CheckpointService
 from server.services.importer import DatasetImportService
 from server.services.loader import TabularFileLoader
@@ -63,12 +63,12 @@ class DatasetService:
     # -------------------------------------------------------------------------
     def __init__(
         self,
-        data_store: DataStore,
+        dataset_repository: DatasetRepository,
         importer: DatasetImportService,
         loader: TabularFileLoader,
         checkpoint_service: CheckpointService | None = None,
     ) -> None:
-        self.data_store = data_store
+        self.dataset_repository = dataset_repository
         self.importer = importer
         self.loader = loader
         self.checkpoint_service = checkpoint_service
@@ -118,12 +118,12 @@ class DatasetService:
 
     # -------------------------------------------------------------------------
     def list_training_datasets(self) -> DatasetListResponse:
-        datasets = self.data_store.list_datasets(dataset_kind="training")
+        datasets = self.dataset_repository.list(dataset_kind="training")
         return DatasetListResponse(datasets=datasets)
 
     # -------------------------------------------------------------------------
     def list_training_dataset_summaries(self) -> DatasetSummaryResponse:
-        datasets = self.data_store.list_datasets_summary(dataset_kind="training")
+        datasets = self.dataset_repository.summaries(dataset_kind="training")
         return DatasetSummaryResponse(datasets=datasets)
 
     # -------------------------------------------------------------------------
@@ -136,5 +136,5 @@ class DatasetService:
                     f"Dataset '{dataset_id}' is referenced by checkpoint(s): {joined}. "
                     "Delete those checkpoints before deleting the dataset."
                 )
-        self.data_store.delete_dataset(dataset_id)
+        self.dataset_repository.delete(dataset_id)
         return DatasetDeleteResponse(status="deleted", dataset_id=dataset_id)

@@ -7,7 +7,6 @@ from typing import Any
 from server.common.checkpoints import normalize_checkpoint_identifier
 from server.common.utils.trainingstats import (
     coerce_optional_finite_float,
-    sanitize_training_stats,
 )
 from server.common.utils.types import coerce_finite_float, coerce_finite_int
 from server.contracts.configuration import DatabaseSettings
@@ -18,143 +17,8 @@ from server.services.training_worker import (
     run_training_process,
 )
 from server.services.checkpoints import CheckpointService
-from server.services.jobs import JobManager
 from server.services.training_data import load_training_series
-
-TRAINING_STATUSES = {
-    "idle",
-    "exploration",
-    "training",
-    "completed",
-    "error",
-    "cancelled",
-}
-HISTORY_POINTS_PER_EPISODE = 20
-
-###############################################################################
-def default_training_stats(
-    total_epochs: int = 0,
-    max_steps: int = 0,
-    status: str = "idle",
-) -> dict[str, Any]:
-    return {
-        "epoch": 0,
-        "total_epochs": total_epochs,
-        "max_steps": max_steps,
-        "time_step": 0,
-        "loss": None,
-        "rmse": None,
-        "val_loss": None,
-        "val_rmse": None,
-        "reward": 0,
-        "val_reward": None,
-        "total_reward": 0,
-        "capital": 0,
-        "capital_gain": 0.0,
-        "status": status,
-    }
-
-###############################################################################
-class TrainingState:
-
-    # -------------------------------------------------------------------------
-    def __init__(self) -> None:
-        self.is_training = False
-        self.current_job_id: str | None = None
-        self.worker: ProcessWorker | None = None
-        self.max_steps = 0
-        self.latest_stats = default_training_stats()
-        self.history_points: list[dict[str, Any]] = []
-        self.max_history_points = 2000
-        self.history_bucket_size = 1.0
-        self.last_history_episode: int | None = None
-        self.last_history_bucket: int | None = None
-        self.latest_env: dict[str, Any] = {}
-
-    # -------------------------------------------------------------------------
-    def reset_for_new_session(
-        self,
-        total_epochs: int,
-        max_steps: int,
-        job_id: str,
-    ) -> None:
-        self.is_training = True
-        self.current_job_id = job_id
-        self.max_steps = max_steps
-        self.latest_stats = default_training_stats(
-            total_epochs, max_steps, "exploration"
-        )
-        self.history_points = []
-        self.history_bucket_size = (
-            max_steps / float(HISTORY_POINTS_PER_EPISODE) if max_steps > 0 else 1.0
-        )
-        self.last_history_episode = None
-        self.last_history_bucket = None
-        self.latest_env = {}
-
-    # -------------------------------------------------------------------------
-    def update_stats(self, stats: dict[str, Any]) -> None:
-        sanitized = sanitize_training_stats(
-            stats,
-            allowed_statuses=TRAINING_STATUSES,
-        )
-        self.latest_stats = {**self.latest_stats, **sanitized}
-        self.add_history_point(self.latest_stats)
-
-    # -------------------------------------------------------------------------
-    def add_history_point(self, stats: dict[str, Any]) -> None:
-        if stats.get("status") not in {"training", "exploration"}:
-            return
-        time_step = stats.get("time_step")
-        loss = coerce_optional_finite_float(stats.get("loss"))
-        rmse = coerce_optional_finite_float(stats.get("rmse"))
-        epoch = stats.get("epoch")
-        if not isinstance(time_step, int) or not isinstance(epoch, int):
-            return
-        if epoch <= 0:
-            return
-        point = {
-            "time_step": time_step,
-            "loss": loss if loss is not None else 0.0,
-            "rmse": rmse if rmse is not None else 0.0,
-            "val_loss": (coerce_optional_finite_float(stats.get("val_loss"))),
-            "val_rmse": (coerce_optional_finite_float(stats.get("val_rmse"))),
-            "epoch": epoch,
-            "reward": coerce_finite_float(stats.get("reward"), 0.0),
-            "total_reward": coerce_finite_float(stats.get("total_reward"), 0.0),
-            "capital": coerce_finite_float(stats.get("capital"), 0.0),
-            "capital_gain": coerce_finite_float(stats.get("capital_gain"), 0.0),
-        }
-        if self.history_points:
-            previous = self.history_points[-1]
-            previous_epoch = previous.get("epoch")
-            previous_step = previous.get("time_step")
-            if previous_epoch == point["epoch"] and previous_step == point["time_step"]:
-                self.history_points[-1] = point
-                return
-            if (
-                isinstance(previous_epoch, int)
-                and isinstance(previous_step, int)
-                and point["epoch"] < previous_epoch
-            ):
-                return
-            if (
-                isinstance(previous_epoch, int)
-                and isinstance(previous_step, int)
-                and point["epoch"] == previous_epoch
-                and point["time_step"] < previous_step
-            ):
-                return
-
-        self.history_points.append(point)
-        if len(self.history_points) > self.max_history_points:
-            self.history_points = self.history_points[-self.max_history_points :]
-
-    # -------------------------------------------------------------------------
-    def finish_session(self) -> None:
-        self.is_training = False
-        self.worker = None
-        self.current_job_id = None
+from server.services.training_run import TrainingRunManager
 
 ###############################################################################
 def calculate_progress(stats: dict[str, Any]) -> float:
@@ -241,7 +105,7 @@ class TrainingService:
     # -------------------------------------------------------------------------
     def __init__(
         self,
-        job_manager: JobManager,
+        training_run_manager: TrainingRunManager,
         checkpoint_service: CheckpointService,
         database_settings: DatabaseSettings | None = None,
         database_path: str | Path | None = None,
@@ -249,27 +113,29 @@ class TrainingService:
         jit_compile: bool = False,
         jit_backend: str = "inductor",
     ) -> None:
-        self.job_manager = job_manager
+        self.training_run_manager = training_run_manager
         self.checkpoint_service = checkpoint_service
         self.database_settings = database_settings
         self.database_path = database_path
         self.polling_interval_seconds = polling_interval_seconds
         self.jit_compile = jit_compile
         self.jit_backend = jit_backend
-        self.training_state = TrainingState()
 
     # -------------------------------------------------------------------------
     def _handle_training_progress(self, job_id: str, message: dict[str, Any]) -> None:
         if message.get("type") != "training_update":
             return
         stats = {key: value for key, value in message.items() if key != "type"}
-        self.training_state.update_stats(stats)
+        self.training_run_manager.update_training_stats(job_id, stats)
         progress = calculate_progress(stats)
-        self.job_manager.update_progress(job_id, progress)
-        self.job_manager.update_result(
+        self.training_run_manager.update_progress(job_id, progress)
+        current_status = self.training_run_manager.training_status(
+            self.polling_interval_seconds
+        )
+        self.training_run_manager.update_result(
             job_id,
             {
-                "latest_stats": self.training_state.latest_stats,
+                "latest_stats": current_status["latest_stats"],
                 "progress_percent": progress,
             },
         )
@@ -291,7 +157,7 @@ class TrainingService:
     ) -> dict[str, Any]:
         stop_requested_at: float | None = None
         while worker.is_alive():
-            if self.job_manager.should_stop(job_id) and not worker.is_interrupted():
+            if self.training_run_manager.should_stop(job_id) and not worker.is_interrupted():
                 worker.stop()
                 stop_requested_at = time.monotonic()
             if stop_requested_at is not None:
@@ -309,7 +175,7 @@ class TrainingService:
 
         result_payload = worker.read_result()
         if result_payload is None:
-            if worker.exitcode not in (0, None) and not self.job_manager.should_stop(
+            if worker.exitcode not in (0, None) and not self.training_run_manager.should_stop(
                 job_id
             ):
                 raise RuntimeError(
@@ -327,7 +193,7 @@ class TrainingService:
         self, configuration: dict[str, Any], job_id: str
     ) -> dict[str, Any]:
         worker = ProcessWorker()
-        self.training_state.worker = worker
+        self.training_run_manager.set_worker(job_id, worker)
         try:
             worker.start(
                 target=run_training_process,
@@ -344,13 +210,18 @@ class TrainingService:
             result = self._monitor_training_process(
                 job_id, worker, stop_timeout_seconds=5.0
             )
-            if self.job_manager.should_stop(job_id):
-                self.training_state.update_stats(
+            if self.training_run_manager.should_stop(job_id):
+                self.training_run_manager.update_training_stats(
+                    job_id,
                     {"status": "cancelled", "message": "Training cancelled"}
                 )
             else:
-                final_epoch = self.training_state.latest_stats.get("total_epochs", 0)
-                self.training_state.update_stats(
+                current_status = self.training_run_manager.training_status(
+                    self.polling_interval_seconds
+                )
+                final_epoch = current_status["latest_stats"].get("total_epochs", 0)
+                self.training_run_manager.update_training_stats(
+                    job_id,
                     {
                         "status": "completed",
                         "message": "Training completed",
@@ -359,14 +230,16 @@ class TrainingService:
                 )
             return result
         except Exception as exc:
-            self.training_state.update_stats({"status": "error", "message": str(exc)})
+            self.training_run_manager.update_training_stats(
+                job_id, {"status": "error", "message": str(exc)}
+            )
             raise
         finally:
             if worker.is_alive():
                 worker.terminate()
                 worker.join(timeout=5)
             worker.cleanup()
-            self.training_state.finish_session()
+            self.training_run_manager.set_worker(job_id, None)
 
     # -------------------------------------------------------------------------
     def run_resume_training_job(
@@ -376,7 +249,7 @@ class TrainingService:
         job_id: str,
     ) -> dict[str, Any]:
         worker = ProcessWorker()
-        self.training_state.worker = worker
+        self.training_run_manager.set_worker(job_id, worker)
         try:
             worker.start(
                 target=run_resume_training_process,
@@ -392,13 +265,18 @@ class TrainingService:
             result = self._monitor_training_process(
                 job_id, worker, stop_timeout_seconds=5.0
             )
-            if self.job_manager.should_stop(job_id):
-                self.training_state.update_stats(
+            if self.training_run_manager.should_stop(job_id):
+                self.training_run_manager.update_training_stats(
+                    job_id,
                     {"status": "cancelled", "message": "Training cancelled"}
                 )
             else:
-                final_epoch = self.training_state.latest_stats.get("total_epochs", 0)
-                self.training_state.update_stats(
+                current_status = self.training_run_manager.training_status(
+                    self.polling_interval_seconds
+                )
+                final_epoch = current_status["latest_stats"].get("total_epochs", 0)
+                self.training_run_manager.update_training_stats(
+                    job_id,
                     {
                         "status": "completed",
                         "message": "Resume training completed",
@@ -407,18 +285,20 @@ class TrainingService:
                 )
             return result
         except Exception as exc:
-            self.training_state.update_stats({"status": "error", "message": str(exc)})
+            self.training_run_manager.update_training_stats(
+                job_id, {"status": "error", "message": str(exc)}
+            )
             raise
         finally:
             if worker.is_alive():
                 worker.terminate()
                 worker.join(timeout=5)
             worker.cleanup()
-            self.training_state.finish_session()
+            self.training_run_manager.set_worker(job_id, None)
 
     # -------------------------------------------------------------------------
     def start_training(self, config: TrainingConfig) -> dict[str, Any]:
-        if self.job_manager.is_job_running(self.JOB_TYPE):
+        if self.training_run_manager.is_job_running(self.JOB_TYPE):
             raise RuntimeError("Training is already in progress.")
 
         base_config = TrainingConfig.model_validate({}).model_dump()
@@ -444,7 +324,7 @@ class TrainingService:
         ) and not configuration.get("dataset_id"):
             raise ValueError("dataset_id is required when use_data_generator is false.")
 
-        job_id = self.job_manager.start_job(
+        job_id = self.training_run_manager.start_job(
             job_type=self.JOB_TYPE,
             runner=self.run_training_job,
             kwargs={"configuration": configuration},
@@ -452,12 +332,15 @@ class TrainingService:
 
         total_epochs = int(configuration.get("episodes", 10))
         max_steps = int(configuration.get("max_steps_episode", 2000))
-        self.training_state.reset_for_new_session(total_epochs, max_steps, job_id)
-        self.job_manager.update_result(
+        self.training_run_manager.reset_training_state(job_id, total_epochs, max_steps)
+        status = self.training_run_manager.training_status(
+            self.polling_interval_seconds
+        )
+        self.training_run_manager.update_result(
             job_id,
             {
-                "latest_stats": self.training_state.latest_stats,
-                "history": self.training_state.history_points,
+                "latest_stats": status["latest_stats"],
+                "history": status["history"],
             },
         )
         return {
@@ -470,7 +353,7 @@ class TrainingService:
 
     # -------------------------------------------------------------------------
     def resume_training(self, config: ResumeConfig) -> dict[str, Any]:
-        if self.job_manager.is_job_running(self.JOB_TYPE):
+        if self.training_run_manager.is_job_running(self.JOB_TYPE):
             raise RuntimeError("Training is already in progress.")
 
         checkpoint, checkpoint_path = (
@@ -491,7 +374,7 @@ class TrainingService:
         )
         restored_points = build_history_points(session, initial_capital_value)
 
-        job_id = self.job_manager.start_job(
+        job_id = self.training_run_manager.start_job(
             job_type=self.JOB_TYPE,
             runner=self.run_resume_training_job,
             kwargs={
@@ -502,15 +385,19 @@ class TrainingService:
 
         total_epochs = from_epoch + int(config.additional_episodes)
         max_steps = int(configuration.get("max_steps_episode", 2000))
-        self.training_state.reset_for_new_session(total_epochs, max_steps, job_id)
-        self.training_state.history_points = restored_points
-        self.training_state.latest_stats["epoch"] = from_epoch
+        self.training_run_manager.reset_training_state(job_id, total_epochs, max_steps)
+        self.training_run_manager.restore_training_history(
+            job_id, restored_points, from_epoch
+        )
 
-        self.job_manager.update_result(
+        status = self.training_run_manager.training_status(
+            self.polling_interval_seconds
+        )
+        self.training_run_manager.update_result(
             job_id,
             {
-                "latest_stats": self.training_state.latest_stats,
-                "history": self.training_state.history_points,
+                "latest_stats": status["latest_stats"],
+                "history": status["history"],
             },
         )
         return {
@@ -523,23 +410,20 @@ class TrainingService:
 
     # -------------------------------------------------------------------------
     def get_status(self) -> dict[str, Any]:
-        return {
-            "job_id": self.training_state.current_job_id,
-            "is_training": self.training_state.is_training,
-            "latest_stats": self.training_state.latest_stats,
-            "history": self.training_state.history_points,
-            "latest_env": self.training_state.latest_env,
-            "poll_interval": self.polling_interval_seconds,
-        }
+        return self.training_run_manager.training_status(
+            self.polling_interval_seconds
+        )
 
     # -------------------------------------------------------------------------
     def stop(self) -> dict[str, Any]:
-        if not self.training_state.is_training:
+        status = self.get_status()
+        if not status["is_training"] or not status["job_id"]:
             raise ValueError("No training is in progress.")
-        if self.training_state.worker is not None:
-            self.training_state.worker.stop()
-        if self.training_state.current_job_id:
-            self.job_manager.cancel_job(self.training_state.current_job_id)
+        job_id = status["job_id"]
+        worker = self.training_run_manager.get_worker(job_id)
+        if worker is not None:
+            worker.stop()
+        self.training_run_manager.cancel_job(job_id)
         return {"status": "stopping", "message": "Training stop requested"}
 
     # -------------------------------------------------------------------------
@@ -557,7 +441,7 @@ class TrainingService:
 
     # -------------------------------------------------------------------------
     def get_job(self, job_id: str) -> dict[str, Any]:
-        job_status = self.job_manager.get_job_status(job_id)
+        job_status = self.training_run_manager.get_job_status(job_id)
         if job_status is None:
             raise KeyError(f"Job not found: {job_id}")
         return {
@@ -567,12 +451,13 @@ class TrainingService:
 
     # -------------------------------------------------------------------------
     def delete_job(self, job_id: str) -> dict[str, Any]:
-        job_status = self.job_manager.get_job_status(job_id)
+        job_status = self.training_run_manager.get_job_status(job_id)
         if job_status is None:
             raise KeyError(f"Job not found: {job_id}")
-        if self.training_state.worker is not None:
-            self.training_state.worker.stop()
-        success = self.job_manager.cancel_job(job_id)
+        worker = self.training_run_manager.get_worker(job_id)
+        if worker is not None:
+            worker.stop()
+        success = self.training_run_manager.cancel_job(job_id)
         return {
             "job_id": job_id,
             "success": success,
