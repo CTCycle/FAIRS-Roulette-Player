@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { InferenceSetupState } from '../context/AppStateContext';
+import type { InferenceSetupState } from '../types/inference';
 import { useCheckpointOptions } from './useCheckpointOptions';
 import {
     parseCheckpointOptionMetadata,
@@ -11,7 +11,7 @@ import {
 } from '../utils/trainingApi';
 
 export interface InferenceDatasetOption {
-    dataset_id: string;
+    dataset_id: number;
     dataset_name: string;
     row_count: number | null;
 }
@@ -60,10 +60,9 @@ export const useInferenceSetupOptions = ({
                 }));
 
                 setDatasets(values);
-                if (values.length > 0 && !latestSetupRef.current.selectedDataset) {
+                if (values.length > 0 && latestSetupRef.current.selectedDataset === null) {
                     onSetupChangeRef.current({
-                        selectedDataset: String(values[0].dataset_id),
-                        datasetSource: 'source',
+                        selectedDataset: values[0].dataset_id,
                     });
                 }
             } catch (err) {
@@ -82,22 +81,25 @@ export const useInferenceSetupOptions = ({
         let mounted = true;
 
         const loadCheckpointMetadata = async () => {
-            const entries = await Promise.all(
-                checkpoints.map(async (checkpoint) => {
-                    try {
+            try {
+                const entries = await Promise.all(
+                    checkpoints.map(async (checkpoint) => {
                         const metadata = await fetchCheckpointMetadata(checkpoint);
                         return [checkpoint, parseCheckpointOptionMetadata(metadata.summary)] as const;
-                    } catch {
-                        return [checkpoint, { datasetId: '', perceptiveFieldSize: null }] as const;
-                    }
-                }),
-            );
+                    }),
+                );
 
-            if (!mounted) {
-                return;
+                if (!mounted) {
+                    return;
+                }
+
+                setCheckpointMetadataMap(Object.fromEntries(entries));
+            } catch (error) {
+                if (mounted) {
+                    setCheckpointMetadataMap({});
+                }
+                console.error('Failed to load checkpoint metadata:', error);
             }
-
-            setCheckpointMetadataMap(Object.fromEntries(entries));
         };
 
         void loadCheckpointMetadata();
@@ -112,10 +114,10 @@ export const useInferenceSetupOptions = ({
         : undefined;
 
     const selectedDatasetIsCompatible = useMemo(() => {
-        if (setup.datasetSource === 'uploaded') {
+        if (setup.uploadedDatasetId !== null) {
             return true;
         }
-        if (!setup.selectedDataset) {
+        if (setup.selectedDataset === null) {
             return false;
         }
         const dataset = datasets.find((entry) => entry.dataset_id === setup.selectedDataset);
@@ -127,16 +129,16 @@ export const useInferenceSetupOptions = ({
             || requiredRows === undefined
             || dataset.row_count === null
             || dataset.row_count >= requiredRows;
-    }, [datasets, selectedCheckpointMetadata, setup.datasetSource, setup.selectedDataset]);
+    }, [datasets, selectedCheckpointMetadata, setup.selectedDataset, setup.uploadedDatasetId]);
 
     useEffect(() => {
-        if (datasets.length === 0 || checkpoints.length === 0 || setup.datasetSource === 'uploaded') {
+        if (datasets.length === 0 || checkpoints.length === 0 || setup.uploadedDatasetId !== null) {
             return;
         }
 
         const getCompatibleDataset = (checkpointName: string): InferenceDatasetOption | undefined => {
             const metadata = checkpointMetadataMap[checkpointName];
-            const preferredDataset = metadata?.datasetId
+            const preferredDataset = metadata?.datasetId !== null && metadata?.datasetId !== undefined
                 ? datasets.find((dataset) => dataset.dataset_id === metadata.datasetId)
                 : undefined;
             const requiredRows = metadata?.perceptiveFieldSize;
@@ -166,14 +168,10 @@ export const useInferenceSetupOptions = ({
             updates.checkpoint = resolvedCheckpoint;
         }
 
-        if (!setup.selectedDataset || !selectedDatasetIsCompatible) {
+        if (setup.selectedDataset === null || !selectedDatasetIsCompatible) {
             if (compatibleDataset) {
                 updates.selectedDataset = compatibleDataset.dataset_id;
             }
-        }
-
-        if ((updates.checkpoint || updates.selectedDataset) && setup.datasetSource !== 'source') {
-            updates.datasetSource = 'source';
         }
 
         if (Object.keys(updates).length > 0) {
@@ -185,8 +183,8 @@ export const useInferenceSetupOptions = ({
         datasets,
         selectedDatasetIsCompatible,
         setup.checkpoint,
-        setup.datasetSource,
         setup.selectedDataset,
+        setup.uploadedDatasetId,
     ]);
 
     return {

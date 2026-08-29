@@ -1,17 +1,7 @@
 import React, { useMemo } from 'react';
+import type { TrainingHistoryPoint } from '../../../types/training';
 
-export interface TrainingHistoryPoint {
-    time_step: number;
-    loss: number;
-    rmse: number;
-    epoch: number;
-    val_loss?: number | null;
-    val_rmse?: number | null;
-    reward?: number;
-    total_reward?: number;
-    capital?: number;
-    capital_gain?: number;
-}
+export type { TrainingHistoryPoint } from '../../../types/training';
 
 interface TrainingLossChartProps {
     points: TrainingHistoryPoint[];

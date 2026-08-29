@@ -5,72 +5,86 @@ import type {
     DatasetSummaryItem,
 } from '../types/frontendApi';
 
-const parseRowCount = (value: unknown): number | null => {
-    if (typeof value === 'number' && Number.isFinite(value)) {
-        return value;
+const requireRecord = (value: unknown, label: string): Record<string, unknown> => {
+    if (!isRecord(value)) {
+        throw new Error(`${label} has an invalid shape.`);
     }
-    return null;
+    return value;
 };
 
-const parsePositiveInteger = (value: unknown): number | null => {
-    if (typeof value !== 'number' || !Number.isInteger(value) || value <= 0) {
+const parseRowCount = (value: unknown): number | null => {
+    if (value === null) {
         return null;
+    }
+    if (typeof value !== 'number' || !Number.isInteger(value) || value < 0) {
+        throw new Error('Dataset summary row_count is invalid.');
+    }
+    return value;
+};
+
+const parseNullablePositiveInteger = (value: unknown, label: string): number | null => {
+    if (value === null) {
+        return null;
+    }
+    if (typeof value !== 'number' || !Number.isInteger(value) || value <= 0) {
+        throw new Error(`${label} is invalid.`);
     }
     return value;
 };
 
 export const parseCheckpointList = (payload: unknown): string[] => {
-    if (!Array.isArray(payload)) {
-        return [];
+    if (!Array.isArray(payload) || payload.some((entry) => typeof entry !== 'string')) {
+        throw new Error('Checkpoint list has an invalid shape.');
     }
-
-    return payload.flatMap((entry) => {
-        if (typeof entry === 'string') {
-            const trimmed = entry.trim();
-            return trimmed.length > 0 ? [trimmed] : [];
+    return payload.map((entry) => {
+        const checkpoint = entry.trim();
+        if (!checkpoint) {
+            throw new Error('Checkpoint list contains an empty checkpoint name.');
         }
-        if (typeof entry === 'number' && Number.isFinite(entry)) {
-            return [String(entry)];
-        }
-        return [];
+        return checkpoint;
     });
 };
 
 export const parseDatasetSummaryItems = (payload: unknown): DatasetSummaryItem[] => {
-    const datasets = isRecord(payload) ? payload.datasets : undefined;
-    if (!Array.isArray(datasets)) {
-        return [];
+    const root = requireRecord(payload, 'Dataset summary');
+    if (!Array.isArray(root.datasets)) {
+        throw new Error('Dataset summary datasets is invalid.');
     }
 
-    return datasets
-        .filter((entry): entry is Record<string, unknown> => isRecord(entry))
-        .map((entry) => ({
-            datasetId: parseDatasetId(entry.dataset_id),
-            datasetName: typeof entry.dataset_name === 'string' ? entry.dataset_name : '',
+    return root.datasets.map((value) => {
+        const entry = requireRecord(value, 'Dataset summary entry');
+        const datasetId = parseDatasetId(entry.dataset_id);
+        if (datasetId === null) {
+            throw new Error('Dataset summary dataset_id is invalid.');
+        }
+        if (typeof entry.dataset_name !== 'string' || !entry.dataset_name.trim()) {
+            throw new Error('Dataset summary dataset_name is invalid.');
+        }
+        return {
+            datasetId,
+            datasetName: entry.dataset_name,
             rowCount: parseRowCount(entry.row_count),
-        }))
-        .filter((entry) => entry.datasetId.length > 0);
+        };
+    });
 };
 
 export const parseCheckpointMetadataResponse = (payload: unknown): CheckpointMetadataResponse => {
-    const safePayload = isRecord(payload) ? payload : {};
-    const checkpoint = typeof safePayload.checkpoint === 'string'
-        ? safePayload.checkpoint
-        : '';
-    const summary = isRecord(safePayload.summary)
-        ? safePayload.summary
-        : {};
-
+    const root = requireRecord(payload, 'Checkpoint metadata');
+    if (typeof root.checkpoint !== 'string' || !root.checkpoint.trim()) {
+        throw new Error('Checkpoint metadata checkpoint is invalid.');
+    }
     return {
-        checkpoint,
-        summary,
+        checkpoint: root.checkpoint,
+        summary: requireRecord(root.summary, 'Checkpoint metadata summary'),
     };
 };
 
 export const parseCheckpointOptionMetadata = (
     summary: Record<string, unknown>,
 ): CheckpointOptionMetadata => ({
-    datasetId: parseDatasetId(summary.dataset_id),
-    perceptiveFieldSize: parsePositiveInteger(summary.perceptive_field_size),
+    datasetId: parseNullablePositiveInteger(summary.dataset_id, 'Checkpoint metadata dataset_id'),
+    perceptiveFieldSize: parseNullablePositiveInteger(
+        summary.perceptive_field_size,
+        'Checkpoint metadata perceptive_field_size',
+    ),
 });
-

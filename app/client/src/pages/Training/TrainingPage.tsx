@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useAppState } from '../../hooks/useAppState';
 import { useDatasetUploadState } from '../../hooks/useDatasetUploadState';
+import { useTrainingStatus } from '../../hooks/useTrainingStatus';
 import './Training.css';
 import { TrainingDashboard } from './components/TrainingDashboard';
 import { DatasetUpload } from './components/DatasetUpload';
@@ -8,8 +8,9 @@ import { DatasetPreview } from './components/DatasetPreview';
 import { CheckpointPreview } from './components/CheckpointPreview';
 
 const TrainingPage: React.FC = () => {
-    const { state, dispatch } = useAppState();
-    const { isTraining } = state.training;
+    const trainingStatus = useTrainingStatus();
+    const { status, isConnected, connectionError, isStopping, stopError, stopTraining } = trainingStatus;
+    const isTraining = status.is_training;
     const {
         datasetUpload,
         updateDatasetUploadState,
@@ -47,6 +48,7 @@ const TrainingPage: React.FC = () => {
                     <div className="preview-column" data-guidance-target="training-configuration">
                         <DatasetPreview
                             refreshKey={datasetRefreshKey}
+                            isTraining={isTraining}
                             onDelete={handleDatasetDelete}
                         />
                     </div>
@@ -64,7 +66,7 @@ const TrainingPage: React.FC = () => {
                         </div>
                     </div>
                     <div className="checkpoints-column">
-                        <CheckpointPreview refreshKey={datasetRefreshKey} />
+                        <CheckpointPreview refreshKey={datasetRefreshKey} isTraining={isTraining} />
                     </div>
                 </div>
             </div>
@@ -73,9 +75,12 @@ const TrainingPage: React.FC = () => {
 
             <div data-guidance-target="training-monitor">
                 <TrainingDashboard
-                    isActive={isTraining}
-                    onTrainingStart={() => dispatch({ type: 'SET_TRAINING_IS_TRAINING', payload: true })}
-                    onTrainingEnd={() => dispatch({ type: 'SET_TRAINING_IS_TRAINING', payload: false })}
+                    status={status}
+                    isConnected={isConnected}
+                    connectionError={connectionError}
+                    isStopping={isStopping}
+                    stopError={stopError}
+                    onStopTraining={stopTraining}
                 />
             </div>
         </div>

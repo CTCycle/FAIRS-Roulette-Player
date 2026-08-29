@@ -1,7 +1,12 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { GameConfig, GameStep, PredictionResult, SessionState } from '../../types/inference';
-import type { InferenceSetupState } from '../../context/AppStateContext';
+import type {
+    GameStep,
+    GameConfig,
+    InferenceSessionSnapshot,
+    InferenceSetupState,
+    PredictionResult,
+} from '../../types/inference';
 import styles from './GameSession.module.css';
 import { Check, History, Pencil, Play, Square, Trash2 } from 'lucide-react';
 import { useInferenceSetupOptions } from '../../hooks/useInferenceSetupOptions';
@@ -20,16 +25,10 @@ import { FeatureTip } from '../guidance/FeatureTip';
 import { HelpPopover } from '../guidance/HelpPopover';
 
 interface GameSessionProps {
-    config: GameConfig | null;
     setup: InferenceSetupState;
-    sessionState: SessionState;
-    history: GameStep[];
+    snapshot: InferenceSessionSnapshot;
     onSetupChange: (updates: Partial<InferenceSetupState>) => void;
-    onSessionStateChange: (updates: Partial<SessionState>) => void;
-    onAddHistoryStep: (step: GameStep) => void;
-    onHistoryChange: (steps: GameStep[]) => void;
-    onGameConfigChange: (config: GameConfig | null) => void;
-    onClearSession: () => void;
+    onSnapshotChange: (updates: Partial<InferenceSessionSnapshot>) => void;
 }
 
 const cleanObserved = (val: string) => {
@@ -42,16 +41,10 @@ const cleanObserved = (val: string) => {
 };
 
 export const GameSession: React.FC<GameSessionProps> = ({
-    config,
     setup,
-    sessionState,
-    history,
+    snapshot,
     onSetupChange,
-    onSessionStateChange,
-    onAddHistoryStep,
-    onHistoryChange,
-    onGameConfigChange,
-    onClearSession,
+    onSnapshotChange,
 }) => {
     const {
         checkpoints,
@@ -69,25 +62,44 @@ export const GameSession: React.FC<GameSessionProps> = ({
     const [error, setError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const sessionActive = sessionState.isActive;
-    const datasetLocked = sessionActive || setup.datasetSource === 'uploaded';
+    const {
+        config,
+        history,
+        isActive: sessionActive,
+        currentCapital,
+        currentBet,
+        lastPrediction,
+        totalSteps,
+    } = snapshot;
+    const datasetLocked = sessionActive || setup.uploadedDatasetId !== null;
     const setupLocked = sessionActive;
 
-    const datasetId = useMemo(() => {
-        if (setup.datasetSource === 'uploaded') {
-            return setup.uploadedDatasetName;
-        }
-        return setup.selectedDataset;
-    }, [setup.datasetSource, setup.selectedDataset, setup.uploadedDatasetName]);
+    const datasetId = setup.uploadedDatasetId ?? setup.selectedDataset;
 
-    const updateBetAmount = async (value: number, forceSessionUpdate = false) => {
+    const updateSnapshot = (updates: Partial<InferenceSessionSnapshot>): void => {
+        onSnapshotChange(updates);
+    };
+
+    const replaceHistory = (steps: GameStep[]): void => {
+        updateSnapshot({ history: steps });
+    };
+
+    const addHistoryStep = (step: GameStep): void => {
+        replaceHistory([...history, step]);
+    };
+
+    const updateBetAmount = async (
+        value: number,
+        forceSessionUpdate = false,
+        sessionIdOverride?: string,
+    ) => {
         onSetupChange({ betAmount: value });
-        onSessionStateChange({ currentBet: value });
+        updateSnapshot({ currentBet: value });
         if (!config || (!sessionActive && !forceSessionUpdate)) {
             return;
         }
         try {
-            await updateInferenceBet(config.sessionId, value);
+            await updateInferenceBet(sessionIdOverride ?? config.sessionId, value);
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Unable to update bet amount.';
             setError(message);
@@ -108,13 +120,12 @@ export const GameSession: React.FC<GameSessionProps> = ({
             setIsUploading(true);
             try {
                 const uploadPayload = await uploadInferenceDataset(file);
-                const uploadedId = String(uploadPayload.dataset_id || '');
-                if (!uploadedId) {
+                const uploadedId = uploadPayload.dataset_id;
+                if (uploadedId === null) {
                     throw new Error('Upload completed but dataset_id was not returned.');
                 }
                 onSetupChange({
-                    datasetSource: 'uploaded',
-                    uploadedDatasetName: uploadedId,
+                    uploadedDatasetId: uploadedId,
                 });
             } catch (err) {
                 const message = err instanceof Error ? err.message : 'Unable to upload dataset.';
@@ -131,8 +142,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
 
     const handleClearUpload = async () => {
         onSetupChange({
-            datasetSource: 'source',
-            uploadedDatasetName: null,
+            uploadedDatasetId: null,
             datasetFileMetadata: null,
         });
         await clearInferenceContext();
@@ -140,37 +150,30 @@ export const GameSession: React.FC<GameSessionProps> = ({
     };
 
     const startSession = async (
-        sessionId?: string,
         overrides?: { initialCapital?: number; betAmount?: number }
     ) => {
-        if (!datasetId) {
+        if (datasetId === null) {
             throw new Error('Select a dataset first.');
         }
         if (!setup.checkpoint) {
             throw new Error('Select a checkpoint first.');
         }
-        const resolvedDatasetId = Number(datasetId);
-        if (!Number.isInteger(resolvedDatasetId) || resolvedDatasetId <= 0) {
-            throw new Error('Invalid dataset identifier.');
-        }
         const gameCapital = overrides?.initialCapital ?? setup.initialCapital;
         const gameBet = overrides?.betAmount ?? setup.betAmount;
         return startInferenceSession({
-            sessionId,
             checkpoint: setup.checkpoint,
-            datasetId: resolvedDatasetId,
-            datasetSource: setup.datasetSource,
+            datasetId,
             gameCapital,
             gameBet,
         });
     };
 
     const handlePlay = async () => {
-        if (setup.datasetSource === 'uploaded' && !setup.uploadedDatasetName) {
+        if (setup.uploadedDatasetId !== null && datasetId === null) {
             setError('Upload the dataset before starting.');
             return;
         }
-        if (setup.datasetSource !== 'uploaded' && !setup.selectedDataset) {
+        if (setup.uploadedDatasetId === null && setup.selectedDataset === null) {
             setError('Select a dataset first.');
             return;
         }
@@ -178,7 +181,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
             setError('Select a checkpoint first.');
             return;
         }
-        if (setup.datasetSource !== 'uploaded' && !selectedDatasetIsCompatible) {
+        if (setup.uploadedDatasetId === null && !selectedDatasetIsCompatible) {
             const requiredRows = selectedCheckpointMetadata?.perceptiveFieldSize;
             if (requiredRows) {
                 setError(`Selected dataset needs at least ${requiredRows} rows for this checkpoint.`);
@@ -200,20 +203,10 @@ export const GameSession: React.FC<GameSessionProps> = ({
             const newConfig: GameConfig = {
                 sessionId: String(session.session_id),
                 checkpoint: String(session.checkpoint),
-                datasetName: datasetId || '',
+                datasetId: datasetId as number,
                 initialCapital: Number(session.game_capital),
                 betAmount: currentBet,
             };
-
-            onGameConfigChange(newConfig);
-            onSessionStateChange({
-                isActive: true,
-                currentCapital,
-                currentBet: currentBet,
-                lastPrediction: prediction,
-                totalSteps: 0,
-            });
-            onHistoryChange([]);
 
             const initialStep: GameStep = {
                 step: 1,
@@ -227,7 +220,15 @@ export const GameSession: React.FC<GameSessionProps> = ({
                 capitalAfter: currentCapital,
                 isEditing: false,
             };
-            onAddHistoryStep(initialStep);
+            updateSnapshot({
+                config: newConfig,
+                isActive: true,
+                currentCapital,
+                currentBet,
+                lastPrediction: prediction,
+                totalSteps: 0,
+                history: [initialStep],
+            });
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Unable to start session.';
             setError(message);
@@ -244,7 +245,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
         setError(null);
         try {
             await shutdownInferenceSession(config.sessionId);
-            onSessionStateChange({ isActive: false });
+            updateSnapshot({ isActive: false });
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Unable to stop session.';
             setError(message);
@@ -265,7 +266,15 @@ export const GameSession: React.FC<GameSessionProps> = ({
             return;
         }
         await clearPersistedSession();
-        onClearSession();
+        updateSnapshot({
+            config: null,
+            isActive: false,
+            currentCapital: setup.initialCapital,
+            currentBet: setup.betAmount,
+            lastPrediction: null,
+            totalSteps: 0,
+            history: [],
+        });
     };
 
     const handleObservedChange = (index: number, value: string) => {
@@ -274,7 +283,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
                 ? { ...row, observedInput: cleanObserved(value) }
                 : row
         );
-        onHistoryChange(updated);
+        replaceHistory(updated);
     };
 
     const recomputeHistory = async (rows: GameStep[]) => {
@@ -288,7 +297,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
             await shutdownInferenceSession(config.sessionId);
             await clearPersistedSession();
 
-            const session = await startSession(config.sessionId, {
+            const session = await startSession({
                 initialCapital: config.initialCapital,
                 betAmount: rows.length > 0 ? rows[0].betAmount : config.betAmount,
             });
@@ -297,20 +306,22 @@ export const GameSession: React.FC<GameSessionProps> = ({
             const currentBet = prediction.currentBetAmount ?? Number(session.game_bet);
             const updatedHistory: GameStep[] = [];
 
-            onGameConfigChange({
+            const newConfig: GameConfig = {
                 sessionId: String(session.session_id),
                 checkpoint: String(session.checkpoint),
-                datasetName: datasetId || '',
+                datasetId: datasetId as number,
                 initialCapital: Number(session.game_capital),
                 betAmount: currentBet,
-            });
+            };
 
-            onSessionStateChange({
+            updateSnapshot({
+                config: newConfig,
                 isActive: true,
                 currentCapital,
-                currentBet: currentBet,
+                currentBet,
                 lastPrediction: prediction,
                 totalSteps: 0,
+                history: [],
             });
 
             updatedHistory.push({
@@ -333,7 +344,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
                     break;
                 }
                 if (row.betAmount !== activeBet) {
-                    await updateBetAmount(row.betAmount, true);
+                    await updateBetAmount(row.betAmount, true, String(session.session_id));
                     activeBet = row.betAmount;
                 }
 
@@ -354,7 +365,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
                 };
                 updatedHistory[updatedHistory.length - 1] = updatedRow;
 
-                onSessionStateChange({
+                updateSnapshot({
                     currentCapital: capitalAfter,
                     totalSteps: stepIndex,
                 });
@@ -363,7 +374,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
                 if (hasNextRow) {
                     const nextRowBet = rows[index + 1].betAmount;
                     if (nextRowBet !== activeBet) {
-                        await updateBetAmount(nextRowBet, true);
+                        await updateBetAmount(nextRowBet, true, String(session.session_id));
                         activeBet = nextRowBet;
                     }
                     const nextPayload = await requestNextInferencePrediction(String(session.session_id));
@@ -381,14 +392,14 @@ export const GameSession: React.FC<GameSessionProps> = ({
                         capitalAfter,
                         isEditing: false,
                     });
-                    onSessionStateChange({
+                    updateSnapshot({
                         lastPrediction: nextPrediction,
                         currentBet: nextPrediction.currentBetAmount ?? activeBet,
                     });
                 }
             }
 
-            onHistoryChange(updatedHistory);
+            replaceHistory(updatedHistory);
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Unable to recompute session.';
             setError(message);
@@ -430,8 +441,8 @@ export const GameSession: React.FC<GameSessionProps> = ({
                     : item
             );
 
-            onHistoryChange(updated);
-            onSessionStateChange({
+            replaceHistory(updated);
+            updateSnapshot({
                 currentCapital: capitalAfter,
                 totalSteps: stepIndex,
             });
@@ -454,7 +465,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
             const updated = history.map((item, rowIndex) =>
                 rowIndex === index ? { ...item, isEditing: true } : item
             );
-            onHistoryChange(updated);
+            replaceHistory(updated);
             return;
         }
         const updatedRows = history.map((item, rowIndex) =>
@@ -475,8 +486,11 @@ export const GameSession: React.FC<GameSessionProps> = ({
         }
         const updatedRows = history.filter((_, rowIndex) => rowIndex !== index);
         if (updatedRows.length === 0) {
-            onHistoryChange([]);
-            onSessionStateChange({ totalSteps: 0, currentCapital: setup.initialCapital });
+            updateSnapshot({
+                history: [],
+                totalSteps: 0,
+                currentCapital: setup.initialCapital,
+            });
             return;
         }
         await recomputeHistory(updatedRows);
@@ -490,8 +504,8 @@ export const GameSession: React.FC<GameSessionProps> = ({
         try {
             const nextPayload = await requestNextInferencePrediction(config.sessionId);
             const prediction: PredictionResult = normalizePrediction(nextPayload.prediction);
-            const nextStep = sessionState.totalSteps + 1;
-            const activeBet = prediction.currentBetAmount ?? sessionState.currentBet;
+            const nextStep = totalSteps + 1;
+            const activeBet = prediction.currentBetAmount ?? currentBet;
 
             const newStep: GameStep = {
                 step: nextStep,
@@ -502,12 +516,12 @@ export const GameSession: React.FC<GameSessionProps> = ({
                 observedInput: '',
                 betAmount: activeBet,
                 outcome: null,
-                capitalAfter: sessionState.currentCapital,
+                capitalAfter: currentCapital,
                 isEditing: false,
             };
 
-            onAddHistoryStep(newStep);
-            onSessionStateChange({ lastPrediction: prediction, currentBet: activeBet });
+            addHistoryStep(newStep);
+            updateSnapshot({ lastPrediction: prediction, currentBet: activeBet });
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Unable to get next prediction.';
             setError(message);
@@ -518,15 +532,15 @@ export const GameSession: React.FC<GameSessionProps> = ({
         if (!sessionActive) {
             return;
         }
-        const suggested = sessionState.lastPrediction?.suggestedBetAmount;
+        const suggested = lastPrediction?.suggestedBetAmount;
         if (suggested === undefined) {
             return;
         }
         await updateBetAmount(Number(suggested), true);
-        if (sessionState.lastPrediction) {
-            onSessionStateChange({
+        if (lastPrediction) {
+            updateSnapshot({
                 lastPrediction: {
-                    ...sessionState.lastPrediction,
+                    ...lastPrediction,
                     currentBetAmount: Number(suggested),
                 },
             });
@@ -574,16 +588,14 @@ export const GameSession: React.FC<GameSessionProps> = ({
                         <select
                             id="inference-dataset"
                             className={styles.select}
-                            value={setup.datasetSource === 'uploaded'
-                                ? setup.uploadedDatasetName || ''
-                                : setup.selectedDataset}
-                            onChange={(e) => onSetupChange({ selectedDataset: e.target.value, datasetSource: 'source' })}
+                            value={setup.uploadedDatasetId ?? setup.selectedDataset ?? ''}
+                            onChange={(e) => onSetupChange({ selectedDataset: Number(e.target.value) })}
                             disabled={datasets.length === 0 || datasetLocked}
                             aria-label="Inference dataset"
                         >
-                            {setup.datasetSource === 'uploaded' && setup.uploadedDatasetName ? (
-                                <option value={setup.uploadedDatasetName}>
-                                    {setup.datasetFileMetadata?.name ?? setup.uploadedDatasetName}
+                            {setup.uploadedDatasetId !== null ? (
+                                <option value={setup.uploadedDatasetId}>
+                                    {setup.datasetFileMetadata?.name ?? `Dataset ${setup.uploadedDatasetId}`}
                                 </option>
                             ) : (
                                 <>
@@ -620,7 +632,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
                             type="button"
                             className={`${styles.ghostButton} ${styles.compactButton}`}
                             onClick={handleClearUpload}
-                            disabled={setupLocked || setup.datasetSource !== 'uploaded'}
+                            disabled={setupLocked || setup.uploadedDatasetId === null}
                         >
                             Clear
                         </button>
@@ -638,8 +650,8 @@ export const GameSession: React.FC<GameSessionProps> = ({
                                 onChange={(e) => {
                                     const value = Number(e.target.value);
                                     onSetupChange({ initialCapital: value });
-                                    if (!sessionState.isActive) {
-                                        onSessionStateChange({ currentCapital: value });
+                                    if (!sessionActive) {
+                                        updateSnapshot({ currentCapital: value });
                                     }
                                 }}
                                 min="1"
@@ -665,27 +677,27 @@ export const GameSession: React.FC<GameSessionProps> = ({
                         <div className={styles.statItem}>
                             <span className={styles.statLabel}>Current Capital</span>
                             <span className={`${styles.statValue} ${styles.statValueAccent}`}>
-                                € {sessionState.currentCapital.toFixed(2)}
+                                € {currentCapital.toFixed(2)}
                             </span>
                         </div>
                         <div className={styles.statItem}>
                             <span className={styles.statLabel}>Profit/Loss</span>
-                            {sessionState.totalSteps === 0 ? (
+                            {totalSteps === 0 ? (
                                 <span className={styles.statValue}>€ 0.00</span>
                             ) : (
-                                <span className={`${styles.statValue} ${sessionState.currentCapital >= setup.initialCapital ? styles.outcomeWin : styles.outcomeLoss}`}>
-                                    {(sessionState.currentCapital - setup.initialCapital) >= 0 ? '+' : ''}
-                                    € {(sessionState.currentCapital - setup.initialCapital).toFixed(2)}
+                                <span className={`${styles.statValue} ${currentCapital >= setup.initialCapital ? styles.outcomeWin : styles.outcomeLoss}`}>
+                                    {(currentCapital - setup.initialCapital) >= 0 ? '+' : ''}
+                                    € {(currentCapital - setup.initialCapital).toFixed(2)}
                                 </span>
                             )}
                         </div>
                         <div className={styles.statItem}>
                             <span className={styles.statLabel}>Bet Amount</span>
-                            <span className={styles.statValue}>€ {sessionState.currentBet}</span>
+                            <span className={styles.statValue}>€ {currentBet}</span>
                         </div>
                         <div className={styles.statItem}>
                             <span className={styles.statLabel}>Steps</span>
-                            <span className={styles.statValue}>{sessionState.totalSteps}</span>
+                            <span className={styles.statValue}>{totalSteps}</span>
                         </div>
                     </div>
                 </div>
@@ -698,21 +710,21 @@ export const GameSession: React.FC<GameSessionProps> = ({
                         </HelpPopover>
                     </div>
                     <div className={styles.predictionValue}>
-                        {sessionState.lastPrediction?.description || 'Waiting for a prediction'}
+                        {lastPrediction?.description || 'Waiting for a prediction'}
                     </div>
-                    {sessionState.lastPrediction?.confidence !== undefined && (
+                    {lastPrediction?.confidence !== undefined && (
                         <div className={styles.predictionDesc}>
-                            Confidence: {(sessionState.lastPrediction.confidence * 100).toFixed(0)}%
+                            Confidence: {(lastPrediction.confidence * 100).toFixed(0)}%
                         </div>
                     )}
-                    {sessionState.lastPrediction?.betStrategyName && (
+                    {lastPrediction?.betStrategyName && (
                         <div className={styles.predictionDesc}>
-                            Strategy: {sessionState.lastPrediction.betStrategyName}
+                            Strategy: {lastPrediction.betStrategyName}
                         </div>
                     )}
-                    {sessionState.lastPrediction?.suggestedBetAmount !== undefined && (
+                    {lastPrediction?.suggestedBetAmount !== undefined && (
                         <div className={styles.predictionDesc}>
-                            Suggested Bet: € {sessionState.lastPrediction.suggestedBetAmount}
+                            Suggested Bet: € {lastPrediction.suggestedBetAmount}
                         </div>
                     )}
                     <button
@@ -721,7 +733,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
                         onClick={handleApplySuggestedBet}
                         disabled={
                             !sessionActive ||
-                            sessionState.lastPrediction?.suggestedBetAmount === undefined
+                            lastPrediction?.suggestedBetAmount === undefined
                         }
                     >
                         Apply Suggested Bet

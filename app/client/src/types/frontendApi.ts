@@ -1,5 +1,5 @@
 export interface DatasetSummaryItem {
-    datasetId: string;
+    datasetId: number;
     datasetName: string;
     rowCount: number | null;
 }
@@ -10,7 +10,7 @@ export interface CheckpointMetadataResponse {
 }
 
 export interface CheckpointOptionMetadata {
-    datasetId: string;
+    datasetId: number | null;
     perceptiveFieldSize: number | null;
 }
 
