@@ -1,6 +1,6 @@
 ## Startup
 
-Last updated: 2026-08-21
+Last updated: 2026-08-30
 
 ## Local Application Startup
 
@@ -45,13 +45,13 @@ Cache layout and cleanup:
 
 - uv, npm, pip, Python bytecode, and other runtime caches are rooted at `runtimes/cache`
 - pytest, Ruff, coverage, mypy, Playwright, and other test-tool caches are rooted at `app/tests/cache`
-- option 9 removes both cache roots and known legacy cache locations item by item; locked or administrator-protected entries are reported and skipped so the remaining artifacts are still removed
+- option 9 removes the canonical runtime and test cache roots; locked or administrator-protected entries are reported and skipped so the remaining artifacts are still removed
 - options 8 through 12 require the exact case-sensitive passphrase `DELETE` before removing logs, caches, checkpoints, local user data, runtimes, dependencies, or build outputs
 
 Database behavior:
 
 - FastAPI lifespan and the explicit CLI/launcher initializer run the same Alembic create/upgrade state machine before repositories and services are constructed.
-- Empty SQLite databases upgrade to Alembic `head`; existing exact unversioned model databases are stamped at `head` without recreating tables or changing rows.
+- Empty SQLite databases upgrade to Alembic `head`; non-empty unversioned databases are rejected unchanged and must be migrated explicitly.
 - Partial, unknown, drifted, or ahead schemas fail unchanged with an actionable error. Known revisions behind `head` are upgraded in order; current `head` is a strict-validation no-op.
 - SQLite migration locking uses `BEGIN IMMEDIATE`; PostgreSQL database creation uses a deterministic admin advisory lock and target migrations use a transaction advisory lock with a bounded timeout.
 - PostgreSQL startup may create a missing configured database only when the initial target connection returns SQLSTATE `3D000`; the configured role must have `CREATEDB`, or an administrator must pre-create the database.

@@ -1,6 +1,6 @@
 ## Backend API
 
-Last updated: 2026-08-20
+Last updated: 2026-08-30
 
 ## Mounting Model
 
@@ -56,8 +56,7 @@ Router prefix: `/inference`
 ## System Endpoints
 
 - `GET /api/health`
-  - returns a typed `HealthResponse` with `status`, `application`, `version`, and `mode`.
-  - reports `development` by default and `desktop` only when `FAIRS_TAURI_MODE=true`; no packaged desktop runtime is shipped by this repository.
+  - returns a typed `HealthResponse` with `status`, `application`, and `version`.
 
 ## Non-API Routes
 
@@ -69,6 +68,7 @@ Router prefix: `/inference`
 ## API Design Notes
 
 - Endpoints use explicit resource identifiers such as `job_id` and `session_id`.
+- `POST /api/inference/sessions/start` accepts only `checkpoint`, numeric `dataset_id`, `game_capital`, and `game_bet`; strategy behavior comes from the checkpoint configuration.
 - Training start and resume requests return `202 Accepted` because work is tracked as a background job.
 - Upload, dataset, checkpoint, inference, and job-management operations return `200 OK` on success unless a documented validation or conflict error applies.
 - `DELETE /api/datasets/training/{dataset_id}` returns `409 Conflict` when checkpoint metadata still references the dataset; the successful response contract and route are unchanged.

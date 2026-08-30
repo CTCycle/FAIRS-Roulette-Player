@@ -1,6 +1,6 @@
 ## Persistence
 
-Last updated: 2026-08-20
+Last updated: 2026-08-30
 
 ## Current Persistence Model
 
@@ -102,8 +102,9 @@ The checkpoint configuration stores values such as `dataset_id`, but the databas
 - `server.repositories.database.initializer.initialize_database()` is the single shared create/upgrade runner used by FastAPI lifespan, the CLI, and launcher actions.
 - SQLite creates the parent directory as needed, uses Python 3.14 transaction control with `autocommit=False`, preserves foreign-key/WAL/busy-timeout pragmas, and serializes the migration transaction with `BEGIN IMMEDIATE`.
 - PostgreSQL first connects to the configured target. Only SQLSTATE `3D000` triggers an AUTOCOMMIT connection to `postgres`; database creation is rechecked under a deterministic advisory lock and requires the configured role to have `CREATEDB`. Target migrations use a transaction-level advisory lock and a bounded lock timeout.
-- An empty database upgrades to `head`. An unversioned database containing application tables is adopted only when strict Alembic metadata comparison and exact structural comparison match the baseline; adoption stamps `head` without recreating objects or changing rows.
-- Partial, unknown, or drifted unversioned schemas fail unchanged. Unknown/ahead revisions, multiple database heads, multiple script heads, and post-upgrade drift fail before services start. Automatic repair is intentionally disabled.
+- An empty database upgrades to `head`.
+- Any non-empty database without an Alembic revision is rejected unchanged. Partial, unknown, or drifted unversioned schemas fail before services start; there is no runtime adoption or stamping path.
+- Unknown/ahead revisions, multiple database heads, multiple script heads, and post-upgrade drift fail before services start. Automatic repair is intentionally disabled.
 - A known revision behind `head` upgrades in order. A database already at `head` performs strict drift validation and then a no-op.
 - Application startup runs this state machine before constructing repositories/services. The explicit launcher/CLI path is idempotent and means create/upgrade.
 - There is no seed/catalog workflow.
@@ -124,9 +125,9 @@ Use `uv run alembic -c alembic.ini upgrade head --sql` for offline SQL generatio
 ## Persistence Boundaries
 
 - API modules do not embed direct database logic.
-- Dataset and inference operations flow through `DatasetRepository` and `InferenceRepository`, coordinated for services by `DataStore`.
-- Training reads use `TrainingRepositoryQueries` and `TrainingSeriesLoader`, constructed by the application-owned `TrainingDataService` inside the worker process.
-- Model/checkpoint files use `CheckpointStorage` and `CheckpointService`, outside the relational schema.
+- Dataset operations flow through `DatasetRepository`, the sole SQL dataset authority. Inference session and step operations flow through `InferenceRepository`.
+- `TrainingDataService` owns stored/synthetic training-series selection, calls `DatasetRepository.training_outcomes()`, and applies the shared roulette encoding before learning runs.
+- `CheckpointRepository` owns checkpoint filesystem I/O and current configuration validation; `CheckpointService` owns checkpoint lifecycle policy outside the relational schema.
 - Schema, serializer, and API contract changes should be reviewed together.
 
 ## Architectural Assessment

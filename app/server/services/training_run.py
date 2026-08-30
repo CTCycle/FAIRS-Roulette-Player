@@ -45,6 +45,8 @@ def default_training_stats(
         "total_reward": 0,
         "capital": 0,
         "capital_gain": 0.0,
+        "current_bet_amount": None,
+        "current_strategy_id": None,
         "status": status,
     }
 
@@ -194,6 +196,7 @@ class TrainingRunManager:
         runner: Callable[..., dict[str, Any]],
         args: tuple[Any, ...] = (),
         kwargs: dict[str, Any] | None = None,
+        initializer: Callable[[TrainingRun], None] | None = None,
     ) -> str:
         job_id = str(uuid.uuid4())[:8]
         run = TrainingRun(job_id=job_id, job_type=job_type)
@@ -204,6 +207,16 @@ class TrainingRunManager:
         with self.lock:
             self.runs[job_id] = run
             self.last_training_run = run
+
+        if initializer is not None:
+            try:
+                initializer(run)
+            except Exception:
+                with self.lock:
+                    self.runs.pop(job_id, None)
+                    if self.last_training_run is run:
+                        self.last_training_run = None
+                raise
 
         thread = threading.Thread(
             target=self.run_job,

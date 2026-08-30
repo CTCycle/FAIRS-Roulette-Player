@@ -90,7 +90,7 @@ Database settings belong in `settings/.env`; a `database` block in `configuratio
 
 - `EMBEDDED_DATABASE=true` uses SQLite. FastAPI startup and launcher option 6 run the shared Alembic create/upgrade runner against the configured database without resetting or repairing drift.
 - `EMBEDDED_DATABASE=false` uses PostgreSQL. The runner first tries the configured target and creates it only when that connection returns SQLSTATE `3D000`; automatic creation requires `CREATEDB`. Target migrations use a transaction advisory lock.
-- Empty databases upgrade to Alembic `head`. Exact unversioned legacy databases are stamped at `head` without recreating objects or changing rows. Partial, drifted, unknown, ahead, or multi-head states fail unchanged before services start.
+- Empty databases upgrade to Alembic `head`. Any non-empty unversioned database is rejected unchanged; partial, drifted, unknown, ahead, or multi-head states also fail before services start. Existing databases must be migrated explicitly before startup.
 
 ### Database migration workflow
 
@@ -105,7 +105,7 @@ uv run alembic -c alembic.ini upgrade head
 
 Use `uv run alembic -c alembic.ini upgrade head --sql` for offline SQL output. Future constraints must be explicitly named; existing unnamed foreign keys retain their current semantics and are not renamed for dialect-specific consistency. SQLite initialization serializes with `BEGIN IMMEDIATE` and PostgreSQL initialization uses deterministic advisory locks with bounded waits. Resolve lock timeouts or migration errors before retrying; automatic repair is intentionally disabled.
 
-`FAIRS_DATA_DIR` can override the mutable database, logs, and checkpoint root. `FAIRS_LOG_DIR` can override the log directory for isolated runs.
+`FAIRS_DATA_DIR` can override the mutable database, logs, and checkpoint root. Logs always live under the active data root's `logs` directory.
 
 ## Training workflow
 
@@ -118,7 +118,7 @@ Use `uv run alembic -c alembic.ini upgrade head --sql` for offline SQL output. F
 ![Training workspace](assets/figures/training-page.png)
 _The Training workspace combines dataset upload, checkpoint management, and a live training monitor with populated metrics and history charts._
 
-Synthetic training generates roulette outcomes in the canonical `0..36` range and normalizes them for the training serializer.
+Synthetic training generates roulette outcomes in the canonical `0..36` range and normalizes them through the shared training-data service.
 
 ## DQN overview
 

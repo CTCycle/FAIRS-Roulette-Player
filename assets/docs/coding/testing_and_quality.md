@@ -1,6 +1,6 @@
 ## Testing And Quality
 
-Last updated: 2026-08-20
+Last updated: 2026-08-30
 
 ## Quality Baseline
 
@@ -18,10 +18,10 @@ Last updated: 2026-08-20
 ## Frontend Validation
 
 - Use the existing npm scripts for linting and build validation.
-- Keep parser logic defensive where backend payloads can drift.
+- Keep parser logic strict at the current snake_case contract boundary; reject malformed, aliased, or legacy payloads instead of silently defaulting them.
 - Validate UI behavior visually when user-facing layout or interaction changes are involved.
 - The current frontend package provides build and lint scripts but no standalone frontend test scripts.
-- CI enforces the frontend gate in `.github/workflows/ci.yml` with Node 22: `npm install`, `npm run lint`, and `npm run build` from `app/client`. The install resolves from `package.json` when `package-lock.json` is absent.
+- CI enforces the frontend gate in `.github/workflows/ci.yml` with Node 22: `npm ci`, `npm run lint`, and `npm run build` from `app/client`. A checked-in `package-lock.json` is required.
 
 ## Test Layout
 
@@ -42,7 +42,7 @@ Primary automated test surfaces live under `app/tests`:
 
 - Keep the immutable baseline aligned with all four current SQLAlchemy tables, indexes, named checks/unique constraints, and foreign-key cascade semantics.
 - Use test-only synthetic revisions for behind-version and rollback cases; do not add failure-only revisions to production history.
-- Validate clean, current, legacy adoption, partial/drift rejection, unknown/ahead revision rejection, rollback, and concurrent SQLite initialization. Run PostgreSQL persistence migration coverage when the service is available.
+- Validate clean/current databases, rejection of non-empty unversioned and partial schemas, unknown/ahead revision rejection, rollback, and concurrent SQLite initialization. Run PostgreSQL persistence migration coverage when the service is available.
 
 ## Change Expectations
 

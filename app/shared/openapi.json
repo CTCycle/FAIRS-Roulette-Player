@@ -974,18 +974,13 @@
           "version": {
             "type": "string",
             "title": "Version"
-          },
-          "mode": {
-            "type": "string",
-            "title": "Mode"
           }
         },
         "type": "object",
         "required": [
           "status",
           "application",
-          "version",
-          "mode"
+          "version"
         ],
         "title": "HealthResponse"
       },
@@ -1101,29 +1096,6 @@
             "minimum": 1.0,
             "title": "Dataset Id"
           },
-          "dataset_source": {
-            "anyOf": [
-              {
-                "type": "string",
-                "pattern": "^(source|uploaded)$"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Dataset Source"
-          },
-          "session_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Session Id"
-          },
           "game_capital": {
             "type": "integer",
             "minimum": 1.0,
@@ -1135,63 +1107,6 @@
             "minimum": 1.0,
             "title": "Game Bet",
             "default": 1
-          },
-          "dynamic_betting_enabled": {
-            "type": "boolean",
-            "title": "Dynamic Betting Enabled",
-            "default": false
-          },
-          "bet_strategy_model_enabled": {
-            "type": "boolean",
-            "title": "Bet Strategy Model Enabled",
-            "default": false
-          },
-          "bet_strategy_fixed_id": {
-            "type": "integer",
-            "maximum": 4.0,
-            "minimum": 0.0,
-            "title": "Bet Strategy Fixed Id",
-            "default": 0
-          },
-          "strategy_hold_steps": {
-            "type": "integer",
-            "minimum": 1.0,
-            "title": "Strategy Hold Steps",
-            "default": 1
-          },
-          "bet_unit": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 1.0
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Bet Unit"
-          },
-          "bet_max": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 1.0
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Bet Max"
-          },
-          "bet_enforce_capital": {
-            "type": "boolean",
-            "title": "Bet Enforce Capital",
-            "default": true
-          },
-          "auto_apply_bet_suggestions": {
-            "type": "boolean",
-            "title": "Auto Apply Bet Suggestions",
-            "default": false
           }
         },
         "additionalProperties": false,
