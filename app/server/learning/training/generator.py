@@ -7,9 +7,9 @@ import pandas as pd
 
 from server.common.constants import NUMBERS
 
+
 ###############################################################################
 class RouletteSyntheticGenerator:
-
     # -------------------------------------------------------------------------
     def __init__(self, configuration: dict[str, Any]) -> None:
         self.configuration = configuration

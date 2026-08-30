@@ -8,6 +8,7 @@ from server.common.constants import (
     ROULETTE_POSITION_MAP,
 )
 
+
 ###############################################################################
 def encode_roulette_series(dataframe: pd.DataFrame) -> pd.DataFrame:
     """Return roulette outcomes enriched with the canonical wheel features."""

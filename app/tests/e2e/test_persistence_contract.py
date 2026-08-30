@@ -20,30 +20,65 @@ from server.repositories.datasets import DatasetRepository
 from server.repositories.inference import InferenceRepository
 from server.repositories.schemas.models import Base
 
+
 ###############################################################################
 def exercise_contract(database: FAIRSDatabase) -> None:
     run_migrations_on_engine(database.engine)
     datasets = DatasetRepository(database)
     inference = InferenceRepository(database)
-    first = datasets.import_replacement("Example", "training", pd.DataFrame({"sequence_index": [0, 1], "outcome_id": [0, 32]}))
-    second = datasets.import_replacement(" example ", "training", pd.DataFrame({"sequence_index": [0], "outcome_id": [19]}))
+    first = datasets.import_replacement(
+        "Example",
+        "training",
+        pd.DataFrame({"sequence_index": [0, 1], "outcome_id": [0, 32]}),
+    )
+    second = datasets.import_replacement(
+        " example ",
+        "training",
+        pd.DataFrame({"sequence_index": [0], "outcome_id": [19]}),
+    )
     assert first["dataset_id"] == second["dataset_id"]
     assert len(datasets.outcomes(first["dataset_id"])) == 1
     assert datasets.summaries("training")[0]["row_count"] == 1
-    inference.upsert_session({"session_id": "contract-session", "dataset_id": first["dataset_id"], "checkpoint_name": "checkpoint", "initial_capital": 100})
-    inference.upsert_step({"session_id": "contract-session", "step_number": 1, "bet_amount": 1, "predicted_action": 0, "capital_after": 99})
+    inference.upsert_session(
+        {
+            "session_id": "contract-session",
+            "dataset_id": first["dataset_id"],
+            "checkpoint_name": "checkpoint",
+            "initial_capital": 100,
+        }
+    )
+    inference.upsert_step(
+        {
+            "session_id": "contract-session",
+            "step_number": 1,
+            "bet_amount": 1,
+            "predicted_action": 0,
+            "capital_after": 99,
+        }
+    )
     datasets.delete(first["dataset_id"])
     with database.Session() as session:
-        assert session.execute(text("SELECT COUNT(*) FROM inference_session_steps")).scalar_one() == 0
+        assert (
+            session.execute(
+                text("SELECT COUNT(*) FROM inference_session_steps")
+            ).scalar_one()
+            == 0
+        )
+
 
 ###############################################################################
 def test_sqlite_contract() -> None:
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
-    event.listen(engine, "connect", lambda connection, _: connection.execute("PRAGMA foreign_keys=ON"))
+    event.listen(
+        engine,
+        "connect",
+        lambda connection, _: connection.execute("PRAGMA foreign_keys=ON"),
+    )
     try:
         exercise_contract(FAIRSDatabase(engine=engine))
     finally:
         engine.dispose()
+
 
 ###############################################################################
 def _reset_postgres(engine) -> None:
@@ -52,6 +87,7 @@ def _reset_postgres(engine) -> None:
             "DROP TABLE IF EXISTS inference_session_steps, inference_sessions, "
             "dataset_outcomes, datasets, alembic_version CASCADE"
         )
+
 
 ###############################################################################
 @pytest.fixture
@@ -66,6 +102,7 @@ def postgres_engine():
     finally:
         _reset_postgres(engine)
         engine.dispose()
+
 
 ###############################################################################
 def _copy_test_alembic_environment(tmp_path: Path, body: str) -> Path:
@@ -83,6 +120,7 @@ def _copy_test_alembic_environment(tmp_path: Path, body: str) -> Path:
     )
     return fixture_root / "alembic.ini"
 
+
 ###############################################################################
 def _set_postgres_revision(engine, revision: str) -> None:
     with engine.begin() as connection:
@@ -91,15 +129,24 @@ def _set_postgres_revision(engine, revision: str) -> None:
             {"revision": revision},
         )
 
+
 ###############################################################################
 def test_postgresql_clean_and_current_are_idempotent(postgres_engine) -> None:
     run_migrations_on_engine(postgres_engine)
     run_migrations_on_engine(postgres_engine)
     with postgres_engine.connect() as connection:
-        assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0001_initial_schema"
+        assert (
+            connection.execute(
+                text("SELECT version_num FROM alembic_version")
+            ).scalar_one()
+            == "0001_initial_schema"
+        )
+
 
 ###############################################################################
-def test_postgresql_unversioned_database_is_rejected_without_mutation(postgres_engine) -> None:
+def test_postgresql_unversioned_database_is_rejected_without_mutation(
+    postgres_engine,
+) -> None:
     Base.metadata.create_all(postgres_engine)
     with postgres_engine.begin() as connection:
         connection.execute(
@@ -110,12 +157,17 @@ def test_postgresql_unversioned_database_is_rejected_without_mutation(postgres_e
             )
         )
 
-    with pytest.raises(DatabaseRevisionError, match="non-empty database has no Alembic revision"):
+    with pytest.raises(
+        DatabaseRevisionError, match="non-empty database has no Alembic revision"
+    ):
         run_migrations_on_engine(postgres_engine)
 
     with postgres_engine.connect() as connection:
-        assert connection.execute(text("SELECT COUNT(*) FROM datasets")).scalar_one() == 1
+        assert (
+            connection.execute(text("SELECT COUNT(*) FROM datasets")).scalar_one() == 1
+        )
         assert not inspect(connection).has_table("alembic_version")
+
 
 ###############################################################################
 def test_postgresql_synthetic_rollback_and_behind_revision(
@@ -145,7 +197,12 @@ def downgrade() -> None:
         run_migrations_on_engine(postgres_engine, config_path=failure_config)
     with postgres_engine.connect() as connection:
         assert not inspect(connection).has_table("temporary_failure_table")
-        assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0001_initial_schema"
+        assert (
+            connection.execute(
+                text("SELECT version_num FROM alembic_version")
+            ).scalar_one()
+            == "0001_initial_schema"
+        )
 
     behind_config = _copy_test_alembic_environment(
         tmp_path / "behind",
@@ -165,7 +222,13 @@ def downgrade() -> None:
     _set_postgres_revision(postgres_engine, "0001_initial_schema")
     run_migrations_on_engine(postgres_engine, config_path=behind_config)
     with postgres_engine.connect() as connection:
-        assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0002_test_revision"
+        assert (
+            connection.execute(
+                text("SELECT version_num FROM alembic_version")
+            ).scalar_one()
+            == "0002_test_revision"
+        )
+
 
 ###############################################################################
 def test_postgresql_concurrent_initializers_serialize(postgres_engine) -> None:
@@ -182,7 +245,13 @@ def test_postgresql_concurrent_initializers_serialize(postgres_engine) -> None:
             future.result()
 
     with postgres_engine.connect() as connection:
-        assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0001_initial_schema"
+        assert (
+            connection.execute(
+                text("SELECT version_num FROM alembic_version")
+            ).scalar_one()
+            == "0001_initial_schema"
+        )
+
 
 ###############################################################################
 def test_postgresql_contract(postgres_engine) -> None:

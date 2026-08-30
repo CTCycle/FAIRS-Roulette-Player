@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict
 
 DatasetKind = Literal["training", "inference"]
 
+
 ###############################################################################
 class UploadRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -13,6 +14,7 @@ class UploadRequest(BaseModel):
     dataset_kind: DatasetKind
     csv_separator: str = ";"
     sheet_name: str | int = 0
+
 
 ###############################################################################
 class UploadResponse(BaseModel):

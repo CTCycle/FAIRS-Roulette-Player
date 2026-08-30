@@ -6,6 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+
 ###############################################################################
 @dataclass(frozen=True)
 class DatabaseSettings:
@@ -21,10 +22,12 @@ class DatabaseSettings:
     connect_timeout: int
     insert_batch_size: int
 
+
 ###############################################################################
 @dataclass(frozen=True)
 class JobsSettings:
     polling_interval: float
+
 
 ###############################################################################
 @dataclass(frozen=True)
@@ -33,12 +36,14 @@ class DeviceSettings:
     jit_backend: str
     use_mixed_precision: bool
 
+
 ###############################################################################
 @dataclass(frozen=True)
 class ServerSettings:
     database: DatabaseSettings
     jobs: JobsSettings
     device: DeviceSettings
+
 
 ###############################################################################
 class EnvDatabaseSettings(BaseModel):
@@ -127,9 +132,11 @@ class EnvDatabaseSettings(BaseModel):
             )
         return self
 
+
 ###############################################################################
 class JsonJobsSettings(BaseModel):
     polling_interval: float = Field(default=1.0, ge=0.1, le=10.0)
+
 
 ###############################################################################
 class JsonDeviceSettings(BaseModel):
@@ -143,6 +150,7 @@ class JsonDeviceSettings(BaseModel):
     def normalize_backend(cls, value: Any) -> str:
         text = str(value).strip() if value is not None else ""
         return text or "inductor"
+
 
 ###############################################################################
 class JsonServerSettings(BaseModel):

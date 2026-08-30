@@ -13,6 +13,7 @@ from server.repositories.database.initializer import (
     validate_database_metadata,
 )
 
+
 ###############################################################################
 def test_alembic_history_has_one_immutable_baseline_head() -> None:
     config = Config(str(ALEMBIC_CONFIG_PATH))
@@ -20,6 +21,7 @@ def test_alembic_history_has_one_immutable_baseline_head() -> None:
 
     assert script.get_heads() == ["0001_initial_schema"]
     assert script.get_revision("0001_initial_schema").down_revision is None
+
 
 ###############################################################################
 def test_alembic_check_and_model_metadata_match_head(tmp_path: Path) -> None:

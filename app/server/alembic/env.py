@@ -26,6 +26,7 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 VERSION_TABLE = "alembic_version"
 
+
 ###############################################################################
 def _include_object(
     _object: Any,
@@ -35,6 +36,7 @@ def _include_object(
     _compare_to: Any,
 ) -> bool:
     return not (object_type == "table" and name == VERSION_TABLE)
+
 
 ###############################################################################
 def _resolved_url() -> str:
@@ -49,9 +51,14 @@ def _resolved_url() -> str:
         raise RuntimeError("DATABASE_NAME is required for PostgreSQL Alembic commands.")
     return str(build_postgres_url(settings, settings.database_name))
 
+
 ###############################################################################
 def _configure_kwargs(connection: Any | None = None) -> dict[str, Any]:
-    dialect_name = connection.dialect.name if connection is not None else make_url(_resolved_url()).get_backend_name()
+    dialect_name = (
+        connection.dialect.name
+        if connection is not None
+        else make_url(_resolved_url()).get_backend_name()
+    )
     return {
         "target_metadata": target_metadata,
         "compare_type": True,
@@ -61,6 +68,7 @@ def _configure_kwargs(connection: Any | None = None) -> dict[str, Any]:
         "transactional_ddl": True,
         "transaction_per_migration": False,
     }
+
 
 ###############################################################################
 def run_migrations_offline() -> None:
@@ -73,6 +81,7 @@ def run_migrations_offline() -> None:
     with context.begin_transaction():
         context.run_migrations()
 
+
 ###############################################################################
 def run_migrations_online() -> None:
     connectable = config.attributes.get("connection")
@@ -80,7 +89,9 @@ def run_migrations_online() -> None:
     if connectable is None:
         url = _resolved_url()
         parsed_url = make_url(url)
-        connect_args = {"autocommit": False} if parsed_url.get_backend_name() == "sqlite" else {}
+        connect_args = (
+            {"autocommit": False} if parsed_url.get_backend_name() == "sqlite" else {}
+        )
         connectable = create_engine(
             url,
             future=True,
@@ -91,7 +102,9 @@ def run_migrations_online() -> None:
     try:
         if owns_connectable:
             with connectable.connect() as connection:
-                context.configure(connection=connection, **_configure_kwargs(connection))
+                context.configure(
+                    connection=connection, **_configure_kwargs(connection)
+                )
                 with context.begin_transaction():
                     context.run_migrations()
         else:

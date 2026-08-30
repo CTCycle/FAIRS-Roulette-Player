@@ -26,6 +26,7 @@ CHECKPOINT_REPLAY_MEMORY_FILE_NAME = "replay_memory.pkl"
 CHECKPOINT_SAVED_MODEL_FILE_NAME = "saved_model.keras"
 CHECKPOINT_STRATEGY_MODEL_FILE_NAME = "strategy.keras"
 
+
 ###############################################################################
 def configure_runtime_paths(data_dir: str | Path | None = None) -> None:
     """Resolve mutable runtime paths after environment loading."""
@@ -38,17 +39,21 @@ def configure_runtime_paths(data_dir: str | Path | None = None) -> None:
     CHECKPOINT_PATH = RESOURCES_PATH / "checkpoints"
     DATABASE_PATH = RESOURCES_PATH / "database.db"
 
+
 ###############################################################################
 def as_path(value: str | Path) -> Path:
     return value if isinstance(value, Path) else Path(value)
+
 
 ###############################################################################
 def checkpoint_directory(checkpoint_name: str) -> Path:
     return CHECKPOINT_PATH / checkpoint_name
 
+
 ###############################################################################
 def checkpoint_configuration_dir(checkpoint_path: str | Path) -> Path:
     return as_path(checkpoint_path) / CHECKPOINT_CONFIGURATION_DIRNAME
+
 
 ###############################################################################
 def checkpoint_configuration_file(checkpoint_path: str | Path) -> Path:
@@ -57,12 +62,14 @@ def checkpoint_configuration_file(checkpoint_path: str | Path) -> Path:
         / CHECKPOINT_CONFIGURATION_FILE_NAME
     )
 
+
 ###############################################################################
 def checkpoint_session_history_file(checkpoint_path: str | Path) -> Path:
     return (
         checkpoint_configuration_dir(checkpoint_path)
         / CHECKPOINT_SESSION_HISTORY_FILE_NAME
     )
+
 
 ###############################################################################
 def checkpoint_replay_memory_file(checkpoint_path: str | Path) -> Path:
@@ -71,9 +78,11 @@ def checkpoint_replay_memory_file(checkpoint_path: str | Path) -> Path:
         / CHECKPOINT_REPLAY_MEMORY_FILE_NAME
     )
 
+
 ###############################################################################
 def checkpoint_saved_model_file(checkpoint_path: str | Path) -> Path:
     return as_path(checkpoint_path) / CHECKPOINT_SAVED_MODEL_FILE_NAME
+
 
 ###############################################################################
 def checkpoint_strategy_model_file(

@@ -16,9 +16,9 @@ from server.repositories.datasets import DatasetRepository
 from server.repositories.inference import InferenceRepository
 from server.services.checkpoints import CheckpointService
 
+
 ###############################################################################
 class InferenceSession:
-
     # -------------------------------------------------------------------------
     def __init__(
         self,
@@ -84,9 +84,9 @@ class InferenceSession:
         self.current_bet = int(bet_amount)
         self.player.update_bet_amount(bet_amount)
 
+
 ###############################################################################
 class InferenceState:
-
     # -------------------------------------------------------------------------
     def __init__(self) -> None:
         self.sessions: dict[str, InferenceSession] = {}
@@ -115,9 +115,9 @@ class InferenceState:
         ordered = sorted(self.sessions.values(), key=lambda item: item.last_seen)
         return ordered[: max(0, len(ordered) - self.max_sessions)]
 
+
 ###############################################################################
 class InferenceService:
-
     # -------------------------------------------------------------------------
     def __init__(
         self,

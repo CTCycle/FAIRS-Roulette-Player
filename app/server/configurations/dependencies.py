@@ -6,13 +6,16 @@ from server.services.datasets import DatasetService
 from server.services.inference import InferenceService
 from server.services.training import TrainingService
 
+
 ###############################################################################
 def get_dataset_service(request: Request) -> DatasetService:
     return request.app.state.dataset_service
 
+
 ###############################################################################
 def get_training_service(request: Request) -> TrainingService:
     return request.app.state.training_service
+
 
 ###############################################################################
 def get_inference_service(request: Request) -> InferenceService:

@@ -11,6 +11,7 @@ from server.common.checkpoints import (
 from server.contracts.training import TrainingCheckpointSummary
 from server.repositories.checkpoints import CheckpointRepository
 
+
 ###############################################################################
 def get_last_history_value(values: Any) -> float | None:
     if isinstance(values, list) and values:
@@ -19,13 +20,14 @@ def get_last_history_value(values: Any) -> float | None:
             return float(last_value)
     return None
 
+
 ###############################################################################
 class CheckpointReferenceError(RuntimeError):
     """Raised when dataset deletion would invalidate checkpoint metadata."""
 
+
 ###############################################################################
 class CheckpointService:
-
     # -------------------------------------------------------------------------
     def __init__(
         self,
@@ -53,27 +55,29 @@ class CheckpointService:
             checkpoint_path
         )
         history = session.get("history", {}) if isinstance(session, dict) else {}
-        summary = TrainingCheckpointSummary.model_validate({
-            "dataset_id": configuration.get("dataset_id"),
-            "sample_size": configuration.get("sample_size"),
-            "seed": configuration.get("seed"),
-            "episodes": configuration["episodes"],
-            "batch_size": configuration.get("batch_size"),
-            "learning_rate": configuration.get("learning_rate"),
-            "perceptive_field_size": configuration.get("perceptive_field_size"),
-            "neurons": configuration.get("qnet_neurons"),
-            "embedding_dimensions": configuration.get("embedding_dimensions"),
-            "exploration_rate": configuration.get("exploration_rate"),
-            "exploration_rate_decay": configuration.get("exploration_rate_decay"),
-            "discount_rate": configuration.get("discount_rate"),
-            "model_update_frequency": configuration.get("model_update_frequency"),
-            "bet_amount": configuration.get("bet_amount"),
-            "initial_capital": configuration.get("initial_capital"),
-            "final_loss": get_last_history_value(history.get("loss")),
-            "final_rmse": get_last_history_value(history.get("metrics")),
-            "final_val_loss": get_last_history_value(history.get("val_loss")),
-            "final_val_rmse": get_last_history_value(history.get("val_rmse")),
-        })
+        summary = TrainingCheckpointSummary.model_validate(
+            {
+                "dataset_id": configuration.get("dataset_id"),
+                "sample_size": configuration.get("sample_size"),
+                "seed": configuration.get("seed"),
+                "episodes": configuration["episodes"],
+                "batch_size": configuration.get("batch_size"),
+                "learning_rate": configuration.get("learning_rate"),
+                "perceptive_field_size": configuration.get("perceptive_field_size"),
+                "neurons": configuration.get("qnet_neurons"),
+                "embedding_dimensions": configuration.get("embedding_dimensions"),
+                "exploration_rate": configuration.get("exploration_rate"),
+                "exploration_rate_decay": configuration.get("exploration_rate_decay"),
+                "discount_rate": configuration.get("discount_rate"),
+                "model_update_frequency": configuration.get("model_update_frequency"),
+                "bet_amount": configuration.get("bet_amount"),
+                "initial_capital": configuration.get("initial_capital"),
+                "final_loss": get_last_history_value(history.get("loss")),
+                "final_rmse": get_last_history_value(history.get("metrics")),
+                "final_val_loss": get_last_history_value(history.get("val_loss")),
+                "final_val_rmse": get_last_history_value(history.get("val_rmse")),
+            }
+        )
         return {"checkpoint": checkpoint, "summary": summary.model_dump()}
 
     # -------------------------------------------------------------------------
@@ -83,8 +87,10 @@ class CheckpointService:
         for checkpoint in self.list_checkpoints():
             try:
                 _, checkpoint_path = self.resolve_existing_checkpoint(checkpoint)
-                configuration, _ = self.checkpoint_repository.load_training_configuration(
-                    checkpoint_path
+                configuration, _ = (
+                    self.checkpoint_repository.load_training_configuration(
+                        checkpoint_path
+                    )
                 )
             except (OSError, TypeError, ValueError) as exc:
                 raise CheckpointReferenceError(

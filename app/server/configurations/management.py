@@ -8,9 +8,9 @@ from typing import Any
 from server.common import path as shared_paths
 from server.contracts.configuration import JsonServerSettings, ServerSettings
 
+
 ###############################################################################
 class ConfigurationManager:
-
     # -------------------------------------------------------------------------
     def __init__(self, config_path: str | Path | None = None) -> None:
         self._lock = RLock()

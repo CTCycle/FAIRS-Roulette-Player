@@ -25,6 +25,7 @@ TRAINING_STATUSES = {
 }
 HISTORY_POINTS_PER_EPISODE = 20
 
+
 ###############################################################################
 def default_training_stats(
     total_epochs: int = 0,
@@ -49,6 +50,7 @@ def default_training_stats(
         "current_strategy_id": None,
         "status": status,
     }
+
 
 ###############################################################################
 @dataclass
@@ -97,9 +99,7 @@ class TrainingRun:
             )
             self.history_points = []
             self.history_bucket_size = (
-                max_steps / float(HISTORY_POINTS_PER_EPISODE)
-                if max_steps > 0
-                else 1.0
+                max_steps / float(HISTORY_POINTS_PER_EPISODE) if max_steps > 0 else 1.0
             )
             self.last_history_episode = None
             self.last_history_bucket = None
@@ -157,7 +157,10 @@ class TrainingRun:
             if isinstance(previous_epoch, int) and isinstance(previous_step, int):
                 if point["epoch"] < previous_epoch:
                     return
-                if point["epoch"] == previous_epoch and point["time_step"] < previous_step:
+                if (
+                    point["epoch"] == previous_epoch
+                    and point["time_step"] < previous_step
+                ):
                     return
 
         self.history_points.append(point)
@@ -177,6 +180,7 @@ class TrainingRun:
                 "created_at": self.created_at,
                 "completed_at": self.completed_at,
             }
+
 
 ###############################################################################
 class TrainingRunManager:
@@ -231,7 +235,9 @@ class TrainingRunManager:
         return job_id
 
     # -------------------------------------------------------------------------
-    def reset_training_state(self, job_id: str, total_epochs: int, max_steps: int) -> None:
+    def reset_training_state(
+        self, job_id: str, total_epochs: int, max_steps: int
+    ) -> None:
         run = self._get_run(job_id)
         if run is not None:
             run.reset_training_state(total_epochs, max_steps)
@@ -387,12 +393,15 @@ class TrainingRunManager:
     def runner_accepts_job_id(runner: Callable[..., dict[str, Any]]) -> bool:
         try:
             signature = inspect.signature(runner)
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             return False
-        return any(
-            parameter.kind == parameter.VAR_KEYWORD
-            for parameter in signature.parameters.values()
-        ) or "job_id" in signature.parameters
+        return (
+            any(
+                parameter.kind == parameter.VAR_KEYWORD
+                for parameter in signature.parameters.values()
+            )
+            or "job_id" in signature.parameters
+        )
 
 
 __all__ = [

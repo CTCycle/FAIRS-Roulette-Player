@@ -9,6 +9,7 @@ APP_ROOT = REPOSITORY_ROOT / "app"
 CLIENT_SOURCE_ROOT = APP_ROOT / "client" / "src"
 SERVER_ROOT = APP_ROOT / "server"
 
+
 ###############################################################################
 def _source_text(root: Path) -> str:
     return "\n".join(
@@ -16,6 +17,7 @@ def _source_text(root: Path) -> str:
         for path in root.rglob("*")
         if path.is_file() and "node_modules" not in path.parts
     )
+
 
 ###############################################################################
 def test_legacy_state_and_persistence_paths_are_removed() -> None:
@@ -48,7 +50,9 @@ def test_legacy_state_and_persistence_paths_are_removed() -> None:
     openapi = json.loads(
         (APP_ROOT / "shared" / "openapi.json").read_text(encoding="utf-8")
     )
-    assert set(openapi["components"]["schemas"]["InferenceStartRequest"]["properties"]) == {
+    assert set(
+        openapi["components"]["schemas"]["InferenceStartRequest"]["properties"]
+    ) == {
         "checkpoint",
         "dataset_id",
         "game_capital",
@@ -59,6 +63,7 @@ def test_legacy_state_and_persistence_paths_are_removed() -> None:
         "application",
         "version",
     }
+
 
 ###############################################################################
 def test_frontend_package_does_not_duplicate_backend_version_authority() -> None:

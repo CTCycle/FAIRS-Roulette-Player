@@ -7,6 +7,7 @@ from server.common.checkpoints import (
     normalize_checkpoint_identifier,
 )
 
+
 ###############################################################################
 class InferenceStartRequest(BaseModel):
     model_config = ConfigDict(
@@ -25,6 +26,7 @@ class InferenceStartRequest(BaseModel):
     def validate_checkpoint(cls, value: str) -> str:
         return normalize_checkpoint_identifier(value)
 
+
 ###############################################################################
 class PredictionResponse(BaseModel):
     action: int
@@ -35,6 +37,7 @@ class PredictionResponse(BaseModel):
     suggested_bet_amount: int | None = None
     current_bet_amount: int | None = None
 
+
 ###############################################################################
 class InferenceStartResponse(BaseModel):
     session_id: str
@@ -44,16 +47,19 @@ class InferenceStartResponse(BaseModel):
     current_capital: int
     prediction: PredictionResponse
 
+
 ###############################################################################
 class InferenceNextResponse(BaseModel):
     session_id: str
     prediction: PredictionResponse
+
 
 ###############################################################################
 class InferenceStepRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     extraction: int = Field(..., ge=0, le=36)
+
 
 ###############################################################################
 class InferenceStepResponse(BaseModel):
@@ -65,26 +71,31 @@ class InferenceStepResponse(BaseModel):
     reward: int
     capital_after: int
 
+
 ###############################################################################
 class InferenceBetUpdateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     bet_amount: int = Field(..., ge=1)
 
+
 ###############################################################################
 class InferenceShutdownResponse(BaseModel):
     session_id: str
     status: str
+
 
 ###############################################################################
 class InferenceBetUpdateResponse(BaseModel):
     session_id: str
     bet_amount: int
 
+
 ###############################################################################
 class InferenceRowsClearResponse(BaseModel):
     session_id: str
     status: str
+
 
 ###############################################################################
 class InferenceContextClearResponse(BaseModel):

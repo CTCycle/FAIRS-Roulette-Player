@@ -9,9 +9,9 @@ from server.learning.betting.types import STRATEGY_COUNT
 from server.learning.models.embeddings import RouletteEmbedding
 from server.learning.models.logits import AddNorm, BatchNormDense, QScoreNet
 
+
 ###############################################################################
 class StrategyNet:
-
     # -------------------------------------------------------------------------
     def __init__(self, configuration: dict[str, Any]) -> None:
         self.perceptive_size = int(configuration.get("perceptive_field_size", 64))

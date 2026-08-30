@@ -9,9 +9,9 @@ from server.common.constants import NUMBERS, STATES
 from server.learning.models.embeddings import RouletteEmbedding
 from server.learning.models.logits import AddNorm, BatchNormDense, QScoreNet
 
+
 ###############################################################################
 class FAIRSnet:
-
     # -------------------------------------------------------------------------
     def __init__(
         self,

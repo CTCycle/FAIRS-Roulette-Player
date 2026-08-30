@@ -21,6 +21,7 @@ from server.services.checkpoints import CheckpointService
 from server.services.training_data import load_training_series
 from server.services.training_run import TrainingRun, TrainingRunManager
 
+
 ###############################################################################
 def calculate_progress(stats: dict[str, Any]) -> float:
     epoch = stats.get("epoch", 0)
@@ -33,6 +34,7 @@ def calculate_progress(stats: dict[str, Any]) -> float:
         return 0.0
     progress = (float(epoch) / float(total_epochs)) * 100.0
     return min(100.0, max(0.0, progress))
+
 
 ###############################################################################
 def build_history_points(
@@ -99,6 +101,7 @@ def build_history_points(
             results.append(point)
     return results
 
+
 ###############################################################################
 class TrainingService:
     JOB_TYPE = "training"
@@ -158,7 +161,10 @@ class TrainingService:
     ) -> dict[str, Any]:
         stop_requested_at: float | None = None
         while worker.is_alive():
-            if self.training_run_manager.should_stop(job_id) and not worker.is_interrupted():
+            if (
+                self.training_run_manager.should_stop(job_id)
+                and not worker.is_interrupted()
+            ):
                 worker.stop()
                 stop_requested_at = time.monotonic()
             if stop_requested_at is not None:
@@ -176,9 +182,10 @@ class TrainingService:
 
         result_payload = worker.read_result()
         if result_payload is None:
-            if worker.exitcode not in (0, None) and not self.training_run_manager.should_stop(
-                job_id
-            ):
+            if worker.exitcode not in (
+                0,
+                None,
+            ) and not self.training_run_manager.should_stop(job_id):
                 raise RuntimeError(
                     f"Training process exited with code {worker.exitcode}"
                 )
@@ -213,8 +220,7 @@ class TrainingService:
             )
             if self.training_run_manager.should_stop(job_id):
                 self.training_run_manager.update_training_stats(
-                    job_id,
-                    {"status": "cancelled", "message": "Training cancelled"}
+                    job_id, {"status": "cancelled", "message": "Training cancelled"}
                 )
             else:
                 current_status = self.training_run_manager.training_status(
@@ -227,7 +233,7 @@ class TrainingService:
                         "status": "completed",
                         "message": "Training completed",
                         "epoch": final_epoch,
-                    }
+                    },
                 )
             return result
         except Exception as exc:
@@ -268,8 +274,7 @@ class TrainingService:
             )
             if self.training_run_manager.should_stop(job_id):
                 self.training_run_manager.update_training_stats(
-                    job_id,
-                    {"status": "cancelled", "message": "Training cancelled"}
+                    job_id, {"status": "cancelled", "message": "Training cancelled"}
                 )
             else:
                 current_status = self.training_run_manager.training_status(
@@ -282,7 +287,7 @@ class TrainingService:
                         "status": "completed",
                         "message": "Resume training completed",
                         "epoch": final_epoch,
-                    }
+                    },
                 )
             return result
         except Exception as exc:
@@ -364,10 +369,8 @@ class TrainingService:
         checkpoint, checkpoint_path = (
             self.checkpoint_service.resolve_existing_checkpoint(config.checkpoint)
         )
-        configuration, session = (
-            self.checkpoint_service.load_training_configuration(
-                checkpoint_path
-            )
+        configuration, session = self.checkpoint_service.load_training_configuration(
+            checkpoint_path
         )
 
         from_epoch = int(session.get("total_episodes", 0))
@@ -417,9 +420,7 @@ class TrainingService:
 
     # -------------------------------------------------------------------------
     def get_status(self) -> dict[str, Any]:
-        return self.training_run_manager.training_status(
-            self.polling_interval_seconds
-        )
+        return self.training_run_manager.training_status(self.polling_interval_seconds)
 
     # -------------------------------------------------------------------------
     def stop(self) -> dict[str, Any]:

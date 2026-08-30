@@ -8,6 +8,7 @@ from server.services.training_run import (
     default_training_stats,
 )
 
+
 ###############################################################################
 def test_default_training_stats_match_the_frontend_status_contract() -> None:
     stats = default_training_stats()
@@ -15,6 +16,7 @@ def test_default_training_stats_match_the_frontend_status_contract() -> None:
     assert stats["status"] == "idle"
     assert stats["current_bet_amount"] is None
     assert stats["current_strategy_id"] is None
+
 
 ###############################################################################
 def test_training_run_manager_owns_the_completed_run_projection() -> None:

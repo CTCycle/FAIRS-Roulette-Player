@@ -24,9 +24,9 @@ from server.learning.betting.types import (
     normalize_strategy_id,
 )
 
+
 ###############################################################################
 class BetSizer:
-
     # -------------------------------------------------------------------------
     def __init__(self, configuration: dict[str, Any]) -> None:
         configured_base = configuration.get("bet_amount")

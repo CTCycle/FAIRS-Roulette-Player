@@ -22,9 +22,9 @@ from server.learning.models.qnet import FAIRSnet
 from server.learning.models.strategy import StrategyNet
 from server.repositories.checkpoints import CheckpointRepository
 
+
 ###############################################################################
 class QueueProgressReporter:
-
     # -------------------------------------------------------------------------
     def __init__(self, target_queue: Any) -> None:
         self.target_queue = target_queue
@@ -50,9 +50,9 @@ class QueueProgressReporter:
         except Exception as exc:  # noqa: BLE001
             logger.debug("Failed to push training update: %s", exc)
 
+
 ###############################################################################
 class WorkerChannels:
-
     # -------------------------------------------------------------------------
     def __init__(
         self,
@@ -68,9 +68,9 @@ class WorkerChannels:
     def is_interrupted(self) -> bool:
         return bool(self.stop_event.is_set())
 
+
 ###############################################################################
 class ProcessWorker:
-
     # -------------------------------------------------------------------------
     def __init__(
         self,
@@ -136,7 +136,7 @@ class ProcessWorker:
             message = self.progress_queue.get(timeout=timeout)
         except queue.Empty:
             return None
-        except (EOFError, OSError):
+        except EOFError, OSError:
             return None
         if isinstance(message, dict):
             return message
@@ -149,7 +149,7 @@ class ProcessWorker:
                 self.progress_queue.get_nowait()
             except queue.Empty:
                 return
-            except (EOFError, OSError):
+            except EOFError, OSError:
                 return
 
     # -------------------------------------------------------------------------
@@ -158,7 +158,7 @@ class ProcessWorker:
             payload = self.result_queue.get_nowait()
         except queue.Empty:
             return None
-        except (EOFError, OSError):
+        except EOFError, OSError:
             return None
         if isinstance(payload, dict):
             return payload
@@ -207,6 +207,7 @@ class ProcessWorker:
             return None
         return self.process.exitcode
 
+
 ###############################################################################
 def process_target(
     target: Callable[..., None],
@@ -217,6 +218,7 @@ def process_target(
         os.setsid()
     target(worker=worker, **kwargs)
 
+
 ###############################################################################
 def queue_training_update(
     stats: dict[str, Any],
@@ -224,6 +226,7 @@ def queue_training_update(
 ) -> None:
     payload = {"type": "training_update", **stats}
     reporter(payload)
+
 
 ###############################################################################
 async def run_training_async(
@@ -296,6 +299,7 @@ async def run_training_async(
 
     return model, strategy_model, history, checkpoint_path
 
+
 ###############################################################################
 async def run_resume_training_async(
     checkpoint: str,
@@ -308,8 +312,8 @@ async def run_resume_training_async(
     polling_interval_seconds: float = 1.0,
 ) -> tuple[Any, Any | None, dict[str, Any], dict[str, Any], str]:
     checkpoint_repository = CheckpointRepository()
-    model, train_config, session, checkpoint_path = checkpoint_repository.load_checkpoint(
-        checkpoint
+    model, train_config, session, checkpoint_path = (
+        checkpoint_repository.load_checkpoint(checkpoint)
     )
     dynamic_enabled = bool(train_config.get("dynamic_betting_enabled", False))
     strategy_enabled = bool(train_config.get("bet_strategy_model_enabled", False))
@@ -361,6 +365,7 @@ async def run_resume_training_async(
     )
 
     return model, strategy_model, history, train_config, checkpoint_path
+
 
 ###############################################################################
 def run_training_process(
@@ -423,6 +428,7 @@ def run_training_process(
         )
     except Exception as exc:  # noqa: BLE001
         result_queue.put({"error": str(exc)})
+
 
 ###############################################################################
 def run_resume_training_process(

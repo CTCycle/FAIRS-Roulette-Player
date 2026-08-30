@@ -19,6 +19,7 @@ BOUNDARY_RULES: dict[str, tuple[str, ...]] = {
     "server.learning": ("server.api", "server.services", "server.repositories"),
 }
 
+
 ###############################################################################
 def _module_name(path: Path) -> str:
     relative = path.relative_to(SERVER_ROOT).with_suffix("")
@@ -26,6 +27,7 @@ def _module_name(path: Path) -> str:
     if parts[-1] == "__init__":
         parts.pop()
     return ".".join(("server", *parts))
+
 
 ###############################################################################
 def _imported_modules(tree: ast.AST) -> set[str]:
@@ -36,6 +38,7 @@ def _imported_modules(tree: ast.AST) -> set[str]:
         elif isinstance(node, ast.ImportFrom) and node.module:
             imported.add(node.module)
     return {name for name in imported if name.startswith("server.")}
+
 
 ###############################################################################
 def test_backend_module_boundaries_remain_explicit() -> None:
@@ -54,7 +57,12 @@ def test_backend_module_boundaries_remain_explicit() -> None:
                     if module == owner or module.startswith(f"{owner}.")
                     for target in targets
                 )
-            if any(imported == target or imported.startswith(f"{target}.") for target in forbidden):
+            if any(
+                imported == target or imported.startswith(f"{target}.")
+                for target in forbidden
+            ):
                 violations.append(f"{module} imports {imported}")
 
-    assert not violations, "Architectural boundary violations:\n" + "\n".join(sorted(violations))
+    assert not violations, "Architectural boundary violations:\n" + "\n".join(
+        sorted(violations)
+    )

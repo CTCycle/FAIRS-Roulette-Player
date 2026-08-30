@@ -18,11 +18,13 @@ from server.bootstrap import bootstrap_runtime  # noqa: E402
 
 bootstrap_runtime()
 
+
 ###############################################################################
 def _normalize_connect_host(host: str) -> str:
     if host in {"0.0.0.0", "::", "[::]"}:
         return "127.0.0.1"
     return host
+
 
 ###############################################################################
 def _build_base_url(
@@ -42,17 +44,20 @@ API_BASE_URL = os.getenv("APP_TEST_BACKEND_URL") or _build_base_url(
 )
 API_BASE_PATH = f"{API_BASE_URL}/api"
 
+
 ###############################################################################
 @pytest.fixture(scope="session")
 def base_url() -> str:
     """Returns the base URL of the UI."""
     return UI_BASE_URL
 
+
 ###############################################################################
 @pytest.fixture(scope="session")
 def api_base_url() -> str:
     """Returns the base URL of the API."""
     return API_BASE_PATH
+
 
 ###############################################################################
 @pytest.fixture

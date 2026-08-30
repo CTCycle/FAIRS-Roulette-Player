@@ -10,6 +10,7 @@ from server.services.training_worker import run_training_process
 from server.services import training as training_module
 from server.services.training import TrainingService
 
+
 ###############################################################################
 def build_service(
     polling_interval_seconds: float = 1.0,
@@ -39,6 +40,7 @@ def build_service(
     )
     return service, training_run_manager, checkpoint_service
 
+
 ###############################################################################
 def test_start_training_starts_job_and_returns_contract() -> None:
     service, training_run_manager, _ = build_service()
@@ -46,6 +48,7 @@ def test_start_training_starts_job_and_returns_contract() -> None:
     assert payload["status"] == "started"
     assert payload["job_id"] == "job123"
     training_run_manager.start_job.assert_called_once()
+
 
 ###############################################################################
 def test_start_training_requires_dataset_without_generator() -> None:
@@ -55,6 +58,7 @@ def test_start_training_requires_dataset_without_generator() -> None:
             TrainingConfig(use_data_generator=False, dataset_id=None)
         )
 
+
 ###############################################################################
 def test_training_responses_use_injected_polling_interval() -> None:
     service, _, _ = build_service(polling_interval_seconds=2.5)
@@ -63,6 +67,7 @@ def test_training_responses_use_injected_polling_interval() -> None:
 
     assert started["poll_interval"] == 2.5
     assert service.get_status()["poll_interval"] == 2.5
+
 
 ###############################################################################
 def test_resume_training_starts_resume_job() -> None:
@@ -74,12 +79,14 @@ def test_resume_training_starts_resume_job() -> None:
     assert payload["job_type"] == "training"
     training_run_manager.start_job.assert_called_once()
 
+
 ###############################################################################
 def test_stop_sets_cancellation_on_current_job() -> None:
     service, training_run_manager, _ = build_service()
     payload = service.stop()
     assert payload["status"] == "stopping"
     training_run_manager.cancel_job.assert_called_once_with("job123")
+
 
 ###############################################################################
 def test_get_and_delete_job_contracts() -> None:
@@ -99,13 +106,13 @@ def test_get_and_delete_job_contracts() -> None:
     assert job["job_id"] == "job123"
     assert cancel["job_id"] == "job123"
 
+
 ###############################################################################
 def test_training_worker_receives_explicit_runtime_dependencies(monkeypatch) -> None:
     started: dict[str, object] = {}
 
     ###############################################################################
     class FakeWorker:
-
         # -------------------------------------------------------------------------
         def start(self, target, kwargs) -> None:
             started["target"] = target

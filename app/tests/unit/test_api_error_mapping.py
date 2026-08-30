@@ -9,12 +9,14 @@ from server.api.datasets import delete_roulette_dataset
 from server.api.training import _map_training_exception
 from server.services.checkpoints import CheckpointReferenceError
 
+
 ###############################################################################
 def test_training_exception_mapping_preserves_conflict_category() -> None:
     mapped = _map_training_exception(RuntimeError("training is already running"))
 
     assert mapped.status_code == 409
     assert mapped.detail == "training is already running"
+
 
 ###############################################################################
 def test_dataset_delete_route_maps_checkpoint_reference_to_conflict() -> None:
