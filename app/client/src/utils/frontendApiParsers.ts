@@ -12,10 +12,7 @@ const requireRecord = (value: unknown, label: string): Record<string, unknown> =
     return value;
 };
 
-const parseRowCount = (value: unknown): number | null => {
-    if (value === null) {
-        return null;
-    }
+const parseRowCount = (value: unknown): number => {
     if (typeof value !== 'number' || !Number.isInteger(value) || value < 0) {
         throw new Error('Dataset summary row_count is invalid.');
     }

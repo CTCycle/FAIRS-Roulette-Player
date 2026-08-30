@@ -59,6 +59,17 @@ const requiredNumber = (
     return value;
 };
 
+const requiredInteger = (
+    record: Record<string, unknown>,
+    key: string,
+): number => {
+    const value = requiredNumber(record, key);
+    if (!Number.isInteger(value)) {
+        throw new Error(`Training status field ${key} is invalid.`);
+    }
+    return value;
+};
+
 const nullableNumber = (
     record: Record<string, unknown>,
     key: string,
@@ -73,15 +84,26 @@ const nullableNumber = (
     return value;
 };
 
+const nullableInteger = (
+    record: Record<string, unknown>,
+    key: string,
+): number | null => {
+    const value = nullableNumber(record, key);
+    if (value !== null && !Number.isInteger(value)) {
+        throw new Error(`Training status field ${key} is invalid.`);
+    }
+    return value;
+};
+
 const parseHistoryPoint = (value: unknown): TrainingHistoryPoint => {
     if (!isRecord(value)) {
         throw new Error('Training history contains an invalid point.');
     }
     const point: TrainingHistoryPoint = {
-        time_step: requiredNumber(value, 'time_step'),
+        time_step: requiredInteger(value, 'time_step'),
         loss: requiredNumber(value, 'loss'),
         rmse: requiredNumber(value, 'rmse'),
-        epoch: requiredNumber(value, 'epoch'),
+        epoch: requiredInteger(value, 'epoch'),
     };
     for (const key of ['val_loss', 'val_rmse'] as const) {
         if (key in value && value[key] !== null) {
@@ -105,10 +127,10 @@ const parseTrainingStats = (value: unknown): TrainingStats => {
         throw new Error('Training status contains an invalid status code.');
     }
     const stats: TrainingStats = {
-        epoch: requiredNumber(value, 'epoch'),
-        total_epochs: requiredNumber(value, 'total_epochs'),
-        max_steps: requiredNumber(value, 'max_steps'),
-        time_step: requiredNumber(value, 'time_step'),
+        epoch: requiredInteger(value, 'epoch'),
+        total_epochs: requiredInteger(value, 'total_epochs'),
+        max_steps: requiredInteger(value, 'max_steps'),
+        time_step: requiredInteger(value, 'time_step'),
         loss: nullableNumber(value, 'loss'),
         rmse: nullableNumber(value, 'rmse'),
         val_loss: nullableNumber(value, 'val_loss'),
@@ -119,7 +141,7 @@ const parseTrainingStats = (value: unknown): TrainingStats => {
         capital: requiredNumber(value, 'capital'),
         capital_gain: requiredNumber(value, 'capital_gain'),
         current_bet_amount: nullableNumber(value, 'current_bet_amount'),
-        current_strategy_id: nullableNumber(value, 'current_strategy_id'),
+        current_strategy_id: nullableInteger(value, 'current_strategy_id'),
         status: status as TrainingStatusCode,
     };
     if ('current_strategy_name' in value) {

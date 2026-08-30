@@ -45,6 +45,21 @@ def test_legacy_state_and_persistence_paths_are_removed() -> None:
     assert "DataStore" not in app_source
     assert "JobManager" not in app_source
 
+    openapi = json.loads(
+        (APP_ROOT / "shared" / "openapi.json").read_text(encoding="utf-8")
+    )
+    assert set(openapi["components"]["schemas"]["InferenceStartRequest"]["properties"]) == {
+        "checkpoint",
+        "dataset_id",
+        "game_capital",
+        "game_bet",
+    }
+    assert set(openapi["components"]["schemas"]["HealthResponse"]["properties"]) == {
+        "status",
+        "application",
+        "version",
+    }
+
 ###############################################################################
 def test_frontend_package_does_not_duplicate_backend_version_authority() -> None:
     package = json.loads(
