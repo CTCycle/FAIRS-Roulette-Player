@@ -86,6 +86,17 @@ const optionalNumber = (
     return value;
 };
 
+const optionalInteger = (
+    record: Record<string, unknown>,
+    key: string,
+): number | undefined => {
+    const value = optionalNumber(record, key);
+    if (value !== undefined && !Number.isInteger(value)) {
+        throw new Error(`Inference prediction field ${key} is invalid.`);
+    }
+    return value;
+};
+
 const normalizePrediction = (value: unknown): PredictionResult => {
     const payload = requireRecord(value, 'Inference prediction');
     const prediction: PredictionResult = {
@@ -93,10 +104,13 @@ const normalizePrediction = (value: unknown): PredictionResult => {
         description: requireString(payload, 'description'),
     };
     const confidence = optionalNumber(payload, 'confidence');
+    if (confidence !== undefined && (confidence < 0 || confidence > 1)) {
+        throw new Error('Inference prediction field confidence is invalid.');
+    }
     if (confidence !== undefined) {
         prediction.confidence = confidence;
     }
-    const betStrategyId = optionalNumber(payload, 'bet_strategy_id');
+    const betStrategyId = optionalInteger(payload, 'bet_strategy_id');
     if (betStrategyId !== undefined) {
         prediction.betStrategyId = betStrategyId;
     }
@@ -107,11 +121,11 @@ const normalizePrediction = (value: unknown): PredictionResult => {
         }
         prediction.betStrategyName = betStrategyName;
     }
-    const suggestedBetAmount = optionalNumber(payload, 'suggested_bet_amount');
+    const suggestedBetAmount = optionalInteger(payload, 'suggested_bet_amount');
     if (suggestedBetAmount !== undefined) {
         prediction.suggestedBetAmount = suggestedBetAmount;
     }
-    const currentBetAmount = optionalNumber(payload, 'current_bet_amount');
+    const currentBetAmount = optionalInteger(payload, 'current_bet_amount');
     if (currentBetAmount !== undefined) {
         prediction.currentBetAmount = currentBetAmount;
     }
@@ -167,9 +181,9 @@ const parseStartResponse = (value: unknown): InferenceStartResponse => {
     return {
         session_id: requireString(payload, 'session_id'),
         checkpoint: requireString(payload, 'checkpoint'),
-        game_capital: requireNumber(payload, 'game_capital'),
-        game_bet: requireNumber(payload, 'game_bet'),
-        current_capital: requireNumber(payload, 'current_capital'),
+        game_capital: requireInteger(payload, 'game_capital'),
+        game_bet: requireInteger(payload, 'game_bet'),
+        current_capital: requireInteger(payload, 'current_capital'),
         prediction: normalizePrediction(payload.prediction),
     };
 };

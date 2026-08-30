@@ -25,7 +25,7 @@ interface CheckpointPreviewProps {
 interface DatasetInfo {
     datasetId: number;
     datasetName: string;
-    rowCount: number | null;
+    rowCount: number;
 }
 
 interface CheckpointSummary {
@@ -271,7 +271,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
             const requiredRows = parsePositiveNumber(summary.perceptive_field_size);
             const preferredDatasetId = parseDatasetId(summary.dataset_id);
             const compatibleDatasets = datasets.filter((dataset) => (
-                requiredRows === null || dataset.rowCount === null || dataset.rowCount >= requiredRows
+                requiredRows === null || dataset.rowCount >= requiredRows
             ));
             const selectedDataset = (
                 compatibleDatasets.find((dataset) => dataset.datasetId === preferredDatasetId)

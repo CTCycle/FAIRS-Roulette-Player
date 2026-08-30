@@ -20,7 +20,7 @@ interface DatasetPreviewProps {
 interface DatasetSummary {
     datasetId: number;
     name: string;
-    rowCount: number | null;
+    rowCount: number;
 }
 
 const WIZARD_STEPS = [
@@ -262,10 +262,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
         goToNextWizardStep();
     };
 
-    const formatRowCount = (rowCount: number | null) => {
-        if (rowCount === null) {
-            return 'Rows: --';
-        }
+    const formatRowCount = (rowCount: number) => {
         return `${rowCount.toLocaleString()} rows`;
     };
 

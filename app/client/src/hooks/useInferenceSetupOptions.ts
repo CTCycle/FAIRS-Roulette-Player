@@ -13,7 +13,7 @@ import {
 export interface InferenceDatasetOption {
     dataset_id: number;
     dataset_name: string;
-    row_count: number | null;
+    row_count: number;
 }
 
 interface UseInferenceSetupOptionsParams {
@@ -127,7 +127,6 @@ export const useInferenceSetupOptions = ({
         const requiredRows = selectedCheckpointMetadata?.perceptiveFieldSize;
         return requiredRows === null
             || requiredRows === undefined
-            || dataset.row_count === null
             || dataset.row_count >= requiredRows;
     }, [datasets, selectedCheckpointMetadata, setup.selectedDataset, setup.uploadedDatasetId]);
 
@@ -145,7 +144,6 @@ export const useInferenceSetupOptions = ({
             const isCompatible = (dataset: InferenceDatasetOption) => (
                 requiredRows === null
                 || requiredRows === undefined
-                || dataset.row_count === null
                 || dataset.row_count >= requiredRows
             );
 

@@ -1,7 +1,7 @@
 export interface DatasetSummaryItem {
     datasetId: number;
     datasetName: string;
-    rowCount: number | null;
+    rowCount: number;
 }
 
 export interface CheckpointMetadataResponse {
