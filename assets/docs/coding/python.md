@@ -1,6 +1,6 @@
 ## Python
 
-Last updated: 2026-08-20
+Last updated: 2026-08-30
 
 ## Runtime Baseline
 
@@ -38,7 +38,7 @@ Last updated: 2026-08-20
   - start endpoint
   - status endpoint
   - stop or cancel endpoint
-- Reuse the `JobManager` plus worker-process model for training workloads.
+- Reuse `TrainingRunManager` plus the worker-process model for training workloads. `TrainingRunManager` is the single in-process training-run state owner.
 
 ## Structure Rules
 
@@ -66,7 +66,7 @@ Last updated: 2026-08-20
 
 ## Persistence And Settings Rules
 
-- Route data access through repository queries and serializers; do not construct databases inside API handlers.
+- Route data access through `DatasetRepository`, `InferenceRepository`, and `CheckpointRepository`; do not construct databases inside API handlers.
 - Keep schema, serializer, and API contracts synchronized.
 - Runtime flags come from environment variables.
 - Structured non-env settings live in `settings/configurations.json`.

@@ -1,6 +1,6 @@
 ## Configuration
 
-Last updated: 2026-08-20
+Last updated: 2026-08-30
 
 ## Environment Variables
 
@@ -14,7 +14,6 @@ The runtime scripts and backend consume these environment keys:
 - `ENABLE_API_DOCS`
 - `RELOAD`
 - `EMBEDDED_DATABASE`
-- `DATABASE_URL`
 - `DATABASE_ENGINE`
 - `DATABASE_HOST`
 - `DATABASE_PORT`
@@ -38,14 +37,10 @@ The runtime scripts and backend consume these environment keys:
   - set by the launcher below `app/tests/cache`
 - `FAIRS_DATA_DIR`
   - overrides the mutable database, logs, and checkpoints directory
-- `FAIRS_LOG_DIR`
-  - overrides the log directory; primarily useful for isolated test runs
-- `FAIRS_TAURI_MODE`
-  - marks the health response as `desktop` and requires a built frontend, but does not provide packaging
 
 For external PostgreSQL mode, `DATABASE_ENGINE` must be `postgresql+psycopg`. Legacy aliases such as `postgres`, `postgresql`, and `postgresql+psycopg2` are rejected during startup validation.
 
-The backend creates timestamped `FAIRS_*.log` files in `FAIRS_LOG_DIR` when set, or in the active data `logs` directory otherwise.
+The backend creates timestamped `FAIRS_*.log` files under the active data root's `logs` directory.
 
 The application entry point calls `server.bootstrap.bootstrap_runtime()` explicitly before importing Keras-backed application modules. Direct imports of `server`, common path helpers, and logging helpers do not load `.env`, resolve mutable paths from the environment, create directories, or configure the global logging tree.
 
@@ -74,7 +69,7 @@ The application entry point calls `server.bootstrap.bootstrap_runtime()` explici
   - first tries the configured database and creates it only after SQLSTATE `3D000`, under an admin advisory lock
   - requires `CREATEDB` for automatic database creation; migrations then run under a target transaction advisory lock
 
-The application and launcher use the same idempotent runner. The runner adopts only an exact unversioned baseline, preserves its rows when stamping `head`, and fails before service construction for partial/drifted/unknown/ahead states.
+The application and launcher use the same idempotent runner. Empty databases upgrade to `head`; non-empty unversioned databases are rejected unchanged and must be migrated explicitly. Partial/drifted/unknown/ahead states fail before service construction.
 
 ### Backend Log Visibility
 

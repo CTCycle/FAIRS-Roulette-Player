@@ -1,6 +1,6 @@
 ## System Overview
 
-Last updated: 2026-08-20
+Last updated: 2026-08-30
 
 ## Current State
 
@@ -49,7 +49,6 @@ The structure below is source-focused and excludes dependency, cache, and genera
 │  │     ├─ App.tsx
 │  │     ├─ main.tsx
 │  │     ├─ components/
-│  │     ├─ context/
 │  │     ├─ hooks/
 │  │     ├─ pages/
 │  │     ├─ styles/
@@ -95,16 +94,16 @@ The structure below is source-focused and excludes dependency, cache, and genera
 - `app/server/contracts` contains Pydantic request/response contracts and validated runtime settings. These are boundary contracts, not persistent entities or a separate domain model.
 - `app/server/services` owns application orchestration: dataset import, checkpoint lifecycle, training jobs, inference sessions, startup checks, in-process job state, and the training worker process orchestration.
 - `app/server/learning` owns roulette betting logic, neural models, environments, training algorithms, and inference players. Learning receives prepared data and explicit runtime inputs rather than constructing persistence adapters.
-- `app/server/repositories` owns SQLAlchemy schema definitions, database engines/transactions, dataset and inference persistence, training queries, and checkpoint/model serialization.
+- `app/server/repositories` owns SQLAlchemy schema definitions, database engines/transactions, dataset and inference persistence, and checkpoint filesystem/configuration I/O.
 - `app/server/common` contains narrowly scoped cross-cutting primitives such as paths, constants, error mapping, logging, session/checkpoint normalization, and roulette feature encoding.
 - `app/server/configurations` resolves environment and JSON settings and exposes the runtime configuration used by composition and selected ML components.
 
 ## Frontend Ownership
 
-- `src/App.tsx` composes `BrowserRouter`, providers, and the two application routes.
+- `src/App.tsx` composes `BrowserRouter`, the guidance provider, and the two application routes.
 - `src/pages` owns route-level composition for Training and Inference.
 - `src/components` owns reusable layout, guidance, upload, wizard, dashboard, and session views.
-- `src/context` and `src/hooks` own shared state and feature-local state/request orchestration.
+- `src/hooks` own feature-local request/status orchestration; Training and Inference pages own their workflow snapshots.
 - `src/types` defines frontend state and response shapes; `src/utils` contains defensive API parsing and upload helpers.
 - Styling is token-driven through `src/styles/global.css`, feature stylesheets, and CSS modules.
 

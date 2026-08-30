@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import partial
 import time
 from pathlib import Path
 from typing import Any
@@ -18,7 +19,7 @@ from server.services.training_worker import (
 )
 from server.services.checkpoints import CheckpointService
 from server.services.training_data import load_training_series
-from server.services.training_run import TrainingRunManager
+from server.services.training_run import TrainingRun, TrainingRunManager
 
 ###############################################################################
 def calculate_progress(stats: dict[str, Any]) -> float:
@@ -324,15 +325,19 @@ class TrainingService:
         ) and not configuration.get("dataset_id"):
             raise ValueError("dataset_id is required when use_data_generator is false.")
 
+        total_epochs = int(configuration.get("episodes", 10))
+        max_steps = int(configuration.get("max_steps_episode", 2000))
         job_id = self.training_run_manager.start_job(
             job_type=self.JOB_TYPE,
             runner=self.run_training_job,
             kwargs={"configuration": configuration},
+            initializer=partial(
+                self._initialize_training_run,
+                total_epochs=total_epochs,
+                max_steps=max_steps,
+            ),
         )
 
-        total_epochs = int(configuration.get("episodes", 10))
-        max_steps = int(configuration.get("max_steps_episode", 2000))
-        self.training_run_manager.reset_training_state(job_id, total_epochs, max_steps)
         status = self.training_run_manager.training_status(
             self.polling_interval_seconds
         )
@@ -374,6 +379,8 @@ class TrainingService:
         )
         restored_points = build_history_points(session, initial_capital_value)
 
+        total_epochs = from_epoch + int(config.additional_episodes)
+        max_steps = int(configuration.get("max_steps_episode", 2000))
         job_id = self.training_run_manager.start_job(
             job_type=self.JOB_TYPE,
             runner=self.run_resume_training_job,
@@ -381,13 +388,13 @@ class TrainingService:
                 "checkpoint": checkpoint,
                 "additional_episodes": config.additional_episodes,
             },
-        )
-
-        total_epochs = from_epoch + int(config.additional_episodes)
-        max_steps = int(configuration.get("max_steps_episode", 2000))
-        self.training_run_manager.reset_training_state(job_id, total_epochs, max_steps)
-        self.training_run_manager.restore_training_history(
-            job_id, restored_points, from_epoch
+            initializer=partial(
+                self._initialize_training_run,
+                total_epochs=total_epochs,
+                max_steps=max_steps,
+                history_points=restored_points,
+                from_epoch=from_epoch,
+            ),
         )
 
         status = self.training_run_manager.training_status(
@@ -448,6 +455,20 @@ class TrainingService:
             **job_status,
             "poll_interval": self.polling_interval_seconds,
         }
+
+    # -------------------------------------------------------------------------
+    @staticmethod
+    def _initialize_training_run(
+        run: TrainingRun,
+        *,
+        total_epochs: int,
+        max_steps: int,
+        history_points: list[dict[str, Any]] | None = None,
+        from_epoch: int = 0,
+    ) -> None:
+        run.reset_training_state(total_epochs, max_steps)
+        if history_points is not None:
+            run.restore_history(history_points, from_epoch)
 
     # -------------------------------------------------------------------------
     def delete_job(self, job_id: str) -> dict[str, Any]:

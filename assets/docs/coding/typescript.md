@@ -1,6 +1,6 @@
 ## TypeScript
 
-Last updated: 2026-08-20
+Last updated: 2026-08-30
 
 ## Baseline
 
@@ -13,7 +13,7 @@ Last updated: 2026-08-20
 ## Frontend Architecture Rules
 
 - Route composition and top-level wiring belong in `app/client/src/App.tsx`.
-- Shared app state belongs in `app/client/src/context` and related hooks.
+- Keep workflow state local to the owning page or feature hook. Use context only for true cross-cutting UI concerns such as guidance.
 - Page orchestration belongs in `app/client/src/pages`.
 - Reusable view units belong in `app/client/src/components`.
 - Keep API requests scoped to the consuming feature unless extraction clearly reduces duplication.
@@ -26,7 +26,7 @@ Last updated: 2026-08-20
 - Keep state updates immutable.
 - Keep effect dependencies explicit and stable.
 - Keep local UI state close to the component that owns it.
-- Use context only for state that must cross page or feature boundaries.
+- Do not create a global application-state store for training or inference workflows; pass typed snapshots through the owning page boundary.
 
 ## UI Implementation Rules
 

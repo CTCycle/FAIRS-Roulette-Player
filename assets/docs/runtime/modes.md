@@ -1,6 +1,6 @@
 ## Runtime Modes
 
-Last updated: 2026-08-13
+Last updated: 2026-08-30
 
 ## Supported Modes
 
@@ -19,7 +19,7 @@ Last updated: 2026-08-13
 ### Unsupported Packaging Modes
 
 - Container deployment is not implemented; the repository has no Dockerfile or supported container startup pipeline.
-- The backend recognizes `FAIRS_TAURI_MODE` for a desktop-mode health label and a built-frontend guard, but this checkout contains no Tauri packaging or supported desktop distribution.
+- Tauri, desktop installers, containers, and other packaged distribution modes are not implemented or supported by this checkout.
 
 ## Cross-Mode Differences
 

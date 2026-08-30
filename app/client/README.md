@@ -5,12 +5,12 @@ The frontend is a React 19 + TypeScript + Vite single-page client for the local 
 ## Structure
 
 - `src/main.tsx` mounts the React tree.
-- `src/App.tsx` composes `BrowserRouter`, `AppStateProvider`, `GuidanceProvider`, and the shared `MainLayout`.
+- `src/App.tsx` composes `BrowserRouter`, `GuidanceProvider`, and the shared `MainLayout`.
 - `src/pages/Training` owns the six-step training workflow, dataset/checkpoint previews, and live training monitor.
 - `src/pages/Inference` composes the inference workspace and `components/inference/GameSession`.
 - `src/components/Layout` contains the shared shell and navigation.
 - `src/components/guidance` contains optional Help, walkthrough, and Tips & Tricks behavior.
-- `src/context` and `src/hooks` own shared state and feature-local request/workflow state.
+- `src/hooks` own feature-local request/workflow state; pages own state that spans their child components.
 - `src/types` contains frontend state and API response shapes.
 - `src/utils` contains defensive payload parsing and dataset-upload helpers.
 
@@ -35,7 +35,7 @@ The package currently defines lint, build, dev, and preview scripts but no stand
 
 ## Implementation guidance
 
-- Keep route composition in `App.tsx`, cross-page state in context, and feature state close to its page or hook.
+- Keep route composition in `App.tsx`, page workflow state close to its page, and reusable request/status state in feature hooks.
 - Keep API requests, parsing, loading, and error handling inside the consuming feature unless a small helper clearly removes duplication.
 - Preserve existing design tokens, focus behavior, keyboard interactions, responsive layouts, and explicit loading/empty/error states.
 - Avoid broad component rewrites; `GameSession` and the training preview/dashboard components are intentionally identified as future extraction candidates in the architecture review.
