@@ -9,6 +9,7 @@ from server.contracts.upload import UploadRequest
 from server.services.checkpoints import CheckpointReferenceError
 from server.services.datasets import DatasetService
 
+
 ###############################################################################
 def build_dataset_service() -> tuple[DatasetService, Mock, Mock, Mock]:
     dataset_repository = Mock()
@@ -20,6 +21,7 @@ def build_dataset_service() -> tuple[DatasetService, Mock, Mock, Mock]:
         loader=loader,
     )
     return service, dataset_repository, importer, loader
+
 
 ###############################################################################
 def test_import_upload_normalizes_filename_separator_and_sheet_name() -> None:
@@ -43,6 +45,7 @@ def test_import_upload_normalizes_filename_separator_and_sheet_name() -> None:
     loader.load_bytes.assert_called_once()
     importer.import_dataframe.assert_called_once()
 
+
 ###############################################################################
 def test_import_upload_rejects_oversized_payload() -> None:
     service, _, _, _ = build_dataset_service()
@@ -52,6 +55,7 @@ def test_import_upload_rejects_oversized_payload() -> None:
             filename="big.csv",
             request=UploadRequest(dataset_kind="training"),
         )
+
 
 ###############################################################################
 def test_dataset_list_and_delete_delegate_to_repository() -> None:
@@ -82,6 +86,7 @@ def test_dataset_list_and_delete_delegate_to_repository() -> None:
     assert len(summary_response.datasets) == 1
     assert delete_response.status == "deleted"
     dataset_repository.delete.assert_called_once_with(1)
+
 
 ###############################################################################
 def test_dataset_delete_blocks_checkpoint_references() -> None:

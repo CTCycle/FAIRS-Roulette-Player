@@ -24,9 +24,9 @@ from server.learning.betting.types import (
     strategy_name,
 )
 
+
 ###############################################################################
 class BetsAndRewards:
-
     # -------------------------------------------------------------------------
     def __init__(self, configuration: dict[str, Any]) -> None:
         self.seed = configuration.get("train_seed", 42)
@@ -171,9 +171,9 @@ class BetsAndRewards:
         capital += reward
         return reward, capital, done
 
+
 ###############################################################################
 class RouletteWheelRenderer:
-
     # -------------------------------------------------------------------------
     def __init__(self, red_numbers: list[int], black_numbers: list[int]) -> None:
         self.red_numbers = set(red_numbers)
@@ -318,9 +318,9 @@ class RouletteWheelRenderer:
             return set(self.third_dozen_numbers)
         return set()
 
+
 ###############################################################################
 class RouletteEnvironment(gym.Env):
-
     # -------------------------------------------------------------------------
     def __init__(
         self, data: pd.DataFrame, configuration: dict[str, Any], checkpoint_path: str

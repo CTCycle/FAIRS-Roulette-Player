@@ -4,6 +4,7 @@ from server.common import path as shared_paths
 from server.configurations import ServerSettings
 from server.repositories.database.utils import is_supported_postgres_engine
 
+
 ###############################################################################
 def run_startup_validations(settings: ServerSettings) -> None:
     for directory in (

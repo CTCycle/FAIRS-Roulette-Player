@@ -5,6 +5,7 @@ from playwright.sync_api import Page, expect
 
 GUIDANCE_KEY = "fairs.guidance"
 
+
 ###############################################################################
 def _prepare_training_guidance(page: Page, base_url: str) -> None:
     page.goto(f"{base_url}/training")
@@ -12,6 +13,7 @@ def _prepare_training_guidance(page: Page, base_url: str) -> None:
     page.evaluate(f"localStorage.removeItem('{GUIDANCE_KEY}')")
     page.reload()
     page.wait_for_timeout(300)
+
 
 ###############################################################################
 class TestGuidance:
@@ -29,7 +31,9 @@ class TestGuidance:
         tips = page.get_by_role("dialog", name="Tips & Tricks")
         expect(tips).to_be_visible()
         launch_button = tips.get_by_role("button", name="Show the Training walkthrough")
-        expect(tips.locator(".guidance-tour-heading").get_by_role("button")).to_be_visible()
+        expect(
+            tips.locator(".guidance-tour-heading").get_by_role("button")
+        ).to_be_visible()
         expect(tips.get_by_role("button", name="Replay")).to_have_count(0)
         expect(tips.get_by_role("button", name="Reset guidance")).to_have_count(0)
         launch_button.click()
@@ -69,9 +73,7 @@ class TestGuidance:
         page.wait_for_timeout(300)
 
         expect(page.get_by_role("dialog")).not_to_be_visible()
-        page.get_by_role(
-            "button", name="Dismiss Train a checkpoint first"
-        ).click()
+        page.get_by_role("button", name="Dismiss Train a checkpoint first").click()
         page.reload()
         page.wait_for_timeout(300)
         expect(

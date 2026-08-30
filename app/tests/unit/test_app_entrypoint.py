@@ -13,6 +13,7 @@ from server.contracts.configuration import (
     ServerSettings,
 )
 
+
 ###############################################################################
 def _build_settings() -> ServerSettings:
     return ServerSettings(
@@ -37,6 +38,7 @@ def _build_settings() -> ServerSettings:
         ),
     )
 
+
 ###############################################################################
 def _build_external_settings() -> ServerSettings:
     settings = _build_settings()
@@ -58,6 +60,7 @@ def _build_external_settings() -> ServerSettings:
         device=settings.device,
     )
 
+
 ###############################################################################
 def _stub_lifespan_dependencies(
     monkeypatch,
@@ -78,7 +81,6 @@ def _stub_lifespan_dependencies(
 
     ###############################################################################
     class DatabaseStub:
-
         # -------------------------------------------------------------------------
         def dispose(self) -> None:
             dispose_calls.append(True)
@@ -96,11 +98,14 @@ def _stub_lifespan_dependencies(
 
     return initialize_calls, dispose_calls
 
+
 ###############################################################################
 def test_root_redirects_to_docs_when_client_build_is_missing(monkeypatch) -> None:
     import server.app as app_module
 
-    initialize_calls, dispose_calls = _stub_lifespan_dependencies(monkeypatch, app_module)
+    initialize_calls, dispose_calls = _stub_lifespan_dependencies(
+        monkeypatch, app_module
+    )
     monkeypatch.setenv("ENABLE_API_DOCS", "true")
     monkeypatch.setattr(app_module, "_client_build_available", lambda: False)
 
@@ -114,11 +119,14 @@ def test_root_redirects_to_docs_when_client_build_is_missing(monkeypatch) -> Non
     assert len(initialize_calls) == 1
     assert dispose_calls == [True]
 
+
 ###############################################################################
 def test_root_returns_status_when_api_docs_are_disabled(monkeypatch) -> None:
     import server.app as app_module
 
-    initialize_calls, dispose_calls = _stub_lifespan_dependencies(monkeypatch, app_module)
+    initialize_calls, dispose_calls = _stub_lifespan_dependencies(
+        monkeypatch, app_module
+    )
     monkeypatch.setenv("ENABLE_API_DOCS", "false")
     monkeypatch.setattr(app_module, "_client_build_available", lambda: False)
 
@@ -132,6 +140,7 @@ def test_root_returns_status_when_api_docs_are_disabled(monkeypatch) -> None:
     assert len(initialize_calls) == 1
     assert dispose_calls == [True]
 
+
 ###############################################################################
 def test_root_and_nested_routes_serve_built_client_when_available(
     tmp_path: Path,
@@ -139,7 +148,9 @@ def test_root_and_nested_routes_serve_built_client_when_available(
 ) -> None:
     import server.app as app_module
 
-    initialize_calls, dispose_calls = _stub_lifespan_dependencies(monkeypatch, app_module)
+    initialize_calls, dispose_calls = _stub_lifespan_dependencies(
+        monkeypatch, app_module
+    )
 
     client_dist = tmp_path / "dist"
     assets_dir = client_dist / "assets"
@@ -167,6 +178,7 @@ def test_root_and_nested_routes_serve_built_client_when_available(
     assert len(initialize_calls) == 1
     assert dispose_calls == [True]
 
+
 ###############################################################################
 def test_postgresql_startup_runs_the_shared_initializer(monkeypatch) -> None:
     import server.app as app_module
@@ -186,6 +198,7 @@ def test_postgresql_startup_runs_the_shared_initializer(monkeypatch) -> None:
     assert response.status_code == 307
     assert initialize_calls == [_build_external_settings().database]
     assert dispose_calls == [True]
+
 
 ###############################################################################
 def test_postgresql_startup_reports_connection_failure(monkeypatch) -> None:

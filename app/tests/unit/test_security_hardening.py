@@ -19,6 +19,7 @@ from server.services.datasets import (
     normalize_sheet_name,
 )
 
+
 ###############################################################################
 def test_checkpoint_name_validation_rejects_path_traversal_patterns() -> None:
     for candidate in ("", ".", "..", "../x", "..\\x", "x/y", "C:temp", "bad\x00name"):
@@ -27,6 +28,7 @@ def test_checkpoint_name_validation_rejects_path_traversal_patterns() -> None:
 
     assert normalize_checkpoint_identifier("checkpoint_01") == "checkpoint_01"
 
+
 ###############################################################################
 def test_checkpoint_path_builder_stays_under_checkpoint_root() -> None:
     checkpoint_root = CHECKPOINT_PATH.resolve()
@@ -34,6 +36,7 @@ def test_checkpoint_path_builder_stays_under_checkpoint_root() -> None:
 
     assert checkpoint_root in resolved.parents
     assert resolved == checkpoint_root / "safe-checkpoint"
+
 
 ###############################################################################
 def test_upload_parameter_normalizers_apply_bounds() -> None:
@@ -53,6 +56,7 @@ def test_upload_parameter_normalizers_apply_bounds() -> None:
     with pytest.raises(ValueError):
         normalize_filename("bad\x00.csv")
 
+
 ###############################################################################
 def test_dataset_name_normalization_rejects_invalid_values() -> None:
     assert normalize_dataset_name("training_set") == "training_set"
@@ -63,5 +67,6 @@ def test_dataset_name_normalization_rejects_invalid_values() -> None:
         normalize_dataset_name("x" * 129)
     with pytest.raises(ValueError):
         normalize_dataset_name("bad\x00name")
+
 
 ###############################################################################

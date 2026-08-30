@@ -7,9 +7,9 @@ from keras.mixed_precision import set_global_policy
 
 from server.common.utils.logger import logger
 
+
 ###############################################################################
 class DeviceConfig:
-
     # -------------------------------------------------------------------------
     def __init__(self, configuration: dict[str, Any]) -> None:
         self.configuration = configuration

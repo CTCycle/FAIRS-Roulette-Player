@@ -16,6 +16,7 @@ from server.common.utils.logger import logger
 from server.contracts.training import CheckpointConfiguration
 from server.learning import models as custom_layers_registry  # noqa: F401
 
+
 ###############################################################################
 class CheckpointRepository:
     """Own the checkpoint filesystem and validate its current file contract."""

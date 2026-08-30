@@ -5,6 +5,7 @@ import pandas as pd
 from server.common.roulette import encode_roulette_series
 from server.services.training_data import TrainingDataService
 
+
 ###############################################################################
 def test_generated_training_series_matches_environment_contract() -> None:
     service = TrainingDataService(database_settings=None)
@@ -26,6 +27,7 @@ def test_generated_training_series_matches_environment_contract() -> None:
     assert "color_code" in dataset.columns
     assert "outcome" not in dataset.columns
     assert dataset["extraction"].between(0, 36).all()
+
 
 ###############################################################################
 def test_roulette_encoding_isolated_from_input_frame() -> None:

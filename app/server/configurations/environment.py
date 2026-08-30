@@ -11,16 +11,19 @@ from dotenv import load_dotenv
 from server.common import path as shared_paths
 from server.common.utils.logger import logger
 
+
 ###############################################################################
 @dataclass
 class _EnvironmentState:
     lock: Lock = field(default_factory=Lock)
     loaded: bool = False
 
+
 ###############################################################################
 @lru_cache(maxsize=1)
 def _environment_state() -> _EnvironmentState:
     return _EnvironmentState()
+
 
 ###############################################################################
 def ensure_environment_file() -> Path:
@@ -44,6 +47,7 @@ def ensure_environment_file() -> Path:
     logger.info("Created environment file from template: %s", env_path)
     return env_path
 
+
 ###############################################################################
 def load_environment(*, force: bool = False) -> Path | None:
     state = _environment_state()
@@ -57,6 +61,7 @@ def load_environment(*, force: bool = False) -> Path | None:
 
         state.loaded = True
         return env_path
+
 
 ###############################################################################
 def reset_environment_for_tests() -> None:

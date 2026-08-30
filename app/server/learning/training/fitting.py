@@ -29,6 +29,7 @@ from server.learning.training.environment import RouletteEnvironment
 
 HISTORY_POINTS_PER_EPISODE = 20
 
+
 ###############################################################################
 def has_non_finite_numbers(stats: dict[str, Any], keys: list[str]) -> bool:
     for key in keys:
@@ -43,9 +44,9 @@ def has_non_finite_numbers(stats: dict[str, Any], keys: list[str]) -> bool:
             return True
     return False
 
+
 ###############################################################################
 class DQNTraining:
-
     # -------------------------------------------------------------------------
     def __init__(
         self,
@@ -136,7 +137,9 @@ class DQNTraining:
             }
 
         # Progress update related
-        self.polling_interval_ms = int(max(0.25, float(polling_interval_seconds)) * 1000)
+        self.polling_interval_ms = int(
+            max(0.25, float(polling_interval_seconds)) * 1000
+        )
         self.last_ws_update_time = 0.0
         self.is_cancelled = False
         self.stop_event = stop_event

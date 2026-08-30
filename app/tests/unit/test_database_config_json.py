@@ -20,11 +20,13 @@ DATABASE_ENV_KEYS = (
     "DATABASE_INSERT_BATCH_SIZE",
 )
 
+
 ###############################################################################
 @pytest.fixture(autouse=True)
 def reset_database_env(monkeypatch: pytest.MonkeyPatch) -> None:
     for env_name in DATABASE_ENV_KEYS:
         monkeypatch.delenv(env_name, raising=False)
+
 
 ###############################################################################
 def test_database_settings_use_env_payload_for_embedded_mode(
@@ -42,6 +44,7 @@ def test_database_settings_use_env_payload_for_embedded_mode(
     assert settings.database_name is None
     assert settings.connect_timeout == 25
     assert settings.insert_batch_size == 250
+
 
 ###############################################################################
 def test_database_settings_use_env_payload_for_external_postgres_mode(
@@ -73,6 +76,7 @@ def test_database_settings_use_env_payload_for_external_postgres_mode(
     assert settings.connect_timeout == 25
     assert settings.insert_batch_size == 250
 
+
 ###############################################################################
 def test_database_url_is_rejected(
     monkeypatch: pytest.MonkeyPatch,
@@ -84,6 +88,7 @@ def test_database_url_is_rejected(
     with pytest.raises(ValueError, match="DATABASE_URL is unsupported"):
         JsonServerSettings.model_validate({}).to_server_settings()
 
+
 ###############################################################################
 def test_database_validation_requires_external_fields(
     monkeypatch: pytest.MonkeyPatch,
@@ -94,6 +99,7 @@ def test_database_validation_requires_external_fields(
     ):
         monkeypatch.setenv("EMBEDDED_DATABASE", "false")
         _ = EnvDatabaseSettings.from_environment()
+
 
 ###############################################################################
 def test_json_server_settings_rejects_database_block() -> None:

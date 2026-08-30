@@ -7,6 +7,7 @@ from playwright.sync_api import APIRequestContext
 
 DATASET_NAME = "e2e_dataset_for_listing"
 
+
 ###############################################################################
 def ensure_dataset_for_listing(api_context: APIRequestContext) -> None:
     summary_response = api_context.get("/api/datasets/training/summary")
@@ -34,6 +35,7 @@ def ensure_dataset_for_listing(api_context: APIRequestContext) -> None:
     assert upload_response.ok, (
         f"Expected 200, got {upload_response.status}: {upload_response.text()}"
     )
+
 
 ###############################################################################
 class TestRouletteDatasetsEndpoints:
