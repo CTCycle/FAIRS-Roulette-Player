@@ -1,6 +1,6 @@
 ## Startup
 
-Last updated: 2026-08-30
+Last updated: 2026-08-31
 
 ## Local Application Startup
 
@@ -13,7 +13,7 @@ From repository root in PowerShell:
 `start_on_windows.ps1` is the single interactive entry point. Its menu supports:
 
 - launching the application
-- updating the application from the `main` branch with `git pull`
+- updating the application from a non-detached, clean checkout of `main` with `git pull --ff-only origin main`; the launcher never switches branches or modifies local changes
 - checking the locally known `origin/main` status without downloading or applying updates
 - installing or updating dependencies
 - rebuilding the frontend without updating dependencies
@@ -56,7 +56,7 @@ Database behavior:
 - SQLite migration locking uses `BEGIN IMMEDIATE`; PostgreSQL database creation uses a deterministic admin advisory lock and target migrations use a transaction advisory lock with a bounded timeout.
 - PostgreSQL startup may create a missing configured database only when the initial target connection returns SQLSTATE `3D000`; the configured role must have `CREATEDB`, or an administrator must pre-create the database.
 - Option 6 is **Create / upgrade database** and is idempotent. Option 4 runs it after dependency installation and frontend setup. Option 5 remains frontend-only.
-- Option 2 runs `git pull origin main` in the current checkout. Option 3 compares the current checkout with the locally known `origin/main` reference only; it does not fetch, download, or apply updates.
+- Option 2 updates source only from a non-detached, clean `main` checkout with `git pull --ff-only origin main`. Option 3 compares the current checkout with the locally known `origin/main` reference only; it does not fetch, download, or apply updates.
 - Option 10 removes saved checkpoint files separately. Option 11 removes the local embedded database, SQLite sidecars, and log files while preserving checkpoints and tracked application files. An externally configured PostgreSQL database is not deleted by the local launcher.
 - Options 8 through 12 cancel without changes unless `DELETE` is entered exactly at the confirmation prompt.
 
