@@ -75,7 +75,7 @@ Later launches normally reuse the prepared environment. If a required runtime, d
 | 12 | Remove local runtimes, dependencies, and build output so the environment can be prepared again. Source files and user data are preserved. |
 | 13 | Exit the launcher. |
 
-Options 8 through 12 require the exact confirmation word DELETE. Read the description carefully before confirming a cleanup action.
+Options 8 through 12 require an affirmative response at a `[y/N]` confirmation prompt. Read the description carefully before confirming a cleanup action.
 
 ## How a typical experiment works
 

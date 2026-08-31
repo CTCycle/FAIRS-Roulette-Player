@@ -58,7 +58,7 @@ Database behavior:
 - Option 6 is **Create / upgrade database** and is idempotent. Option 4 runs it after dependency installation and frontend setup. Option 5 remains frontend-only.
 - Option 2 updates source only from a non-detached, clean `main` checkout with `git pull --ff-only origin main`. Option 3 compares the current checkout with the locally known `origin/main` reference only; it does not fetch, download, or apply updates.
 - Option 10 removes saved checkpoint files separately. Option 11 removes the local embedded database, SQLite sidecars, and log files while preserving checkpoints and tracked application files. An externally configured PostgreSQL database is not deleted by the local launcher.
-- Options 8 through 12 cancel without changes unless `DELETE` is entered exactly at the confirmation prompt.
+- Options 8 through 12 cancel without changes unless the `[y/N]` confirmation prompt receives an affirmative response.
 
 Before the FastAPI composition root imports Keras-backed modules, `server.bootstrap.bootstrap_runtime()` explicitly loads `settings/.env`, resolves the runtime data/log paths, and configures logging. Importing the `server` package or common path/logging utilities alone has no filesystem or global-logging side effects.
 
