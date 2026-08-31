@@ -9,6 +9,7 @@ import pandas as pd
 import pytest
 from sqlalchemy import create_engine, event, inspect, text
 
+from server.contracts.configuration import DatabaseSettings
 from server.repositories.database.backend import FAIRSDatabase
 from server.repositories.database.initializer import (
     ALEMBIC_CONFIG_PATH,
@@ -19,6 +20,23 @@ from server.repositories.database.initializer import (
 from server.repositories.datasets import DatasetRepository
 from server.repositories.inference import InferenceRepository
 from server.repositories.schemas.models import Base
+
+
+###############################################################################
+def _test_database_settings() -> DatabaseSettings:
+    return DatabaseSettings(
+        embedded_database=True,
+        engine=None,
+        host=None,
+        port=None,
+        database_name=None,
+        username=None,
+        password=None,
+        ssl=False,
+        ssl_ca=None,
+        connect_timeout=10,
+        insert_batch_size=1000,
+    )
 
 
 ###############################################################################
@@ -75,7 +93,9 @@ def test_sqlite_contract() -> None:
         lambda connection, _: connection.execute("PRAGMA foreign_keys=ON"),
     )
     try:
-        exercise_contract(FAIRSDatabase(engine=engine))
+        exercise_contract(
+            FAIRSDatabase(_test_database_settings(), engine=engine)
+        )
     finally:
         engine.dispose()
 
@@ -255,4 +275,6 @@ def test_postgresql_concurrent_initializers_serialize(postgres_engine) -> None:
 
 ###############################################################################
 def test_postgresql_contract(postgres_engine) -> None:
-    exercise_contract(FAIRSDatabase(engine=postgres_engine))
+    exercise_contract(
+        FAIRSDatabase(_test_database_settings(), engine=postgres_engine)
+    )
