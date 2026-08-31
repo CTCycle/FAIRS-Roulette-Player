@@ -26,6 +26,8 @@ $runtimeCacheDir = Join-Path $runtimeRoot 'cache'
 $testCacheDir = Join-Path $testsDir 'cache'
 $pytestCacheDir = Join-Path $testCacheDir 'pytest'
 $ruffCacheDir = Join-Path $testCacheDir 'ruff'
+$script:NextProgressId = 1
+$script:ActiveProgressIds = [Collections.Generic.HashSet[int]]::new()
 
 # -----------------------------------------------------------------------------
 # Portable runtime versions and download sources
@@ -48,6 +50,63 @@ function Write-Step([string]$Message) { Write-Host "[STEP] $Message" -Foreground
 function Write-Ok([string]$Message) { Write-Host "[OK] $Message" -ForegroundColor Green }
 function Write-Info([string]$Message) { Write-Host "[INFO] $Message" -ForegroundColor DarkCyan }
 function Write-Fatal([string]$Message) { Write-Host "[FATAL] $Message" -ForegroundColor Red }
+
+function Start-LauncherProgress {
+    param([Parameter(Mandatory)][string]$Activity, [string]$Status = 'Starting')
+    $id = $script:NextProgressId++
+    [void]$script:ActiveProgressIds.Add($id)
+    Write-Progress -Id $id -Activity $Activity -Status $Status
+    return $id
+}
+
+function Update-LauncherProgress {
+    param(
+        [Parameter(Mandatory)][int]$Id,
+        [Parameter(Mandatory)][string]$Activity,
+        [Parameter(Mandatory)][string]$Status,
+        [Nullable[int]]$PercentComplete
+    )
+    if (-not $script:ActiveProgressIds.Contains($Id)) { return }
+    $progress = @{ Id = $Id; Activity = $Activity; Status = $Status }
+    if ($null -ne $PercentComplete) { $progress.PercentComplete = $PercentComplete }
+    Write-Progress @progress
+}
+
+function Complete-LauncherProgress([int]$Id) {
+    if ($script:ActiveProgressIds.Contains($Id)) {
+        Write-Progress -Id $Id -Activity 'FAIRS launcher' -Completed
+        [void]$script:ActiveProgressIds.Remove($Id)
+    }
+}
+
+function Clear-LauncherProgress {
+    foreach ($id in @($script:ActiveProgressIds)) {
+        Write-Progress -Id $id -Activity 'FAIRS launcher' -Completed
+        [void]$script:ActiveProgressIds.Remove($id)
+    }
+}
+
+function Invoke-TrackedLauncherAction {
+    param(
+        [Parameter(Mandatory)][string]$Name,
+        [Parameter(Mandatory)][scriptblock]$Action
+    )
+    $activity = "FAIRS: $Name"
+    $progressId = Start-LauncherProgress -Activity $activity -Status 'Starting'
+    Write-Step "Starting $Name"
+    try {
+        Update-LauncherProgress -Id $progressId -Activity $activity -Status 'Running'
+        & $Action
+        Write-Ok "$Name completed"
+    }
+    catch {
+        Write-Fatal "$Name failed: $($_.Exception.Message)"
+        throw
+    }
+    finally {
+        Complete-LauncherProgress $progressId
+    }
+}
 
 # -----------------------------------------------------------------------------
 # Filesystem and cache helpers
@@ -96,8 +155,17 @@ function Remove-PathBestEffort([string]$Path) {
         } catch {
             Write-Info "Skipped inaccessible children under: $Path"
         }
-        foreach ($child in $children) {
-            Remove-PathBestEffort $child.FullName | Out-Null
+        $progressId = Start-LauncherProgress -Activity "FAIRS: remove $($item.Name)" -Status "0 of $($children.Count) items"
+        try {
+            for ($index = 0; $index -lt $children.Count; $index++) {
+                $child = $children[$index]
+                $percent = if ($children.Count -eq 0) { 100 } else { [int](($index + 1) * 100 / $children.Count) }
+                Update-LauncherProgress -Id $progressId -Activity "FAIRS: remove $($item.Name)" -Status "$($index + 1) of $($children.Count): $($child.Name)" -PercentComplete $percent
+                Remove-PathBestEffort $child.FullName | Out-Null
+            }
+        }
+        finally {
+            Complete-LauncherProgress $progressId
         }
     }
 
@@ -114,13 +182,20 @@ function Remove-PathBestEffort([string]$Path) {
 # Runtime setup helpers
 # -----------------------------------------------------------------------------
 function Invoke-DownloadAndExtract([string]$Uri, [string]$ArchivePath, [string]$DestinationPath) {
-    $ProgressPreference = 'SilentlyContinue'
-    New-Item -ItemType Directory -Path (Split-Path -Parent $ArchivePath), $DestinationPath -Force | Out-Null
+    $previousProgressPreference = $ProgressPreference
+    $activity = "FAIRS: download and extract $([IO.Path]::GetFileName($ArchivePath))"
+    $progressId = Start-LauncherProgress -Activity $activity -Status "Downloading $Uri"
     try {
+        $ProgressPreference = 'SilentlyContinue'
+        New-Item -ItemType Directory -Path (Split-Path -Parent $ArchivePath), $DestinationPath -Force | Out-Null
         Invoke-WebRequest -UseBasicParsing -Uri $Uri -OutFile $ArchivePath
+        $ProgressPreference = $previousProgressPreference
+        Update-LauncherProgress -Id $progressId -Activity $activity -Status 'Extracting archive'
         Expand-Archive -LiteralPath $ArchivePath -DestinationPath $DestinationPath -Force
     } finally {
+        $ProgressPreference = $previousProgressPreference
         Remove-Item -LiteralPath $ArchivePath -Force -ErrorAction SilentlyContinue
+        Complete-LauncherProgress $progressId
     }
 }
 
@@ -144,15 +219,24 @@ function Invoke-HealthCheck([string]$Url, [int]$TimeoutSeconds = 60) {
     $prevEap = $ErrorActionPreference
     $ErrorActionPreference = 'SilentlyContinue'
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
-    do {
-        try {
-            $response = Invoke-WebRequest -UseBasicParsing -Uri $Url -TimeoutSec 2
-            if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 300) { return }
-        } catch { }
-        Start-Sleep -Seconds 1
-    } while ((Get-Date) -lt $deadline)
-    $ErrorActionPreference = $prevEap
-    throw "Backend did not become healthy within $TimeoutSeconds seconds."
+    $activity = "FAIRS: wait for health $Url"
+    $progressId = Start-LauncherProgress -Activity $activity -Status "Waiting up to $TimeoutSeconds seconds"
+    try {
+        do {
+            $elapsed = [int](([DateTime]::Now - $deadline.AddSeconds(-$TimeoutSeconds)).TotalSeconds)
+            Update-LauncherProgress -Id $progressId -Activity $activity -Status "Waiting for healthy response; ${elapsed}s elapsed"
+            try {
+                $response = Invoke-WebRequest -UseBasicParsing -Uri $Url -TimeoutSec 2
+                if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 300) { return }
+            } catch { }
+            Start-Sleep -Seconds 1
+        } while ((Get-Date) -lt $deadline)
+        throw "Backend did not become healthy within $TimeoutSeconds seconds."
+    }
+    finally {
+        $ErrorActionPreference = $prevEap
+        Complete-LauncherProgress $progressId
+    }
 }
 
 function Initialize-EnvironmentFile {
@@ -490,7 +574,17 @@ function Remove-Logs {
 function Remove-UserLogFiles([string]$Path) {
     if (-not (Test-Path -LiteralPath $Path -PathType Container)) { return }
     $logFiles = @(Get-ChildItem -LiteralPath $Path -Filter '*.log' -File -Recurse -Force -ErrorAction SilentlyContinue)
-    foreach ($logFile in $logFiles) { Remove-PathBestEffort $logFile.FullName | Out-Null }
+    $progressId = Start-LauncherProgress -Activity "FAIRS: remove logs from $Path" -Status "0 of $($logFiles.Count) files"
+    try {
+        for ($index = 0; $index -lt $logFiles.Count; $index++) {
+            $logFile = $logFiles[$index]
+            Update-LauncherProgress -Id $progressId -Activity "FAIRS: remove logs from $Path" -Status "$($index + 1) of $($logFiles.Count): $($logFile.Name)" -PercentComplete ([int](($index + 1) * 100 / [Math]::Max(1, $logFiles.Count)))
+            Remove-PathBestEffort $logFile.FullName | Out-Null
+        }
+    }
+    finally {
+        Complete-LauncherProgress $progressId
+    }
 }
 
 function Remove-PythonCaches {
@@ -504,8 +598,17 @@ function Remove-PythonCaches {
 function Clear-Cache {
     if (-not (Confirm-Delete 'clear Python, uv, and tool caches')) { return }
 
-    foreach ($cachePath in @($runtimeCacheDir, $testCacheDir)) {
-        Remove-PathBestEffort $cachePath | Out-Null
+    $cachePaths = @($runtimeCacheDir, $testCacheDir)
+    $progressId = Start-LauncherProgress -Activity 'FAIRS: clear caches' -Status "0 of $($cachePaths.Count) roots"
+    try {
+        for ($index = 0; $index -lt $cachePaths.Count; $index++) {
+            $cachePath = $cachePaths[$index]
+            Update-LauncherProgress -Id $progressId -Activity 'FAIRS: clear caches' -Status "$($index + 1) of $($cachePaths.Count): $cachePath" -PercentComplete ([int](($index + 1) * 100 / $cachePaths.Count))
+            Remove-PathBestEffort $cachePath | Out-Null
+        }
+    }
+    finally {
+        Complete-LauncherProgress $progressId
     }
     Remove-PythonCaches
     Set-CacheEnvironment
@@ -544,9 +647,17 @@ function Get-UserDataTargets {
 function Remove-UserDataDirectory([string]$Path) {
     if (-not (Test-Path -LiteralPath $Path -PathType Container)) { return }
     $children = @(Get-ChildItem -LiteralPath $Path -Force -ErrorAction SilentlyContinue)
-    foreach ($child in $children) {
-        if ($child.Name -eq '.gitkeep') { continue }
-        Remove-PathBestEffort $child.FullName | Out-Null
+    $progressId = Start-LauncherProgress -Activity "FAIRS: remove data from $Path" -Status "0 of $($children.Count) items"
+    try {
+        for ($index = 0; $index -lt $children.Count; $index++) {
+            $child = $children[$index]
+            if ($child.Name -eq '.gitkeep') { continue }
+            Update-LauncherProgress -Id $progressId -Activity "FAIRS: remove data from $Path" -Status "$($index + 1) of $($children.Count): $($child.Name)" -PercentComplete ([int](($index + 1) * 100 / [Math]::Max(1, $children.Count)))
+            Remove-PathBestEffort $child.FullName | Out-Null
+        }
+    }
+    finally {
+        Complete-LauncherProgress $progressId
     }
 }
 
@@ -588,8 +699,16 @@ function Uninstall-Application {
         (Join-Path $clientDir '.angular'),
         (Join-Path $clientDir 'dist')
     )
-    foreach ($path in $paths) {
-        Remove-PathBestEffort $path | Out-Null
+    $progressId = Start-LauncherProgress -Activity 'FAIRS: uninstall application' -Status "0 of $($paths.Count) paths"
+    try {
+        for ($index = 0; $index -lt $paths.Count; $index++) {
+            $path = $paths[$index]
+            Update-LauncherProgress -Id $progressId -Activity 'FAIRS: uninstall application' -Status "$($index + 1) of $($paths.Count): $path" -PercentComplete ([int](($index + 1) * 100 / $paths.Count))
+            Remove-PathBestEffort $path | Out-Null
+        }
+    }
+    finally {
+        Complete-LauncherProgress $progressId
     }
     New-Item -ItemType Directory -Path $runtimeRoot -Force | Out-Null
     New-Item -ItemType File -Path (Join-Path $runtimeRoot '.gitkeep') -Force | Out-Null
@@ -603,15 +722,32 @@ function Uninstall-Application {
 function Update-Application {
     Push-Location $repoRoot
     try {
-        $currentBranch = (& git branch --show-current).Trim()
-        if ($LASTEXITCODE -ne 0) { throw 'Unable to determine the current Git branch.' }
-        $branchLabel = if ($currentBranch) { $currentBranch } else { 'the detached checkout' }
+        $branchOutput = @(& git branch --show-current 2>$null)
+        $branchExitCode = if ($null -eq $LASTEXITCODE) { 0 } else { [int]$LASTEXITCODE }
+        $currentBranch = (@($branchOutput | ForEach-Object { [string]$_ }) -join [Environment]::NewLine).Trim()
+        if ($branchExitCode -ne 0) { throw 'Unable to determine the current Git branch.' }
+        if ([string]::IsNullOrWhiteSpace($currentBranch)) { throw 'Update requires a non-detached Git checkout.' }
+        if ($currentBranch -ne 'main') {
+            throw "Update requires the main branch to be checked out; current branch is '$currentBranch'. No files were changed."
+        }
+        $statusOutput = @(& git status --porcelain 2>$null)
+        $statusExitCode = if ($null -eq $LASTEXITCODE) { 0 } else { [int]$LASTEXITCODE }
+        if ($statusExitCode -ne 0) { throw 'Unable to inspect the Git working tree before updating.' }
+        $changes = @($statusOutput | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })
+        if ($changes.Count -gt 0) { throw 'Update requires a clean Git working tree. Commit or safely preserve local changes before retrying.' }
 
-        Write-Step "Pulling application updates from origin/main into $branchLabel."
-        $gitOutput = @(& git pull origin main 2>&1)
-        $gitExitCode = $LASTEXITCODE
-        $gitOutput | ForEach-Object { Write-Host $_ }
-        if ($gitExitCode -ne 0) { throw "Application update failed with exit code $gitExitCode." }
+        $activity = 'FAIRS: update application from origin/main'
+        $progressId = Start-LauncherProgress -Activity $activity -Status 'Pulling origin/main'
+        try {
+            Write-Step 'Pulling application updates from origin/main (fast-forward only).'
+            $gitOutput = @(& git pull --ff-only origin main 2>&1)
+            $gitExitCode = $LASTEXITCODE
+            $gitOutput | ForEach-Object { Write-Host $_ }
+            if ($gitExitCode -ne 0) { throw "Application update failed with exit code $gitExitCode." }
+        }
+        finally {
+            Complete-LauncherProgress $progressId
+        }
         Write-Ok 'Application update completed from origin/main.'
     } finally {
         Pop-Location
@@ -720,6 +856,7 @@ function Show-Menu {
         }
         if ($selection -eq '13') { break }
         try {
+        Invoke-TrackedLauncherAction -Name "menu option $selection" -Action {
             switch ($selection) {
                 '1' { Start-Application; exit 0 }
                 '2' { Update-Application }
@@ -739,6 +876,7 @@ function Show-Menu {
                 '11' { Remove-AllData }
                 '12' { Uninstall-Application }
             }
+        }
             if ([Console]::IsInputRedirected) { break }
         } catch {
             Write-Fatal $_.Exception.Message
@@ -750,3 +888,4 @@ function Show-Menu {
 
 Set-CacheEnvironment
 Show-Menu
+Clear-LauncherProgress
