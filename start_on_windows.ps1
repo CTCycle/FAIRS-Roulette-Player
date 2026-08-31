@@ -46,13 +46,13 @@ $uvUrl = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') {
 # -----------------------------------------------------------------------------
 # Output helpers
 # -----------------------------------------------------------------------------
-function Write-Step([string]$Message) { Write-Host "[STEP] $Message" -ForegroundColor Cyan }
-function Write-Ok([string]$Message) { Write-Host "[OK] $Message" -ForegroundColor Green }
-function Write-Info([string]$Message) { Write-Host "[INFO] $Message" -ForegroundColor DarkCyan }
-function Write-Fatal([string]$Message) { Write-Host "[FATAL] $Message" -ForegroundColor Red }
+function Write-Step([string]$Message) { Clear-LauncherProgress; Write-Host "[STEP] $Message" -ForegroundColor Cyan }
+function Write-Ok([string]$Message) { Clear-LauncherProgress; Write-Host "[OK] $Message" -ForegroundColor Green }
+function Write-Info([string]$Message) { Clear-LauncherProgress; Write-Host "[INFO] $Message" -ForegroundColor DarkCyan }
+function Write-Fatal([string]$Message) { Clear-LauncherProgress; Write-Host "[FATAL] $Message" -ForegroundColor Red }
 
 function Start-LauncherProgress {
-    param([Parameter(Mandatory)][string]$Activity, [string]$Status = 'Starting')
+    param([Parameter(Mandatory)][string]$Activity, [Parameter(Mandatory)][string]$Status)
     $id = $script:NextProgressId++
     [void]$script:ActiveProgressIds.Add($id)
     Write-Progress -Id $id -Activity $Activity -Status $Status
@@ -91,20 +91,14 @@ function Invoke-TrackedLauncherAction {
         [Parameter(Mandatory)][string]$Name,
         [Parameter(Mandatory)][scriptblock]$Action
     )
-    $activity = "FAIRS: $Name"
-    $progressId = Start-LauncherProgress -Activity $activity -Status 'Starting'
     Write-Step "Starting $Name"
     try {
-        Update-LauncherProgress -Id $progressId -Activity $activity -Status 'Running'
         & $Action
         Write-Ok "$Name completed"
     }
     catch {
         Write-Fatal "$Name failed: $($_.Exception.Message)"
         throw
-    }
-    finally {
-        Complete-LauncherProgress $progressId
     }
 }
 
@@ -138,43 +132,56 @@ function Set-CacheEnvironment {
 }
 
 function Remove-PathBestEffort([string]$Path) {
-    if (-not (Test-Path -LiteralPath $Path)) { return $true }
-
-    $item = $null
     try {
         $item = Get-Item -LiteralPath $Path -Force -ErrorAction Stop
     } catch {
+        if ($_.CategoryInfo.Category -eq [System.Management.Automation.ErrorCategory]::ObjectNotFound) {
+            return $true
+        }
         Write-Info "Skipped inaccessible path: $Path"
         return $false
     }
 
-    if ($item.PSIsContainer) {
-        $children = @()
-        try {
-            $children = @(Get-ChildItem -LiteralPath $Path -Force -ErrorAction Stop)
-        } catch {
-            Write-Info "Skipped inaccessible children under: $Path"
-        }
-        $progressId = Start-LauncherProgress -Activity "FAIRS: remove $($item.Name)" -Status "0 of $($children.Count) items"
-        try {
-            for ($index = 0; $index -lt $children.Count; $index++) {
-                $child = $children[$index]
-                $percent = if ($children.Count -eq 0) { 100 } else { [int](($index + 1) * 100 / $children.Count) }
-                Update-LauncherProgress -Id $progressId -Activity "FAIRS: remove $($item.Name)" -Status "$($index + 1) of $($children.Count): $($child.Name)" -PercentComplete $percent
-                Remove-PathBestEffort $child.FullName | Out-Null
-            }
-        }
-        finally {
-            Complete-LauncherProgress $progressId
-        }
-    }
-
     try {
-        Remove-Item -LiteralPath $Path -Force -ErrorAction Stop
+        Remove-Item -LiteralPath $item.FullName -Recurse -Force -Confirm:$false -ErrorAction Stop
         return $true
     } catch {
-        Write-Info "Skipped locked or protected path: $Path"
-        return $false
+        if (-not $item.PSIsContainer) {
+            Write-Info "Skipped locked or protected path: $Path"
+            return $false
+        }
+
+        $enumerationErrors = @()
+        $entries = @(Get-ChildItem -LiteralPath $item.FullName -Force -Recurse -ErrorAction SilentlyContinue -ErrorVariable enumerationErrors |
+            Sort-Object @{ Expression = { $_.FullName.Length }; Descending = $true }, @{ Expression = { $_.FullName.ToUpperInvariant() }; Descending = $false })
+        $failureMessages = [Collections.Generic.List[string]]::new()
+        foreach ($enumerationError in $enumerationErrors) {
+            [void]$failureMessages.Add("Skipped inaccessible path below ${Path}: $($enumerationError.Exception.Message)")
+        }
+
+        foreach ($entry in $entries) {
+            try {
+                Remove-Item -LiteralPath $entry.FullName -Force -Confirm:$false -ErrorAction Stop
+            } catch {
+                [void]$failureMessages.Add("Skipped locked or protected path: $($entry.FullName)")
+            }
+        }
+
+        if (Test-Path -LiteralPath $item.FullName -ErrorAction SilentlyContinue) {
+            try {
+                Remove-Item -LiteralPath $item.FullName -Force -Confirm:$false -ErrorAction Stop
+            } catch {
+                [void]$failureMessages.Add("Skipped locked or protected path: $($item.FullName)")
+            }
+        }
+
+        $remaining = Test-Path -LiteralPath $item.FullName -ErrorAction SilentlyContinue
+        if ($remaining) {
+            foreach ($message in @($failureMessages | Sort-Object -Unique)) {
+                Write-Info $message
+            }
+        }
+        return -not $remaining
     }
 }
 
@@ -554,17 +561,17 @@ function Invoke-TestSuite {
 # -----------------------------------------------------------------------------
 # Cleanup and data management
 # -----------------------------------------------------------------------------
-function Confirm-Delete([string]$Description) {
-    $confirmation = (Read-Host "Type DELETE to $Description").Trim()
-    if ($confirmation -cne 'DELETE') {
-        Write-Info "Operation cancelled. No data was deleted."
+function Confirm-DestructiveAction([string]$Description) {
+    $confirmation = ([string](Read-Host "Continue to $Description? [y/N]")).Trim()
+    if ($confirmation -notmatch '^(?i:y|yes)$') {
+        Write-Info "Operation cancelled. No changes were made."
         return $false
     }
     return $true
 }
 
 function Remove-Logs {
-    if (-not (Confirm-Delete 'remove application log files')) { return }
+    if (-not (Confirm-DestructiveAction 'remove application log files')) { return }
 
     $logDir = (Get-UserDataTargets).LogRoot
     Remove-UserLogFiles $logDir
@@ -573,7 +580,8 @@ function Remove-Logs {
 
 function Remove-UserLogFiles([string]$Path) {
     if (-not (Test-Path -LiteralPath $Path -PathType Container)) { return }
-    $logFiles = @(Get-ChildItem -LiteralPath $Path -Filter '*.log' -File -Recurse -Force -ErrorAction SilentlyContinue)
+    $logFiles = @(Get-ChildItem -LiteralPath $Path -Filter '*.log' -File -Recurse -Force -ErrorAction SilentlyContinue |
+        Sort-Object @{ Expression = { $_.FullName.ToUpperInvariant() }; Descending = $false })
     $progressId = Start-LauncherProgress -Activity "FAIRS: remove logs from $Path" -Status "0 of $($logFiles.Count) files"
     try {
         for ($index = 0; $index -lt $logFiles.Count; $index++) {
@@ -589,14 +597,15 @@ function Remove-UserLogFiles([string]$Path) {
 
 function Remove-PythonCaches {
     $pythonCacheDirs = @(Get-ChildItem -LiteralPath $repoRoot -Directory -Recurse -Force -ErrorAction SilentlyContinue |
-        Where-Object Name -eq '__pycache__')
+        Where-Object Name -eq '__pycache__' |
+        Sort-Object @{ Expression = { $_.FullName.Length }; Descending = $true }, @{ Expression = { $_.FullName.ToUpperInvariant() }; Descending = $false })
     foreach ($pythonCacheDir in $pythonCacheDirs) {
         Remove-PathBestEffort $pythonCacheDir.FullName | Out-Null
     }
 }
 
 function Clear-Cache {
-    if (-not (Confirm-Delete 'clear Python, uv, and tool caches')) { return }
+    if (-not (Confirm-DestructiveAction 'clear Python, uv, and tool caches')) { return }
 
     $cachePaths = @($runtimeCacheDir, $testCacheDir)
     $progressId = Start-LauncherProgress -Activity 'FAIRS: clear caches' -Status "0 of $($cachePaths.Count) roots"
@@ -646,7 +655,8 @@ function Get-UserDataTargets {
 
 function Remove-UserDataDirectory([string]$Path) {
     if (-not (Test-Path -LiteralPath $Path -PathType Container)) { return }
-    $children = @(Get-ChildItem -LiteralPath $Path -Force -ErrorAction SilentlyContinue)
+    $children = @(Get-ChildItem -LiteralPath $Path -Force -ErrorAction SilentlyContinue |
+        Sort-Object @{ Expression = { $_.FullName.ToUpperInvariant() }; Descending = $false })
     $progressId = Start-LauncherProgress -Activity "FAIRS: remove data from $Path" -Status "0 of $($children.Count) items"
     try {
         for ($index = 0; $index -lt $children.Count; $index++) {
@@ -662,7 +672,7 @@ function Remove-UserDataDirectory([string]$Path) {
 }
 
 function Remove-Checkpoints {
-    if (-not (Confirm-Delete 'delete all saved checkpoints')) { return }
+    if (-not (Confirm-DestructiveAction 'delete all saved checkpoints')) { return }
 
     $targets = Get-UserDataTargets
     Remove-UserDataDirectory $targets.CheckpointRoot
@@ -671,7 +681,7 @@ function Remove-Checkpoints {
 }
 
 function Remove-AllData {
-    if (-not (Confirm-Delete 'delete local user data')) { return }
+    if (-not (Confirm-DestructiveAction 'delete local user data')) { return }
 
     $targets = Get-UserDataTargets
     foreach ($databaseFile in $targets.DatabaseFiles) {
@@ -689,7 +699,7 @@ function Remove-AllData {
 }
 
 function Uninstall-Application {
-    if (-not (Confirm-Delete 'remove local runtimes and build outputs')) { return }
+    if (-not (Confirm-DestructiveAction 'remove local runtimes and build outputs')) { return }
 
     $paths = @(
         $runtimeRoot,
@@ -736,18 +746,11 @@ function Update-Application {
         $changes = @($statusOutput | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })
         if ($changes.Count -gt 0) { throw 'Update requires a clean Git working tree. Commit or safely preserve local changes before retrying.' }
 
-        $activity = 'FAIRS: update application from origin/main'
-        $progressId = Start-LauncherProgress -Activity $activity -Status 'Pulling origin/main'
-        try {
-            Write-Step 'Pulling application updates from origin/main (fast-forward only).'
-            $gitOutput = @(& git pull --ff-only origin main 2>&1)
-            $gitExitCode = $LASTEXITCODE
-            $gitOutput | ForEach-Object { Write-Host $_ }
-            if ($gitExitCode -ne 0) { throw "Application update failed with exit code $gitExitCode." }
-        }
-        finally {
-            Complete-LauncherProgress $progressId
-        }
+        Write-Step 'Pulling application updates from origin/main (fast-forward only).'
+        $gitOutput = @(& git pull --ff-only origin main 2>&1)
+        $gitExitCode = $LASTEXITCODE
+        $gitOutput | ForEach-Object { Write-Host $_ }
+        if ($gitExitCode -ne 0) { throw "Application update failed with exit code $gitExitCode." }
         Write-Ok 'Application update completed from origin/main.'
     } finally {
         Pop-Location
