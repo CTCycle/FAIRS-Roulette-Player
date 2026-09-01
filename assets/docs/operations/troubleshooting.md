@@ -4,10 +4,10 @@ Last updated: 2026-09-01
 
 ## Startup Problems
 
-- If local startup fails, run option 5 in `start_on_windows.ps1` and choose `Standard` to resync runtimes and application dependencies.
-- If test or browser tooling is missing, run option 5 and choose `Development` so the server's `test` extra is installed.
+- If local startup fails, run option 3 in `start_on_windows.ps1` and choose `Standard` to resync runtimes and application dependencies.
+- If test or browser tooling is missing, run option 3 and choose `Development` so the server's `test` extra is installed.
 - If ports are already occupied, run option 2 only when the listener belongs to this repository. The launcher reports the PID and command line and refuses to terminate unrelated listeners; stop the unrelated service through its own owner or choose different configured ports.
-- If the backend starts without the frontend, verify that `app/client/node_modules` contains Vite and that `app/client/dist/index.html` and its generated assets exist; retry option 1 for automatic recovery, run option 6 for a frontend-only rebuild, or run option 5 when frontend dependencies also need updating.
+- If the backend starts without the frontend, verify that `app/client/node_modules` contains Vite and that `app/client/dist/index.html` and its generated assets exist; retry option 1 for automatic recovery, run option 4 for a frontend-only rebuild, or run option 3 when frontend dependencies also need updating.
 - Maintenance actions require option 2 first. If npm reports `EPERM` for `esbuild.exe`, stop any external Vite or Node process using `app/client/node_modules` through its own owner and retry.
 - If the launcher reports a backend readiness failure, open `http://<FASTAPI_HOST>:<FASTAPI_PORT>/api/health` and inspect the generated `FAIRS_*.log` file.
 - If startup reports an unsupported worker count, unset `WEB_CONCURRENCY`, `UVICORN_WORKERS`, and `FAIRS_WORKERS`, or set each to `1`. Do not use multiple workers for this process-local runtime.
@@ -26,7 +26,7 @@ Last updated: 2026-09-01
 ## Configuration Problems
 
 - If database startup fails, confirm the embedded-vs-external database settings are internally consistent.
-- If PostgreSQL mode is enabled, select option 7 in `start_on_windows.ps1` to create or upgrade the configured database. FastAPI startup runs the same idempotent runner. A missing target is created only for SQLSTATE `3D000`, and the configured role needs `CREATEDB`.
+- If PostgreSQL mode is enabled, select option 5 in `start_on_windows.ps1` to create or upgrade the configured database. FastAPI startup runs the same idempotent runner. A missing target is created only for SQLSTATE `3D000`, and the configured role needs `CREATEDB`.
 - If startup reports an unsupported database engine, set external PostgreSQL configuration to `DATABASE_ENGINE=postgresql+psycopg`; legacy aliases are not accepted.
 - If startup reports schema drift, a partial legacy schema, or an unknown/ahead revision, do not delete or reset the database. Review the Alembic revision and database state, make an explicit reviewed migration or restore the matching revision scripts, then retry. Automatic repair is disabled.
 - For migration lock timeouts, stop the competing initializer/session and retry. SQLite uses `BEGIN IMMEDIATE`; PostgreSQL reports a bounded advisory-lock timeout.

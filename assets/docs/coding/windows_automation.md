@@ -24,7 +24,7 @@ This file covers repository-specific conventions for the PowerShell launcher and
 - Option 2 is the explicit application stop action. Closing the browser is not a stop signal.
 - Startup is complete only after backend health and frontend HTTP checks succeed. If either service fails readiness, all processes started by that launch attempt are cleaned up.
 - Uvicorn is always launched with one worker. `RELOAD=true` is development-only because reloads discard process-local state.
-- Cache cleanup is best-effort and reproducible: it attempts one recursive bulk removal per target, then uses a single deepest-first, normalized-path snapshot for item-level recovery only when the bulk operation fails. Locked or protected paths are reported and skipped.
+- Cache and data cleanup is best-effort and reproducible: it inventories each target recursively, excludes required sentinels, deletes individual entries deepest-first in stable normalized-path order, and reports locked or protected paths as skipped. Required roots are recreated after cleanup.
 - Any changes to runtime staging should be reflected in both the scripts and the runtime documentation.
 
 ## Related Files

@@ -14,8 +14,8 @@ From repository root in PowerShell:
 
 - launching the application
 - explicitly stopping the application
-- updating the application from a non-detached, clean checkout of `main` with `git pull --ff-only origin main`; the launcher never switches branches or modifies local changes
 - checking the locally known `origin/main` status without downloading or applying updates
+- updating the application from a non-detached, clean checkout of `main` with `git pull --ff-only origin main`; the launcher never switches branches or modifies local changes
 - installing or updating dependencies
 - rebuilding the frontend without updating dependencies
 - initializing the database
@@ -34,9 +34,9 @@ What the launcher does:
 - targets the runtime virtual environment through `UV_PROJECT_ENVIRONMENT`
 - checks whether the application environment is ready before installing
 - syncs Python dependencies with `uv` in `Standard` mode when installation is needed
-- installs the server's test extra when option 5 is run with `Development` selected
+- installs the server's test extra when option 3 is run with `Development` selected
 - installs frontend dependencies as needed
-- rebuilds the frontend when option 5 is executed, when standalone option 6 is selected, or during option 1 recovery when the environment or frontend build is missing or unusable
+- rebuilds the frontend when option 3 is executed, when standalone option 4 is selected, or during option 1 recovery when the environment or frontend build is missing or unusable
 - launches the backend with `uvicorn` and the built frontend with Vite preview
 - opens the configured frontend URL in the default browser after both services are ready
 - verifies backend health, backend listener ownership, frontend HTTP success, and frontend listener ownership before reporting success
@@ -48,7 +48,7 @@ Cache layout and cleanup:
 
 - uv, npm, pip, Python bytecode, and other runtime caches are rooted at `runtimes/cache`
 - pytest, Ruff, coverage, mypy, Playwright, and other test-tool caches are rooted at `app/tests/cache`
-- option 10 removes the canonical runtime and test cache roots; locked or administrator-protected entries are reported and skipped so the remaining artifacts are still removed
+- option 10 removes the canonical runtime and test cache roots; cleanup inventories nested entries deepest-first, preserves required sentinels, and reports locked or administrator-protected entries as skipped
 - options 9 through 13 require the exact case-sensitive passphrase `DELETE` before removing logs, caches, checkpoints, local user data, runtimes, dependencies, or build outputs
 
 Database behavior:
@@ -58,8 +58,8 @@ Database behavior:
 - Partial, unknown, drifted, or ahead schemas fail unchanged with an actionable error. Known revisions behind `head` are upgraded in order; current `head` is a strict-validation no-op.
 - SQLite migration locking uses `BEGIN IMMEDIATE`; PostgreSQL database creation uses a deterministic admin advisory lock and target migrations use a transaction advisory lock with a bounded timeout.
 - PostgreSQL startup may create a missing configured database only when the initial target connection returns SQLSTATE `3D000`; the configured role must have `CREATEDB`, or an administrator must pre-create the database.
-- Option 7 is **Create / upgrade database** and is idempotent. Option 5 runs it after dependency installation and frontend setup. Option 6 remains frontend-only.
-- Option 3 updates source only from a non-detached, clean `main` checkout with `git pull --ff-only origin main`. Option 4 compares the current checkout with the locally known `origin/main` reference only; it does not fetch, download, or apply updates.
+- Option 5 is **Create / upgrade database** and is idempotent. Option 3 runs it after dependency installation and frontend setup. Option 4 remains frontend-only.
+- Option 8 updates source only from a non-detached, clean `main` checkout with `git pull --ff-only origin main`. Option 7 compares the current checkout with the locally known `origin/main` reference only; it does not fetch, download, or apply updates.
 - Option 11 removes saved checkpoint files separately. Option 12 removes the local embedded database, SQLite sidecars, and log files while preserving checkpoints and tracked application files. An externally configured PostgreSQL database is not deleted by the local launcher.
 - Options 9 through 13 cancel without changes unless the `[y/N]` confirmation prompt receives an affirmative response.
 
@@ -69,7 +69,7 @@ The runtime state is `starting` during bootstrap, `ready` while serving requests
 
 `RELOAD=true` is development-only. Uvicorn reloads replace the in-memory process and therefore discard active training jobs and inference sessions; production and normal local runs use one non-reloading worker.
 
-If the readiness check passes, normal application start skips dependency installation and proceeds directly to the two services. If the environment or built frontend is missing or unusable, option 1 recovers dependencies and rebuilds the frontend. Use option 5 when source changes require a deliberate dependency sync, or option 6 when only the frontend needs rebuilding and its dependencies are already installed. Maintenance, database, test, data-removal, update, and uninstall actions require the application to be stopped first.
+If the readiness check passes, normal application start skips dependency installation and proceeds directly to the two services. If the environment or built frontend is missing or unusable, option 1 recovers dependencies and rebuilds the frontend. Use option 3 when source changes require a deliberate dependency sync, or option 4 when only the frontend needs rebuilding and its dependencies are already installed. Maintenance, database, test, data-removal, update, and uninstall actions require the application to be stopped first.
 
 ## Test Startup
 
