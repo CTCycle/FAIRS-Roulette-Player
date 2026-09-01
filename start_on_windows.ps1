@@ -87,7 +87,9 @@ function Complete-LauncherProgress([int]$Id) {
     if ($script:ActiveProgressActivities.ContainsKey($Id)) {
         $activity = $script:ActiveProgressActivities[$Id]
         try {
-            if (Test-InteractiveConsole) { Write-Progress -Id $Id -Activity $activity -Completed }
+            if (Test-InteractiveConsole) {
+                try { Write-Progress -Id $Id -Activity $activity -Completed } catch { }
+            }
         }
         finally {
             [void]$script:ActiveProgressActivities.Remove($Id)
