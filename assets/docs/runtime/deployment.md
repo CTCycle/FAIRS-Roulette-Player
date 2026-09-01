@@ -1,6 +1,6 @@
 ## Deployment
 
-Last updated: 2026-08-30
+Last updated: 2026-09-01
 
 ## Supported Distribution
 
@@ -11,7 +11,9 @@ FAIRS is distributed as source and run locally from its repository through `star
 - portable Python `3.14.2`, uv, and Node.js `22.13.0` are prepared under `runtimes/`
 - backend dependencies are synchronized into `app/server/.venv`
 - frontend dependencies are installed in `app/client/node_modules`
-- `npm run build` produces the frontend used by `npm run preview`; the launcher invokes this after dependency installation in option 4, directly through option 5, and during option 1 recovery when the environment or build is unusable
+- `npm run build` produces the frontend used by `npm run preview`; the launcher invokes this after dependency installation in option 5, directly through option 6, and during option 1 recovery when the environment or build is unusable
+- the backend is launched as one Uvicorn worker and the frontend as a separate Vite preview process
+- the launcher reports startup complete only after the backend health endpoint and frontend HTTP endpoint both succeed
 
 ## Constraints
 
@@ -19,6 +21,9 @@ FAIRS is distributed as source and run locally from its repository through `star
 - No container deployment path is documented or supported in this repository.
 - Training workloads remain compute-heavy and depend on the existing worker-process model.
 - The launcher is the supported operational boundary for preparing runtimes, starting services, testing, and removing generated dependencies/build output while preserving source and user data.
+- The launcher never clears a configured port unconditionally. It discovers listeners, checks command-line or launcher ownership, and refuses to kill an unrelated process. Option 2 is the explicit stop action.
+- `RELOAD=true` is development-only because reload replaces the process-local training and inference state. Multiple Uvicorn workers are unsupported and rejected.
+- Closing the browser does not stop the backend or active inference sessions. Sessions end on explicit Stop, capacity eviction, or backend shutdown; a backend restart intentionally expires live model state.
 
 ## Source Release Boundary
 

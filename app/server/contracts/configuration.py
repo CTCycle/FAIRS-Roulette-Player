@@ -86,7 +86,8 @@ class EnvDatabaseSettings(BaseModel):
     @classmethod
     def from_environment(cls) -> "EnvDatabaseSettings":
         raw: dict[str, Any] = {}
-        if "DATABASE_URL" in os.environ:
+        database_url = os.getenv("DATABASE_URL")
+        if database_url is not None and database_url.strip():
             raise ValueError(
                 "DATABASE_URL is unsupported. Configure the individual DATABASE_* values."
             )

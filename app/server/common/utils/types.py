@@ -10,7 +10,7 @@ def coerce_finite_float(value: Any, default: float = 0.0) -> float:
         return float(value)
     try:
         candidate = float(value)
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         return default
     if math.isfinite(candidate):
         return candidate

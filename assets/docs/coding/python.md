@@ -1,6 +1,6 @@
 ## Python
 
-Last updated: 2026-08-30
+Last updated: 2026-09-01
 
 ## Runtime Baseline
 
@@ -34,10 +34,16 @@ Last updated: 2026-08-30
 
 - Use `async` only for genuinely non-blocking operations.
 - Do not run CPU-heavy model workloads in async request handlers.
+- Keep application bootstrap and resource ownership inside the FastAPI lifespan. Module imports must not load mutable environment state, create runtime directories, configure application logging, or construct ML/database resources.
+- Acquire shared resources in dependency order and release them in reverse order. Startup failure must roll back partial acquisition; shutdown must be idempotent and isolate individual cleanup failures.
+- Use application-scoped database engines/pools, process-local ML objects, and explicit `close`/`dispose` methods. Never create shared clients, executors, or model instances per request without a measured reason.
+- Treat `asyncio` tasks, worker processes, queues, file uploads, and temporary workspaces as owned resources. Signal cancellation, await or join them with a bound, and use a forceful fallback only after graceful cleanup has failed.
+- Move blocking upload parsing/import and other synchronous I/O out of the event loop with the project’s threadpool helper; close `UploadFile` handles in a `finally` block.
 - Follow the existing long-running task pattern:
   - start endpoint
   - status endpoint
   - stop or cancel endpoint
+- A training job transitions through `pending`, `running`, `stopping`, and terminal states. Cancellation is reported only after the worker has stopped; incomplete checkpoints are never published.
 - Reuse `TrainingRunManager` plus the worker-process model for training workloads. `TrainingRunManager` is the single in-process training-run state owner.
 
 ## Structure Rules

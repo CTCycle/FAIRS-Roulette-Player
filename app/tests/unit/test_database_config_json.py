@@ -90,6 +90,18 @@ def test_database_url_is_rejected(
 
 
 ###############################################################################
+def test_blank_database_url_is_treated_as_unconfigured(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("DATABASE_URL", "  ")
+    monkeypatch.setenv("EMBEDDED_DATABASE", "true")
+
+    settings = JsonServerSettings.model_validate({}).to_server_settings().database
+
+    assert settings.embedded_database is True
+
+
+###############################################################################
 def test_database_validation_requires_external_fields(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

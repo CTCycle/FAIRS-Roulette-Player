@@ -9,6 +9,7 @@ import {
     fetchCheckpointMetadata,
     fetchTrainingDatasetSummaries,
 } from '../utils/trainingApi';
+import { isAbortError } from '../utils/apiClient';
 
 export interface InferenceDatasetOption {
     dataset_id: number;
@@ -51,14 +52,19 @@ export const useInferenceSetupOptions = ({
     }, [onSetupChange]);
 
     useEffect(() => {
+        let mounted = true;
+        const controller = new AbortController();
         const loadDatasets = async () => {
             try {
-                const values = (await fetchTrainingDatasetSummaries()).map((entry) => ({
+                const values = (await fetchTrainingDatasetSummaries(controller.signal)).map((entry) => ({
                     dataset_id: entry.datasetId,
                     dataset_name: entry.datasetName,
                     row_count: entry.rowCount,
                 }));
 
+                if (!mounted) {
+                    return;
+                }
                 setDatasets(values);
                 if (values.length > 0 && latestSetupRef.current.selectedDataset === null) {
                     onSetupChangeRef.current({
@@ -66,11 +72,17 @@ export const useInferenceSetupOptions = ({
                     });
                 }
             } catch (err) {
-                console.error('Failed to load datasets:', err);
+                if (!isAbortError(err)) {
+                    console.error('Failed to load datasets:', err);
+                }
             }
         };
 
         void loadDatasets();
+        return () => {
+            mounted = false;
+            controller.abort();
+        };
     }, []);
 
     useEffect(() => {
@@ -79,12 +91,13 @@ export const useInferenceSetupOptions = ({
         }
 
         let mounted = true;
+        const controller = new AbortController();
 
         const loadCheckpointMetadata = async () => {
             try {
                 const entries = await Promise.all(
                     checkpoints.map(async (checkpoint) => {
-                        const metadata = await fetchCheckpointMetadata(checkpoint);
+                        const metadata = await fetchCheckpointMetadata(checkpoint, controller.signal);
                         return [checkpoint, parseCheckpointOptionMetadata(metadata.summary)] as const;
                     }),
                 );
@@ -95,10 +108,12 @@ export const useInferenceSetupOptions = ({
 
                 setCheckpointMetadataMap(Object.fromEntries(entries));
             } catch (error) {
-                if (mounted) {
+                if (mounted && !isAbortError(error)) {
                     setCheckpointMetadataMap({});
                 }
-                console.error('Failed to load checkpoint metadata:', error);
+                if (!isAbortError(error)) {
+                    console.error('Failed to load checkpoint metadata:', error);
+                }
             }
         };
 
@@ -106,6 +121,7 @@ export const useInferenceSetupOptions = ({
 
         return () => {
             mounted = false;
+            controller.abort();
         };
     }, [checkpoints]);
 

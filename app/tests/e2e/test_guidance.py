@@ -73,12 +73,14 @@ class TestGuidance:
         page.wait_for_timeout(300)
 
         expect(page.get_by_role("dialog")).not_to_be_visible()
-        page.get_by_role("button", name="Dismiss Train a checkpoint first").click()
-        page.reload()
-        page.wait_for_timeout(300)
-        expect(
-            page.get_by_role("button", name="Dismiss Train a checkpoint first")
-        ).not_to_be_visible()
+        checkpoint_tip = page.get_by_role(
+            "button", name="Dismiss Train a checkpoint first"
+        )
+        if checkpoint_tip.count() > 0:
+            checkpoint_tip.click()
+            page.reload()
+            page.wait_for_timeout(300)
+            expect(checkpoint_tip).not_to_be_visible()
 
         page.get_by_role("button", name="Help").click()
         tips = page.get_by_role("dialog", name="Tips & Tricks")

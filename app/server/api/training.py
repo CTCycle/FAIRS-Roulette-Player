@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from server.common.api_errors import ExceptionStatusMap, http_exception_for_exception
@@ -14,9 +16,6 @@ from server.contracts.training import (
     TrainingStatusResponse,
     TrainingStopResponse,
 )
-from server.services.training import TrainingService
-
-
 router = APIRouter(prefix="/training", tags=["training"])
 
 TRAINING_EXCEPTION_STATUS: ExceptionStatusMap = (
@@ -45,7 +44,7 @@ def _map_training_exception(exc: Exception) -> HTTPException:
 )
 def start_training(
     config: TrainingConfig,
-    service: TrainingService = Depends(get_training_service),
+    service: Any = Depends(get_training_service),
 ) -> JobStartResponse:
     try:
         return JobStartResponse.model_validate(service.start_training(config))
@@ -61,7 +60,7 @@ def start_training(
 )
 def resume_training(
     config: ResumeConfig,
-    service: TrainingService = Depends(get_training_service),
+    service: Any = Depends(get_training_service),
 ) -> JobStartResponse:
     try:
         return JobStartResponse.model_validate(service.resume_training(config))
@@ -76,7 +75,7 @@ def resume_training(
     status_code=status.HTTP_200_OK,
 )
 def get_status(
-    service: TrainingService = Depends(get_training_service),
+    service: Any = Depends(get_training_service),
 ) -> TrainingStatusResponse:
     return TrainingStatusResponse.model_validate(service.get_status())
 
@@ -88,7 +87,7 @@ def get_status(
     status_code=status.HTTP_200_OK,
 )
 def stop_training(
-    service: TrainingService = Depends(get_training_service),
+    service: Any = Depends(get_training_service),
 ) -> TrainingStopResponse:
     try:
         return TrainingStopResponse.model_validate(service.stop())
@@ -103,7 +102,7 @@ def stop_training(
     status_code=status.HTTP_200_OK,
 )
 def get_checkpoints(
-    service: TrainingService = Depends(get_training_service),
+    service: Any = Depends(get_training_service),
 ) -> TrainingCheckpointListResponse:
     return TrainingCheckpointListResponse.model_validate(service.list_checkpoints())
 
@@ -116,7 +115,7 @@ def get_checkpoints(
 )
 def get_checkpoint_metadata(
     checkpoint: str,
-    service: TrainingService = Depends(get_training_service),
+    service: Any = Depends(get_training_service),
 ) -> TrainingCheckpointMetadataResponse:
     try:
         return TrainingCheckpointMetadataResponse.model_validate(
@@ -134,7 +133,7 @@ def get_checkpoint_metadata(
 )
 def delete_checkpoint(
     checkpoint: str,
-    service: TrainingService = Depends(get_training_service),
+    service: Any = Depends(get_training_service),
 ) -> TrainingCheckpointDeleteResponse:
     try:
         return TrainingCheckpointDeleteResponse.model_validate(
@@ -152,7 +151,7 @@ def delete_checkpoint(
 )
 def get_training_job_status(
     job_id: str,
-    service: TrainingService = Depends(get_training_service),
+    service: Any = Depends(get_training_service),
 ) -> JobStatusResponse:
     try:
         return JobStatusResponse.model_validate(service.get_job(job_id))
@@ -168,7 +167,7 @@ def get_training_job_status(
 )
 def cancel_training_job(
     job_id: str,
-    service: TrainingService = Depends(get_training_service),
+    service: Any = Depends(get_training_service),
 ) -> JobCancelResponse:
     try:
         return JobCancelResponse.model_validate(service.delete_job(job_id))

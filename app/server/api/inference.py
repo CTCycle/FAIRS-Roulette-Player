@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 
 from server.common.api_errors import (
     ExceptionStatusMap,
@@ -15,14 +15,13 @@ from server.contracts.inference import (
     InferenceContextClearResponse,
     InferenceNextResponse,
     InferenceRowsClearResponse,
+    InferenceSessionStatusResponse,
     InferenceShutdownResponse,
     InferenceStartRequest,
     InferenceStartResponse,
     InferenceStepRequest,
     InferenceStepResponse,
 )
-from server.services.inference import InferenceService
-
 router = APIRouter(prefix="/inference", tags=["inference"])
 
 INFERENCE_EXCEPTION_STATUS: ExceptionStatusMap = (
@@ -50,10 +49,41 @@ def _map_inference_exception(exc: Exception) -> HTTPException:
 )
 def start_session(
     payload: InferenceStartRequest,
-    service: Annotated[InferenceService, Depends(get_inference_service)],
+    service: Annotated[Any, Depends(get_inference_service)],
+    preserve_session_id: Annotated[
+        str | None,
+        Header(alias="X-Preserve-Inference-Session"),
+    ] = None,
 ) -> InferenceStartResponse:
     try:
-        return InferenceStartResponse.model_validate(service.start_session(payload))
+        if preserve_session_id is None:
+            result = service.start_session(payload)
+        else:
+            result = service.start_session(
+                payload,
+                preserve_session_id=preserve_session_id,
+            )
+        return InferenceStartResponse.model_validate(
+            result
+        )
+    except Exception as exc:
+        raise _map_inference_exception(exc) from exc
+
+
+###############################################################################
+@router.get(
+    "/sessions/{session_id}",
+    response_model=InferenceSessionStatusResponse,
+    status_code=status.HTTP_200_OK,
+)
+def get_session(
+    session_id: str,
+    service: Annotated[Any, Depends(get_inference_service)],
+) -> InferenceSessionStatusResponse:
+    try:
+        return InferenceSessionStatusResponse.model_validate(
+            service.get_session_snapshot(session_id)
+        )
     except Exception as exc:
         raise _map_inference_exception(exc) from exc
 
@@ -66,7 +96,7 @@ def start_session(
 )
 def next_prediction(
     session_id: str,
-    service: Annotated[InferenceService, Depends(get_inference_service)],
+    service: Annotated[Any, Depends(get_inference_service)],
 ) -> InferenceNextResponse:
     try:
         return InferenceNextResponse.model_validate(service.next_prediction(session_id))
@@ -83,7 +113,7 @@ def next_prediction(
 def submit_step(
     session_id: str,
     payload: InferenceStepRequest,
-    service: Annotated[InferenceService, Depends(get_inference_service)],
+    service: Annotated[Any, Depends(get_inference_service)],
 ) -> InferenceStepResponse:
     try:
         return InferenceStepResponse.model_validate(
@@ -101,7 +131,7 @@ def submit_step(
 )
 def shutdown(
     session_id: str,
-    service: Annotated[InferenceService, Depends(get_inference_service)],
+    service: Annotated[Any, Depends(get_inference_service)],
 ) -> InferenceShutdownResponse:
     try:
         return InferenceShutdownResponse.model_validate(
@@ -120,7 +150,7 @@ def shutdown(
 def update_bet_amount(
     session_id: str,
     payload: InferenceBetUpdateRequest,
-    service: Annotated[InferenceService, Depends(get_inference_service)],
+    service: Annotated[Any, Depends(get_inference_service)],
 ) -> InferenceBetUpdateResponse:
     try:
         return InferenceBetUpdateResponse.model_validate(
@@ -138,7 +168,7 @@ def update_bet_amount(
 )
 def clear_session_rows(
     session_id: str,
-    service: Annotated[InferenceService, Depends(get_inference_service)],
+    service: Annotated[Any, Depends(get_inference_service)],
 ) -> InferenceRowsClearResponse:
     try:
         return InferenceRowsClearResponse.model_validate(
@@ -155,7 +185,7 @@ def clear_session_rows(
     status_code=status.HTTP_200_OK,
 )
 def clear_inference_context(
-    service: Annotated[InferenceService, Depends(get_inference_service)],
+    service: Annotated[Any, Depends(get_inference_service)],
 ) -> InferenceContextClearResponse:
     try:
         return InferenceContextClearResponse.model_validate(service.clear_context())

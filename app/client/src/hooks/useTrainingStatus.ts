@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { isRecord, parseApiErrorDetail } from '../utils/apiParsers';
+import { isRecord } from '../utils/apiParsers';
+import { isAbortError, requestJson } from '../utils/apiClient';
 import type {
     TrainingHistoryPoint,
     TrainingStats,
@@ -14,6 +15,7 @@ const TRAINING_STATUSES: ReadonlySet<TrainingStatusCode> = new Set([
     'completed',
     'error',
     'cancelled',
+    'stopping',
 ]);
 
 const DEFAULT_STATS: TrainingStats = {
@@ -208,9 +210,14 @@ export const useTrainingStatus = (): UseTrainingStatusResult => {
     const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const pollIntervalRef = useRef(1000);
     const pollAbortRef = useRef<AbortController | null>(null);
+    const reconnectAttemptRef = useRef(0);
+    const mountedRef = useRef(true);
+    const stopAbortRef = useRef<AbortController | null>(null);
+    const stopInFlightRef = useRef(false);
 
     useEffect(() => {
         let cancelled = false;
+        mountedRef.current = true;
 
         const pollStatus = async (): Promise<void> => {
             const startedAt = Date.now();
@@ -218,25 +225,25 @@ export const useTrainingStatus = (): UseTrainingStatusResult => {
                 pollAbortRef.current?.abort();
                 const controller = new AbortController();
                 pollAbortRef.current = controller;
-                const response = await fetch('/api/training/status', {
-                    signal: controller.signal,
-                });
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch training status (${response.status})`);
-                }
-                const parsed = parseTrainingStatus(await response.json());
+                const parsed = parseTrainingStatus(await requestJson(
+                    '/api/training/status',
+                    { signal: controller.signal },
+                    'Failed to fetch training status.',
+                ));
                 if (cancelled) {
                     return;
                 }
+                reconnectAttemptRef.current = 0;
                 setStatus(parsed);
                 setIsConnected(true);
                 setConnectionError(null);
                 pollIntervalRef.current = Math.max(250, parsed.poll_interval * 1000);
             } catch (error) {
-                if (error instanceof DOMException && error.name === 'AbortError') {
+                if (isAbortError(error)) {
                     return;
                 }
                 if (!cancelled) {
+                    reconnectAttemptRef.current += 1;
                     setIsConnected(false);
                     setConnectionError(
                         error instanceof Error ? error.message : 'Failed to connect to training server',
@@ -245,7 +252,13 @@ export const useTrainingStatus = (): UseTrainingStatusResult => {
             } finally {
                 if (!cancelled) {
                     const elapsed = Date.now() - startedAt;
-                    const delay = Math.max(0, pollIntervalRef.current - elapsed);
+                    const reconnectDelay = Math.min(
+                        10_000,
+                        1_000 * (2 ** Math.min(reconnectAttemptRef.current, 4)),
+                    );
+                    const delay = reconnectAttemptRef.current > 0
+                        ? Math.max(0, reconnectDelay - elapsed)
+                        : Math.max(0, pollIntervalRef.current - elapsed);
                     pollTimeoutRef.current = setTimeout(() => {
                         void pollStatus();
                     }, delay);
@@ -256,7 +269,9 @@ export const useTrainingStatus = (): UseTrainingStatusResult => {
         void pollStatus();
         return () => {
             cancelled = true;
+            mountedRef.current = false;
             pollAbortRef.current?.abort();
+            stopAbortRef.current?.abort();
             if (pollTimeoutRef.current !== null) {
                 clearTimeout(pollTimeoutRef.current);
             }
@@ -264,21 +279,32 @@ export const useTrainingStatus = (): UseTrainingStatusResult => {
     }, []);
 
     const stopTraining = useCallback(async (): Promise<void> => {
-        if (isStopping) {
+        if (isStopping || stopInFlightRef.current) {
             return;
         }
+        stopInFlightRef.current = true;
         setIsStopping(true);
         setStopError(null);
+        const controller = new AbortController();
+        stopAbortRef.current = controller;
         try {
-            const response = await fetch('/api/training/stop', { method: 'POST' });
-            const payload = await response.json().catch(() => null);
-            if (!response.ok) {
-                throw new Error(parseApiErrorDetail(payload, 'Failed to stop training'));
-            }
+            await requestJson(
+                '/api/training/stop',
+                { method: 'POST', signal: controller.signal },
+                'Failed to stop training.',
+            );
         } catch (error) {
-            setStopError(error instanceof Error ? error.message : 'Failed to stop training');
+            if (!isAbortError(error) && mountedRef.current) {
+                setStopError(error instanceof Error ? error.message : 'Failed to stop training');
+            }
         } finally {
-            setIsStopping(false);
+            if (stopAbortRef.current === controller) {
+                stopAbortRef.current = null;
+            }
+            stopInFlightRef.current = false;
+            if (mountedRef.current) {
+                setIsStopping(false);
+            }
         }
     }, [isStopping]);
 

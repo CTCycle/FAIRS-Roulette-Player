@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Activity, Info, RefreshCw, Save, X } from 'lucide-react';
 import { useWizardStep } from '../../../hooks/useWizardStep';
 import { WizardActions } from './WizardActions';
-import { parseApiErrorDetail, parseDatasetId } from '../../../utils/apiParsers';
+import { parseDatasetId } from '../../../utils/apiParsers';
+import { isAbortError, requestJson } from '../../../utils/apiClient';
 import {
     fetchCheckpointMetadata,
     fetchTrainingCheckpoints,
@@ -68,52 +69,98 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
     const [resumeWizardCheckpoint, setResumeWizardCheckpoint] = useState<string | null>(null);
     const [resumeWizardError, setResumeWizardError] = useState<string | null>(null);
     const [resumeSubmitting, setResumeSubmitting] = useState(false);
+    const mountedRef = useRef(true);
+    const checkpointsAbortRef = useRef<AbortController | null>(null);
+    const datasetsAbortRef = useRef<AbortController | null>(null);
 
-    const loadCheckpoints = async () => {
-        setLoading(true);
-        setError(null);
-        setNotice(null);
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => {
+            mountedRef.current = false;
+            checkpointsAbortRef.current?.abort();
+            datasetsAbortRef.current?.abort();
+        };
+    }, []);
+
+    const loadCheckpoints = async (signal?: AbortSignal) => {
+        await Promise.resolve();
+        if (mountedRef.current) {
+            setLoading(true);
+            setError(null);
+            setNotice(null);
+        }
         try {
-            const checkpointList = await fetchTrainingCheckpoints();
-            setCheckpoints(checkpointList);
-        } catch {
-            setError('Unable to load checkpoints.');
-            setCheckpoints([]);
+            const checkpointList = await fetchTrainingCheckpoints(signal);
+            if (mountedRef.current) {
+                setCheckpoints(checkpointList);
+            }
+        } catch (loadError) {
+            if (isAbortError(loadError)) {
+                return;
+            }
+            if (mountedRef.current) {
+                setError('Unable to load checkpoints.');
+                setCheckpoints([]);
+            }
         } finally {
-            setLoading(false);
+            if (mountedRef.current) {
+                setLoading(false);
+            }
         }
     };
 
-    const loadDatasets = async () => {
-        setDatasetsLoading(true);
-        setDatasetsError(null);
+    const loadDatasets = async (signal?: AbortSignal) => {
+        await Promise.resolve();
+        if (mountedRef.current) {
+            setDatasetsLoading(true);
+            setDatasetsError(null);
+        }
         try {
-            const datasetList = (await fetchTrainingDatasetSummaries())
+            const datasetList = (await fetchTrainingDatasetSummaries(signal))
                 .map((entry) => ({
                     datasetId: entry.datasetId,
                     datasetName: entry.datasetName,
                     rowCount: entry.rowCount,
                 }))
                 .filter((entry) => entry.datasetName.trim().length > 0);
-            setDatasets(datasetList);
-        } catch {
-            setDatasets([]);
-            setDatasetsError('Unable to load dataset names.');
+            if (mountedRef.current) {
+                setDatasets(datasetList);
+            }
+        } catch (loadError) {
+            if (isAbortError(loadError)) {
+                return;
+            }
+            if (mountedRef.current) {
+                setDatasets([]);
+                setDatasetsError('Unable to load dataset names.');
+            }
         } finally {
-            setDatasetsLoading(false);
+            if (mountedRef.current) {
+                setDatasetsLoading(false);
+            }
         }
     };
 
     useEffect(() => {
-        // Data loading updates the async request state for this refresh cycle.
+        checkpointsAbortRef.current?.abort();
+        const controller = new AbortController();
+        checkpointsAbortRef.current = controller;
+        // The request callback owns asynchronous loading state and guards it
+        // with mountedRef; it is not a synchronous effect state transition.
         // eslint-disable-next-line react-hooks/set-state-in-effect
-        void loadCheckpoints();
+        void loadCheckpoints(controller.signal);
+        return () => controller.abort();
     }, [refreshKey]);
 
     useEffect(() => {
-        // Data loading updates the async request state for this refresh cycle.
+        datasetsAbortRef.current?.abort();
+        const controller = new AbortController();
+        datasetsAbortRef.current = controller;
+        // The request callback owns asynchronous loading state and guards it
+        // with mountedRef; it is not a synchronous effect state transition.
         // eslint-disable-next-line react-hooks/set-state-in-effect
-        void loadDatasets();
+        void loadDatasets(controller.signal);
+        return () => controller.abort();
     }, [refreshKey]);
 
     const handleRefreshOverview = async () => {
@@ -128,26 +175,31 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
         setNotice(null);
 
         try {
-            const response = await fetch(`/api/training/checkpoints/${checkpointName}`, {
+            await requestJson(`/api/training/checkpoints/${checkpointName}`, {
                 method: 'DELETE',
-            });
+            }, 'Failed to delete checkpoint.');
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => null);
-                throw new Error(parseApiErrorDetail(errorData, 'Failed to delete checkpoint'));
+            if (mountedRef.current) {
+                setCheckpoints((prev) => prev.filter((name) => name !== checkpointName));
             }
-
-            setCheckpoints((prev) => prev.filter((name) => name !== checkpointName));
         } catch (err) {
-            console.error('Error deleting checkpoint:', err);
-            setError(`Error deleting checkpoint: ${err instanceof Error ? err.message : String(err)}`);
+            if (!isAbortError(err) && mountedRef.current) {
+                console.error('Error deleting checkpoint:', err);
+                setError(`Error deleting checkpoint: ${err instanceof Error ? err.message : String(err)}`);
+            }
         }
     };
 
-    const loadCheckpointMetadata = useCallback(async (checkpointName: string) => {
+    const loadCheckpointMetadata = useCallback(async (
+        checkpointName: string,
+        signal?: AbortSignal,
+    ) => {
         try {
-            return await fetchCheckpointMetadata(checkpointName);
+            return await fetchCheckpointMetadata(checkpointName, signal);
         } catch (error) {
+            if (isAbortError(error)) {
+                throw error;
+            }
             throw new Error(
                 error instanceof Error
                     ? error.message
@@ -160,7 +212,10 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
         setMetadataCache((prev) => ({ ...prev, [checkpointName]: payload }));
     }, []);
 
-    const prefetchCheckpointMetadata = useCallback(async (checkpointList: string[]) => {
+    const prefetchCheckpointMetadata = useCallback(async (
+        checkpointList: string[],
+        signal?: AbortSignal,
+    ) => {
         const toFetch = checkpointList.filter((name) => !metadataCache[name]);
         if (toFetch.length === 0) {
             return;
@@ -168,7 +223,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
         const results = await Promise.all(
             toFetch.map(async (name) => {
                 try {
-                    const payload = await loadCheckpointMetadata(name);
+                    const payload = await loadCheckpointMetadata(name, signal);
                     return { name, payload };
                 } catch {
                     return { name, payload: null };
@@ -186,7 +241,9 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
         if (checkpoints.length === 0) {
             return;
         }
-        void prefetchCheckpointMetadata(checkpoints);
+        const controller = new AbortController();
+        void prefetchCheckpointMetadata(checkpoints, controller.signal);
+        return () => controller.abort();
     }, [checkpoints, prefetchCheckpointMetadata]);
 
     const openMetadataModal = async (checkpointName: string) => {
@@ -203,10 +260,14 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
             cacheCheckpointMetadata(checkpointName, payload);
             setMetadataPayload(payload);
         } catch (err) {
-            setMetadataPayload(null);
-            setMetadataError(err instanceof Error ? err.message : 'Unable to load metadata');
+            if (!isAbortError(err) && mountedRef.current) {
+                setMetadataPayload(null);
+                setMetadataError(err instanceof Error ? err.message : 'Unable to load metadata');
+            }
         } finally {
-            setMetadataLoading(false);
+            if (mountedRef.current) {
+                setMetadataLoading(false);
+            }
         }
     };
 
@@ -230,26 +291,26 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
         setResumeWizardError(null);
 
         try {
-            const response = await fetch('/api/training/resume', {
+            await requestJson('/api/training/resume', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     checkpoint: resumeWizardCheckpoint,
                     additional_episodes: Number(resumeConfig.numAdditionalEpisodes),
                 }),
-            });
-
-            if (!response.ok) {
-                const errorPayload = await response.json().catch(() => null);
-                setResumeWizardError(`Failed to resume training: ${parseApiErrorDetail(errorPayload, 'Unknown error')}`);
-                return;
-            }
+            }, 'Unknown error.');
 
             closeResumeWizard();
-        } catch {
-            setResumeWizardError('Failed to connect to training server');
+        } catch (resumeError) {
+            if (mountedRef.current) {
+                setResumeWizardError(resumeError instanceof Error
+                    ? `Failed to resume training: ${resumeError.message}`
+                    : 'Failed to connect to training server');
+            }
         } finally {
-            setResumeSubmitting(false);
+            if (mountedRef.current) {
+                setResumeSubmitting(false);
+            }
         }
     };
 

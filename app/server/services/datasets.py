@@ -8,8 +8,9 @@ from server.contracts.datasets import (
     DatasetSummaryResponse,
 )
 from server.contracts.upload import UploadRequest, UploadResponse
+from server.common.exceptions import CheckpointReferenceError
 from server.repositories.datasets import DatasetRepository
-from server.services.checkpoints import CheckpointReferenceError, CheckpointService
+from server.services.checkpoints import CheckpointService
 from server.services.importer import DatasetImportService
 from server.services.loader import TabularFileLoader
 

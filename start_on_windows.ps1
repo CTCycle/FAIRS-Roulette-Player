@@ -28,6 +28,8 @@ $pytestCacheDir = Join-Path $testCacheDir 'pytest'
 $ruffCacheDir = Join-Path $testCacheDir 'ruff'
 $script:NextProgressId = 1
 $script:ActiveProgressIds = [Collections.Generic.HashSet[int]]::new()
+$script:OwnedProcessIds = [Collections.Generic.HashSet[int]]::new()
+$script:OwnedProcessRecords = @{}
 
 # -----------------------------------------------------------------------------
 # Portable runtime versions and download sources
@@ -50,12 +52,17 @@ function Write-Step([string]$Message) { Clear-LauncherProgress; Write-Host "[STE
 function Write-Ok([string]$Message) { Clear-LauncherProgress; Write-Host "[OK] $Message" -ForegroundColor Green }
 function Write-Info([string]$Message) { Clear-LauncherProgress; Write-Host "[INFO] $Message" -ForegroundColor DarkCyan }
 function Write-Fatal([string]$Message) { Clear-LauncherProgress; Write-Host "[FATAL] $Message" -ForegroundColor Red }
+function Test-InteractiveConsole {
+    return -not [Console]::IsInputRedirected -and -not [Console]::IsOutputRedirected
+}
 
 function Start-LauncherProgress {
     param([Parameter(Mandatory)][string]$Activity, [Parameter(Mandatory)][string]$Status)
     $id = $script:NextProgressId++
     [void]$script:ActiveProgressIds.Add($id)
-    Write-Progress -Id $id -Activity $Activity -Status $Status
+    if (Test-InteractiveConsole) {
+        Write-Progress -Id $id -Activity $Activity -Status $Status
+    }
     return $id
 }
 
@@ -69,19 +76,25 @@ function Update-LauncherProgress {
     if (-not $script:ActiveProgressIds.Contains($Id)) { return }
     $progress = @{ Id = $Id; Activity = $Activity; Status = $Status }
     if ($null -ne $PercentComplete) { $progress.PercentComplete = $PercentComplete }
-    Write-Progress @progress
+    if (Test-InteractiveConsole) {
+        Write-Progress @progress
+    }
 }
 
 function Complete-LauncherProgress([int]$Id) {
     if ($script:ActiveProgressIds.Contains($Id)) {
-        Write-Progress -Id $Id -Activity 'FAIRS launcher' -Completed
+        if (Test-InteractiveConsole) {
+            Write-Progress -Id $Id -Activity 'FAIRS launcher' -Completed
+        }
         [void]$script:ActiveProgressIds.Remove($Id)
     }
 }
 
 function Clear-LauncherProgress {
     foreach ($id in @($script:ActiveProgressIds)) {
-        Write-Progress -Id $id -Activity 'FAIRS launcher' -Completed
+        if (Test-InteractiveConsole) {
+            Write-Progress -Id $id -Activity 'FAIRS launcher' -Completed
+        }
         [void]$script:ActiveProgressIds.Remove($id)
     }
 }
@@ -262,9 +275,9 @@ function Import-DotEnv {
     Initialize-EnvironmentFile
     $defaults = [ordered]@{
         FASTAPI_HOST = '127.0.0.1'
-        FASTAPI_PORT = '8000'
+        FASTAPI_PORT = '8890'
         UI_HOST = '127.0.0.1'
-        UI_PORT = '8001'
+        UI_PORT = '8051'
         RELOAD = 'false'
         BACKEND_LOGS_VISIBLE = 'true'
     }
@@ -339,6 +352,7 @@ function Install-Dependencies {
         [string]$InstallationType = 'Standard'
     )
     Import-DotEnv
+    Assert-ApplicationStopped
     Ensure-PortableRuntimes
 
     Set-CacheEnvironment
@@ -360,8 +374,6 @@ function Install-Dependencies {
         if ($LASTEXITCODE -ne 0) { throw "uv sync failed with exit code $LASTEXITCODE." }
     } finally { Pop-Location }
 
-    Write-Step 'Stopping any running frontend before updating dependencies.'
-    Clear-Port ([int]$env:UI_PORT)
     Write-Step 'Installing frontend dependencies.'
     Push-Location $clientDir
     try {
@@ -382,6 +394,8 @@ function Install-Dependencies {
 }
 
 function Build-Frontend {
+    Import-DotEnv
+    Assert-ApplicationStopped
     Write-Step 'Building frontend.'
     Push-Location $clientDir
     try {
@@ -446,16 +460,204 @@ function Get-PortProcessIds([int]$Port) {
     } | Sort-Object -Unique)
 }
 
-function Clear-Port([int]$Port) {
-    foreach ($processId in Get-PortProcessIds $Port) {
-        Write-Info "Stopping PID $processId on port $Port."
-        & taskkill.exe /PID $processId /T /F | Out-Null
+function Register-LauncherProcess([int]$ProcessId) {
+    if ($ProcessId -gt 0) {
+        [void]$script:OwnedProcessIds.Add($ProcessId)
+        try {
+            $process = Get-Process -Id $ProcessId -ErrorAction Stop
+            $script:OwnedProcessRecords[$ProcessId] = [pscustomobject]@{
+                StartTime   = $process.StartTime
+                CommandLine = Get-ProcessCommandLine $ProcessId
+            }
+        } catch {
+            [void]$script:OwnedProcessRecords.Remove($ProcessId)
+        }
+    }
+}
+
+function Get-ProcessCommandLine([int]$ProcessId) {
+    try {
+        $process = Get-CimInstance -ClassName Win32_Process -Filter "ProcessId = $ProcessId" -ErrorAction Stop
+        return [string]$process.CommandLine
+    } catch {
+        return ''
+    }
+}
+
+function Get-ProcessParentId([int]$ProcessId) {
+    try {
+        $process = Get-CimInstance -ClassName Win32_Process -Filter "ProcessId = $ProcessId" -ErrorAction Stop
+        return [int]$process.ParentProcessId
+    } catch {
+        return 0
+    }
+}
+
+function Test-RecordedProcessIdentity([int]$ProcessId) {
+    if (-not $script:OwnedProcessRecords.ContainsKey($ProcessId)) { return $false }
+    $record = $script:OwnedProcessRecords[$ProcessId]
+    try {
+        $process = Get-Process -Id $ProcessId -ErrorAction Stop
+        if ($process.StartTime -eq $record.StartTime) { return $true }
+    } catch { }
+
+    $currentCommandLine = Get-ProcessCommandLine $ProcessId
+    return -not [string]::IsNullOrWhiteSpace($record.CommandLine) -and
+        $currentCommandLine -eq $record.CommandLine
+}
+
+function Test-LauncherOwnedProcess([int]$ProcessId) {
+    $visited = [Collections.Generic.HashSet[int]]::new()
+    $currentProcessId = $ProcessId
+    for ($depth = 0; $depth -lt 16 -and $currentProcessId -gt 0; $depth++) {
+        if (-not $visited.Add($currentProcessId)) { break }
+        if (Test-RecordedProcessIdentity $currentProcessId) { return $true }
+
+        $commandLine = Get-ProcessCommandLine $currentProcessId
+        if (-not [string]::IsNullOrWhiteSpace($commandLine)) {
+            $inRepository = $commandLine.IndexOf($repoRoot, [StringComparison]::OrdinalIgnoreCase) -ge 0
+            $backendMarker = $commandLine.IndexOf('server.app:app', [StringComparison]::OrdinalIgnoreCase) -ge 0
+            $frontendMarker = $commandLine.IndexOf('run preview', [StringComparison]::OrdinalIgnoreCase) -ge 0 -or
+                $commandLine.IndexOf('vite preview', [StringComparison]::OrdinalIgnoreCase) -ge 0 -or
+                $commandLine -match '(?i)node_modules[\\/].*\bvite(?:\.js)?\b.*\bpreview\b'
+            if ($inRepository -and ($backendMarker -or $frontendMarker)) { return $true }
+        }
+
+        $parentProcessId = Get-ProcessParentId $currentProcessId
+        if ($parentProcessId -le 0 -or $parentProcessId -eq $currentProcessId) { break }
+        $currentProcessId = $parentProcessId
+    }
+
+    if ($script:OwnedProcessRecords.ContainsKey($ProcessId)) {
+        [void]$script:OwnedProcessRecords.Remove($ProcessId)
+        [void]$script:OwnedProcessIds.Remove($ProcessId)
+    }
+    return $false
+}
+
+function Get-ApplicationProcessIds([int[]]$Ports) {
+    $processIds = [Collections.Generic.HashSet[int]]::new()
+    foreach ($port in $Ports) {
+        foreach ($processId in @(Get-PortProcessIds $port)) {
+            [void]$processIds.Add([int]$processId)
+        }
+    }
+    foreach ($processId in @($script:OwnedProcessIds)) {
+        try {
+            if (Get-Process -Id $processId -ErrorAction Stop) {
+                [void]$processIds.Add([int]$processId)
+            }
+        } catch { }
+    }
+    return @($processIds | Sort-Object)
+}
+
+function Stop-LauncherProcess([int]$ProcessId) {
+    try {
+        if (-not (Get-Process -Id $ProcessId -ErrorAction Stop)) {
+            [void]$script:OwnedProcessIds.Remove($ProcessId)
+            [void]$script:OwnedProcessRecords.Remove($ProcessId)
+            return
+        }
+    } catch {
+        [void]$script:OwnedProcessIds.Remove($ProcessId)
+        [void]$script:OwnedProcessRecords.Remove($ProcessId)
+        return
+    }
+    if (-not (Test-LauncherOwnedProcess $ProcessId)) {
+        throw "Refusing to stop unrelated PID $ProcessId. Its command line does not belong to this repository."
+    }
+    Write-Info "Stopping application PID $ProcessId."
+    & taskkill.exe /PID $ProcessId /T /F | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        try {
+            Get-Process -Id $ProcessId -ErrorAction Stop | Out-Null
+            throw "Could not stop application PID $ProcessId (taskkill exit code $LASTEXITCODE)."
+        } catch [Microsoft.PowerShell.Commands.ProcessCommandException] {
+            # The process may already have exited after taskkill terminated its tree.
+        }
+    }
+    [void]$script:OwnedProcessIds.Remove($ProcessId)
+    [void]$script:OwnedProcessRecords.Remove($ProcessId)
+}
+
+function Assert-ApplicationProcessOwnership([int[]]$ProcessIds) {
+    $unowned = foreach ($processId in $ProcessIds) {
+        if (-not (Test-LauncherOwnedProcess $processId)) {
+            $commandLine = Get-ProcessCommandLine $processId
+            if ([string]::IsNullOrWhiteSpace($commandLine)) {
+                "PID $processId (command line unavailable)"
+            } else {
+                "PID $processId ($commandLine)"
+            }
+        }
+    }
+    if (@($unowned).Count -gt 0) {
+        throw "Refusing to stop unrelated process(es). $($unowned -join '; ')"
+    }
+}
+
+function Assert-ApplicationStopped {
+    $fastApiPort = [int]$env:FASTAPI_PORT
+    $uiPort = [int]$env:UI_PORT
+    $processIds = @(Get-ApplicationProcessIds @($fastApiPort, $uiPort))
+    if ($processIds.Count -eq 0) { return }
+
+    $details = foreach ($processId in $processIds) {
+        $commandLine = Get-ProcessCommandLine $processId
+        if ([string]::IsNullOrWhiteSpace($commandLine)) {
+            "PID $processId (command line unavailable)"
+        } else {
+            "PID $processId ($commandLine)"
+        }
+    }
+    throw "Application processes are still running. Use Stop application first. $($details -join '; ')"
+}
+
+function Assert-SingleWorkerConfiguration {
+    foreach ($variableName in @('WEB_CONCURRENCY', 'UVICORN_WORKERS', 'FAIRS_WORKERS')) {
+        $rawValue = [Environment]::GetEnvironmentVariable($variableName, 'Process')
+        if ([string]::IsNullOrWhiteSpace($rawValue)) { continue }
+        $workerCount = 0
+        if (-not [int]::TryParse($rawValue.Trim(), [ref]$workerCount) -or $workerCount -ne 1) {
+            throw "$variableName=$rawValue is unsupported. FAIRS requires exactly one backend worker for process-local training and inference state."
+        }
+    }
+}
+
+function Stop-Application {
+    Import-DotEnv
+    $fastApiPort = [int]$env:FASTAPI_PORT
+    $uiPort = [int]$env:UI_PORT
+    $processIds = @(Get-ApplicationProcessIds @($fastApiPort, $uiPort))
+    if ($processIds.Count -eq 0) {
+        Write-Info 'No application processes are running.'
+        return
+    }
+
+    Assert-ApplicationProcessOwnership $processIds
+    foreach ($processId in $processIds) {
+        Stop-LauncherProcess $processId
     }
     for ($attempt = 0; $attempt -lt 20; $attempt++) {
-        if ((Get-PortProcessIds $Port).Count -eq 0) { return }
+        $remainingPorts = @(Get-PortProcessIds $fastApiPort) + @(Get-PortProcessIds $uiPort) |
+            Sort-Object -Unique
+        $remainingOwned = @(Get-ApplicationProcessIds @($fastApiPort, $uiPort))
+        if ($remainingPorts.Count -eq 0 -and $remainingOwned.Count -eq 0) {
+            Write-Ok 'Application stopped.'
+            return
+        }
+        if ($remainingPorts.Count -eq 0 -and $remainingOwned.Count -gt 0) {
+            Assert-ApplicationProcessOwnership $remainingOwned
+            foreach ($processId in $remainingOwned) {
+                Stop-LauncherProcess $processId
+            }
+            continue
+        }
+        Assert-ApplicationProcessOwnership $remainingPorts
         Start-Sleep -Seconds 1
     }
-    throw "Port $Port is still occupied."
+    throw "Application processes or configured ports are still occupied after shutdown."
 }
 
 # -----------------------------------------------------------------------------
@@ -463,6 +665,8 @@ function Clear-Port([int]$Port) {
 # -----------------------------------------------------------------------------
 function Start-Application {
     Import-DotEnv
+    Assert-ApplicationStopped
+    Assert-SingleWorkerConfiguration
     Ensure-PortableRuntimes
     Set-CacheEnvironment
     $env:UV_PROJECT_ENVIRONMENT = $venvDir
@@ -478,45 +682,54 @@ function Start-Application {
     }
     $fastApiPort = [int]$env:FASTAPI_PORT
     $uiPort = [int]$env:UI_PORT
-    Clear-Port $fastApiPort
-    Clear-Port $uiPort
 
     $reloadArgument = if ($env:RELOAD -eq 'true') { ' --reload' } else { '' }
-    $backendArgs = "-m uvicorn server.app:app --app-dir `"$($repoRoot)\app`" --host $($env:FASTAPI_HOST) --port $fastApiPort$reloadArgument --log-level info"
+    if ($env:RELOAD -eq 'true') {
+        Write-Info 'RELOAD=true is development-only; reloads discard in-memory training jobs and inference sessions.'
+    }
+    $backendArgs = "-m uvicorn server.app:app --app-dir `"$($repoRoot)\app`" --host $($env:FASTAPI_HOST) --port $fastApiPort --workers 1$reloadArgument --log-level info"
     Write-Step 'Launching backend.'
     if ($env:BACKEND_LOGS_VISIBLE -eq 'true') {
-        $visibleBackendCommand = 'start "FAIRS Backend" /D "' + $repoRoot + '" cmd.exe /k ""' + $venvPython + '" ' + $backendArgs + '"'
-        Start-Process -FilePath 'cmd.exe' -ArgumentList @('/d', '/c', $visibleBackendCommand) -WorkingDirectory $repoRoot | Out-Null
-        $backendProcess = $null
+        $backendCommand = '"' + $venvPython + '" ' + $backendArgs
+        $backendProcess = Start-Process -FilePath 'cmd.exe' -ArgumentList @('/d', '/k', $backendCommand) -WorkingDirectory $repoRoot -PassThru
     } else {
         $backendProcess = Start-Process -FilePath $venvPython -ArgumentList $backendArgs -WorkingDirectory $repoRoot -WindowStyle Hidden -PassThru
     }
+    Register-LauncherProcess $backendProcess.Id
 
     $backendUrl = "http://$($env:FASTAPI_HOST):$fastApiPort"
     Write-Step "Waiting for backend readiness at $backendUrl/api/health."
     try {
         Invoke-HealthCheck "$backendUrl/api/health" 60
     } catch {
-        if ($backendProcess) { & taskkill.exe /PID $backendProcess.Id /T /F | Out-Null }
+        try { Stop-Application } catch { Write-Info "Backend cleanup reported: $($_.Exception.Message)" }
         throw "Backend did not become healthy within 60 seconds."
     }
     $backendPid = (Get-PortProcessIds $fastApiPort | Select-Object -First 1)
+    if (-not $backendPid) {
+        try { Stop-Application } catch { Write-Info "Backend cleanup reported: $($_.Exception.Message)" }
+        throw "Backend reported readiness but no listener was found on port $fastApiPort."
+    }
 
     Write-Step 'Launching frontend preview.'
     $frontendArgs = "/c `"`"$npmCmd`" run preview -- --host $($env:UI_HOST) --port $uiPort --strictPort`""
     $frontendProcess = Start-Process -FilePath 'cmd.exe' -ArgumentList $frontendArgs -WorkingDirectory $clientDir -WindowStyle Hidden -PassThru
+    Register-LauncherProcess $frontendProcess.Id
     $uiUrl = "http://$($env:UI_HOST):$uiPort"
+    $frontendReady = $false
     for ($attempt = 0; $attempt -lt 30; $attempt++) {
         try {
             $response = Invoke-WebRequest -UseBasicParsing -Uri $uiUrl -TimeoutSec 2
-            if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 400) { break }
+            if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 400) {
+                $frontendReady = $true
+                break
+            }
         } catch { }
         Start-Sleep -Seconds 1
     }
     $frontendPid = (Get-PortProcessIds $uiPort | Select-Object -First 1)
-    if (-not $frontendPid) {
-        if ($backendPid) { & taskkill.exe /PID $backendPid /T /F | Out-Null }
-        if (-not $frontendProcess.HasExited) { & taskkill.exe /PID $frontendProcess.Id /T /F | Out-Null }
+    if (-not $frontendReady -or -not $frontendPid) {
+        try { Stop-Application } catch { Write-Info "Application cleanup reported: $($_.Exception.Message)" }
         throw "Frontend preview did not become ready at $uiUrl."
     }
 
@@ -532,6 +745,7 @@ function Start-Application {
 # -----------------------------------------------------------------------------
 function Initialize-Database {
     Import-DotEnv
+    Assert-ApplicationStopped
     Ensure-PortableRuntimes
     Set-CacheEnvironment
     $env:UV_PROJECT_ENVIRONMENT = $venvDir
@@ -552,6 +766,8 @@ function Initialize-Database {
 }
 
 function Invoke-TestSuite {
+    Import-DotEnv
+    Assert-ApplicationStopped
     Set-CacheEnvironment
     & (Join-Path $repoRoot 'app\tests\run_tests.bat')
     if ($LASTEXITCODE -ne 0) { throw "Test suite failed with exit code $LASTEXITCODE." }
@@ -571,6 +787,8 @@ function Confirm-DestructiveAction([string]$Description) {
 }
 
 function Remove-Logs {
+    Import-DotEnv
+    Assert-ApplicationStopped
     if (-not (Confirm-DestructiveAction 'remove application log files')) { return }
 
     $logDir = (Get-UserDataTargets).LogRoot
@@ -605,6 +823,8 @@ function Remove-PythonCaches {
 }
 
 function Clear-Cache {
+    Import-DotEnv
+    Assert-ApplicationStopped
     if (-not (Confirm-DestructiveAction 'clear Python, uv, and tool caches')) { return }
 
     $cachePaths = @($runtimeCacheDir, $testCacheDir)
@@ -672,6 +892,8 @@ function Remove-UserDataDirectory([string]$Path) {
 }
 
 function Remove-Checkpoints {
+    Import-DotEnv
+    Assert-ApplicationStopped
     if (-not (Confirm-DestructiveAction 'delete all saved checkpoints')) { return }
 
     $targets = Get-UserDataTargets
@@ -681,6 +903,8 @@ function Remove-Checkpoints {
 }
 
 function Remove-AllData {
+    Import-DotEnv
+    Assert-ApplicationStopped
     if (-not (Confirm-DestructiveAction 'delete local user data')) { return }
 
     $targets = Get-UserDataTargets
@@ -699,6 +923,8 @@ function Remove-AllData {
 }
 
 function Uninstall-Application {
+    Import-DotEnv
+    Assert-ApplicationStopped
     if (-not (Confirm-DestructiveAction 'remove local runtimes and build outputs')) { return }
 
     $paths = @(
@@ -730,6 +956,8 @@ function Uninstall-Application {
 # Repository maintenance
 # -----------------------------------------------------------------------------
 function Update-Application {
+    Import-DotEnv
+    Assert-ApplicationStopped
     Push-Location $repoRoot
     try {
         $branchOutput = @(& git branch --show-current 2>$null)
@@ -817,7 +1045,9 @@ function Read-InstallationType {
 
 function Show-Menu {
     while ($true) {
-        Clear-Host
+        if (Test-InteractiveConsole) {
+            Clear-Host
+        }
         Write-Host ''
         Write-Host '  +---------------------------------------------------+' -ForegroundColor DarkCyan
         Write-Host '  |                                                   |' -ForegroundColor DarkCyan
@@ -828,56 +1058,58 @@ function Show-Menu {
         Write-Host ''
         Write-Host '  START' -ForegroundColor DarkCyan
         Write-MenuItem '1' 'Launch application' 'Start the backend and player' Cyan
+        Write-MenuItem '2' 'Stop application' 'Stop only this repository''s backend and player' Cyan
         Write-Host ''
         Write-Host '  APPLICATION UPDATES' -ForegroundColor DarkCyan
-        Write-MenuItem '2' 'Update application' 'Pull application changes from the main branch' Yellow
-        Write-MenuItem '3' 'Check for updates' 'Report local main-branch update status only' Yellow
+        Write-MenuItem '3' 'Update application' 'Pull application changes from the main branch' Yellow
+        Write-MenuItem '4' 'Check for updates' 'Report local main-branch update status only' Yellow
         Write-Host ''
         Write-Host '  SETUP & VALIDATION' -ForegroundColor DarkCyan
-        Write-MenuItem '4' 'Install / update dependencies' 'Prepare local runtimes and build the frontend' Yellow
-        Write-MenuItem '5' 'Rebuild frontend' 'Build the frontend without updating dependencies' Yellow
-        Write-MenuItem '6' 'Create / upgrade database' 'Create the selected database and apply migrations' Yellow
-        Write-MenuItem '7' 'Run test suite' 'Execute automated checks' Yellow
+        Write-MenuItem '5' 'Install / update dependencies' 'Prepare local runtimes and build the frontend' Yellow
+        Write-MenuItem '6' 'Rebuild frontend' 'Build the frontend without updating dependencies' Yellow
+        Write-MenuItem '7' 'Create / upgrade database' 'Create the selected database and apply migrations' Yellow
+        Write-MenuItem '8' 'Run test suite' 'Execute automated checks' Yellow
         Write-Host ''
         Write-Host '  CLEANUP & DATA' -ForegroundColor DarkCyan
-        Write-MenuItem '8' 'Remove logs' 'Delete application log files' DarkYellow
-        Write-MenuItem '9' 'Clear cache' 'Remove Python, uv, and tool caches' DarkYellow
-        Write-MenuItem '10' 'Remove checkpoints' 'Delete saved checkpoints only' Red
-        Write-MenuItem '11' 'Remove All Data' 'Delete local database and logs, preserving checkpoints' Red
+        Write-MenuItem '9' 'Remove logs' 'Delete application log files' DarkYellow
+        Write-MenuItem '10' 'Clear cache' 'Remove Python, uv, and tool caches' DarkYellow
+        Write-MenuItem '11' 'Remove checkpoints' 'Delete saved checkpoints only' Red
+        Write-MenuItem '12' 'Remove All Data' 'Delete local database and logs, preserving checkpoints' Red
         Write-Host ''
         Write-Host '  APPLICATION FILES' -ForegroundColor DarkCyan
-        Write-MenuItem '12' 'Uninstall application' 'Remove local runtimes and build outputs' Red
+        Write-MenuItem '13' 'Uninstall application' 'Remove local runtimes and build outputs' Red
         Write-Host ''
         Write-Host '  -----------------------------------------------------' -ForegroundColor DarkCyan
-        Write-MenuItem '13' 'Exit' 'Close this launcher' DarkGray
+        Write-MenuItem '14' 'Exit' 'Close this launcher' DarkGray
         Write-Host ''
-        $selection = Read-Host '  Select an option (1-13)'
-        if ($selection -notmatch '^(?:[1-9]|1[0-3])$') {
-            Write-Fatal 'Invalid option. Select a number from 1 through 13.'
+        $selection = Read-Host '  Select an option (1-14)'
+        if ($selection -notmatch '^(?:[1-9]|1[0-4])$') {
+            Write-Fatal 'Invalid option. Select a number from 1 through 14.'
             Wait-ForMenu
             continue
         }
-        if ($selection -eq '13') { break }
+        if ($selection -eq '14') { break }
         try {
         Invoke-TrackedLauncherAction -Name "menu option $selection" -Action {
             switch ($selection) {
                 '1' { Start-Application; exit 0 }
-                '2' { Update-Application }
-                '3' { Check-ForUpdates }
-                '4' {
+                '2' { Stop-Application }
+                '3' { Update-Application }
+                '4' { Check-ForUpdates }
+                '5' {
                     $installationType = Read-InstallationType
                     Install-Dependencies -PruneCache -InstallationType $installationType
                     Build-Frontend
                     Initialize-Database
                 }
-                '5' { Build-Frontend }
-                '6' { Initialize-Database }
-                '7' { Invoke-TestSuite }
-                '8' { Remove-Logs }
-                '9' { Clear-Cache }
-                '10' { Remove-Checkpoints }
-                '11' { Remove-AllData }
-                '12' { Uninstall-Application }
+                '6' { Build-Frontend }
+                '7' { Initialize-Database }
+                '8' { Invoke-TestSuite }
+                '9' { Remove-Logs }
+                '10' { Clear-Cache }
+                '11' { Remove-Checkpoints }
+                '12' { Remove-AllData }
+                '13' { Uninstall-Application }
             }
         }
             if ([Console]::IsInputRedirected) { break }

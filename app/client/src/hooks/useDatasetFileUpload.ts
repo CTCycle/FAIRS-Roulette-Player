@@ -1,10 +1,11 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, DragEvent, RefObject } from 'react';
 import {
     isSupportedDatasetFile,
     uploadDatasetFile,
 } from '../utils/datasetUpload';
 import type { DatasetUploadStateUpdates } from '../types/datasetUpload';
+import { isAbortError } from '../utils/apiClient';
 
 interface UseDatasetFileUploadOptions {
     onStateChange: (updates: DatasetUploadStateUpdates) => void;
@@ -37,6 +38,17 @@ export const useDatasetFileUpload = ({
     // Keep the actual File object local; only display metadata leaves this hook.
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const uploadAbortRef = useRef<AbortController | null>(null);
+    const uploadInFlightRef = useRef(false);
+    const mountedRef = useRef(true);
+
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => {
+            mountedRef.current = false;
+            uploadAbortRef.current?.abort();
+        };
+    }, []);
 
     const setSelectedDatasetFile = (file: File): void => {
         setSelectedFile(file);
@@ -79,6 +91,7 @@ export const useDatasetFileUpload = ({
     };
 
     const clearFiles = (): void => {
+        uploadAbortRef.current?.abort();
         setSelectedFile(null);
         onReset();
         if (fileInputRef.current) {
@@ -87,32 +100,51 @@ export const useDatasetFileUpload = ({
     };
 
     const uploadDataset = async (): Promise<void> => {
-        if (!selectedFile) {
-            onStateChange({
-                uploadStatus: 'error',
-                uploadMessage: 'Select a CSV/XLSX file first.',
-            });
+        if (!selectedFile || uploadInFlightRef.current) {
+            if (!selectedFile) {
+                onStateChange({
+                    uploadStatus: 'error',
+                    uploadMessage: 'Select a CSV/XLSX file first.',
+                });
+            }
+            return;
+        }
+        if (!mountedRef.current) {
             return;
         }
 
+        uploadInFlightRef.current = true;
+        const controller = new AbortController();
+        uploadAbortRef.current = controller;
         onStateChange({
             uploadStatus: 'uploading',
             uploadMessage: 'Uploading and importing dataset...',
         });
 
         try {
-            const rows = await uploadDatasetFile(selectedFile);
+            const rows = await uploadDatasetFile(selectedFile, controller.signal);
+            if (!mountedRef.current) {
+                return;
+            }
             onStateChange({
                 uploadStatus: 'success',
                 uploadMessage: `Imported ${rows} rows into the database.`,
             });
             onUploadSuccess?.();
         } catch (error) {
+            if (isAbortError(error) || !mountedRef.current) {
+                return;
+            }
             const message = error instanceof Error ? error.message : 'Upload failed.';
             onStateChange({
                 uploadStatus: 'error',
                 uploadMessage: message,
             });
+        } finally {
+            if (uploadAbortRef.current === controller) {
+                uploadAbortRef.current = null;
+            }
+            uploadInFlightRef.current = false;
         }
     };
 

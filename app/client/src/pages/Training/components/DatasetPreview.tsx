@@ -1,12 +1,16 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, Database, Play, RefreshCw, X } from 'lucide-react';
 import type { TrainingNewConfig } from '../../../types/training';
 import { initialTrainingNewConfig } from '../../../types/training';
 import { useWizardStep } from '../../../hooks/useWizardStep';
 import { buildTrainingPayload, validateTrainingConfig, validateTrainingStep } from './trainingPayload';
 import { WizardActions } from './WizardActions';
-import { parseApiErrorDetail } from '../../../utils/apiParsers';
 import { parseDatasetSummaryItems } from '../../../utils/frontendApiParsers';
+import {
+    isAbortError,
+    requestJson,
+    requestReadOnlyJson,
+} from '../../../utils/apiClient';
 import { WizardSummaryRows, type WizardSummaryRow } from '../../../components/wizard/WizardSummaryRows';
 import { FeatureTip } from '../../../components/guidance/FeatureTip';
 import { HelpPopover } from '../../../components/guidance/HelpPopover';
@@ -83,16 +87,29 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
     const [wizardDatasetLabel, setWizardDatasetLabel] = useState<string | null>(null);
     const [wizardError, setWizardError] = useState<string | null>(null);
     const [wizardSubmitting, setWizardSubmitting] = useState(false);
+    const mountedRef = useRef(true);
+    const loadAbortRef = useRef<AbortController | null>(null);
 
-    const loadDatasets = async () => {
-        setLoading(true);
-        setError(null);
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => {
+            mountedRef.current = false;
+            loadAbortRef.current?.abort();
+        };
+    }, []);
+
+    const loadDatasets = async (signal?: AbortSignal) => {
+        await Promise.resolve();
+        if (mountedRef.current) {
+            setLoading(true);
+            setError(null);
+        }
         try {
-            const response = await fetch('/api/datasets/training/summary');
-            if (!response.ok) {
-                throw new Error('Failed to load dataset summary');
-            }
-            const data = await response.json();
+            const data = await requestReadOnlyJson(
+                '/api/datasets/training/summary',
+                { signal },
+                'Failed to load dataset summary.',
+            );
             const datasetList = parseDatasetSummaryItems(data)
                 .map((entry) => ({
                     datasetId: entry.datasetId,
@@ -100,19 +117,35 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                     rowCount: entry.rowCount,
                 }))
                 .filter((entry) => entry.name.trim().length > 0);
-            setDatasets(datasetList);
-        } catch {
-            setError('Unable to load datasets.');
-            setDatasets([]);
+            if (mountedRef.current) {
+                setDatasets(datasetList);
+            }
+        } catch (loadError) {
+            if (isAbortError(loadError)) {
+                return;
+            }
+            if (mountedRef.current) {
+                setError('Unable to load datasets.');
+                setDatasets([]);
+            }
         } finally {
-            setLoading(false);
+            if (mountedRef.current) {
+                setLoading(false);
+            }
         }
     };
 
     useEffect(() => {
-        // Data loading updates the async request state for this refresh cycle.
+        loadAbortRef.current?.abort();
+        const controller = new AbortController();
+        loadAbortRef.current = controller;
+        // The request callback owns asynchronous loading state and guards it
+        // with mountedRef; it is not a synchronous effect state transition.
         // eslint-disable-next-line react-hooks/set-state-in-effect
-        void loadDatasets();
+        void loadDatasets(controller.signal);
+        return () => {
+            controller.abort();
+        };
     }, [refreshKey]);
 
     const updateNewConfig = (updates: Partial<TrainingNewConfig>) => {
@@ -165,16 +198,17 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
 
     const handleDelete = async (datasetId: number) => {
         try {
-            const response = await fetch(`/api/datasets/training/${encodeURIComponent(datasetId)}`, {
+            await requestJson(`/api/datasets/training/${encodeURIComponent(datasetId)}`, {
                 method: 'DELETE',
-            });
-            if (!response.ok) {
-                throw new Error('Failed to delete dataset');
-            }
+            }, 'Failed to delete dataset.');
             await loadDatasets();
-            onDelete?.();
-        } catch {
-            setError('Failed to delete dataset.');
+            if (mountedRef.current) {
+                onDelete?.();
+            }
+        } catch (deleteError) {
+            if (!isAbortError(deleteError) && mountedRef.current) {
+                setError(deleteError instanceof Error ? deleteError.message : 'Failed to delete dataset.');
+            }
         }
     };
 
@@ -232,21 +266,19 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
         setWizardError(null);
 
         try {
-            const response = await fetch('/api/training/start', {
+            await requestJson('/api/training/start', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(config),
-            });
-
-            if (!response.ok) {
-                const errorPayload = await response.json().catch(() => null);
-                setWizardError(`Failed to start training: ${parseApiErrorDetail(errorPayload, 'Unknown error')}`);
-                return;
-            }
+            }, 'Unknown error.');
 
             closeWizard();
-        } catch {
-            setWizardError('Failed to connect to training server');
+        } catch (startError) {
+            if (mountedRef.current) {
+                setWizardError(startError instanceof Error
+                    ? `Failed to start training: ${startError.message}`
+                    : 'Failed to connect to training server');
+            }
         } finally {
             setWizardSubmitting(false);
         }

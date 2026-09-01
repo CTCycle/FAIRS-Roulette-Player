@@ -1,6 +1,6 @@
 ## Execution And Data Flow
 
-Last updated: 2026-08-30
+Last updated: 2026-09-01
 
 ## Current Layering
 
@@ -11,7 +11,7 @@ FAIRS is a layered local monolith with an explicit composition root. The names b
 - **Application services:** `app/server/services/*` coordinates dataset import, checkpoint lifecycle, training runs, inference sessions, startup checks, and worker-process orchestration.
 - **Learning execution:** `app/server/learning/*` contains roulette betting rules, neural models, training algorithms, and inference players. It receives prepared data and explicit runtime inputs from application services.
 - **Persistence adapters:** `app/server/repositories/*` owns SQLAlchemy schema, engines, transactions, dataset/inference repositories, and checkpoint filesystem/configuration I/O.
-- **Configuration:** `app/server/bootstrap.py` explicitly loads `.env`, resolves mutable paths, and configures logging before the composition root imports Keras-backed modules; `app/server/configurations/*` resolves JSON settings and typed environment database settings.
+- **Configuration:** `app/server/configurations/*` resolves JSON settings and typed environment database settings. `app/server/bootstrap.py` is invoked by the FastAPI lifespan before Keras-backed services are imported; import-time composition remains filesystem- and ML-safe.
 - **Shared primitives:** `app/server/common/*` contains paths, constants, logging, normalization, error mapping, version lookup, and the shared roulette feature transformation.
 
 ## Current Module Dependency Diagram
@@ -67,9 +67,11 @@ The dashed repository-to-learning edge is limited to custom Keras-layer registra
 3. Runs the shared Alembic create/upgrade runner for SQLite or PostgreSQL. Empty databases upgrade to `head`; non-empty unversioned databases, drift, unknown/ahead revisions, and multiple heads are rejected without runtime adoption or stamping.
 4. Constructs `FAIRSDatabase`, the `DatasetRepository`, and the `InferenceRepository`. The application engine is disposed during lifespan cleanup.
 5. Constructs one `CheckpointService`, one `TrainingRunManager`, `DatasetService`, `TrainingService`, and `InferenceService` with those concrete collaborators.
-6. Stores the runtime objects on `application.state` for FastAPI dependency providers.
+6. Stores the runtime objects on `application.state` for FastAPI dependency providers and marks the application ready only after all required resources are available.
 
-The `server` package itself is import-safe. `server.app` calls `bootstrap_runtime()` before importing Keras-backed application modules; the bootstrap loads/creates `.env`, resolves `FAIRS_DATA_DIR`, and configures logging under the active data root. Direct imports of common path/logger modules do not create files or configure the global logging tree.
+The `server` package itself is import-safe. Constructing `server.app:app` mounts transport routes without loading Keras/Torch, creating runtime directories, reading mutable paths, or configuring application logging. The lifespan invokes `bootstrap_runtime()`, then imports the ML-backed repositories/services, initializes the database, and publishes `starting` to `ready`; its `finally` block transitions through `stopping` and releases resources in reverse order. Direct imports of common path/logger modules remain side-effect free.
+
+If any startup step fails, already acquired resources are cleaned up before the failure is re-raised. Shutdown is idempotent and failure-isolated: inference sessions, training workers/queues, the manager, database pool, and application-owned logging handlers are each attempted independently.
 
 ## Training Flow
 
@@ -113,7 +115,7 @@ sequenceDiagram
     Worker-->>Runs: result or error
 ```
 
-`TrainingRunManager` is the single in-process training-run state owner. It owns the authoritative `TrainingRun`, worker handle, progress, cancellation flag, latest statistics, and history projection. A run may use a child `ProcessWorker`, while the browser polls the status endpoint; there is no WebSocket or durable job table. `additional_episodes` is a resume operation input and is not added to the persisted checkpoint configuration.
+`TrainingRunManager` is the single in-process training-run state owner. It owns the authoritative `TrainingRun`, worker handle, progress, cancellation flag, latest statistics, and history projection. A run may use a child `ProcessWorker`, while the browser polls the status endpoint; there is no WebSocket or durable job table. A stop request enters `stopping` and becomes `cancelled` only after the worker has stopped. Terminal runs are bounded in memory. Checkpoint output is staged and published only after model, strategy, configuration, and history writes succeed. `additional_episodes` is a resume operation input and is not added to the persisted checkpoint configuration.
 
 ## Inference Flow
 
@@ -154,7 +156,7 @@ sequenceDiagram
     API-->>Client: response
 ```
 
-The inference start contract does not accept dataset-source labels, session replacement identifiers, or strategy overrides. The checkpoint owns strategy behavior; the service only overlays the per-session capital and bet. Active sessions are held in `InferenceState` with a bounded in-memory session count. Database rows provide history, not a rehydration mechanism for the live `RoulettePlayer` object.
+The inference start contract does not accept dataset-source labels or strategy overrides. The optional `X-Preserve-Inference-Session` header is an internal replacement boundary used while the client replays a session. The checkpoint owns strategy behavior; the service only overlays the per-session capital and bet. Active sessions are held in `InferenceState` with a bounded in-memory session count and locked mutations. Database rows provide history and snapshots, not a rehydration mechanism for the live `RoulettePlayer` object. A missing live session after backend restart is a clean expiration.
 
 ## Important Class Relationships
 
@@ -165,6 +167,7 @@ classDiagram
         +resume_training(config)
         +get_status()
         +stop()
+        +shutdown()
     }
     class TrainingRunManager {
         +start_job()
@@ -194,8 +197,10 @@ classDiagram
     }
     class InferenceService {
         +start_session(payload)
+        +get_session_snapshot(session_id)
         +next_prediction(session_id)
         +step_session(session_id, payload)
+        +shutdown()
     }
     class InferenceState {
         +sessions
@@ -245,11 +250,11 @@ classDiagram
 
 ## Concurrency And Observability
 
-- Most handlers are synchronous `def` handlers; file upload is asynchronous for file reads.
+- Most handlers are synchronous `def` handlers; upload reads are asynchronous at the transport boundary and blocking parse/import work runs through the threadpool. `UploadFile` is closed in the route's `finally` block.
 - Training runs outside the request thread in a worker process monitored by the `TrainingRunManager` thread.
-- Inference is synchronous and stateful per active backend process.
+- Inference is synchronous and stateful per active backend process, with an application operation lock plus per-session locks.
 - Logs are timestamped `FAIRS_*.log` files under the configured data-root `logs` directory.
-- `GET /api/health` is a lightweight readiness check exposing application version from installed `fairs-server` package metadata; it has no desktop/runtime-mode field.
+- `GET /api/health` is a lightweight readiness check exposing application version from installed `fairs-server` package metadata; it has no desktop/runtime-mode field. The frontend treats health/status recovery as retryable with capped backoff, while mutating operations are not retried automatically.
 
 ## Related Files
 

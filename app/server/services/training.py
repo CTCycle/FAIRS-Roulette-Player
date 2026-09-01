@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from server.common.checkpoints import normalize_checkpoint_identifier
+from server.common.utils.logger import logger
 from server.common.utils.trainingstats import (
     coerce_optional_finite_float,
 )
@@ -242,11 +243,18 @@ class TrainingService:
             )
             raise
         finally:
-            if worker.is_alive():
-                worker.terminate()
-                worker.join(timeout=5)
-            worker.cleanup()
-            self.training_run_manager.set_worker(job_id, None)
+            try:
+                if worker.is_alive():
+                    worker.terminate()
+                    worker.join(timeout=5)
+            except Exception:  # noqa: BLE001
+                logger.exception("Failed to terminate training worker %s", job_id)
+            finally:
+                try:
+                    worker.cleanup()
+                except Exception:  # noqa: BLE001
+                    logger.exception("Failed to clean up training worker %s", job_id)
+                self.training_run_manager.set_worker(job_id, None)
 
     # -------------------------------------------------------------------------
     def run_resume_training_job(
@@ -296,11 +304,18 @@ class TrainingService:
             )
             raise
         finally:
-            if worker.is_alive():
-                worker.terminate()
-                worker.join(timeout=5)
-            worker.cleanup()
-            self.training_run_manager.set_worker(job_id, None)
+            try:
+                if worker.is_alive():
+                    worker.terminate()
+                    worker.join(timeout=5)
+            except Exception:  # noqa: BLE001
+                logger.exception("Failed to terminate resumed training worker %s", job_id)
+            finally:
+                try:
+                    worker.cleanup()
+                except Exception:  # noqa: BLE001
+                    logger.exception("Failed to clean up resumed training worker %s", job_id)
+                self.training_run_manager.set_worker(job_id, None)
 
     # -------------------------------------------------------------------------
     def start_training(self, config: TrainingConfig) -> dict[str, Any]:
@@ -428,11 +443,13 @@ class TrainingService:
         if not status["is_training"] or not status["job_id"]:
             raise ValueError("No training is in progress.")
         job_id = status["job_id"]
-        worker = self.training_run_manager.get_worker(job_id)
-        if worker is not None:
-            worker.stop()
         self.training_run_manager.cancel_job(job_id)
         return {"status": "stopping", "message": "Training stop requested"}
+
+    # -------------------------------------------------------------------------
+    def shutdown(self, timeout_seconds: float = 10.0) -> bool:
+        """Stop all training work owned by this application instance."""
+        return self.training_run_manager.shutdown(timeout_seconds)
 
     # -------------------------------------------------------------------------
     def list_checkpoints(self) -> list[str]:
@@ -476,10 +493,7 @@ class TrainingService:
         job_status = self.training_run_manager.get_job_status(job_id)
         if job_status is None:
             raise KeyError(f"Job not found: {job_id}")
-        worker = self.training_run_manager.get_worker(job_id)
-        if worker is not None:
-            worker.stop()
-        success = self.training_run_manager.cancel_job(job_id)
+        success = self.training_run_manager.request_stop(job_id)
         return {
             "job_id": job_id,
             "success": success,

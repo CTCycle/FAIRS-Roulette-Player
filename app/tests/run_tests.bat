@@ -35,9 +35,9 @@ if not exist "%MYPY_CACHE_DIR%" mkdir "%MYPY_CACHE_DIR%"
 if not exist "%PLAYWRIGHT_BROWSERS_PATH%" mkdir "%PLAYWRIGHT_BROWSERS_PATH%"
 
 set "FASTAPI_HOST=127.0.0.1"
-set "FASTAPI_PORT=8000"
+set "FASTAPI_PORT=8890"
 set "UI_HOST=127.0.0.1"
-set "UI_PORT=7861"
+set "UI_PORT=8051"
 set "TEST_RESULT=0"
 set "BACKEND_PHASE=SKIPPED"
 set "FRONTEND_BOOTSTRAP_PHASE=SKIPPED"
@@ -47,6 +47,8 @@ set "PYTEST_PHASE=SKIPPED"
 set "LIVE_SERVER_PHASE=SKIPPED"
 set "STARTED_BACKEND=0"
 set "STARTED_FRONTEND=0"
+set "STARTED_BACKEND_PID="
+set "STARTED_FRONTEND_PID="
 
 if exist "%SETTINGS_ENV%" (
   for /f "usebackq tokens=* delims=" %%L in ("%SETTINGS_ENV%") do (
@@ -143,7 +145,13 @@ if /i "%STANDARD_TEST_SKIP_LIVE_SERVERS%"=="false" if "%HAS_E2E%"=="1" (
   curl -s --max-time 2 "%APP_TEST_BACKEND_URL%/api/health" >nul 2>&1
   if errorlevel 1 (
     echo [INFO] Starting backend server...
-    start "" /B /D "%BACKEND_WORKDIR%" "%PYTHON_CMD%" -m uvicorn %UVICORN_APP% --host %FASTAPI_HOST% --port %FASTAPI_PORT% --log-level warning
+    for /f "usebackq delims=" %%P in (`powershell.exe -NoProfile -Command "$p = Start-Process -FilePath '%PYTHON_CMD%' -ArgumentList @('-m','uvicorn','%UVICORN_APP%','--host','%FASTAPI_HOST%','--port','%FASTAPI_PORT%','--workers','1','--log-level','warning') -WorkingDirectory '%BACKEND_WORKDIR%' -WindowStyle Hidden -PassThru; $p.Id"`) do set "STARTED_BACKEND_PID=%%P"
+    if not defined STARTED_BACKEND_PID (
+      echo [ERROR] Backend process could not be started.
+      set "LIVE_SERVER_PHASE=FAIL"
+      set "TEST_RESULT=1"
+      goto cleanup
+    )
     set "STARTED_BACKEND=1"
   )
 
@@ -171,7 +179,13 @@ if /i "%STANDARD_TEST_SKIP_LIVE_SERVERS%"=="false" if "%HAS_E2E%"=="1" (
       )
 
       echo [INFO] Starting frontend preview server...
-      start "" /B /D "%CLIENT_DIR%" "%NPM_CMD%" run preview -- --host %UI_HOST% --port %UI_PORT%
+      for /f "usebackq delims=" %%P in (`powershell.exe -NoProfile -Command "$p = Start-Process -FilePath '%NPM_CMD%' -ArgumentList @('run','preview','--','--host','%UI_HOST%','--port','%UI_PORT%','--strictPort') -WorkingDirectory '%CLIENT_DIR%' -WindowStyle Hidden -PassThru; $p.Id"`) do set "STARTED_FRONTEND_PID=%%P"
+      if not defined STARTED_FRONTEND_PID (
+        echo [ERROR] Frontend process could not be started.
+        set "LIVE_SERVER_PHASE=FAIL"
+        set "TEST_RESULT=1"
+        goto cleanup
+      )
       set "STARTED_FRONTEND=1"
     )
   )
@@ -259,11 +273,11 @@ echo ============================================================
 echo.
 
 :cleanup
-if "%STARTED_BACKEND%"=="1" (
-  for /f "tokens=5" %%P in ('netstat -ano ^| findstr /R "LISTENING" ^| findstr /R ":%FASTAPI_PORT% "') do taskkill /PID %%P /F >nul 2>&1
+if "%STARTED_BACKEND%"=="1" if defined STARTED_BACKEND_PID (
+  taskkill /PID %STARTED_BACKEND_PID% /T /F >nul 2>&1
 )
-if "%STARTED_FRONTEND%"=="1" (
-  for /f "tokens=5" %%P in ('netstat -ano ^| findstr /R "LISTENING" ^| findstr /R ":%UI_PORT% "') do taskkill /PID %%P /F >nul 2>&1
+if "%STARTED_FRONTEND%"=="1" if defined STARTED_FRONTEND_PID (
+  taskkill /PID %STARTED_FRONTEND_PID% /T /F >nul 2>&1
 )
 
 exit /b %TEST_RESULT%

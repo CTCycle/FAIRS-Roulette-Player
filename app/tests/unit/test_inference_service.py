@@ -141,3 +141,119 @@ def test_clear_context_succeeds_after_session_shutdown(monkeypatch) -> None:
 
     assert service.clear_context() == {"status": "cleared"}
     dataset_repository.clear.assert_called_once_with("inference")
+
+
+###############################################################################
+def test_shutdown_session_keeps_live_state_when_persistence_close_fails(monkeypatch) -> None:
+    service, _ = build_service(monkeypatch)
+    start = service.start_session(InferenceStartRequest(checkpoint="cp1", dataset_id=1))
+    service.inference_repository.end_session.side_effect = RuntimeError(
+        "close persistence failed"
+    )
+
+    with pytest.raises(RuntimeError, match="close persistence failed"):
+        service.shutdown_session(start["session_id"])
+
+    assert service.state.get_optional(start["session_id"]) is not None
+    assert service.state.get_session(start["session_id"]).player is not None
+
+
+###############################################################################
+def test_session_start_rolls_back_persistence_and_model_on_registration_failure(
+    monkeypatch,
+) -> None:
+    service, _ = build_service(monkeypatch)
+    released_players: list[FakePlayer] = []
+
+    class TrackingPlayer(FakePlayer):
+        def __init__(self, *args, **kwargs):  # noqa: ANN002, ANN003
+            super().__init__(*args, **kwargs)
+            self.model = object()
+            released_players.append(self)
+
+    monkeypatch.setattr("server.services.inference.RoulettePlayer", TrackingPlayer)
+    service.inference_repository.create_session_with_initial_step.side_effect = RuntimeError(
+        "persistence failed"
+    )
+
+    with pytest.raises(RuntimeError, match="persistence failed"):
+        service.start_session(InferenceStartRequest(checkpoint="cp1", dataset_id=1))
+
+    service.inference_repository.delete_session.assert_called_once()
+    assert not service.state.has_sessions()
+    assert released_players[0].model is None
+
+
+###############################################################################
+def test_session_snapshot_returns_authoritative_persisted_steps(monkeypatch) -> None:
+    service, _ = build_service(monkeypatch)
+    start = service.start_session(InferenceStartRequest(checkpoint="cp1", dataset_id=1))
+    session_id = start["session_id"]
+    service.inference_repository.list_steps.return_value = [
+        {
+            "step_number": 1,
+            "bet_amount": 10,
+            "predicted_action": 1,
+            "predicted_confidence": 0.9,
+            "observed_outcome_id": 12,
+            "reward": 1,
+            "capital_after": 101,
+        }
+    ]
+
+    snapshot = service.get_session_snapshot(session_id)
+
+    assert snapshot["session_id"] == session_id
+    assert snapshot["current_capital"] == 100
+    assert snapshot["step_count"] == 0
+    assert snapshot["steps"] == [
+        {
+            "step": 1,
+            "bet_amount": 10,
+            "predicted_action": 1,
+            "predicted_action_desc": "action 1",
+            "predicted_confidence": 0.9,
+            "observed_outcome_id": 12,
+            "reward": 1,
+            "capital_after": 101,
+        }
+    ]
+
+
+###############################################################################
+def test_capacity_eviction_failure_keeps_existing_session_live(monkeypatch) -> None:
+    service, _ = build_service(monkeypatch)
+    service.state.max_sessions = 1
+    first = service.start_session(
+        InferenceStartRequest(checkpoint="cp1", dataset_id=1)
+    )
+    service.inference_repository.end_session.side_effect = RuntimeError(
+        "eviction persistence failed"
+    )
+
+    with pytest.raises(RuntimeError, match="eviction persistence failed"):
+        service.start_session(InferenceStartRequest(checkpoint="cp1", dataset_id=1))
+
+    assert service.state.get_optional(first["session_id"]) is not None
+    assert len(service.state.session_ids()) == 1
+    service.inference_repository.delete_session.assert_called()
+
+
+###############################################################################
+def test_shutdown_is_failure_isolated_and_idempotent(monkeypatch) -> None:
+    service, _ = build_service(monkeypatch)
+    service.state.max_sessions = 2
+    first = service.start_session(
+        InferenceStartRequest(checkpoint="cp1", dataset_id=1)
+    )
+    second = service.start_session(
+        InferenceStartRequest(checkpoint="cp1", dataset_id=1)
+    )
+    service.inference_repository.end_session.side_effect = [RuntimeError("first"), None]
+
+    service.shutdown()
+    service.shutdown()
+
+    assert not service.state.has_sessions()
+    assert service.inference_repository.end_session.call_count == 2
+    assert first["session_id"] != second["session_id"]

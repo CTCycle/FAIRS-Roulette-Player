@@ -74,3 +74,29 @@ def configure_logging(*, force: bool = False) -> None:
     resolved_directory.mkdir(parents=True, exist_ok=True)
     logging.config.dictConfig(_build_log_config(resolved_directory))
     _configured = True
+
+
+###############################################################################
+def close_application_logging() -> None:
+    """Close only file handlers owned by the FAIRS application."""
+    global _configured
+    resolved_directory = Path(shared_paths.LOGS_PATH).resolve()
+    logger_objects = [logging.getLogger()]
+    logger_objects.extend(
+        value
+        for value in logging.Logger.manager.loggerDict.values()
+        if isinstance(value, logging.Logger)
+    )
+    seen_handlers: set[int] = set()
+    for logger_object in logger_objects:
+        for handler in list(logger_object.handlers):
+            if not isinstance(handler, logging.FileHandler):
+                continue
+            filename = Path(handler.baseFilename).resolve()
+            if resolved_directory not in filename.parents:
+                continue
+            logger_object.removeHandler(handler)
+            if id(handler) not in seen_handlers:
+                handler.close()
+                seen_handlers.add(id(handler))
+    _configured = False

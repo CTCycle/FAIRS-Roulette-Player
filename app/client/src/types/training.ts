@@ -92,7 +92,8 @@ export type TrainingStatusCode =
     | 'training'
     | 'completed'
     | 'error'
-    | 'cancelled';
+    | 'cancelled'
+    | 'stopping';
 
 export interface TrainingHistoryPoint {
     time_step: number;
