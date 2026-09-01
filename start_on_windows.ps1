@@ -170,11 +170,12 @@ function Remove-LauncherPath {
         Path = $fullPath
         Planned = 0
         PlannedCount = 0
-        Removed = $removed
+        Removed = 0
         RemovedCount = 0
-        Preserved = $preserved
+        RemovedPaths = $removed
+        Preserved = 0
         PreservedEntries = $preserved
-        Skipped = $skipped
+        Skipped = 0
         SkippedPaths = $skipped
         EnumerationErrors = $enumerationErrors
         WhatIf = [bool]$WhatIf
@@ -217,6 +218,7 @@ function Remove-LauncherPath {
         Sort-Object @{ Expression = { $_.FullName.Length }; Descending = $true }, @{ Expression = { $_.FullName.ToUpperInvariant() }; Descending = $false })
     $result.Planned = $candidates.Count
     $result.PlannedCount = $candidates.Count
+    $result.Preserved = $preserved.Count
     $progressId = $null
     try {
         if ($candidates.Count -gt 0) { $progressId = Start-LauncherProgress -Activity $Activity -Status "0 of $($candidates.Count) items" }
@@ -239,7 +241,9 @@ function Remove-LauncherPath {
     finally {
         if ($null -ne $progressId) { Complete-LauncherProgress -Id $progressId }
     }
+    $result.Removed = $removed.Count
     $result.RemovedCount = $removed.Count
+    $result.Skipped = $skipped.Count
     if ($Strict -and ($skipped.Count -gt 0 -or $enumerationErrors.Count -gt 0)) {
         throw "Removal of '$fullPath' was incomplete. Skipped $($skipped.Count) item(s) and encountered $($enumerationErrors.Count) enumeration error(s)."
     }
@@ -248,7 +252,7 @@ function Remove-LauncherPath {
 
 function Remove-PathBestEffort([string]$Path) {
     $result = Remove-LauncherPath -Path $Path -Activity "FAIRS: remove $([IO.Path]::GetFileName($Path))"
-    return $result.Skipped.Count -eq 0 -and $result.EnumerationErrors.Count -eq 0
+    return $result.Skipped -eq 0 -and $result.EnumerationErrors.Count -eq 0
 }
 
 # -----------------------------------------------------------------------------
