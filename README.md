@@ -1,5 +1,5 @@
 # FAIRS: Fabulous Automated Intelligent Roulette System
-Last updated: 2026-08-31
+Last updated: 2026-09-01
 
 [![Release](https://img.shields.io/github/v/release/CTCycle/FAIRS-Roulette-Player?display_name=tag)](https://github.com/CTCycle/FAIRS-Roulette-Player/releases) [![Python](https://img.shields.io/badge/python-%3E%3D3.14-3776AB?logo=python&logoColor=white)](https://www.python.org/) [![Node.js](https://img.shields.io/badge/node.js-22.13.0-339933?logo=node.js&logoColor=white)](https://nodejs.org/) [![React](https://img.shields.io/badge/react-19.2.8-61DAFB?logo=react&logoColor=black)](https://react.dev/) [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE) [![CI](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml?query=branch%3Adevelop)
 [![CTCycle Portfolio](https://img.shields.io/badge/CTCycle-Portfolio-58a6ff?style=flat-square)](https://ctcycle.github.io/CTCycle/)
@@ -47,7 +47,7 @@ From the extracted repository root, open PowerShell and run:
 
 On the first run:
 
-1. Choose **4 — Install / update dependencies**.
+1. Choose **3 — Install / update dependencies**.
 2. Choose **Standard** for normal application use. Choose **Development** only when you need the optional test tools.
 3. Choose **1 — Launch application**.
 
@@ -62,20 +62,21 @@ Later launches normally reuse the prepared environment. If a required runtime, d
 | Option | Use |
 | --- | --- |
 | 1 | Launch FAIRS and open the web interface. |
-| 2 | Update the application from the main release line. This requires a clean checkout and does not switch branches or overwrite local edits. |
-| 3 | Check whether the local checkout knows about newer application changes without downloading or applying them. |
-| 4 | Prepare or update the local runtimes and dependencies. Choose **Standard** for normal use or **Development** for optional test tools. |
-| 5 | Rebuild the web interface when the visible application needs refreshing after a source change. |
-| 6 | Create or upgrade the selected database without resetting existing data. |
-| 7 | Run the repository's automated checks. This is primarily for maintainers and contributors. |
-| 8 | Remove application log files. |
-| 9 | Clear local runtime and test caches. |
-| 10 | Remove saved checkpoints only. |
-| 11 | Remove the local database and logs while preserving saved checkpoints. An external PostgreSQL database is not deleted by this action. |
-| 12 | Remove local runtimes, dependencies, and build output so the environment can be prepared again. Source files and user data are preserved. |
-| 13 | Exit the launcher. |
+| 2 | Stop the application-owned backend and player processes. |
+| 3 | Prepare or update the local runtimes and dependencies. Choose **Standard** for normal use or **Development** for optional test tools. |
+| 4 | Rebuild the web interface when the visible application needs refreshing after a source change. |
+| 5 | Create or upgrade the selected database without resetting existing data. |
+| 6 | Run the repository's automated checks. This is primarily for maintainers and contributors. |
+| 7 | Check whether the local checkout knows about newer application changes without downloading or applying them. |
+| 8 | Update the application from the main release line. This requires a clean checkout and does not switch branches or overwrite local edits. |
+| 9 | Remove application log files. |
+| 10 | Clear local runtime and test caches. |
+| 11 | Remove saved checkpoints only. |
+| 12 | Remove the local database and logs while preserving saved checkpoints. An external PostgreSQL database is not deleted by this action. |
+| 13 | Remove local runtimes, dependencies, and build output so the environment can be prepared again. Source files and user data are preserved. |
+| 14 | Exit the launcher. |
 
-Options 8 through 12 require an affirmative response at a `[y/N]` confirmation prompt. Read the description carefully before confirming a cleanup action.
+Options 9 through 13 require an affirmative response at a `[y/N]` confirmation prompt. Read the description carefully before confirming a cleanup action.
 
 ## How a typical experiment works
 
@@ -151,7 +152,7 @@ _Tips & Tricks brings workflow shortcuts and an optional Inference walkthrough i
 ## Data, checkpoints, and storage
 
 - FAIRS uses SQLite as the default local database. The launcher prepares or updates it automatically during setup and startup.
-- PostgreSQL is supported for an advanced external setup. The database must be reachable and the account must have permission to create or update the selected database; use launcher option 6 when it needs to be prepared.
+- PostgreSQL is supported for an advanced external setup. The database must be reachable and the account must have permission to create or update the selected database; use launcher option 5 when it needs to be prepared.
 - Datasets, checkpoints, and logs are local application data in the normal setup. Keep a backup of any experiment you cannot recreate.
 - Checkpoints and datasets form a training lineage. If a checkpoint still depends on a dataset, FAIRS may block dataset deletion to prevent an incomplete experiment.
 - The application checks database compatibility before services start and does not silently reset or repair an incompatible database. If it reports a schema or database-state problem, follow the troubleshooting guidance before removing any data.
@@ -162,19 +163,19 @@ _Tips & Tricks brings workflow shortcuts and an optional Inference walkthrough i
 
 - Confirm that PowerShell is open in the extracted repository root and that you are using <code>.\start_on_windows.ps1</code>.
 - If Windows reports that scripts are blocked, follow your organization's PowerShell policy or ask an administrator for the approved way to run the launcher. Avoid changing system-wide security settings just for FAIRS.
-- If the first setup stops while downloading, restore network access and run option 4 with **Standard** selected.
+- If the first setup stops while downloading, restore network access and run option 3 with **Standard** selected.
 - If the folder is read-only, move the extracted repository to a writable location and retry.
 
 ### The browser does not open or the page is blank
 
 - Wait for the launcher to report that both services are ready, then open the printed interface address manually.
-- Run option 4 with **Standard** selected to resync the application environment and rebuild the web interface.
-- If the backend starts but the page still does not load, run option 5 to rebuild only the web interface.
+- Run option 3 with **Standard** selected to resync the application environment and rebuild the web interface.
+- If the backend starts but the page still does not load, run option 4 to rebuild only the web interface.
 - If a different application is using the configured ports, close that application and retry. The default interface port is 8051 and the default backend port is 8890.
 
 ### Database startup fails
 
-- For the default local database, run option 6 and retry the launch.
+- For the default local database, run option 5 and retry the launch.
 - For PostgreSQL, confirm that the server is running, the connection details are correct, and the account has the required permissions.
 - If FAIRS reports an incompatible, partially upgraded, or inconsistent database, do not delete or reset it. Preserve the data and ask the project maintainer to review the database state.
 
@@ -201,7 +202,7 @@ Enlarge the browser window to at least 1100 pixels wide. FAIRS keeps its desktop
 
 ## Optional validation
 
-The launcher includes **7 — Run test suite** for maintainers and contributors. Choose **Development** in option 4 first when the optional test tools are not installed. Normal users do not need to run the test suite to use the application.
+The launcher includes **6 — Run test suite** for maintainers and contributors. Choose **Development** in option 3 first when the optional test tools are not installed. Normal users do not need to run the test suite to use the application.
 
 ## More documentation
 
