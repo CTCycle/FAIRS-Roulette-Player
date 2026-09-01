@@ -1,6 +1,6 @@
 ## TypeScript
 
-Last updated: 2026-08-30
+Last updated: 2026-09-01
 
 ## Baseline
 
@@ -25,6 +25,10 @@ Last updated: 2026-08-30
 - Use functional components and hooks.
 - Keep state updates immutable.
 - Keep effect dependencies explicit and stable.
+- Every effect must mirror setup with cleanup. Abort requests, clear timers, unsubscribe observers, and ignore stale responses after dependency changes or unmount. The app intentionally keeps React Strict Mode enabled.
+- Pass `AbortSignal` through API helpers. Read-only readiness/status requests may use capped reconnect backoff; mutating operations are not retried automatically.
+- Persist only an advisory inference-session descriptor in `localStorage`. Recover through the backend snapshot endpoint on mount; remove the descriptor only after explicit Stop or confirmed expiration.
+- Serialize inference mutations. Transactional recomputation creates and replays a replacement first, then switches UI ownership only after success; failed replay retains the old session.
 - Keep local UI state close to the component that owns it.
 - Do not create a global application-state store for training or inference workflows; pass typed snapshots through the owning page boundary.
 

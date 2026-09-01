@@ -24,26 +24,35 @@ class FAIRSDatabase:
         database_path: str | Path | None = None,
     ) -> None:
         self.settings = settings
-        if engine is not None:
-            self.engine = engine
-            self.db_path = None
-        elif self.settings.embedded_database:
-            self.engine = build_sqlite_engine(
-                self.settings,
-                database_path=database_path,
+        owns_engine = engine is None
+        constructed_engine: Engine | None = None
+        try:
+            if engine is not None:
+                self.engine = engine
+                self.db_path = None
+            elif self.settings.embedded_database:
+                constructed_engine = build_sqlite_engine(
+                    self.settings,
+                    database_path=database_path,
+                )
+                self.engine = constructed_engine
+                self.db_path = (
+                    Path(str(self.engine.url.database))
+                    if self.engine.url.database
+                    else None
+                )
+            else:
+                constructed_engine = build_postgres_engine(self.settings)
+                self.engine = constructed_engine
+                self.db_path = None
+            self.Session = sessionmaker(
+                bind=self.engine, future=True, expire_on_commit=False
             )
-            self.db_path = (
-                Path(str(self.engine.url.database))
-                if self.engine.url.database
-                else None
-            )
-        else:
-            self.engine = build_postgres_engine(self.settings)
-            self.db_path = None
-        self.Session = sessionmaker(
-            bind=self.engine, future=True, expire_on_commit=False
-        )
-        self.insert_batch_size = self.settings.insert_batch_size
+            self.insert_batch_size = self.settings.insert_batch_size
+        except Exception:
+            if owns_engine and constructed_engine is not None:
+                constructed_engine.dispose()
+            raise
 
     # -------------------------------------------------------------------------
     @contextmanager

@@ -3,7 +3,9 @@ from __future__ import annotations
 import json
 import re
 import shutil
+import uuid
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from keras import Model
@@ -49,10 +51,148 @@ class CheckpointRepository:
         return str(checkpoint_path)
 
     # -------------------------------------------------------------------------
+    def create_checkpoint_workspace(
+        self, checkpoint_name: str | None = None
+    ) -> tuple[str, str]:
+        """Reserve a checkpoint name and return final and private staging paths."""
+        selected_name = (
+            checkpoint_name.strip() if isinstance(checkpoint_name, str) else ""
+        )
+        selected_name = re.sub(r"[\\/]+", "_", selected_name)
+        if selected_name:
+            selected_name = normalize_checkpoint_identifier(selected_name)
+        else:
+            selected_name = f"{self.model_name}_{datetime.now():%Y%m%dT%H%M%S%f}"
+
+        final_path = shared_paths.checkpoint_directory(selected_name)
+        if final_path.exists():
+            raise ValueError(f"Checkpoint already exists: {selected_name}")
+
+        staging_path = final_path.parent / (
+            f".{final_path.name}.staging-{uuid.uuid4().hex}"
+        )
+        staging_path.mkdir(parents=True, exist_ok=False)
+        shared_paths.checkpoint_configuration_dir(staging_path).mkdir(exist_ok=True)
+        logger.debug("Created checkpoint staging workspace at %s", staging_path)
+        return str(final_path), str(staging_path)
+
+    # -------------------------------------------------------------------------
+    def create_resume_workspace(self, checkpoint_path: str) -> str:
+        """Copy an existing checkpoint into an isolated workspace for resume."""
+        source = shared_paths.as_path(checkpoint_path)
+        staging_path = source.parent / f".{source.name}.staging-{uuid.uuid4().hex}"
+        try:
+            shutil.copytree(
+                source,
+                staging_path,
+                ignore=shutil.ignore_patterns(
+                    ".staging-*", ".backup-*", ".publish-*"
+                ),
+            )
+        except Exception:
+            if staging_path.exists():
+                try:
+                    shutil.rmtree(staging_path)
+                except OSError:
+                    logger.exception(
+                        "Failed to remove partial resume workspace %s", staging_path
+                    )
+            raise
+        return str(staging_path)
+
+    # -------------------------------------------------------------------------
+    @staticmethod
+    def remove_staging_workspace(staging_path: str | None) -> None:
+        if not staging_path:
+            return
+        path = shared_paths.as_path(staging_path)
+        if not path.exists():
+            return
+        try:
+            shutil.rmtree(path)
+        except OSError:
+            logger.exception("Failed to remove checkpoint staging workspace %s", path)
+
+    # -------------------------------------------------------------------------
+    def cleanup_incomplete_workspaces(self) -> None:
+        """Remove hidden workspaces left by a force-terminated worker."""
+        root = shared_paths.CHECKPOINT_PATH
+        if not root.exists():
+            return
+        for entry in root.iterdir():
+            if not entry.is_dir() or not (
+                ".staging-" in entry.name
+                or ".backup-" in entry.name
+                or ".publish-" in entry.name
+            ):
+                continue
+            try:
+                shutil.rmtree(entry)
+            except OSError:
+                logger.exception("Failed to remove incomplete checkpoint workspace %s", entry)
+
+    # -------------------------------------------------------------------------
+    def publish_checkpoint(self, staging_path: str, final_path: str) -> None:
+        """Publish a complete staging tree while preserving a prior checkpoint."""
+        staging = shared_paths.as_path(staging_path)
+        final = shared_paths.as_path(final_path)
+        required_files = (
+            shared_paths.checkpoint_saved_model_file(staging),
+            shared_paths.checkpoint_configuration_file(staging),
+            shared_paths.checkpoint_session_history_file(staging),
+        )
+        if not all(path.is_file() for path in required_files):
+            raise ValueError(f"Checkpoint staging workspace is incomplete: {staging}")
+
+        complete_path = staging / shared_paths.CHECKPOINT_COMPLETE_FILE_NAME
+        self._write_text_atomically(complete_path, "complete\n")
+        backup: Path | None = None
+        try:
+            if final.exists():
+                backup = final.parent / f".{final.name}.backup-{uuid.uuid4().hex}"
+                final.rename(backup)
+            staging.rename(final)
+        except Exception:
+            if backup is not None and backup.exists() and not final.exists():
+                backup.rename(final)
+            raise
+        finally:
+            if backup is not None and backup.exists():
+                try:
+                    shutil.rmtree(backup)
+                except OSError:
+                    logger.exception("Failed to remove checkpoint backup %s", backup)
+
+    # -------------------------------------------------------------------------
+    @staticmethod
+    def _write_text_atomically(path: Path, content: str) -> None:
+        temporary_path = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
+        try:
+            temporary_path.write_text(content, encoding="utf-8")
+            temporary_path.replace(path)
+        finally:
+            if temporary_path.exists():
+                try:
+                    temporary_path.unlink()
+                except OSError:
+                    logger.exception("Failed to remove temporary checkpoint file %s", temporary_path)
+
+    # -------------------------------------------------------------------------
     def save_pretrained_model(self, model: Model, path: str) -> None:
         checkpoint_path = shared_paths.as_path(path)
         model_files_path = shared_paths.checkpoint_saved_model_file(checkpoint_path)
-        model.save(model_files_path)
+        temporary_path = model_files_path.with_name(
+            f".{model_files_path.name}.{uuid.uuid4().hex}.tmp.keras"
+        )
+        try:
+            model.save(temporary_path)
+            temporary_path.replace(model_files_path)
+        finally:
+            if temporary_path.exists():
+                try:
+                    temporary_path.unlink()
+                except OSError:
+                    logger.exception("Failed to remove temporary checkpoint model %s", temporary_path)
         logger.info(
             "Training session is over. Model %s has been saved",
             checkpoint_path.name,
@@ -65,7 +205,18 @@ class CheckpointRepository:
             checkpoint_path,
             self.strategy_model_file,
         )
-        model.save(model_file_path)
+        temporary_path = model_file_path.with_name(
+            f".{model_file_path.name}.{uuid.uuid4().hex}.tmp.keras"
+        )
+        try:
+            model.save(temporary_path)
+            temporary_path.replace(model_file_path)
+        finally:
+            if temporary_path.exists():
+                try:
+                    temporary_path.unlink()
+                except OSError:
+                    logger.exception("Failed to remove temporary strategy model %s", temporary_path)
         logger.info(
             "Training session is over. Strategy model %s has been saved",
             checkpoint_path.name,
@@ -83,11 +234,11 @@ class CheckpointRepository:
         history_path = shared_paths.checkpoint_session_history_file(checkpoint_path)
         validated_configuration = CheckpointConfiguration.model_validate(configuration)
 
-        config_path.write_text(
+        self._write_text_atomically(
+            config_path,
             json.dumps(validated_configuration.model_dump()),
-            encoding="utf-8",
         )
-        history_path.write_text(json.dumps(history), encoding="utf-8")
+        self._write_text_atomically(history_path, json.dumps(history))
 
         logger.debug(
             "Model configuration, session history and metadata saved for %s",
@@ -122,8 +273,15 @@ class CheckpointRepository:
             return model_folders
 
         for entry in shared_paths.CHECKPOINT_PATH.iterdir():
-            if entry.is_dir() and any(
-                file.suffix == ".keras" and file.is_file() for file in entry.iterdir()
+            if entry.name.startswith("."):
+                continue
+            if entry.is_dir() and all(
+                path.is_file()
+                for path in (
+                    shared_paths.checkpoint_saved_model_file(entry),
+                    shared_paths.checkpoint_configuration_file(entry),
+                    shared_paths.checkpoint_session_history_file(entry),
+                )
             ):
                 model_folders.append(entry.name)
 

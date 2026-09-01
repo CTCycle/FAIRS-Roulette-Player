@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from server.common import checkpoints as checkpoint_common
@@ -109,3 +111,40 @@ def test_checkpoint_storage_deletes_checkpoint_folder(tmp_path) -> None:
     CheckpointRepository().delete_checkpoint(str(checkpoint_path))
 
     assert not checkpoint_path.exists()
+
+
+###############################################################################
+def test_checkpoint_staging_is_not_visible_until_complete_publish(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(checkpoint_common.shared_paths, "CHECKPOINT_PATH", tmp_path)
+    repository = CheckpointRepository()
+    final_path, staging_path = repository.create_checkpoint_workspace("cp1")
+    staging = Path(staging_path)
+    (staging / "saved_model.keras").write_text("model", encoding="utf-8")
+    configuration = staging / "configuration"
+    configuration.mkdir(exist_ok=True)
+    (configuration / "configuration.json").write_text("{}", encoding="utf-8")
+    (configuration / "session_history.json").write_text("{}", encoding="utf-8")
+
+    assert repository.scan_checkpoints_folder() == []
+    repository.publish_checkpoint(staging_path, final_path)
+
+    assert not staging.exists()
+    assert Path(final_path, ".complete").is_file()
+    assert repository.scan_checkpoints_folder() == ["cp1"]
+
+
+###############################################################################
+def test_incomplete_checkpoint_workspaces_are_cleaned_on_startup(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(checkpoint_common.shared_paths, "CHECKPOINT_PATH", tmp_path)
+    repository = CheckpointRepository()
+    _, staging_path = repository.create_checkpoint_workspace("cp1")
+
+    repository.cleanup_incomplete_workspaces()
+
+    assert not Path(staging_path).exists()

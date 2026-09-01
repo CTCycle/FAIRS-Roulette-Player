@@ -208,6 +208,7 @@ class TestTrainingEndpoints:
             # Wait briefly then stop training to clean up
             time.sleep(1)
             api_context.post("/api/training/stop")
+            wait_for_training_stopped(api_context)
 
     # -------------------------------------------------------------------------
     def test_cancel_unknown_training_job_returns_404(

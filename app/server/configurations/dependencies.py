@@ -1,22 +1,20 @@
 from __future__ import annotations
 
-from fastapi import Request
+from typing import Any
 
-from server.services.datasets import DatasetService
-from server.services.inference import InferenceService
-from server.services.training import TrainingService
+from fastapi import Request
 
 
 ###############################################################################
-def get_dataset_service(request: Request) -> DatasetService:
+def get_dataset_service(request: Request) -> Any:
     return request.app.state.dataset_service
 
 
 ###############################################################################
-def get_training_service(request: Request) -> TrainingService:
+def get_training_service(request: Request) -> Any:
     return request.app.state.training_service
 
 
 ###############################################################################
-def get_inference_service(request: Request) -> InferenceService:
+def get_inference_service(request: Request) -> Any:
     return request.app.state.inference_service

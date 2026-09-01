@@ -1,11 +1,16 @@
 import type { PredictionResult } from '../types/inference';
-import { isRecord, parseApiErrorDetail, parseDatasetId } from './apiParsers';
+import { isRecord, parseDatasetId } from './apiParsers';
+import {
+    requestJson as requestApiJson,
+    requestReadOnlyJson,
+} from './apiClient';
 
 export interface InferenceSessionStartOptions {
     checkpoint: string;
     datasetId: number;
     gameCapital: number;
     gameBet: number;
+    preserveSessionId?: string;
 }
 
 export interface InferenceDatasetUploadResponse {
@@ -39,6 +44,30 @@ export interface InferenceStepResponse {
     predicted_action_desc: string;
     reward: number;
     capital_after: number;
+}
+
+export interface InferenceSessionStepResponse {
+    step: number;
+    bet_amount: number;
+    predicted_action: number;
+    predicted_action_desc: string;
+    predicted_confidence: number | null;
+    observed_outcome_id: number | null;
+    reward: number | null;
+    capital_after: number;
+}
+
+export interface InferenceSessionStatusResponse {
+    session_id: string;
+    checkpoint: string;
+    dataset_id: number;
+    initial_capital: number;
+    current_capital: number;
+    current_bet: number;
+    step_count: number;
+    prediction_pending: boolean;
+    last_prediction: PredictionResult | null;
+    steps: InferenceSessionStepResponse[];
 }
 
 const requireRecord = (value: unknown, label: string): Record<string, unknown> => {
@@ -132,23 +161,6 @@ const normalizePrediction = (value: unknown): PredictionResult => {
     return prediction;
 };
 
-const readJson = async (response: Response): Promise<unknown> => (
-    response.json().catch(() => null)
-);
-
-const requestJson = async (
-    endpoint: string,
-    init: RequestInit,
-    fallbackMessage: string,
-): Promise<Record<string, unknown>> => {
-    const response = await fetch(endpoint, init);
-    const payload = await readJson(response);
-    if (!response.ok) {
-        throw new Error(parseApiErrorDetail(payload, fallbackMessage));
-    }
-    return requireRecord(payload, 'API response');
-};
-
 const parseUploadResponse = (value: unknown): InferenceDatasetUploadResponse => {
     const payload = requireRecord(value, 'Dataset upload response');
     const rawDatasetId = payload.dataset_id;
@@ -174,6 +186,17 @@ const parseUploadResponse = (value: unknown): InferenceDatasetUploadResponse => 
         dataset_kind: datasetKind,
         columns: payload.columns,
     };
+};
+
+const nullableInteger = (
+    record: Record<string, unknown>,
+    key: string,
+): number | null => {
+    const value = record[key];
+    if (value === null) {
+        return null;
+    }
+    return requireInteger(record, key);
 };
 
 const parseStartResponse = (value: unknown): InferenceStartResponse => {
@@ -209,37 +232,90 @@ const parseStepResponse = (value: unknown): InferenceStepResponse => {
     };
 };
 
+const parseSessionStatusResponse = (value: unknown): InferenceSessionStatusResponse => {
+    const payload = requireRecord(value, 'Inference session response');
+    const rawSteps = payload.steps;
+    if (!Array.isArray(rawSteps)) {
+        throw new Error('Inference session steps are invalid.');
+    }
+    const steps = rawSteps.map((rawStep) => {
+        const step = requireRecord(rawStep, 'Inference session step');
+        return {
+            step: requireInteger(step, 'step'),
+            bet_amount: requireInteger(step, 'bet_amount'),
+            predicted_action: requireInteger(step, 'predicted_action'),
+            predicted_action_desc: requireString(step, 'predicted_action_desc'),
+            predicted_confidence: step.predicted_confidence === null
+                ? null
+                : optionalNumber(step, 'predicted_confidence') ?? null,
+            observed_outcome_id: nullableInteger(step, 'observed_outcome_id'),
+            reward: nullableInteger(step, 'reward'),
+            capital_after: requireInteger(step, 'capital_after'),
+        };
+    });
+    const rawPrediction = payload.last_prediction;
+    return {
+        session_id: requireString(payload, 'session_id'),
+        checkpoint: requireString(payload, 'checkpoint'),
+        dataset_id: requireInteger(payload, 'dataset_id'),
+        initial_capital: requireInteger(payload, 'initial_capital'),
+        current_capital: requireInteger(payload, 'current_capital'),
+        current_bet: requireInteger(payload, 'current_bet'),
+        step_count: requireInteger(payload, 'step_count'),
+        prediction_pending: payload.prediction_pending === true,
+        last_prediction: rawPrediction === null
+            ? null
+            : normalizePrediction(rawPrediction),
+        steps,
+    };
+};
+
 export const uploadInferenceDataset = async (
     file: File,
+    signal?: AbortSignal,
 ): Promise<InferenceDatasetUploadResponse> => {
     const formData = new FormData();
     formData.append('file', file);
-    const payload = await requestJson(
+    const payload = await requestApiJson(
         '/api/data/upload?dataset_kind=inference',
-        { method: 'POST', body: formData },
+        { method: 'POST', body: formData, signal },
         'Upload failed.',
     );
     return parseUploadResponse(payload);
 };
 
-export const clearInferenceContext = async (): Promise<Record<string, unknown>> => (
-    requestJson('/api/inference/context/clear', { method: 'POST' }, 'Unable to clear inference context.')
+export const clearInferenceContext = async (signal?: AbortSignal): Promise<Record<string, unknown>> => (
+    requireRecord(
+        await requestApiJson(
+            '/api/inference/context/clear',
+            { method: 'POST', signal },
+            'Unable to clear inference context.',
+        ),
+        'API response',
+    )
 );
 
 export const startInferenceSession = async (
     options: InferenceSessionStartOptions,
+    signal?: AbortSignal,
 ): Promise<InferenceStartResponse> => {
-    const payload = await requestJson(
+    const payload = await requestApiJson(
         '/api/inference/sessions/start',
         {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                ...(options.preserveSessionId
+                    ? { 'X-Preserve-Inference-Session': options.preserveSessionId }
+                    : {}),
+            },
             body: JSON.stringify({
                 checkpoint: options.checkpoint,
                 dataset_id: options.datasetId,
                 game_capital: options.gameCapital,
                 game_bet: options.gameBet,
             }),
+            signal,
         },
         'Session start failed.',
     );
@@ -248,45 +324,59 @@ export const startInferenceSession = async (
 
 export const shutdownInferenceSession = async (
     sessionId: string,
+    signal?: AbortSignal,
 ): Promise<Record<string, unknown>> => (
-    requestJson(
+    requireRecord(
+        await requestApiJson(
         `/api/inference/sessions/${sessionId}/shutdown`,
-        { method: 'POST' },
+        { method: 'POST', signal },
         'Stop failed.',
+        ),
+        'API response',
     )
 );
 
 export const clearInferenceSessionRows = async (
     sessionId: string,
+    signal?: AbortSignal,
 ): Promise<Record<string, unknown>> => (
-    requestJson(
+    requireRecord(
+        await requestApiJson(
         `/api/inference/sessions/${sessionId}/rows/clear`,
-        { method: 'POST' },
+        { method: 'POST', signal },
         'Unable to clear session rows.',
+        ),
+        'API response',
     )
 );
 
 export const updateInferenceBet = async (
     sessionId: string,
     betAmount: number,
+    signal?: AbortSignal,
 ): Promise<Record<string, unknown>> => (
-    requestJson(
+    requireRecord(
+        await requestApiJson(
         `/api/inference/sessions/${sessionId}/bet`,
         {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ bet_amount: betAmount }),
+            signal,
         },
         'Bet update failed.',
+        ),
+        'API response',
     )
 );
 
 export const requestNextInferencePrediction = async (
     sessionId: string,
+    signal?: AbortSignal,
 ): Promise<InferenceNextResponse> => {
-    const payload = await requestJson(
+    const payload = await requestApiJson(
         `/api/inference/sessions/${sessionId}/next`,
-        { method: 'POST' },
+        { method: 'POST', signal },
         'Prediction failed.',
     );
     return parseNextResponse(payload);
@@ -295,17 +385,31 @@ export const requestNextInferencePrediction = async (
 export const submitInferenceStep = async (
     sessionId: string,
     extraction: number,
+    signal?: AbortSignal,
 ): Promise<InferenceStepResponse> => {
-    const payload = await requestJson(
+    const payload = await requestApiJson(
         `/api/inference/sessions/${sessionId}/step`,
         {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ extraction }),
+            signal,
         },
         'Step failed.',
     );
     return parseStepResponse(payload);
+};
+
+export const getInferenceSession = async (
+    sessionId: string,
+    signal?: AbortSignal,
+): Promise<InferenceSessionStatusResponse> => {
+    const payload = await requestReadOnlyJson(
+        `/api/inference/sessions/${sessionId}`,
+        { signal },
+        'Unable to recover inference session.',
+    );
+    return parseSessionStatusResponse(payload);
 };
 
 export { normalizePrediction };

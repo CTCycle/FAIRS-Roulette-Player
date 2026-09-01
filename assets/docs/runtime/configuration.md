@@ -1,6 +1,6 @@
 ## Configuration
 
-Last updated: 2026-08-30
+Last updated: 2026-09-01
 
 ## Environment Variables
 
@@ -26,6 +26,7 @@ The runtime scripts and backend consume these environment keys:
 - `DATABASE_INSERT_BATCH_SIZE`
 - `MPLBACKEND`
 - `KERAS_BACKEND`
+- `WEB_CONCURRENCY`, `UVICORN_WORKERS`, `FAIRS_WORKERS`
 
 ## Internal Runtime Settings
 
@@ -42,7 +43,15 @@ For external PostgreSQL mode, `DATABASE_ENGINE` must be `postgresql+psycopg`. Le
 
 The backend creates timestamped `FAIRS_*.log` files under the active data root's `logs` directory.
 
-The application entry point calls `server.bootstrap.bootstrap_runtime()` explicitly before importing Keras-backed application modules. Direct imports of `server`, common path helpers, and logging helpers do not load `.env`, resolve mutable paths from the environment, create directories, or configure the global logging tree.
+The FastAPI lifespan calls `server.bootstrap.bootstrap_runtime()` before importing Keras-backed application modules. Direct construction/import of `server.app`, `server`, common path helpers, and logging helpers does not load `.env`, resolve mutable paths from the environment, create directories, or configure the global logging tree.
+
+### Lifecycle And Worker Contract
+
+- FastAPI application construction is import-safe; runtime bootstrap, database initialization, service construction, and logging setup occur inside the lifespan.
+- Lifespan state transitions are `starting`, `ready`, `stopping`, and `stopped`. Startup rolls back acquired resources on failure, and shutdown attempts every owned cleanup operation even when one cleanup fails.
+- `WEB_CONCURRENCY`, `UVICORN_WORKERS`, and `FAIRS_WORKERS` must be unset or exactly `1`. The launcher also passes `--workers 1` explicitly. This application does not provide a shared store for process-local training jobs or live inference models.
+- `RELOAD=true` is development-only. A reload replaces the in-memory process and expires active training and inference state.
+- `FAIRS_DATA_DIR` controls persistent database/checkpoint/log ownership; it does not make in-memory jobs or live models durable.
 
 ## Structured Settings
 
@@ -81,8 +90,8 @@ The application and launcher use the same idempotent runner. Empty databases upg
 
 - The launcher checks runtime readiness before installing dependencies.
 - The checked-in `settings/.env.example` template defaults to API port `8890` and UI port `8051`; override them in `settings/.env` when needed.
-- Launcher option 4 selects `Standard` or `Development` installation, installs dependencies, rebuilds the frontend, and runs database create/upgrade; `Development` adds the backend's test extra.
-- Normal application startup skips installation and rebuilding when the environment and frontend build are ready. If either is missing or unusable, option 1 recovers dependencies and rebuilds the frontend; option 4 remains the explicit install/update and rebuild path.
+- Launcher option 5 selects `Standard` or `Development` installation, installs dependencies, rebuilds the frontend, and runs database create/upgrade; `Development` adds the backend's test extra.
+- Normal application startup skips installation and rebuilding when the environment and frontend build are ready. If either is missing or unusable, option 1 recovers dependencies and rebuilds the frontend; option 5 remains the explicit install/update and rebuild path.
 
 When `FAIRS_DATA_DIR` is absent, the application uses `app/resources`.
 

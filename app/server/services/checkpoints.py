@@ -8,6 +8,7 @@ from server.common.checkpoints import (
     normalize_checkpoint_identifier,
     resolve_checkpoint_path,
 )
+from server.common.exceptions import CheckpointReferenceError
 from server.contracts.training import TrainingCheckpointSummary
 from server.repositories.checkpoints import CheckpointRepository
 
@@ -22,11 +23,6 @@ def get_last_history_value(values: Any) -> float | None:
 
 
 ###############################################################################
-class CheckpointReferenceError(RuntimeError):
-    """Raised when dataset deletion would invalidate checkpoint metadata."""
-
-
-###############################################################################
 class CheckpointService:
     # -------------------------------------------------------------------------
     def __init__(
@@ -38,6 +34,10 @@ class CheckpointService:
     # -------------------------------------------------------------------------
     def list_checkpoints(self) -> list[str]:
         return self.checkpoint_repository.scan_checkpoints_folder()
+
+    # -------------------------------------------------------------------------
+    def cleanup_incomplete_workspaces(self) -> None:
+        self.checkpoint_repository.cleanup_incomplete_workspaces()
 
     # -------------------------------------------------------------------------
     def resolve_existing_checkpoint(self, checkpoint_name: str) -> tuple[str, str]:

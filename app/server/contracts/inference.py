@@ -98,5 +98,31 @@ class InferenceRowsClearResponse(BaseModel):
 
 
 ###############################################################################
+class InferenceSessionStepResponse(BaseModel):
+    step: int
+    bet_amount: int
+    predicted_action: int
+    predicted_action_desc: str
+    predicted_confidence: float | None = None
+    observed_outcome_id: int | None = None
+    reward: int | None = None
+    capital_after: int
+
+
+###############################################################################
+class InferenceSessionStatusResponse(BaseModel):
+    session_id: str
+    checkpoint: str
+    dataset_id: int
+    initial_capital: int
+    current_capital: int
+    current_bet: int
+    step_count: int
+    prediction_pending: bool
+    last_prediction: PredictionResponse | None = None
+    steps: list[InferenceSessionStepResponse]
+
+
+###############################################################################
 class InferenceContextClearResponse(BaseModel):
     status: str

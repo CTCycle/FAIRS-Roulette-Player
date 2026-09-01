@@ -25,6 +25,7 @@ CHECKPOINT_SESSION_HISTORY_FILE_NAME = "session_history.json"
 CHECKPOINT_REPLAY_MEMORY_FILE_NAME = "replay_memory.pkl"
 CHECKPOINT_SAVED_MODEL_FILE_NAME = "saved_model.keras"
 CHECKPOINT_STRATEGY_MODEL_FILE_NAME = "strategy.keras"
+CHECKPOINT_COMPLETE_FILE_NAME = ".complete"
 
 
 ###############################################################################
@@ -90,6 +91,3 @@ def checkpoint_strategy_model_file(
     filename: str = CHECKPOINT_STRATEGY_MODEL_FILE_NAME,
 ) -> Path:
     return as_path(checkpoint_path) / filename
-
-
-configure_runtime_paths()

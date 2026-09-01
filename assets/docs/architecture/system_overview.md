@@ -1,12 +1,12 @@
 ## System Overview
 
-Last updated: 2026-08-30
+Last updated: 2026-09-01
 
 ## Current State
 
 FAIRS is a Windows-first local web application for roulette training and inference experiments. The repository contains a React/Vite client and a FastAPI server; the server is the system of record for API behavior, training orchestration, inference session state, persistence, and startup readiness.
 
-The application is intentionally a single local deployment. Training is isolated in a worker process, while jobs and active inference sessions remain in memory. SQLite is the embedded default; PostgreSQL is supported as an explicitly configured external backend. Checkpoints and logs are filesystem data rather than database entities.
+The application is intentionally a single local deployment. Training is isolated in a worker process, while jobs and active inference sessions remain in memory. SQLite is the embedded default; PostgreSQL is supported as an explicitly configured external backend. Checkpoints and logs are filesystem data rather than database entities. The FastAPI lifespan owns startup/shutdown; one Uvicorn worker is required. Closing the browser does not stop the backend or an active inference session, but backend restart expires live model state.
 
 ```mermaid
 flowchart LR
@@ -89,7 +89,7 @@ The structure below is source-focused and excludes dependency, cache, and genera
 
 ## Backend Ownership
 
-- `app/server/bootstrap.py` is the explicit environment/path/logging bootstrap. `app/server/app.py` then creates the FastAPI application, mounts routers, configures SPA fallback routes, validates schema compatibility, and wires runtime services during lifespan startup.
+- `app/server/app.py` constructs the import-safe FastAPI transport surface. Its lifespan invokes `app/server/bootstrap.py`, then validates configuration/schema state, constructs application-owned resources, and wires runtime services; cleanup is reverse-ordered and failure-isolated.
 - `app/server/api` contains transport handlers, request validation, response validation, and HTTP exception translation. It does not access SQLAlchemy directly.
 - `app/server/contracts` contains Pydantic request/response contracts and validated runtime settings. These are boundary contracts, not persistent entities or a separate domain model.
 - `app/server/services` owns application orchestration: dataset import, checkpoint lifecycle, training jobs, inference sessions, startup checks, in-process job state, and the training worker process orchestration.
@@ -112,7 +112,7 @@ The structure below is source-focused and excludes dependency, cache, and genera
 - Backend app: `app/server/app.py`
 - Frontend entry: `app/client/src/main.tsx`
 - Frontend routes: `app/client/src/App.tsx`
-- Windows launcher: `start_on_windows.ps1`
+- Windows launcher: `start_on_windows.ps1` (one-worker startup, ownership-aware explicit stop)
 
 ## Runtime Boundary
 

@@ -159,7 +159,7 @@ class TestInferenceSessionFlow:
     # -------------------------------------------------------------------------
     def test_full_inference_session_flow(self, api_context: APIRequestContext):
         """
-        Tests the complete lifecycle: start -> next -> step -> shutdown.
+        Tests the complete lifecycle: start -> step -> next -> shutdown.
         Skipped if no checkpoints are available.
         """
         checkpoint_name = require_checkpoint(api_context)
@@ -181,19 +181,7 @@ class TestInferenceSessionFlow:
             assert 0.0 <= float(confidence) <= 1.0
 
         try:
-            # Get next prediction
-            next_response = api_context.post(
-                f"/api/inference/sessions/{session_id}/next"
-            )
-            assert next_response.ok
-            next_data = next_response.json()
-            assert "prediction" in next_data
-            assert next_data["prediction"] is not None
-            assert next_data.get("session_id") == session_id
-            assert isinstance(next_data["prediction"].get("action"), int)
-            assert isinstance(next_data["prediction"].get("description"), str)
-
-            # Submit a step with a sample extraction
+            # Submit the observed result for the initial prediction.
             step_response = api_context.post(
                 f"/api/inference/sessions/{session_id}/step",
                 data={
@@ -211,6 +199,18 @@ class TestInferenceSessionFlow:
             assert isinstance(step_data.get("predicted_action_desc"), str)
             assert isinstance(step_data.get("reward"), int)
             assert isinstance(step_data.get("capital_after"), int)
+
+            # Request the next prediction only after the observed result.
+            next_response = api_context.post(
+                f"/api/inference/sessions/{session_id}/next"
+            )
+            assert next_response.ok
+            next_data = next_response.json()
+            assert "prediction" in next_data
+            assert next_data["prediction"] is not None
+            assert next_data.get("session_id") == session_id
+            assert isinstance(next_data["prediction"].get("action"), int)
+            assert isinstance(next_data["prediction"].get("description"), str)
 
         finally:
             # Always shutdown the session
@@ -239,6 +239,11 @@ class TestInferenceSessionFlow:
             bet_payload = bet_response.json()
             assert bet_payload.get("session_id") == session_id
             assert bet_payload.get("bet_amount") == 25
+
+            shutdown_response = api_context.post(
+                f"/api/inference/sessions/{session_id}/shutdown"
+            )
+            assert shutdown_response.ok
 
             clear_rows_response = api_context.post(
                 f"/api/inference/sessions/{session_id}/rows/clear"

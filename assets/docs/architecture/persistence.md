@@ -1,6 +1,6 @@
 ## Persistence
 
-Last updated: 2026-08-30
+Last updated: 2026-09-01
 
 ## Current Persistence Model
 
@@ -92,7 +92,7 @@ erDiagram
 
 - **Embedded relational data:** `app/resources/database.db` by default, or `<FAIRS_DATA_DIR>/database.db` when a custom data root is configured.
 - **External relational data:** PostgreSQL selected through `settings/.env`, validated at startup with a connection probe and required table/column check.
-- **Checkpoints:** `<data-root>/checkpoints/<checkpoint_id>/` containing model files and JSON configuration/history.
+- **Checkpoints:** `<data-root>/checkpoints/<checkpoint_id>/` containing model files and JSON configuration/history. Training writes to a hidden staging workspace and publishes only a complete artifact; incomplete staging workspaces are cleaned on startup.
 - **Logs:** `<data-root>/logs/*.log`.
 
 The checkpoint configuration stores values such as `dataset_id`, but the database cannot enforce a relationship to a checkpoint directory. Dataset deletion therefore scans checkpoint metadata and returns a conflict when a readable checkpoint references the dataset; unreadable metadata also blocks deletion. Immutable dataset snapshots remain deferred.
@@ -107,6 +107,7 @@ The checkpoint configuration stores values such as `dataset_id`, but the databas
 - Unknown/ahead revisions, multiple database heads, multiple script heads, and post-upgrade drift fail before services start. Automatic repair is intentionally disabled.
 - A known revision behind `head` upgrades in order. A database already at `head` performs strict drift validation and then a no-op.
 - Application startup runs this state machine before constructing repositories/services. The explicit launcher/CLI path is idempotent and means create/upgrade.
+- The database engine/pool is application-owned and disposed during FastAPI lifespan shutdown. Worker processes create and dispose their own process-local database engine; they do not inherit the application engine.
 - There is no seed/catalog workflow.
 
 ## Development Migration Workflow
@@ -125,7 +126,7 @@ Use `uv run alembic -c alembic.ini upgrade head --sql` for offline SQL generatio
 ## Persistence Boundaries
 
 - API modules do not embed direct database logic.
-- Dataset operations flow through `DatasetRepository`, the sole SQL dataset authority. Inference session and step operations flow through `InferenceRepository`.
+- Dataset operations flow through `DatasetRepository`, the sole SQL dataset authority. Inference session and step operations flow through `InferenceRepository`. Session creation persists the header and initial step in one transaction; live model state remains process-local and is not reconstructed from persisted history after restart.
 - `TrainingDataService` owns stored/synthetic training-series selection, calls `DatasetRepository.training_outcomes()`, and applies the shared roulette encoding before learning runs.
 - `CheckpointRepository` owns checkpoint filesystem I/O and current configuration validation; `CheckpointService` owns checkpoint lifecycle policy outside the relational schema.
 - Schema, serializer, and API contract changes should be reviewed together.

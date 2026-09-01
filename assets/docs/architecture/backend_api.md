@@ -1,6 +1,6 @@
 ## Backend API
 
-Last updated: 2026-08-30
+Last updated: 2026-09-01
 
 ## Mounting Model
 
@@ -46,12 +46,15 @@ Router prefix: `/datasets`
 Router prefix: `/inference`
 
 - `POST /api/inference/sessions/start`
+- `GET /api/inference/sessions/{session_id}`
 - `POST /api/inference/sessions/{session_id}/next`
 - `POST /api/inference/sessions/{session_id}/step`
 - `POST /api/inference/sessions/{session_id}/shutdown`
 - `POST /api/inference/sessions/{session_id}/bet`
 - `POST /api/inference/sessions/{session_id}/rows/clear`
 - `POST /api/inference/context/clear`
+
+`GET /api/inference/sessions/{session_id}` returns the authoritative live-session snapshot: configuration, capital, current bet, prediction state, step count, last prediction, and persisted step history. A `404` after a backend restart means the in-memory model is gone; persisted history is intentionally not treated as a rehydratable live session.
 
 ## System Endpoints
 
@@ -69,6 +72,7 @@ Router prefix: `/inference`
 
 - Endpoints use explicit resource identifiers such as `job_id` and `session_id`.
 - `POST /api/inference/sessions/start` accepts only `checkpoint`, numeric `dataset_id`, `game_capital`, and `game_bet`; strategy behavior comes from the checkpoint configuration.
+- The optional `X-Preserve-Inference-Session` request header is used only for transactional client-side session replacement during recomputation; the existing session remains authoritative until the replacement is fully replayed.
 - Training start and resume requests return `202 Accepted` because work is tracked as a background job.
 - Upload, dataset, checkpoint, inference, and job-management operations return `200 OK` on success unless a documented validation or conflict error applies.
 - `DELETE /api/datasets/training/{dataset_id}` returns `409 Conflict` when checkpoint metadata still references the dataset; the successful response contract and route are unchanged.

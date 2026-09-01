@@ -1,3 +1,5 @@
+import { requestJson } from './apiClient';
+
 export type DatasetUploadStatus = 'idle' | 'uploading' | 'success' | 'error';
 
 const DATASET_UPLOAD_ENDPOINT = '/api/data/upload?dataset_kind=training';
@@ -6,26 +8,11 @@ const isObjectRecord = (value: unknown): value is Record<string, unknown> => (
     typeof value === 'object' && value !== null
 );
 
-const extractErrorDetail = (value: unknown): string | null => {
-    if (!isObjectRecord(value)) {
-        return null;
-    }
-    return typeof value.detail === 'string' ? value.detail : null;
-};
-
 const extractImportedRows = (value: unknown): number => {
     if (!isObjectRecord(value)) {
         return 0;
     }
     return typeof value.rows_imported === 'number' ? value.rows_imported : 0;
-};
-
-const readJsonSafely = async (response: Response): Promise<unknown | null> => {
-    try {
-        return await response.json();
-    } catch {
-        return null;
-    }
 };
 
 export function formatFileSize(bytes: number): string {
@@ -43,21 +30,14 @@ export function isSupportedDatasetFile(file: File): boolean {
     return extension === 'csv' || extension === 'xlsx' || extension === 'xls';
 }
 
-export async function uploadDatasetFile(file: File): Promise<number> {
+export async function uploadDatasetFile(file: File, signal?: AbortSignal): Promise<number> {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch(DATASET_UPLOAD_ENDPOINT, {
-        method: 'POST',
-        body: formData,
-    });
-
-    if (!response.ok) {
-        const errorPayload = await readJsonSafely(response);
-        const detail = extractErrorDetail(errorPayload) ?? `Upload failed (HTTP ${response.status}).`;
-        throw new Error(detail);
-    }
-
-    const payload = await readJsonSafely(response);
+    const payload = await requestJson(
+        DATASET_UPLOAD_ENDPOINT,
+        { method: 'POST', body: formData, signal },
+        'Upload failed.',
+    );
     return extractImportedRows(payload);
 }

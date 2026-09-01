@@ -19,10 +19,12 @@ TRAINING_STATUSES = {
     "idle",
     "exploration",
     "training",
+    "stopping",
     "completed",
     "error",
     "cancelled",
 }
+ACTIVE_RUN_STATUSES = {"pending", "running", "stopping"}
 HISTORY_POINTS_PER_EPISODE = 20
 
 
@@ -190,8 +192,10 @@ class TrainingRunManager:
     def __init__(self) -> None:
         self.runs: dict[str, TrainingRun] = {}
         self.threads: dict[str, threading.Thread] = {}
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
         self.last_training_run: TrainingRun | None = None
+        self._shutdown_started = False
+        self._shutdown_complete = False
 
     # -------------------------------------------------------------------------
     def start_job(
@@ -209,8 +213,21 @@ class TrainingRunManager:
             runner_kwargs["job_id"] = job_id
 
         with self.lock:
+            if self._shutdown_started:
+                raise RuntimeError("Training manager is shutting down.")
+            if any(existing.status in ACTIVE_RUN_STATUSES for existing in self.runs.values()):
+                raise RuntimeError("Training is already in progress.")
             self.runs[job_id] = run
             self.last_training_run = run
+
+        thread = threading.Thread(
+            target=self.run_job,
+            args=(job_id, runner, args, runner_kwargs),
+            daemon=True,
+            name=f"fairs-training-{job_id}",
+        )
+        with self.lock:
+            self.threads[job_id] = thread
 
         if initializer is not None:
             try:
@@ -218,19 +235,21 @@ class TrainingRunManager:
             except Exception:
                 with self.lock:
                     self.runs.pop(job_id, None)
+                    self.threads.pop(job_id, None)
                     if self.last_training_run is run:
-                        self.last_training_run = None
+                        self.last_training_run = next(iter(self.runs.values()), None)
                 raise
 
-        thread = threading.Thread(
-            target=self.run_job,
-            args=(job_id, runner, args, runner_kwargs),
-            daemon=True,
-        )
         with self.lock:
-            self.threads[job_id] = thread
-        run.update_status("running")
-        thread.start()
+            if self._shutdown_started:
+                self.runs.pop(job_id, None)
+                self.threads.pop(job_id, None)
+                if self.last_training_run is run:
+                    self.last_training_run = next(iter(self.runs.values()), None)
+                raise RuntimeError("Training manager is shutting down.")
+            run.update_status("running")
+            self._prune_terminal_runs_locked()
+            thread.start()
         logger.info("Started training run %s (type=%s)", job_id, job_type)
         return job_id
 
@@ -257,11 +276,20 @@ class TrainingRunManager:
     def update_training_stats(self, job_id: str, stats: dict[str, Any]) -> None:
         run = self._get_run(job_id)
         if run is not None:
+            with run.lock:
+                stop_requested = run.stop_requested
+            if stop_requested and stats.get("status") in {"exploration", "training"}:
+                stats = {
+                    **stats,
+                    "status": "stopping",
+                    "message": "Training stop requested",
+                }
             run.update_stats(stats)
 
     # -------------------------------------------------------------------------
     def training_status(self, polling_interval: float) -> dict[str, Any]:
-        run = self.last_training_run
+        with self.lock:
+            run = self.last_training_run
         if run is None:
             return {
                 "job_id": None,
@@ -272,7 +300,7 @@ class TrainingRunManager:
                 "poll_interval": polling_interval,
             }
         with run.lock:
-            active = run.status in {"pending", "running"} and not run.stop_requested
+            active = run.status in ACTIVE_RUN_STATUSES
             return {
                 "job_id": run.job_id if active else None,
                 "is_training": active,
@@ -289,16 +317,27 @@ class TrainingRunManager:
 
     # -------------------------------------------------------------------------
     def cancel_job(self, job_id: str) -> bool:
+        return self.request_stop(job_id)
+
+    # -------------------------------------------------------------------------
+    def request_stop(self, job_id: str) -> bool:
         run = self._get_run(job_id)
         if run is None:
             return False
         with run.lock:
-            if run.status not in ("pending", "running"):
+            if run.status not in ACTIVE_RUN_STATUSES:
                 return False
             run.stop_requested = True
-            run.status = "cancelled"
-            run.completed_at = monotonic()
-        logger.info("Cancelled training run %s", job_id)
+            run.status = "stopping"
+            run.latest_stats = {
+                **run.latest_stats,
+                "status": "stopping",
+                "message": "Training stop requested",
+            }
+            worker = run.worker
+        if worker is not None:
+            worker.stop()
+        logger.info("Stop requested for training run %s", job_id)
         return True
 
     # -------------------------------------------------------------------------
@@ -306,9 +345,8 @@ class TrainingRunManager:
         with self.lock:
             runs = list(self.runs.values())
         return any(
-            run.status in ("pending", "running")
+            run.status in ACTIVE_RUN_STATUSES
             and (job_type is None or run.job_type == job_type)
-            and not run.stop_requested
             for run in runs
         )
 
@@ -335,8 +373,20 @@ class TrainingRunManager:
     def set_worker(self, job_id: str, worker: Any | None) -> None:
         run = self._get_run(job_id)
         if run is not None:
+            with self.lock:
+                shutdown_started = self._shutdown_started
             with run.lock:
                 run.worker = worker
+                should_stop = worker is not None and (
+                    shutdown_started or run.stop_requested
+                )
+            if should_stop:
+                try:
+                    worker.stop()
+                except Exception:  # noqa: BLE001
+                    logger.exception(
+                        "Failed to signal late-created training worker %s", job_id
+                    )
 
     # -------------------------------------------------------------------------
     def get_worker(self, job_id: str) -> Any | None:
@@ -382,6 +432,18 @@ class TrainingRunManager:
             run.update(status="failed", error=error_msg, completed_at=monotonic())
             logger.error("Training run %s failed: %s", job_id, error_msg)
             logger.debug("Training run %s error details", job_id, exc_info=True)
+        finally:
+            with self.lock:
+                current_thread = self.threads.get(job_id)
+                # Retain the last terminal thread projection so callers can
+                # observe/join the completed job.  It is pruned as soon as a
+                # newer run becomes the retained projection.
+                if (
+                    current_thread is threading.current_thread()
+                    and self.last_training_run is not run
+                ):
+                    self.threads.pop(job_id, None)
+                self._prune_terminal_runs_locked()
 
     # -------------------------------------------------------------------------
     def _get_run(self, job_id: str) -> TrainingRun | None:
@@ -389,11 +451,101 @@ class TrainingRunManager:
             return self.runs.get(job_id)
 
     # -------------------------------------------------------------------------
+    def _prune_terminal_runs_locked(self) -> None:
+        retained = self.last_training_run
+        for job_id, run in list(self.runs.items()):
+            if run is retained:
+                continue
+            with run.lock:
+                terminal = run.status not in ACTIVE_RUN_STATUSES
+            thread = self.threads.get(job_id)
+            if terminal and (thread is None or not thread.is_alive()):
+                self.runs.pop(job_id, None)
+                self.threads.pop(job_id, None)
+
+    # -------------------------------------------------------------------------
+    def shutdown(self, timeout_seconds: float = 10.0) -> bool:
+        """Stop all runs and wait for their job threads and workers to exit."""
+        with self.lock:
+            if self._shutdown_complete:
+                return True
+            self._shutdown_started = True
+            runs = list(self.runs.values())
+
+        for run in runs:
+            with run.lock:
+                if run.status in ACTIVE_RUN_STATUSES:
+                    run.stop_requested = True
+                    run.status = "stopping"
+                    run.latest_stats = {
+                        **run.latest_stats,
+                        "status": "stopping",
+                        "message": "Application shutdown requested",
+                    }
+                worker = run.worker
+            if worker is not None:
+                try:
+                    worker.stop()
+                except Exception:  # noqa: BLE001
+                    logger.exception("Failed to signal training worker %s", run.job_id)
+
+        deadline = monotonic() + max(0.1, timeout_seconds)
+        with self.lock:
+            threads = list(self.threads.values())
+        for thread in threads:
+            remaining = max(0.0, deadline - monotonic())
+            if remaining <= 0:
+                break
+            thread.join(timeout=remaining)
+
+        for run in runs:
+            worker = self.get_worker(run.job_id)
+            if worker is None:
+                continue
+            try:
+                if worker.is_alive():
+                    worker.terminate()
+                    join_worker = getattr(worker, "join", None)
+                    if callable(join_worker):
+                        join_worker(timeout=min(1.0, max(0.1, timeout_seconds)))
+            except Exception:  # noqa: BLE001
+                logger.exception("Failed to terminate training worker %s", run.job_id)
+
+        force_join_deadline = monotonic() + min(1.0, max(0.1, timeout_seconds))
+        for thread in threads:
+            if thread.is_alive():
+                remaining = max(0.0, force_join_deadline - monotonic())
+                thread.join(timeout=remaining)
+
+        with self.lock:
+            alive_threads = [thread.name for thread in self.threads.values() if thread.is_alive()]
+            alive_workers = []
+            for run in self.runs.values():
+                worker = run.worker
+                if worker is not None:
+                    try:
+                        if worker.is_alive():
+                            alive_workers.append(run.job_id)
+                    except Exception:  # noqa: BLE001
+                        alive_workers.append(run.job_id)
+            self._prune_terminal_runs_locked()
+            complete = not alive_threads and not alive_workers
+            self._shutdown_complete = complete
+
+        if not complete:
+            logger.error(
+                "Training shutdown deadline exceeded; threads=%s workers=%s",
+                alive_threads,
+                alive_workers,
+            )
+        return complete
+
+    # -------------------------------------------------------------------------
     @staticmethod
     def runner_accepts_job_id(runner: Callable[..., dict[str, Any]]) -> bool:
         try:
             signature = inspect.signature(runner)
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             return False
         return (
             any(

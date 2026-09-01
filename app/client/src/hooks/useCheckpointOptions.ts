@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { fetchTrainingCheckpoints } from '../utils/trainingApi';
+import { isAbortError } from '../utils/apiClient';
 
 interface UseCheckpointOptionsParams {
     selectedCheckpoint: string;
@@ -24,10 +25,11 @@ export const useCheckpointOptions = ({
 
     useEffect(() => {
         let mounted = true;
+        const controller = new AbortController();
 
         const loadCheckpoints = async (): Promise<void> => {
             try {
-                const normalized = await fetchTrainingCheckpoints();
+                const normalized = await fetchTrainingCheckpoints(controller.signal);
                 if (!mounted) {
                     return;
                 }
@@ -38,7 +40,9 @@ export const useCheckpointOptions = ({
                     onSelectCheckpointRef.current(normalized[0]);
                 }
             } catch (error) {
-                console.error('Failed to load checkpoints:', error);
+                if (!isAbortError(error)) {
+                    console.error('Failed to load checkpoints:', error);
+                }
             }
         };
 
@@ -46,6 +50,7 @@ export const useCheckpointOptions = ({
 
         return () => {
             mounted = false;
+            controller.abort();
         };
     }, []);
 

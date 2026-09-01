@@ -8,8 +8,8 @@ import multiprocessing
 import os
 import queue
 import signal
+import shutil
 import subprocess
-import time
 from pathlib import Path
 from typing import Any
 
@@ -82,6 +82,7 @@ class ProcessWorker:
         self.result_queue = self.ctx.Queue(maxsize=result_queue_size)
         self.stop_event = self.ctx.Event()
         self.process: multiprocessing.Process | None = None
+        self._cleaned = False
 
     # -------------------------------------------------------------------------
     def start(
@@ -89,8 +90,10 @@ class ProcessWorker:
         target: Callable[..., None],
         kwargs: dict[str, Any],
     ) -> None:
-        if self.process is not None and self.process.is_alive():
-            raise RuntimeError("Worker process is already running")
+        if self._cleaned:
+            raise RuntimeError("Worker process has already been cleaned up")
+        if self.process is not None:
+            raise RuntimeError("Worker process can only be started once")
         self.process = self.ctx.Process(
             target=process_target,
             kwargs={
@@ -136,7 +139,7 @@ class ProcessWorker:
             message = self.progress_queue.get(timeout=timeout)
         except queue.Empty:
             return None
-        except EOFError, OSError:
+        except (EOFError, OSError):
             return None
         if isinstance(message, dict):
             return message
@@ -149,7 +152,7 @@ class ProcessWorker:
                 self.progress_queue.get_nowait()
             except queue.Empty:
                 return
-            except EOFError, OSError:
+            except (EOFError, OSError):
                 return
 
     # -------------------------------------------------------------------------
@@ -158,7 +161,7 @@ class ProcessWorker:
             payload = self.result_queue.get_nowait()
         except queue.Empty:
             return None
-        except EOFError, OSError:
+        except (EOFError, OSError):
             return None
         if isinstance(payload, dict):
             return payload
@@ -166,10 +169,29 @@ class ProcessWorker:
 
     # -------------------------------------------------------------------------
     def cleanup(self) -> None:
-        self.progress_queue.close()
-        self.result_queue.close()
-        self.progress_queue.join_thread()
-        self.result_queue.join_thread()
+        if self._cleaned:
+            return
+        if self.is_alive():
+            raise RuntimeError("Cannot clean up a live worker process")
+        cleanup_errors: list[Exception] = []
+        for target_queue in (self.progress_queue, self.result_queue):
+            try:
+                cancel_join = getattr(target_queue, "cancel_join_thread", None)
+                if callable(cancel_join):
+                    cancel_join()
+                target_queue.close()
+            except Exception as exc:  # noqa: BLE001
+                cleanup_errors.append(exc)
+        for target_queue in (self.progress_queue, self.result_queue):
+            try:
+                join_thread = getattr(target_queue, "join_thread", None)
+                if callable(join_thread):
+                    join_thread()
+            except Exception as exc:  # noqa: BLE001
+                cleanup_errors.append(exc)
+        self._cleaned = True
+        for exc in cleanup_errors:
+            logger.error("Training worker queue cleanup failed: %s", exc)
 
     # -------------------------------------------------------------------------
     def as_child(self) -> WorkerChannels:
@@ -194,7 +216,7 @@ class ProcessWorker:
         try:
             pgid = os.getpgid(pid)
             os.killpg(pgid, signal.SIGTERM)
-            time.sleep(1)
+            process.join(timeout=1.0)
             if process.is_alive():
                 os.killpg(pgid, signal.SIGKILL)
         except ProcessLookupError:
@@ -207,6 +229,34 @@ class ProcessWorker:
             return None
         return self.process.exitcode
 
+
+###############################################################################
+class TrainingCancelled(Exception):
+    """Internal signal used to stop before publishing training artifacts."""
+
+    def __init__(self, checkpoint_path: str | None = None) -> None:
+        super().__init__("Training cancelled")
+        self.checkpoint_path = checkpoint_path
+
+
+###############################################################################
+def _raise_if_stopped(stop_event: Any, checkpoint_path: str | None = None) -> None:
+    if stop_event.is_set():
+        raise TrainingCancelled(checkpoint_path)
+
+
+###############################################################################
+def _remove_incomplete_checkpoint(checkpoint_path: str | None) -> None:
+    if not checkpoint_path:
+        return
+    path = Path(checkpoint_path)
+    if not path.exists():
+        return
+    try:
+        shutil.rmtree(path)
+        logger.info("Removed incomplete checkpoint folder %s", path)
+    except OSError:
+        logger.exception("Failed to remove incomplete checkpoint folder %s", path)
 
 ###############################################################################
 def process_target(
@@ -239,65 +289,71 @@ async def run_training_async(
     jit_compile: bool = False,
     jit_backend: str = "inductor",
     polling_interval_seconds: float = 1.0,
-) -> tuple[Any, Any | None, dict[str, Any], str]:
-    dataset, synthetic = training_data_loader(
-        configuration,
-        database_settings,
-        database_path,
-    )
-    if synthetic:
-        logger.info(
-            "Synthetic roulette series generated (%s extractions)", len(dataset)
-        )
-    else:
-        logger.info("Roulette series has been loaded (%s extractions)", len(dataset))
-
-    logger.info("Setting device for training operations")
-    device = DeviceConfig(configuration)
-    device.set_device()
-
+) -> tuple[Any, Any | None, dict[str, Any], str, str]:
     checkpoint_repository = CheckpointRepository()
-    checkpoint_path = checkpoint_repository.create_checkpoint_folder(
+    checkpoint_path, staging_path = checkpoint_repository.create_checkpoint_workspace(
         configuration.get("checkpoint_name")
     )
+    try:
+        _raise_if_stopped(stop_event, staging_path)
+        dataset, synthetic = training_data_loader(
+            configuration,
+            database_settings,
+            database_path,
+        )
+        _raise_if_stopped(stop_event, staging_path)
+        if synthetic:
+            logger.info(
+                "Synthetic roulette series generated (%s extractions)", len(dataset)
+            )
+        else:
+            logger.info("Roulette series has been loaded (%s extractions)", len(dataset))
 
-    logger.info("Building FAIRS reinforcement learning model")
-    learner = FAIRSnet(
-        configuration,
-        jit_compile=jit_compile,
-        jit_backend=jit_backend,
-    )
-    q_model = learner.get_model(model_summary=True)
-    target_model = learner.get_model(model_summary=False)
-    dynamic_enabled = bool(configuration.get("dynamic_betting_enabled", False))
-    strategy_enabled = bool(configuration.get("bet_strategy_model_enabled", False))
-    strategy_model: Any | None = None
-    target_strategy_model: Any | None = None
-    if dynamic_enabled and strategy_enabled:
-        logger.info("Building strategy reinforcement learning model")
-        strategy_learner = StrategyNet(configuration)
-        strategy_model = strategy_learner.get_model(model_summary=True)
-        target_strategy_model = strategy_learner.get_model(model_summary=False)
+        logger.info("Setting device for training operations")
+        device = DeviceConfig(configuration)
+        device.set_device()
 
-    trainer = DQNTraining(
-        configuration,
-        stop_event=stop_event,
-        polling_interval_seconds=polling_interval_seconds,
-    )
-    progress_callback = functools.partial(queue_training_update, reporter=reporter)
+        logger.info("Building FAIRS reinforcement learning model")
+        learner = FAIRSnet(
+            configuration,
+            jit_compile=jit_compile,
+            jit_backend=jit_backend,
+        )
+        q_model = learner.get_model(model_summary=True)
+        target_model = learner.get_model(model_summary=False)
+        dynamic_enabled = bool(configuration.get("dynamic_betting_enabled", False))
+        strategy_enabled = bool(configuration.get("bet_strategy_model_enabled", False))
+        strategy_model: Any | None = None
+        target_strategy_model: Any | None = None
+        if dynamic_enabled and strategy_enabled:
+            logger.info("Building strategy reinforcement learning model")
+            strategy_learner = StrategyNet(configuration)
+            strategy_model = strategy_learner.get_model(model_summary=True)
+            target_strategy_model = strategy_learner.get_model(model_summary=False)
 
-    model, history = await trainer.train_model(
-        q_model,
-        target_model,
-        strategy_model,
-        target_strategy_model,
-        dataset,
-        checkpoint_path,
-        ws_callback=progress_callback,
-        ws_env_callback=None,
-    )
+        trainer = DQNTraining(
+            configuration,
+            stop_event=stop_event,
+            polling_interval_seconds=polling_interval_seconds,
+        )
+        progress_callback = functools.partial(queue_training_update, reporter=reporter)
 
-    return model, strategy_model, history, checkpoint_path
+        model, history = await trainer.train_model(
+            q_model,
+            target_model,
+            strategy_model,
+            target_strategy_model,
+            dataset,
+            staging_path,
+            ws_callback=progress_callback,
+            ws_env_callback=None,
+        )
+        _raise_if_stopped(stop_event, staging_path)
+
+        return model, strategy_model, history, checkpoint_path, staging_path
+    except Exception:
+        checkpoint_repository.remove_staging_workspace(staging_path)
+        raise
 
 
 ###############################################################################
@@ -310,61 +366,70 @@ async def run_resume_training_async(
     database_settings: Any = None,
     database_path: str | Path | None = None,
     polling_interval_seconds: float = 1.0,
-) -> tuple[Any, Any | None, dict[str, Any], dict[str, Any], str]:
+) -> tuple[Any, Any | None, dict[str, Any], dict[str, Any], str, str]:
+    _raise_if_stopped(stop_event)
     checkpoint_repository = CheckpointRepository()
     model, train_config, session, checkpoint_path = (
         checkpoint_repository.load_checkpoint(checkpoint)
     )
-    dynamic_enabled = bool(train_config.get("dynamic_betting_enabled", False))
-    strategy_enabled = bool(train_config.get("bet_strategy_model_enabled", False))
-    strategy_model: Any | None = None
-    target_strategy_model: Any | None = None
-    if dynamic_enabled and strategy_enabled:
-        strategy_model = checkpoint_repository.load_strategy_model(
-            checkpoint_path, required=True
+    staging_path = checkpoint_repository.create_resume_workspace(checkpoint_path)
+    try:
+        _raise_if_stopped(stop_event, staging_path)
+        dynamic_enabled = bool(train_config.get("dynamic_betting_enabled", False))
+        strategy_enabled = bool(train_config.get("bet_strategy_model_enabled", False))
+        strategy_model: Any | None = None
+        target_strategy_model: Any | None = None
+        if dynamic_enabled and strategy_enabled:
+            strategy_model = checkpoint_repository.load_strategy_model(
+                checkpoint_path, required=True
+            )
+            target_strategy_model = checkpoint_repository.load_strategy_model(
+                checkpoint_path, required=True
+            )
+
+        dataset, synthetic = training_data_loader(
+            train_config,
+            database_settings,
+            database_path,
         )
-        target_strategy_model = checkpoint_repository.load_strategy_model(
-            checkpoint_path, required=True
+        _raise_if_stopped(stop_event, staging_path)
+        if synthetic:
+            logger.info(
+                "Synthetic roulette series generated (%s extractions)", len(dataset)
+            )
+        else:
+            logger.info("Roulette series has been loaded (%s extractions)", len(dataset))
+
+        logger.info("Setting device for training operations")
+        device = DeviceConfig(train_config)
+        device.set_device()
+
+        trainer = DQNTraining(
+            train_config,
+            session=session,
+            stop_event=stop_event,
+            polling_interval_seconds=polling_interval_seconds,
         )
+        progress_callback = functools.partial(queue_training_update, reporter=reporter)
 
-    dataset, synthetic = training_data_loader(
-        train_config,
-        database_settings,
-        database_path,
-    )
-    if synthetic:
-        logger.info(
-            "Synthetic roulette series generated (%s extractions)", len(dataset)
+        model, history = await trainer.resume_training(
+            model,
+            model,
+            strategy_model,
+            target_strategy_model,
+            dataset,
+            staging_path,
+            session,
+            additional_episodes,
+            ws_callback=progress_callback,
+            ws_env_callback=None,
         )
-    else:
-        logger.info("Roulette series has been loaded (%s extractions)", len(dataset))
+        _raise_if_stopped(stop_event, staging_path)
 
-    logger.info("Setting device for training operations")
-    device = DeviceConfig(train_config)
-    device.set_device()
-
-    trainer = DQNTraining(
-        train_config,
-        session=session,
-        stop_event=stop_event,
-        polling_interval_seconds=polling_interval_seconds,
-    )
-    progress_callback = functools.partial(queue_training_update, reporter=reporter)
-
-    model, history = await trainer.resume_training(
-        model,
-        model,
-        strategy_model,
-        target_strategy_model,
-        dataset,
-        checkpoint_path,
-        session,
-        additional_episodes,
-        ws_callback=progress_callback,
-        ws_env_callback=None,
-    )
-
-    return model, strategy_model, history, train_config, checkpoint_path
+        return model, strategy_model, history, train_config, checkpoint_path, staging_path
+    except Exception:
+        checkpoint_repository.remove_staging_workspace(staging_path)
+        raise
 
 
 ###############################################################################
@@ -383,12 +448,12 @@ def run_training_process(
     stop_event = worker.stop_event
     reporter = QueueProgressReporter(progress_queue)
 
+    checkpoint_path: str | None = None
+    staging_path: str | None = None
     try:
-        if stop_event.is_set():
-            result_queue.put({"result": {}})
-            return
+        _raise_if_stopped(stop_event)
 
-        model, strategy_model, history, checkpoint_path = asyncio.run(
+        model, strategy_model, history, checkpoint_path, staging_path = asyncio.run(
             run_training_async(
                 configuration,
                 reporter,
@@ -402,13 +467,19 @@ def run_training_process(
             )
         )
 
+        _raise_if_stopped(stop_event, staging_path)
         checkpoint_repository = CheckpointRepository()
-        checkpoint_repository.save_pretrained_model(model, checkpoint_path)
+        checkpoint_repository.save_pretrained_model(model, staging_path)
+        _raise_if_stopped(stop_event, staging_path)
         if strategy_model is not None:
-            checkpoint_repository.save_strategy_model(strategy_model, checkpoint_path)
+            checkpoint_repository.save_strategy_model(strategy_model, staging_path)
+        _raise_if_stopped(stop_event, staging_path)
         checkpoint_repository.save_training_configuration(
-            checkpoint_path, history, configuration
+            staging_path, history, configuration
         )
+        _raise_if_stopped(stop_event, staging_path)
+        checkpoint_repository.publish_checkpoint(staging_path, checkpoint_path)
+        staging_path = None
 
         history_payload = (
             history.get("history", {}) if isinstance(history, dict) else {}
@@ -426,7 +497,11 @@ def run_training_process(
                 }
             }
         )
+    except TrainingCancelled as exc:
+        _remove_incomplete_checkpoint(exc.checkpoint_path or staging_path)
+        result_queue.put({"cancelled": True})
     except Exception as exc:  # noqa: BLE001
+        _remove_incomplete_checkpoint(staging_path)
         result_queue.put({"error": str(exc)})
 
 
@@ -445,12 +520,19 @@ def run_resume_training_process(
     stop_event = worker.stop_event
     reporter = QueueProgressReporter(progress_queue)
 
+    checkpoint_path: str | None = None
+    staging_path: str | None = None
     try:
-        if stop_event.is_set():
-            result_queue.put({"result": {}})
-            return
+        _raise_if_stopped(stop_event)
 
-        model, strategy_model, history, train_config, checkpoint_path = asyncio.run(
+        (
+            model,
+            strategy_model,
+            history,
+            train_config,
+            checkpoint_path,
+            staging_path,
+        ) = asyncio.run(
             run_resume_training_async(
                 checkpoint,
                 additional_episodes,
@@ -463,13 +545,19 @@ def run_resume_training_process(
             )
         )
 
+        _raise_if_stopped(stop_event, staging_path)
         checkpoint_repository = CheckpointRepository()
-        checkpoint_repository.save_pretrained_model(model, checkpoint_path)
+        checkpoint_repository.save_pretrained_model(model, staging_path)
+        _raise_if_stopped(stop_event, staging_path)
         if strategy_model is not None:
-            checkpoint_repository.save_strategy_model(strategy_model, checkpoint_path)
+            checkpoint_repository.save_strategy_model(strategy_model, staging_path)
+        _raise_if_stopped(stop_event, staging_path)
         checkpoint_repository.save_training_configuration(
-            checkpoint_path, history, train_config
+            staging_path, history, train_config
         )
+        _raise_if_stopped(stop_event, staging_path)
+        checkpoint_repository.publish_checkpoint(staging_path, checkpoint_path)
+        staging_path = None
 
         history_payload = (
             history.get("history", {}) if isinstance(history, dict) else {}
@@ -487,5 +575,9 @@ def run_resume_training_process(
                 }
             }
         )
+    except TrainingCancelled:
+        _remove_incomplete_checkpoint(staging_path)
+        result_queue.put({"cancelled": True})
     except Exception as exc:  # noqa: BLE001
+        _remove_incomplete_checkpoint(staging_path)
         result_queue.put({"error": str(exc)})

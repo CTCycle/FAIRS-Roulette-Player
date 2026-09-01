@@ -494,15 +494,33 @@
         ],
         "summary": "Start Session",
         "operationId": "start_session_api_inference_sessions_start_post",
+        "parameters": [
+          {
+            "name": "X-Preserve-Inference-Session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Preserve-Inference-Session"
+            }
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/InferenceStartRequest"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -511,6 +529,48 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/InferenceStartResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/inference/sessions/{session_id}": {
+      "get": {
+        "tags": [
+          "inference"
+        ],
+        "summary": "Get Session",
+        "operationId": "get_session_api_inference_sessions__session_id__get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InferenceSessionStatusResponse"
                 }
               }
             }
@@ -1064,6 +1124,138 @@
           "status"
         ],
         "title": "InferenceRowsClearResponse"
+      },
+      "InferenceSessionStatusResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "checkpoint": {
+            "type": "string",
+            "title": "Checkpoint"
+          },
+          "dataset_id": {
+            "type": "integer",
+            "title": "Dataset Id"
+          },
+          "initial_capital": {
+            "type": "integer",
+            "title": "Initial Capital"
+          },
+          "current_capital": {
+            "type": "integer",
+            "title": "Current Capital"
+          },
+          "current_bet": {
+            "type": "integer",
+            "title": "Current Bet"
+          },
+          "step_count": {
+            "type": "integer",
+            "title": "Step Count"
+          },
+          "prediction_pending": {
+            "type": "boolean",
+            "title": "Prediction Pending"
+          },
+          "last_prediction": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PredictionResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/InferenceSessionStepResponse"
+            },
+            "type": "array",
+            "title": "Steps"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "checkpoint",
+          "dataset_id",
+          "initial_capital",
+          "current_capital",
+          "current_bet",
+          "step_count",
+          "prediction_pending",
+          "steps"
+        ],
+        "title": "InferenceSessionStatusResponse"
+      },
+      "InferenceSessionStepResponse": {
+        "properties": {
+          "step": {
+            "type": "integer",
+            "title": "Step"
+          },
+          "bet_amount": {
+            "type": "integer",
+            "title": "Bet Amount"
+          },
+          "predicted_action": {
+            "type": "integer",
+            "title": "Predicted Action"
+          },
+          "predicted_action_desc": {
+            "type": "string",
+            "title": "Predicted Action Desc"
+          },
+          "predicted_confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Predicted Confidence"
+          },
+          "observed_outcome_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed Outcome Id"
+          },
+          "reward": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reward"
+          },
+          "capital_after": {
+            "type": "integer",
+            "title": "Capital After"
+          }
+        },
+        "type": "object",
+        "required": [
+          "step",
+          "bet_amount",
+          "predicted_action",
+          "predicted_action_desc",
+          "capital_after"
+        ],
+        "title": "InferenceSessionStepResponse"
       },
       "InferenceShutdownResponse": {
         "properties": {

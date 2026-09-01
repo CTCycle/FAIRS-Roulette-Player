@@ -1,18 +1,17 @@
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, Path, status
 
 from server.common.api_errors import ExceptionStatusMap, http_exception_for_exception
+from server.common.exceptions import CheckpointReferenceError
 from server.configurations.dependencies import get_dataset_service
 from server.contracts.datasets import (
     DatasetDeleteResponse,
     DatasetListResponse,
     DatasetSummaryResponse,
 )
-from server.services.datasets import DatasetService
-from server.services.checkpoints import CheckpointReferenceError
-
-
 router = APIRouter(prefix="/datasets", tags=["datasets"])
 DATASET_EXCEPTION_STATUS: ExceptionStatusMap = (
     (CheckpointReferenceError, status.HTTP_409_CONFLICT),
@@ -27,7 +26,7 @@ DATASET_EXCEPTION_STATUS: ExceptionStatusMap = (
     status_code=status.HTTP_200_OK,
 )
 def list_roulette_datasets(
-    service: DatasetService = Depends(get_dataset_service),
+    service: Any = Depends(get_dataset_service),
 ) -> DatasetListResponse:
     return service.list_training_datasets()
 
@@ -39,7 +38,7 @@ def list_roulette_datasets(
     status_code=status.HTTP_200_OK,
 )
 def list_roulette_datasets_summary(
-    service: DatasetService = Depends(get_dataset_service),
+    service: Any = Depends(get_dataset_service),
 ) -> DatasetSummaryResponse:
     return service.list_training_dataset_summaries()
 
@@ -52,7 +51,7 @@ def list_roulette_datasets_summary(
 )
 def delete_roulette_dataset(
     dataset_id: int = Path(..., ge=1),
-    service: DatasetService = Depends(get_dataset_service),
+    service: Any = Depends(get_dataset_service),
 ) -> DatasetDeleteResponse:
     try:
         return service.delete_training_dataset(dataset_id)
