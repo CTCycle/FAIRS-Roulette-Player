@@ -13,7 +13,7 @@ from server.common.utils.trainingstats import (
     coerce_optional_finite_float,
     sanitize_training_stats,
 )
-from server.common.utils.types import coerce_finite_float
+from server.common.utils.types import coerce_finite_float, coerce_finite_int
 
 TRAINING_STATUSES = {
     "idle",
@@ -50,6 +50,9 @@ def default_training_stats(
         "capital_gain": 0.0,
         "current_bet_amount": None,
         "current_strategy_id": None,
+        "epsilon": None,
+        "experience_count": 0,
+        "replay_buffer_size": 0,
         "status": status,
     }
 
@@ -143,6 +146,14 @@ class TrainingRun:
             "rmse": rmse if rmse is not None else 0.0,
             "val_loss": coerce_optional_finite_float(stats.get("val_loss")),
             "val_rmse": coerce_optional_finite_float(stats.get("val_rmse")),
+            "val_reward": coerce_optional_finite_float(stats.get("val_reward")),
+            "epsilon": coerce_optional_finite_float(stats.get("epsilon")),
+            "experience_count": coerce_finite_int(
+                stats.get("experience_count"), 0, minimum=0
+            ),
+            "replay_buffer_size": coerce_finite_int(
+                stats.get("replay_buffer_size"), 0, minimum=0
+            ),
             "epoch": epoch,
             "reward": coerce_finite_float(stats.get("reward"), 0.0),
             "total_reward": coerce_finite_float(stats.get("total_reward"), 0.0),
@@ -435,9 +446,6 @@ class TrainingRunManager:
         finally:
             with self.lock:
                 current_thread = self.threads.get(job_id)
-                # Retain the last terminal thread projection so callers can
-                # observe/join the completed job.  It is pruned as soon as a
-                # newer run becomes the retained projection.
                 if (
                     current_thread is threading.current_thread()
                     and self.last_training_run is not run
