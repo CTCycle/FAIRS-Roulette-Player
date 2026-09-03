@@ -82,6 +82,9 @@ export const validateTrainingStep = (
                 ?? validateRange(Number(config.explorationRate), 'Explore rate', 0, 1)
                 ?? validateRange(Number(config.explorationRateDecay), 'Decay', 0, 1)
                 ?? validateRange(Number(config.minExplorationRate), 'Min explore rate', 0, 1)
+                ?? (Number(config.minExplorationRate) <= Number(config.explorationRate)
+                    ? null
+                    : 'Min explore rate must not exceed the initial explore rate.')
                 ?? validateRange(Number(config.discountRate), 'Discount rate', 0, 1)
             );
         case 1:
@@ -90,15 +93,25 @@ export const validateTrainingStep = (
                 ?? validateRange(Number(config.initialCapital), 'Initial capital', 1)
                 ?? validateRange(Number(config.maxMemorySize), 'Max memory', 100)
                 ?? validateRange(Number(config.replayBufferSize), 'Replay buffer', 100)
+                ?? (Number(config.replayBufferSize) <= Number(config.maxMemorySize)
+                    ? null
+                    : 'Replay buffer must not exceed max memory.')
             );
         case 2:
             if (!config.dynamicBettingEnabled) {
-                return null;
+                return config.betStrategyModelEnabled
+                    ? 'Strategy model requires dynamic betting to be enabled.'
+                    : null;
             }
             return (
                 validateRange(Number(config.strategyHoldSteps), 'Strategy hold steps', 1)
                 ?? (config.betUnitEnabled ? validateRange(Number(config.betUnit), 'Bet unit', 1) : null)
                 ?? (config.betMaxEnabled ? validateRange(Number(config.betMax), 'Bet max', 1) : null)
+                ?? (config.betUnitEnabled
+                    && config.betMaxEnabled
+                    && Number(config.betMax) < Number(config.betUnit)
+                    ? 'Bet max must be greater than or equal to the bet unit.'
+                    : null)
             );
         case 3:
             if (config.useDataGen) {
@@ -110,14 +123,15 @@ export const validateTrainingStep = (
             if (!isFiniteNumber(Number(config.validationSize)) || Number(config.validationSize) < 0 || Number(config.validationSize) >= 1) {
                 return 'Validation split must be between 0 and less than 1.';
             }
-            return (
-                (datasetIdOverride === undefined ? 'Select a dataset to continue.' : null)
-            );
+            return datasetIdOverride === undefined ? 'Select a dataset to continue.' : null;
         case 4:
             return (
                 validateRange(Number(config.episodes), 'Episodes', 1)
                 ?? validateRange(Number(config.maxStepsEpisode), 'Max steps', 100)
                 ?? validateRange(Number(config.batchSize), 'Batch size', 1)
+                ?? (Number(config.batchSize) <= Number(config.replayBufferSize)
+                    ? null
+                    : 'Batch size must not exceed the replay buffer size.')
                 ?? (Number(config.learningRate) > 0 ? null : 'Learning rate must be greater than 0.')
                 ?? validateRange(Number(config.deviceID), 'Device ID', 0)
             );
