@@ -1,25 +1,28 @@
 ## Experience
 
-Last updated: 2026-08-20
+Last updated: 2026-09-03
 
 ## Page Composition
 
 - `/training`
   - dataset upload and preview
   - checkpoint preview and management
+  - side-by-side comparison of stored checkpoint configuration and training summaries
   - six-step training configuration with clickable breadcrumbs and summary confirmation
-  - training monitor with live metrics, circular episode progress, Stop action, and loss/reward charts
+  - training monitor with live DQN metrics, replay-buffer warm-up state, circular episode/step progress, Stop action, and loss/reward charts
 - `/inference`
   - checkpoint and dataset setup, including inference upload
   - initial-capital and bet controls
-  - AI suggestion panel
+  - agent suggestion panel
   - session history table with editable observed values and row actions
+  - Decision Inspector with relative Q preference, current betting context, and a compact recent-observation sequence
 - Walkthroughs do not open automatically. From Help, users can choose a three-step walkthrough for Training or Inference, covering data/setup, configuration/play, and monitoring/observation.
 
 Composition rules:
 
 - Keep each page inside `.page-shell`.
 - Preserve clear separation between setup controls and live telemetry or history views.
+- Keep research diagnostics compact and subordinate to the primary Training or Inference workflow. Do not create a third analytics workspace for information that naturally belongs to those workflows.
 
 ## Workflow Behavior
 
@@ -28,9 +31,14 @@ Composition rules:
   - choose checkpoint or configuration
   - start the workflow
 - Prevent invalid actions with disabled controls and local validation messages.
+- Training configuration validates relationships between exploration settings, replay memory, batch size, and dynamic-betting options before submission; the backend remains authoritative for the same constraints.
 - Keep error feedback local to the action that failed.
 - Preserve explicit loading states for long-running or multi-step actions.
 - Keep outcome and profit feedback immediate and visually distinct.
+- The training monitor calls the pre-learning replay-memory phase `Replay warm-up`; epsilon remains visible separately because epsilon-greedy exploration continues after learning begins.
+- Validation metrics are shown only when a fresh validation measurement exists rather than being visually carried forward across unsampled steps.
+- Checkpoint `Open in Inference` preserves dataset provenance. If the checkpoint's training dataset is unavailable or incompatible, the UI asks the user to choose a dataset explicitly instead of silently substituting one.
+- Inference `Relative Q preference` is a normalized preference derived from Q-scores. It must never be described as a calibrated probability or success confidence.
 - Preserve the two-panel inference layout at every supported viewport width. Below the desktop minimum, retain the desktop geometry and show the minimum-window notice instead of stacking setup and history regions.
 - Keep guidance adjacent to the feature it explains, short enough to scan, and dismissible without blocking the workflow. Do not repeat a dismissed tip during the same guidance version.
 
@@ -59,6 +67,7 @@ Desktop layouts should favor information density, horizontal space, and efficien
 - Consistency over novelty.
 - Clarity over decoration.
 - Predictable behavior across Training and Inference.
+- Research terminology must match the underlying DQN semantics.
 - No parallel styling system outside the established tokens and patterns without a deliberate architectural reason.
 
 ## Related Files
