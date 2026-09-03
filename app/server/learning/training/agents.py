@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pickle
-import random
 from collections import deque
 from typing import Any
 
@@ -23,7 +22,7 @@ class DQNAgent:
         memory: Any | None = None,
         action_size: int | None = None,
     ) -> None:
-        self.rng = np.random.default_rng(seed=configuration.get("seed", 42))
+        self.rng = np.random.default_rng(seed=configuration.get("training_seed", 42))
         self.action_size = int(action_size) if action_size is not None else STATES
         self.state_size = configuration.get("perceptive_field_size", 64)
         self.gamma = configuration.get("discount_rate", 0.5)
@@ -70,6 +69,12 @@ class DQNAgent:
         self.memory.append((state, action, reward, gain, next_gain, next_state, done))
 
     # -------------------------------------------------------------------------
+    def _sample_memory(self, memory_buffer: deque, batch_size: int) -> list[Any]:
+        memory_items = list(memory_buffer)
+        indices = self.rng.choice(len(memory_items), size=batch_size, replace=False)
+        return [memory_items[int(index)] for index in indices]
+
+    # -------------------------------------------------------------------------
     def replay(
         self,
         model: Model,
@@ -77,8 +82,8 @@ class DQNAgent:
         environment: RouletteEnvironment,
         batch_size,
     ) -> dict[str, Any]:
-        batch_size = min(batch_size, self.replay_size)
-        minibatch = random.sample(self.memory, batch_size)
+        batch_size = min(batch_size, self.replay_size, len(self.memory))
+        minibatch = self._sample_memory(self.memory, batch_size)
 
         states = np.array(
             [np.squeeze(s) for s, a, r, c, nc, ns, d in minibatch], dtype=np.int32
@@ -121,13 +126,13 @@ class DQNAgent:
         )
 
         if self.epsilon > self.epsilon_min:
-            self.epsilon *= self.epsilon_decay
+            self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
 
         return logs
 
     # -------------------------------------------------------------------------
     def is_training_ready(self) -> bool:
-        return len(self.memory) > self.replay_size
+        return len(self.memory) >= self.replay_size
 
     # -------------------------------------------------------------------------
     def evaluate_batch(
@@ -145,7 +150,7 @@ class DQNAgent:
         if len(memory_buffer) < batch_size:
             return {"loss": 0.0, "root_mean_squared_error": 0.0}
 
-        minibatch = random.sample(memory_buffer, batch_size)
+        minibatch = self._sample_memory(memory_buffer, batch_size)
 
         states = np.array(
             [np.squeeze(s) for s, a, r, c, nc, ns, d in minibatch], dtype=np.int32
@@ -183,8 +188,6 @@ class DQNAgent:
         batch_indices = np.arange(batch_size, dtype=np.int32)
         targets[batch_indices, actions] = updated_targets
 
-        # Evaluate manually using model.evaluate or by running a single forward pass and calculating loss
-        # Here we use evaluate()
         results = model.evaluate(
             {"timeseries": states, "gain": gains},
             targets,
