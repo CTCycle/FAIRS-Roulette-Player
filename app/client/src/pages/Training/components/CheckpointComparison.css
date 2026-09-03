@@ -1,0 +1,86 @@
+.checkpoint-comparison {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+
+.checkpoint-comparison-header h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.checkpoint-comparison-header p {
+  margin: 0.35rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+}
+
+.checkpoint-comparison-selectors {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin-top: 0.9rem;
+}
+
+.checkpoint-comparison-selectors label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.checkpoint-comparison-selectors select {
+  width: 100%;
+  min-width: 0;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.checkpoint-comparison-error {
+  margin-top: 0.75rem;
+  color: #fecaca;
+  font-size: 0.82rem;
+}
+
+.checkpoint-comparison-table-wrap {
+  overflow-x: auto;
+  margin-top: 0.9rem;
+}
+
+.checkpoint-comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.checkpoint-comparison-table th,
+.checkpoint-comparison-table td {
+  padding: 0.55rem 0.65rem;
+  border-bottom: 1px solid rgba(42, 58, 85, 0.65);
+  text-align: left;
+  vertical-align: top;
+}
+
+.checkpoint-comparison-table th {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.checkpoint-comparison-table td {
+  color: var(--text-primary);
+}
+
+.checkpoint-comparison-table td:first-child {
+  color: var(--text-secondary);
+}
