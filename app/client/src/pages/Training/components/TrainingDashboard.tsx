@@ -8,6 +8,7 @@ import type {
 import { TrainingLossChart } from './TrainingLossChart';
 import { TrainingMetricsChart } from './TrainingMetricsChart';
 import { TrainingMetricCard } from './TrainingMetricCard';
+import './TrainingDashboardEnhancements.css';
 
 interface TrainingDashboardProps {
     status: TrainingStatusSnapshot;
