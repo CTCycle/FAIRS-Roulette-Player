@@ -107,7 +107,6 @@ class DQNTraining:
             else None
         )
 
-        # Restore session_stats from checkpoint if provided (for resume training)
         if session and "history" in session:
             prev_history = session["history"]
             self.session_stats = {
@@ -121,6 +120,7 @@ class DQNTraining:
                 "reward": list(prev_history.get("reward", [])),
                 "total_reward": list(prev_history.get("total_reward", [])),
                 "capital": list(prev_history.get("capital", [])),
+                "epsilon": list(prev_history.get("epsilon", [])),
             }
         else:
             self.session_stats = {
@@ -128,15 +128,15 @@ class DQNTraining:
                 "time_step": [],
                 "loss": [],
                 "metrics": [],
-                "img_reward": [],  # validation reward
+                "img_reward": [],
                 "val_loss": [],
                 "val_rmse": [],
                 "reward": [],
                 "total_reward": [],
                 "capital": [],
+                "epsilon": [],
             }
 
-        # Progress update related
         self.polling_interval_ms = int(
             max(0.25, float(polling_interval_seconds)) * 1000
         )
@@ -211,6 +211,7 @@ class DQNTraining:
         self.session_stats["reward"].append(coerce_finite_float(reward))
         self.session_stats["total_reward"].append(coerce_finite_float(total_reward))
         self.session_stats["capital"].append(coerce_finite_float(capital))
+        self.session_stats["epsilon"].append(coerce_finite_float(self.agent.epsilon))
 
         if val_scores:
             self.session_stats["val_loss"].append(
@@ -223,25 +224,9 @@ class DQNTraining:
                 coerce_finite_float(val_scores.get("reward", 0.0))
             )
         else:
-            # Carry forward last known validation metrics if available.
-            last_val_loss = (
-                self.session_stats["val_loss"][-1]
-                if self.session_stats["val_loss"]
-                else None
-            )
-            last_val_rmse = (
-                self.session_stats["val_rmse"][-1]
-                if self.session_stats["val_rmse"]
-                else None
-            )
-            last_val_reward = (
-                self.session_stats["img_reward"][-1]
-                if self.session_stats["img_reward"]
-                else None
-            )
-            self.session_stats["val_loss"].append(last_val_loss)
-            self.session_stats["val_rmse"].append(last_val_rmse)
-            self.session_stats["img_reward"].append(last_val_reward)
+            self.session_stats["val_loss"].append(None)
+            self.session_stats["val_rmse"].append(None)
+            self.session_stats["img_reward"].append(None)
 
     # -------------------------------------------------------------------------
     def get_latest_stats(
@@ -255,6 +240,12 @@ class DQNTraining:
             float(initial_capital) if isinstance(initial_capital, (int, float)) else 0.0
         )
         max_steps = int(self.configuration.get("max_steps_episode", 2000))
+        experience_count = len(self.agent.memory)
+        common_stats = {
+            "epsilon": coerce_finite_float(self.agent.epsilon, 0.0),
+            "experience_count": coerce_finite_int(experience_count, 0, minimum=0),
+            "replay_buffer_size": coerce_finite_int(self.agent.replay_size, 0, minimum=0),
+        }
         if not self.session_stats["loss"] and not training_ready:
             raw_stats = {
                 "epoch": episode + 1,
@@ -288,6 +279,7 @@ class DQNTraining:
                 ),
                 "capital_gain": 0.0,
                 "status": "training" if training_ready else "exploration",
+                **common_stats,
             }
             return sanitize_training_stats(raw_stats)
 
@@ -371,6 +363,7 @@ class DQNTraining:
             ),
             "capital_gain": float(capital_value) - initial_capital_value,
             "status": "training" if training_ready else "exploration",
+            **common_stats,
         }
         if has_non_finite_numbers(
             raw_stats,
@@ -381,9 +374,11 @@ class DQNTraining:
                 "val_loss",
                 "val_rmse",
                 "reward",
+                "val_reward",
                 "total_reward",
                 "capital",
                 "capital_gain",
+                "epsilon",
             ],
         ):
             logger.warning(
@@ -432,7 +427,6 @@ class DQNTraining:
             gain = val_env.capital / val_env.initial_capital
             gain = np.reshape(gain, shape=(1, 1))
 
-            # Greedy action
             old_eps = self.agent.epsilon
             self.agent.epsilon = 0.0
             action = self.agent.act(model, val_state, gain)
@@ -489,7 +483,6 @@ class DQNTraining:
                 val_state = val_env.reset()
                 val_state = np.reshape(val_state, shape=(1, state_size))
 
-        # Evaluate batch
         val_metrics = self.agent.evaluate_batch(
             model, target_model, val_env, val_memory, self.batch_size
         )
@@ -509,7 +502,7 @@ class DQNTraining:
             val_metrics["strategy_loss"] = coerce_finite_float(
                 strategy_metrics.get("loss"), 0.0
             )
-        val_metrics["reward"] = val_total_reward / steps  # Average reward per step
+        val_metrics["reward"] = val_total_reward / steps
         return val_metrics
 
     # -------------------------------------------------------------------------
@@ -605,6 +598,10 @@ class DQNTraining:
             self.latest_metric_state["val_reward"] = coerce_optional_finite_float(
                 val_scores.get("reward")
             )
+        else:
+            self.latest_metric_state["val_loss"] = None
+            self.latest_metric_state["val_rmse"] = None
+            self.latest_metric_state["val_reward"] = None
 
         if time_step % 50 == 0:
             self._log_training_progress(scores, val_scores, time_step)
@@ -674,6 +671,48 @@ class DQNTraining:
                 total_reward,
                 environment.capital,
             )
+
+    # -------------------------------------------------------------------------
+    def _build_environments(
+        self,
+        data: pd.DataFrame,
+        checkpoint_path: str,
+    ) -> tuple[RouletteEnvironment, RouletteEnvironment | None, int]:
+        perceptive_size = int(self.configuration.get("perceptive_field_size", 64))
+        if len(data) <= perceptive_size:
+            raise ValueError(
+                "Training data must contain more rows than the perceptive field size."
+            )
+
+        validation_split = float(self.configuration.get("validation_size", 0.0))
+        if validation_split <= 0.0:
+            environment = RouletteEnvironment(data, self.configuration, checkpoint_path)
+            return environment, None, int(environment.observation_window.shape[0])
+
+        split_idx = int(len(data) * (1 - validation_split))
+        train_data = data.iloc[:split_idx]
+        val_data = data.iloc[split_idx:]
+        if len(train_data) <= perceptive_size:
+            raise ValueError(
+                "Training partition must contain more rows than the perceptive field size."
+            )
+        if len(val_data) <= perceptive_size:
+            raise ValueError(
+                "Validation partition must contain more rows than the perceptive field size."
+            )
+
+        environment = RouletteEnvironment(
+            train_data, self.configuration, checkpoint_path
+        )
+        val_environment = RouletteEnvironment(
+            val_data, self.configuration, checkpoint_path
+        )
+        logger.info(
+            "Splitting data: Train (%s) | Validation (%s)",
+            len(train_data),
+            len(val_data),
+        )
+        return environment, val_environment, int(environment.observation_window.shape[0])
 
     # -------------------------------------------------------------------------
     async def train_with_reinforcement_learning(
@@ -806,31 +845,15 @@ class DQNTraining:
         ws_callback: Callable[[dict[str, Any]], Any] | None = None,
         ws_env_callback: Callable[[dict[str, Any]], Any] | None = None,
     ) -> tuple[Model, dict[str, Any]]:
-        environment = RouletteEnvironment(data, self.configuration, checkpoint_path)
+        environment, val_environment, state_size = self._build_environments(
+            data, checkpoint_path
+        )
         episodes = self.configuration.get("episodes", 10)
         start_episode = 0
 
-        state_size = environment.observation_window.shape[0]
         logger.info(
-            f"Size of the observation space (previous extractions): {state_size}"
+            "Size of the observation space (previous extractions): %s", state_size
         )
-
-        # Split data for validation
-        validation_split = self.configuration.get("validation_size", 0.0)
-        val_environment = None
-        if validation_split > 0.0:
-            split_idx = int(len(data) * (1 - validation_split))
-            train_data = data.iloc[:split_idx]
-            val_data = data.iloc[split_idx:]
-            environment = RouletteEnvironment(
-                train_data, self.configuration, checkpoint_path
-            )
-            val_environment = RouletteEnvironment(
-                val_data, self.configuration, checkpoint_path
-            )
-            logger.info(
-                f"Splitting data: Train ({len(train_data)}) | Validation ({len(val_data)})"
-            )
 
         model = await self.train_with_reinforcement_learning(
             model,
@@ -870,13 +893,14 @@ class DQNTraining:
         ws_callback: Callable[[dict[str, Any]], Any] | None = None,
         ws_env_callback: Callable[[dict[str, Any]], Any] | None = None,
     ) -> tuple[Model, dict[str, Any]]:
-        environment = RouletteEnvironment(data, self.configuration, checkpoint_path)
+        environment, val_environment, state_size = self._build_environments(
+            data, checkpoint_path
+        )
         from_episode = 0 if not session else session.get("total_episodes", 0)
         total_episodes = from_episode + additional_epochs
 
-        state_size = environment.observation_window.shape[0]
         logger.info(
-            f"Size of the observation space (previous extractions): {state_size}"
+            "Size of the observation space (previous extractions): %s", state_size
         )
         model = await self.train_with_reinforcement_learning(
             model,
@@ -889,6 +913,7 @@ class DQNTraining:
             state_size,
             ws_callback=ws_callback,
             ws_env_callback=ws_env_callback,
+            val_environment=val_environment,
         )
 
         history = {
