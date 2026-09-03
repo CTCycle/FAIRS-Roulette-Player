@@ -29,7 +29,7 @@ from server.learning.betting.types import (
 class BetsAndRewards:
     # -------------------------------------------------------------------------
     def __init__(self, configuration: dict[str, Any]) -> None:
-        self.seed = configuration.get("train_seed", 42)
+        self.seed = configuration.get("training_seed", 42)
         self.bet_amount = configuration.get("bet_amount", 10)
         self.numbers = list(range(NUMBERS))
         self.red_numbers = ROULETTE_COLOR_MAP["red"]
@@ -338,7 +338,7 @@ class RouletteEnvironment(gym.Env):
             else np.zeros(len(self.extractions), dtype=np.int32)
         )
         self.checkpoint_path = checkpoint_path
-        self._rng = np.random.default_rng(configuration.get("train_seed", 42))
+        self._rng = np.random.default_rng(configuration.get("training_seed", 42))
 
         self.perceptive_size = configuration.get("perceptive_field_size", 64)
         self.initial_capital = configuration.get("initial_capital", 1000)
