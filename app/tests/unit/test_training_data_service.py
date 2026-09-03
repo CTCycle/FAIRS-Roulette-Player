@@ -38,3 +38,15 @@ def test_roulette_encoding_isolated_from_input_frame() -> None:
     assert list(source.columns) == ["outcome"]
     assert encoded["color_code"].notna().all()
     assert encoded["wheel_position"].notna().all()
+
+
+###############################################################################
+def test_training_subsample_preserves_contiguous_sequence_order() -> None:
+    source = pd.DataFrame({"outcome": list(range(20))})
+
+    sampled = TrainingDataService._sample_contiguous_window(source, 0.5, seed=7)
+    repeated = TrainingDataService._sample_contiguous_window(source, 0.5, seed=7)
+
+    assert len(sampled) == 10
+    assert sampled["outcome"].diff().dropna().eq(1).all()
+    pd.testing.assert_frame_equal(sampled, repeated)
