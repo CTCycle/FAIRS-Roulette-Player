@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pandas as pd
 
 from server.common.roulette import encode_roulette_series
@@ -31,6 +32,26 @@ class TrainingDataService:
         return RouletteSyntheticGenerator(configuration).generate()
 
     # -------------------------------------------------------------------------
+    @staticmethod
+    def _sample_contiguous_window(
+        dataset: pd.DataFrame,
+        sample_size: float,
+        seed: int,
+    ) -> pd.DataFrame:
+        if dataset.empty or sample_size >= 1.0:
+            return dataset.reset_index(drop=True)
+
+        sample_count = max(1, int(len(dataset) * sample_size))
+        sample_count = min(sample_count, len(dataset))
+        if sample_count == len(dataset):
+            return dataset.reset_index(drop=True)
+
+        rng = np.random.default_rng(seed)
+        max_start = len(dataset) - sample_count
+        start = int(rng.integers(0, max_start + 1))
+        return dataset.iloc[start : start + sample_count].reset_index(drop=True)
+
+    # -------------------------------------------------------------------------
     def _load_training_series(
         self,
         sample_size: float,
@@ -54,9 +75,7 @@ class TrainingDataService:
         if dataset.empty:
             return dataset
         dataset = encode_roulette_series(dataset)
-        if sample_size < 1.0:
-            dataset = dataset.sample(frac=sample_size, random_state=seed)
-        return dataset
+        return self._sample_contiguous_window(dataset, sample_size, seed)
 
     # -------------------------------------------------------------------------
     def get_training_series(
