@@ -321,8 +321,9 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
         return value;
     };
 
-    const handleEvaluateCheckpoint = async (checkpointName: string) => {
+    const handleOpenInInference = async (checkpointName: string) => {
         setNotice(null);
+        setError(null);
         try {
             const payload = metadataCache[checkpointName] ?? await loadCheckpointMetadata(checkpointName);
             if (!metadataCache[checkpointName]) {
@@ -331,16 +332,20 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
             const summary = payload.summary as CheckpointSummary;
             const requiredRows = parsePositiveNumber(summary.perceptive_field_size);
             const preferredDatasetId = parseDatasetId(summary.dataset_id);
-            const compatibleDatasets = datasets.filter((dataset) => (
-                requiredRows === null || dataset.rowCount >= requiredRows
-            ));
-            const selectedDataset = (
-                compatibleDatasets.find((dataset) => dataset.datasetId === preferredDatasetId)
-                ?? compatibleDatasets[0]
-            );
+            const selectedDataset = preferredDatasetId === null
+                ? null
+                : datasets.find((dataset) => dataset.datasetId === preferredDatasetId) ?? null;
 
+            if (preferredDatasetId === null) {
+                setError('This checkpoint does not identify its training dataset. Open Inference and choose a compatible dataset explicitly.');
+                return;
+            }
             if (!selectedDataset) {
-                setError('No compatible dataset is available for this checkpoint.');
+                setError(`The checkpoint training dataset (${preferredDatasetId}) is no longer available. Open Inference and choose a dataset explicitly instead of substituting one automatically.`);
+                return;
+            }
+            if (requiredRows !== null && selectedDataset.rowCount < requiredRows) {
+                setError(`The checkpoint training dataset (${preferredDatasetId}) no longer has enough rows for its perceptive field. Choose another dataset explicitly in Inference.`);
                 return;
             }
 
@@ -350,17 +355,17 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
             navigate('/inference', {
                 state: {
                     inferenceSetup: {
-                    checkpoint: checkpointName,
-                    selectedDataset: selectedDataset.datasetId,
-                    uploadedDatasetId: null,
-                    datasetFileMetadata: null,
-                    initialCapital: Number(initialCapital),
-                    betAmount: Number(betAmount),
+                        checkpoint: checkpointName,
+                        selectedDataset: selectedDataset.datasetId,
+                        uploadedDatasetId: null,
+                        datasetFileMetadata: null,
+                        initialCapital: Number(initialCapital),
+                        betAmount: Number(betAmount),
                     },
                 },
             });
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Unable to start evaluation.');
+            setError(err instanceof Error ? err.message : 'Unable to open checkpoint in Inference.');
         }
     };
 
@@ -480,7 +485,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
                     <>
                         <div className="preview-empty">No checkpoints available</div>
                         <FeatureTip id="training-checkpoints-empty" title="Checkpoints appear after training">
-                            Start a training run to create a reusable model snapshot. You can then inspect, evaluate, or resume it here.
+                            Start a training run to create a reusable model snapshot. You can then inspect it, open it in Inference, or resume training here.
                         </FeatureTip>
                     </>
                 )}
@@ -504,8 +509,8 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
                                         </button>
                                         <button
                                             className="preview-row-icon preview-row-icon-evaluate"
-                                            onClick={() => handleEvaluateCheckpoint(name)}
-                                            title="Evaluate checkpoint"
+                                            onClick={() => handleOpenInInference(name)}
+                                            title="Open checkpoint in Inference using its training dataset"
                                         >
                                             <Activity size={16} />
                                         </button>
@@ -555,11 +560,7 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
                                 {buildMetadataRows(metadataPayload.summary).map((row) => (
                                     <div key={row.label} className="preview-modal-row">
                                         <span className="preview-modal-label">{row.label}</span>
-                                        <span className="preview-modal-value">
-                                            {typeof row.value === 'number'
-                                                ? String(row.value)
-                                                : String(row.value)}
-                                        </span>
+                                        <span className="preview-modal-value">{String(row.value)}</span>
                                     </div>
                                 ))}
                             </div>
@@ -628,4 +629,3 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
         </div>
     );
 };
-
