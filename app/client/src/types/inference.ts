@@ -12,6 +12,7 @@ export interface PredictionResult {
     action: number;
     description: string;
     relativePreference?: number;
+    confidence?: number;
     betStrategyId?: number;
     betStrategyName?: string;
     suggestedBetAmount?: number;
