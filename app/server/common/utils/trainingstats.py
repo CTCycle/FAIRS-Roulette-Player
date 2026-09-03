@@ -15,6 +15,7 @@ TRAINING_METRIC_KEYS = (
     "total_reward",
     "capital",
     "capital_gain",
+    "epsilon",
 )
 
 
@@ -53,6 +54,14 @@ def sanitize_training_stats(
         sanitized["max_steps"] = coerce_finite_int(stats.get("max_steps"), 0, minimum=0)
     if "time_step" in stats:
         sanitized["time_step"] = coerce_finite_int(stats.get("time_step"), 0, minimum=0)
+    if "experience_count" in stats:
+        sanitized["experience_count"] = coerce_finite_int(
+            stats.get("experience_count"), 0, minimum=0
+        )
+    if "replay_buffer_size" in stats:
+        sanitized["replay_buffer_size"] = coerce_finite_int(
+            stats.get("replay_buffer_size"), 0, minimum=0
+        )
 
     for metric_key in TRAINING_METRIC_KEYS:
         if metric_key not in stats:
