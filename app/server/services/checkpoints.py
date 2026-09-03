@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from typing import Any
 
 from keras import Model
@@ -15,10 +16,13 @@ from server.repositories.checkpoints import CheckpointRepository
 
 ###############################################################################
 def get_last_history_value(values: Any) -> float | None:
-    if isinstance(values, list) and values:
-        last_value = values[-1]
-        if isinstance(last_value, (int, float)):
-            return float(last_value)
+    if isinstance(values, list):
+        for value in reversed(values):
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                continue
+            numeric_value = float(value)
+            if math.isfinite(numeric_value):
+                return numeric_value
     return None
 
 

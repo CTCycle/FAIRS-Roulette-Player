@@ -29,7 +29,15 @@ class DummyCheckpointRepository:
                 "qnet_neurons": 16,
                 "dataset_id": 7,
             },
-            {"total_episodes": 3, "history": {"loss": [0.2], "metrics": [0.3]}},
+            {
+                "total_episodes": 3,
+                "history": {
+                    "loss": [0.2],
+                    "metrics": [0.3],
+                    "val_loss": [0.4, None],
+                    "val_rmse": [0.5, None],
+                },
+            },
         )
 
     # -------------------------------------------------------------------------
@@ -62,6 +70,8 @@ def test_get_metadata_returns_summary_shape(tmp_path, monkeypatch) -> None:
     assert "summary" in metadata
     assert metadata["summary"]["episodes"] == 3
     assert metadata["summary"]["neurons"] == 16
+    assert metadata["summary"]["final_val_loss"] == 0.4
+    assert metadata["summary"]["final_val_rmse"] == 0.5
 
 
 ###############################################################################

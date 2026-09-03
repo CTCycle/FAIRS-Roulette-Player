@@ -46,3 +46,20 @@ def test_validation_partition_must_support_perceptive_window() -> None:
 
     with pytest.raises(ValueError, match="Validation partition"):
         trainer._build_environments(data, "checkpoint")
+
+
+###############################################################################
+def test_latest_stats_does_not_carry_sparse_validation_metrics_forward() -> None:
+    trainer = DQNTraining(build_configuration())
+    trainer.session_stats["val_loss"] = [0.4]
+    trainer.session_stats["val_rmse"] = [0.5]
+    trainer.session_stats["img_reward"] = [3.0]
+    trainer.latest_metric_state.update(
+        {"val_loss": None, "val_rmse": None, "val_reward": None}
+    )
+
+    latest_stats = trainer.get_latest_stats(0, 1, training_ready=True)
+
+    assert latest_stats["val_loss"] is None
+    assert latest_stats["val_rmse"] is None
+    assert latest_stats["val_reward"] is None

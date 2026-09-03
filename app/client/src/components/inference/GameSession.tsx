@@ -131,7 +131,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
         step: step.step,
         predictedAction: step.predicted_action,
         predictedActionDesc: step.predicted_action_desc,
-        predictedConfidence: step.predicted_confidence ?? undefined,
+        predictedRelativePreference: step.predicted_confidence ?? undefined,
         observed: step.observed_outcome_id,
         observedInput: step.observed_outcome_id === null
             ? ''
@@ -458,7 +458,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
                     step: 1,
                     predictedAction: prediction.action,
                     predictedActionDesc: prediction.description,
-                    predictedConfidence: prediction.confidence,
+                    predictedRelativePreference: prediction.relativePreference,
                     observed: null,
                     observedInput: '',
                     betAmount: currentBet,
@@ -597,7 +597,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
                 step: 1,
                 predictedAction: prediction.action,
                 predictedActionDesc: prediction.description,
-                predictedConfidence: prediction.confidence,
+                predictedRelativePreference: prediction.relativePreference,
                 observed: null,
                 observedInput: '',
                 betAmount: currentBet,
@@ -653,7 +653,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
                         step: stepIndex + 1,
                         predictedAction: nextPrediction.action,
                         predictedActionDesc: nextPrediction.description,
-                        predictedConfidence: nextPrediction.confidence,
+                        predictedRelativePreference: nextPrediction.relativePreference,
                         observed: null,
                         observedInput: '',
                         betAmount: currentBet,
@@ -852,7 +852,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
                     step: nextStep,
                     predictedAction: prediction.action,
                     predictedActionDesc: prediction.description,
-                    predictedConfidence: prediction.confidence,
+                        predictedRelativePreference: prediction.relativePreference,
                     observed: null,
                     observedInput: '',
                     betAmount: activeBet,
@@ -1077,11 +1077,6 @@ export const GameSession: React.FC<GameSessionProps> = ({
                     <div className={styles.predictionValue}>
                         {lastPrediction?.description || 'Waiting for a prediction'}
                     </div>
-                    {lastPrediction?.confidence !== undefined && (
-                        <div className={styles.predictionDesc}>
-                            Confidence: {(lastPrediction.confidence * 100).toFixed(0)}%
-                        </div>
-                    )}
                     {lastPrediction?.betStrategyName && (
                         <div className={styles.predictionDesc}>
                             Strategy: {lastPrediction.betStrategyName}
