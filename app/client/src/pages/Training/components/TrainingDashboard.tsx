@@ -64,9 +64,15 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({
         })).sort((a, b) => a.time_step - b.time_step);
     }, [historyPoints, stats.max_steps]);
 
-    const progressRaw = stats.total_epochs > 0
-        ? (stats.epoch / stats.total_epochs) * 100
+    const completedEpisodes = Math.max(0, stats.epoch - 1);
+    const episodeFraction = stats.max_steps > 0
+        ? Math.min(1, Math.max(0, (stats.time_step + 1) / stats.max_steps))
         : 0;
+    const progressRaw = stats.status === 'completed'
+        ? 100
+        : stats.total_epochs > 0
+            ? ((completedEpisodes + episodeFraction) / stats.total_epochs) * 100
+            : 0;
     const progress = Number.isFinite(progressRaw)
         ? Math.min(100, Math.max(0, Math.round(progressRaw)))
         : 0;
@@ -80,14 +86,16 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({
         : stats.status === 'error'
             ? 'Error'
             : stats.status === 'exploration'
-                ? 'Exploration'
+                ? 'Replay warm-up'
                 : stats.status === 'training'
                     ? (isStopping ? 'Stopping' : 'Training')
-                    : stats.status === 'completed'
-                        ? 'Completed'
-                        : stats.status === 'cancelled'
-                            ? 'Stopped'
-                            : 'Connected';
+                    : stats.status === 'stopping'
+                        ? 'Stopping'
+                        : stats.status === 'completed'
+                            ? 'Completed'
+                            : stats.status === 'cancelled'
+                                ? 'Stopped'
+                                : 'Connected';
 
     const statusClass = !isConnected
         ? 'disconnected'
@@ -99,9 +107,17 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({
                     ? 'training'
                     : stats.status === 'completed'
                         ? 'completed'
-                        : stats.status === 'cancelled'
+                        : stats.status === 'cancelled' || stats.status === 'stopping'
                             ? 'stopped'
                             : 'connected';
+
+    const replayProgress = stats.replay_buffer_size > 0
+        ? `${Math.min(stats.experience_count, stats.replay_buffer_size).toLocaleString()} / ${stats.replay_buffer_size.toLocaleString()}`
+        : 'N/A';
+    const showRunMessage = Boolean(
+        stats.message
+        && ['completed', 'cancelled', 'error', 'stopping'].includes(stats.status),
+    );
 
     return (
         <div className="training-dashboard">
@@ -131,6 +147,13 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({
                 </div>
             )}
 
+            {showRunMessage && (
+                <div className={`dashboard-status-message dashboard-status-${stats.status}`} role="status">
+                    {stats.status === 'error' && <AlertCircle size={16} />}
+                    <span>{stats.message}</span>
+                </div>
+            )}
+
             <div className="progress-section">
                 <div className="metrics-progress-row">
                     <div className="metrics-panel">
@@ -140,20 +163,24 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({
                             <TrainingMetricCard tone="loss" label="Val Loss" value={formatMetric(stats.val_loss)} Icon={TrendingUp} />
                             <TrainingMetricCard tone="rmse" label="Val RMSE" value={formatMetric(stats.val_rmse)} Icon={Target} />
                             <TrainingMetricCard tone="total-reward" label="Total Reward" value={formatMetric(stats.total_reward)} Icon={TrendingUp} />
+                            <TrainingMetricCard tone="reward" label="Val Reward" value={formatMetric(stats.val_reward)} Icon={Target} />
                             <TrainingMetricCard tone="capital-gain" label="Capital Gain" value={formatMetric(stats.capital_gain)} Icon={ArrowUpRight} />
                             <TrainingMetricCard tone="capital" label="Capital" value={formatMetric(stats.capital)} Icon={DollarSign} />
                             <TrainingMetricCard tone="capital" label="Current Bet" value={formatMetric(stats.current_bet_amount)} Icon={DollarSign} />
+                            <TrainingMetricCard tone="rmse" label="Epsilon" value={formatMetric(stats.epsilon)} Icon={Target} />
                         </div>
 
                         <div className="metrics-meta-row">
                             <TrainingMetricCard tone="rmse" label="Strategy" value={stats.current_strategy_name ?? 'Keep'} Icon={Target} compact />
                             <TrainingMetricCard tone="timestep" label="Time Step" value={formatMetric(stats.time_step)} Icon={Clock} compact />
+                            <TrainingMetricCard tone="timestep" label="Replay Warm-up" value={replayProgress} Icon={Activity} compact />
                         </div>
                     </div>
 
                     <div className="progress-side">
                         <div className="progress-episode-label">
                             Episode {stats.epoch} / {stats.total_epochs}
+                            {stats.max_steps > 0 && ` · Step ${stats.time_step} / ${stats.max_steps}`}
                         </div>
                         <div
                             className="progress-wheel"
