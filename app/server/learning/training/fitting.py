@@ -315,26 +315,14 @@ class DQNTraining:
         val_loss_value = coerce_optional_finite_float(
             self.latest_metric_state.get("val_loss")
         )
-        if val_loss_value is None and self.session_stats["val_loss"]:
-            val_loss_value = coerce_optional_finite_float(
-                self.session_stats["val_loss"][-1]
-            )
 
         val_rmse_value = coerce_optional_finite_float(
             self.latest_metric_state.get("val_rmse")
         )
-        if val_rmse_value is None and self.session_stats["val_rmse"]:
-            val_rmse_value = coerce_optional_finite_float(
-                self.session_stats["val_rmse"][-1]
-            )
 
         val_reward_value = coerce_optional_finite_float(
             self.latest_metric_state.get("val_reward")
         )
-        if val_reward_value is None and self.session_stats["img_reward"]:
-            val_reward_value = coerce_optional_finite_float(
-                self.session_stats["img_reward"][-1]
-            )
 
         raw_stats = {
             "epoch": episode + 1,

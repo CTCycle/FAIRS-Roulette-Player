@@ -12,7 +12,6 @@ export interface PredictionResult {
     action: number;
     description: string;
     relativePreference?: number;
-    confidence?: number;
     betStrategyId?: number;
     betStrategyName?: string;
     suggestedBetAmount?: number;
@@ -23,7 +22,7 @@ export interface GameStep {
     step: number;
     predictedAction: number;
     predictedActionDesc: string;
-    predictedConfidence?: number;
+    predictedRelativePreference?: number;
     observed: number | null;
     observedInput: string;
     betAmount: number;
