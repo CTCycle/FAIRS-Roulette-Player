@@ -164,7 +164,7 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({
                             <TrainingMetricCard tone="loss" label="Val Loss" value={formatMetric(stats.val_loss)} Icon={TrendingUp} />
                             <TrainingMetricCard tone="rmse" label="Val RMSE" value={formatMetric(stats.val_rmse)} Icon={Target} />
                             <TrainingMetricCard tone="total-reward" label="Total Reward" value={formatMetric(stats.total_reward)} Icon={TrendingUp} />
-                            <TrainingMetricCard tone="reward" label="Val Reward" value={formatMetric(stats.val_reward)} Icon={Target} />
+                            <TrainingMetricCard tone="total-reward" label="Val Reward" value={formatMetric(stats.val_reward)} Icon={Target} />
                             <TrainingMetricCard tone="capital-gain" label="Capital Gain" value={formatMetric(stats.capital_gain)} Icon={ArrowUpRight} />
                             <TrainingMetricCard tone="capital" label="Capital" value={formatMetric(stats.capital)} Icon={DollarSign} />
                             <TrainingMetricCard tone="capital" label="Current Bet" value={formatMetric(stats.current_bet_amount)} Icon={DollarSign} />
@@ -214,7 +214,7 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({
                             type="button"
                             className="stop-training-btn"
                             onClick={() => void onStopTraining()}
-                            disabled={isStopping || !status.is_training}
+                            disabled={isStopping || stats.status === 'stopping' || !status.is_training}
                         >
                             Stop
                         </button>
