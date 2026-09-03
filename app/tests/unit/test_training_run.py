@@ -19,6 +19,39 @@ def test_default_training_stats_match_the_frontend_status_contract() -> None:
     assert stats["status"] == "idle"
     assert stats["current_bet_amount"] is None
     assert stats["current_strategy_id"] is None
+    assert stats["epsilon"] is None
+    assert stats["experience_count"] == 0
+    assert stats["replay_buffer_size"] == 0
+
+
+###############################################################################
+def test_training_run_projects_dqn_warmup_telemetry_into_history() -> None:
+    run = TrainingRun(job_id="job123", job_type="training")
+    run.reset_training_state(total_epochs=2, max_steps=100)
+
+    run.update_stats(
+        {
+            "status": "exploration",
+            "epoch": 1,
+            "time_step": 12,
+            "epsilon": 0.75,
+            "experience_count": 13,
+            "replay_buffer_size": 100,
+            "reward": 1,
+            "total_reward": 4,
+            "capital": 104,
+            "capital_gain": 4,
+            "loss": None,
+            "rmse": None,
+            "val_loss": None,
+            "val_rmse": None,
+            "val_reward": None,
+        }
+    )
+
+    assert run.latest_stats["epsilon"] == 0.75
+    assert run.history_points[-1]["experience_count"] == 13
+    assert run.history_points[-1]["replay_buffer_size"] == 100
 
 
 ###############################################################################
