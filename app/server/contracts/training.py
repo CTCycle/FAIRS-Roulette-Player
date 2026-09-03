@@ -1,6 +1,14 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field, RootModel, StrictInt, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    RootModel,
+    StrictInt,
+    field_validator,
+    model_validator,
+)
 
 from server.common.checkpoints import (
     MAX_CHECKPOINT_NAME_LENGTH,
@@ -73,6 +81,32 @@ class TrainingConfig(BaseModel):
         if not value:
             return None
         return normalize_checkpoint_identifier(value)
+
+    # -------------------------------------------------------------------------
+    @model_validator(mode="after")
+    def validate_training_relationships(self) -> TrainingConfig:
+        if self.minimum_exploration_rate > self.exploration_rate:
+            raise ValueError(
+                "minimum_exploration_rate must not exceed exploration_rate."
+            )
+        if self.replay_buffer_size > self.max_memory_size:
+            raise ValueError(
+                "replay_buffer_size must not exceed max_memory_size."
+            )
+        if self.batch_size > self.replay_buffer_size:
+            raise ValueError("batch_size must not exceed replay_buffer_size.")
+        if self.bet_strategy_model_enabled and not self.dynamic_betting_enabled:
+            raise ValueError(
+                "bet_strategy_model_enabled requires dynamic_betting_enabled."
+            )
+        if (
+            self.dynamic_betting_enabled
+            and self.bet_unit is not None
+            and self.bet_max is not None
+            and self.bet_max < self.bet_unit
+        ):
+            raise ValueError("bet_max must be greater than or equal to bet_unit.")
+        return self
 
 
 ###############################################################################
