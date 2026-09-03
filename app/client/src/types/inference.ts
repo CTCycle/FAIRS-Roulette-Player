@@ -11,7 +11,7 @@ export interface GameConfig {
 export interface PredictionResult {
     action: number;
     description: string;
-    confidence?: number;
+    relativePreference?: number;
     betStrategyId?: number;
     betStrategyName?: string;
     suggestedBetAmount?: number;
