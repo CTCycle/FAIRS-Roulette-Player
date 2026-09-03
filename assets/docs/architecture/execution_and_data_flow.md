@@ -1,13 +1,13 @@
 ## Execution And Data Flow
 
-Last updated: 2026-09-01
+Last updated: 2026-09-03
 
 ## Current Layering
 
 FAIRS is a layered local monolith with an explicit composition root. The names below describe ownership, not a claim that every package is framework-independent.
 
 - **Interface:** `app/server/api/*` validates HTTP input, calls an application service, validates the response, and translates selected exceptions to HTTP status codes.
-- **Contracts:** `app/server/contracts/*` contains Pydantic request/response contracts and validated settings models shared between the interface and application code.
+- **Contracts:** `app/server/contracts/*` contains Pydantic request/response contracts and validated settings models shared between the interface and application code. `TrainingConfig` also enforces cross-field DQN invariants such as replay-memory capacity, epsilon bounds, and dynamic-betting relationships.
 - **Application services:** `app/server/services/*` coordinates dataset import, checkpoint lifecycle, training runs, inference sessions, startup checks, and worker-process orchestration.
 - **Learning execution:** `app/server/learning/*` contains roulette betting rules, neural models, training algorithms, and inference players. It receives prepared data and explicit runtime inputs from application services.
 - **Persistence adapters:** `app/server/repositories/*` owns SQLAlchemy schema, engines, transactions, dataset/inference repositories, and checkpoint filesystem/configuration I/O.
@@ -101,13 +101,14 @@ sequenceDiagram
     Data->>Dataset: training_outcomes(dataset_id)
     Dataset->>DB: SELECT training outcomes
     DB-->>Dataset: rows
-    Data-->>ML: encoded dataframe
-    Worker->>ML: run configured training
+    Data->>Data: encode + deterministic contiguous sampling
+    Data-->>ML: ordered dataframe
+    Worker->>ML: build train/validation environments and run configured training
     loop While run is active
         Client->>API: GET /api/training/status
         API->>Service: get_status()
         Service->>Runs: read run snapshot
-        Runs-->>API: typed status/history projection
+        Runs-->>API: status/history including epsilon, replay fill, validation telemetry
         API-->>Client: TrainingStatusResponse
         Worker-->>Runs: progress messages
     end
@@ -116,6 +117,12 @@ sequenceDiagram
 ```
 
 `TrainingRunManager` is the single in-process training-run state owner. It owns the authoritative `TrainingRun`, worker handle, progress, cancellation flag, latest statistics, and history projection. A run may use a child `ProcessWorker`, while the browser polls the status endpoint; there is no WebSocket or durable job table. A stop request enters `stopping` and becomes `cancelled` only after the worker has stopped. Terminal runs are bounded in memory. Checkpoint output is staged and published only after model, strategy, configuration, and history writes succeed. `additional_episodes` is a resume operation input and is not added to the persisted checkpoint configuration.
+
+Stored-dataset `sample_size` is applied as a seeded contiguous window rather than `DataFrame.sample`, so the reduced dataset preserves chronological adjacency. The later validation split remains chronological. `seed` controls the selected data window. `training_seed` controls Keras initialization, the DQN action/replay RNG, and roulette-environment random starts.
+
+`DQNTraining._build_environments()` is shared by initial and resumed training. It validates that the full dataset and each requested train/validation partition contain more observations than the perceptive field, then constructs both environments. Resume therefore produces fresh validation measurements when the checkpoint configuration has a validation split. Sparse validation history points retain `null` between real validation measurements rather than copying the last value forward.
+
+Training status remains inside the existing `latest_stats` dictionary contract and now projects epsilon, experience count, replay-buffer size, and validation reward. The frontend uses those values to distinguish replay-buffer warm-up from epsilon-greedy exploration without introducing another job-state model.
 
 ## Inference Flow
 
@@ -158,6 +165,10 @@ sequenceDiagram
 
 The inference start contract does not accept dataset-source labels or strategy overrides. The optional `X-Preserve-Inference-Session` header is an internal replacement boundary used while the client replays a session. The checkpoint owns strategy behavior; the service only overlays the per-session capital and bet. Active sessions are held in `InferenceState` with a bounded in-memory session count and locked mutations. Database rows provide history and snapshots, not a rehydration mechanism for the live `RoulettePlayer` object. A missing live session after backend restart is a clean expiration.
 
+`RoulettePlayer` still returns the existing `confidence` response field for API compatibility, but the value is a softmax normalization of unbounded DQN Q-scores and is not a calibrated success probability. The React boundary maps it to `relativePreference` for user-facing research UX. The Decision Inspector displays that preference together with recent confirmed observations and betting context. No separate inference analytics service or persistence model is introduced.
+
+Checkpoint handoff from Training to Inference requires the dataset ID recorded by the checkpoint to still exist and satisfy the checkpoint perceptive field. The client no longer silently substitutes the first compatible dataset. Choosing a different dataset remains possible from Inference, but becomes an explicit experimental-context change.
+
 ## Important Class Relationships
 
 ```mermaid
@@ -191,9 +202,11 @@ classDiagram
     }
     class DQNTraining {
         +train()
+        +_build_environments()
     }
     class TrainingDataService {
         +get_training_series(config)
+        +_sample_contiguous_window()
     }
     class InferenceService {
         +start_session(payload)
@@ -241,12 +254,13 @@ classDiagram
 
 ## Responsibility And Duplication Notes
 
-- Validation at the API boundary, service boundary, and database constraint boundary is intentional defense in depth; it is not automatically accidental duplication.
+- Validation at the API boundary, service boundary, and database constraint boundary is intentional defense in depth; it is not automatically accidental duplication. Cross-field DQN constraints are mirrored in the training wizard for immediate UX feedback and remain authoritative in `TrainingConfig`.
 - Roulette feature derivation is one shared transformation in `server.common.roulette`.
-- `DatasetRepository` is the sole SQL authority for dataset metadata and outcome rows. `TrainingDataService` owns encoding and sampling after repository reads.
+- `DatasetRepository` is the sole SQL authority for dataset metadata and outcome rows. `TrainingDataService` owns encoding and sequence-preserving sampling after repository reads.
 - `CheckpointRepository` owns checkpoint filesystem I/O and validates the current checkpoint configuration contract. `CheckpointService` owns lifecycle policy, including dataset-reference checks before deletion.
 - `TrainingRunManager` owns the one authoritative in-process training-run model; `TrainingService` coordinates operations and worker execution around it.
 - Training and inference pages own their workflow snapshots. `useTrainingStatus` is the single frontend training-status polling hook; API parsers reject malformed or legacy shapes instead of silently selecting compatibility defaults.
+- Checkpoint comparison is a frontend projection of existing checkpoint metadata, not a new experiment entity or persistence layer.
 
 ## Concurrency And Observability
 
