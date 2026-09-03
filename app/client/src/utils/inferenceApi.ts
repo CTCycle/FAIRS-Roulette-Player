@@ -132,12 +132,12 @@ const normalizePrediction = (value: unknown): PredictionResult => {
         action: requireInteger(payload, 'action'),
         description: requireString(payload, 'description'),
     };
-    const confidence = optionalNumber(payload, 'confidence');
-    if (confidence !== undefined && (confidence < 0 || confidence > 1)) {
+    const relativePreference = optionalNumber(payload, 'confidence');
+    if (relativePreference !== undefined && (relativePreference < 0 || relativePreference > 1)) {
         throw new Error('Inference prediction field confidence is invalid.');
     }
-    if (confidence !== undefined) {
-        prediction.confidence = confidence;
+    if (relativePreference !== undefined) {
+        prediction.relativePreference = relativePreference;
     }
     const betStrategyId = optionalInteger(payload, 'bet_strategy_id');
     if (betStrategyId !== undefined) {
