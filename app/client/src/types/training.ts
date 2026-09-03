@@ -102,6 +102,10 @@ export interface TrainingHistoryPoint {
     epoch: number;
     val_loss?: number | null;
     val_rmse?: number | null;
+    val_reward?: number | null;
+    epsilon?: number | null;
+    experience_count?: number;
+    replay_buffer_size?: number;
     reward?: number;
     total_reward?: number;
     capital?: number;
@@ -125,6 +129,9 @@ export interface TrainingStats {
     current_bet_amount: number | null;
     current_strategy_id: number | null;
     current_strategy_name?: string;
+    epsilon: number | null;
+    experience_count: number;
+    replay_buffer_size: number;
     status: TrainingStatusCode;
     message?: string;
 }
