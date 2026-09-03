@@ -6,6 +6,7 @@ import { TrainingDashboard } from './components/TrainingDashboard';
 import { DatasetUpload } from './components/DatasetUpload';
 import { DatasetPreview } from './components/DatasetPreview';
 import { CheckpointPreview } from './components/CheckpointPreview';
+import { CheckpointComparison } from './components/CheckpointComparison';
 
 const TrainingPage: React.FC = () => {
     const trainingStatus = useTrainingStatus();
@@ -61,12 +62,13 @@ const TrainingPage: React.FC = () => {
                         <div className="info-content">
                             <h3>Checkpoints</h3>
                             <p>
-                                Review trained model snapshots, compare checkpoint metadata, resume interrupted training runs, and launch evaluation sessions directly from the checkpoint panel.
+                                Review trained model snapshots, compare stored training summaries, resume interrupted runs, and open checkpoints in Inference while preserving dataset provenance.
                             </p>
                         </div>
                     </div>
                     <div className="checkpoints-column">
                         <CheckpointPreview refreshKey={datasetRefreshKey} isTraining={isTraining} />
+                        <CheckpointComparison />
                     </div>
                 </div>
             </div>
