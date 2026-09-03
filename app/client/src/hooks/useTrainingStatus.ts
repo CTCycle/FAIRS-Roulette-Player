@@ -34,6 +34,9 @@ const DEFAULT_STATS: TrainingStats = {
     capital_gain: 0,
     current_bet_amount: null,
     current_strategy_id: null,
+    epsilon: null,
+    experience_count: 0,
+    replay_buffer_size: 0,
     status: 'idle',
 };
 
@@ -107,9 +110,14 @@ const parseHistoryPoint = (value: unknown): TrainingHistoryPoint => {
         rmse: requiredNumber(value, 'rmse'),
         epoch: requiredInteger(value, 'epoch'),
     };
-    for (const key of ['val_loss', 'val_rmse'] as const) {
-        if (key in value && value[key] !== null) {
-            point[key] = requiredNumber(value, key);
+    for (const key of ['val_loss', 'val_rmse', 'val_reward', 'epsilon'] as const) {
+        if (key in value) {
+            point[key] = value[key] === null ? null : requiredNumber(value, key);
+        }
+    }
+    for (const key of ['experience_count', 'replay_buffer_size'] as const) {
+        if (key in value) {
+            point[key] = requiredInteger(value, key);
         }
     }
     for (const key of ['reward', 'total_reward', 'capital', 'capital_gain'] as const) {
@@ -144,6 +152,9 @@ const parseTrainingStats = (value: unknown): TrainingStats => {
         capital_gain: requiredNumber(value, 'capital_gain'),
         current_bet_amount: nullableNumber(value, 'current_bet_amount'),
         current_strategy_id: nullableInteger(value, 'current_strategy_id'),
+        epsilon: nullableNumber(value, 'epsilon'),
+        experience_count: requiredInteger(value, 'experience_count'),
+        replay_buffer_size: requiredInteger(value, 'replay_buffer_size'),
         status: status as TrainingStatusCode,
     };
     if ('current_strategy_name' in value) {
