@@ -1,5 +1,5 @@
 # FAIRS: Fabulous Automated Intelligent Roulette System
-Last updated: 2026-09-01
+Last updated: 2026-09-04
 
 [![Release](https://img.shields.io/github/v/release/CTCycle/FAIRS-Roulette-Player?display_name=tag)](https://github.com/CTCycle/FAIRS-Roulette-Player/releases) [![Python](https://img.shields.io/badge/python-%3E%3D3.14-3776AB?logo=python&logoColor=white)](https://www.python.org/) [![Node.js](https://img.shields.io/badge/node.js-22.13.0-339933?logo=node.js&logoColor=white)](https://nodejs.org/) [![React](https://img.shields.io/badge/react-19.2.8-61DAFB?logo=react&logoColor=black)](https://react.dev/) [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE) [![CI](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml?query=branch%3Adevelop)
 [![CTCycle Portfolio](https://img.shields.io/badge/CTCycle-Portfolio-58a6ff?style=flat-square)](https://ctcycle.github.io/CTCycle/)
@@ -35,7 +35,7 @@ macOS and Linux are not supported launch targets for this checkout. There is no 
 
 ## Download the source
 
-The current source release is v3.1.0. Download the version you want from the [GitHub Releases page](https://github.com/CTCycle/FAIRS-Roulette-Player/releases), extract it completely, and keep the extracted folder in a writable location.
+The current source release is v3.2.0. Download the version you want from the [GitHub Releases page](https://github.com/CTCycle/FAIRS-Roulette-Player/releases), extract it completely, and keep the extracted folder in a writable location.
 
 ## Install and launch on Windows
 
@@ -99,7 +99,7 @@ FAIRS separates an experiment into two related phases:
 6. Open the checkpoint panel when the run completes, or use it to resume an interrupted run.
 
 ![Training workspace](assets/figures/training-page.png)
-_The Training workspace combines dataset upload, checkpoint management, and a live training monitor with populated metrics and history charts._
+_The Training workspace combines dataset upload, checkpoint management, and a balanced monitor with grouped metrics and history charts._
 
 Training data uses the same canonical 0..36 roulette range whether it comes from an uploaded file or the synthetic generator. The application also applies the same preparation rules to both sources so that comparisons are meaningful.
 
@@ -141,14 +141,14 @@ Change only one or two controls at a time, and keep the dataset, validation spli
 **Play** starts a session and fetches a prediction; it does not submit a wheel result for you. Applying a suggested bet changes the current bet amount only; it does not advance the session. The observed value must be recorded before the next prediction can use it as context.
 
 ![Inference session](assets/figures/inference-page.png)
-_The Inference workspace pairs a trained checkpoint and dataset with live stepwise predictions, observed outcomes, and session history._
+_The Inference workspace keeps setup, live metrics, and the AI suggestion stacked on the left beside a large, bounded session-history table._
 
 ## Tips & Tricks
 
 Open **Help** from the Training or Inference workspace for practical shortcuts and optional walkthroughs. Tips & Tricks covers the round-by-round inference loop, checkpoint reuse, synthetic-data setup, and fixed-bet baseline comparisons. The walkthroughs are optional and can be reopened whenever you need a refresher.
 
 ![Tips & Tricks dialog](assets/figures/tips-and-tricks.png)
-_Tips & Tricks brings workflow shortcuts and an optional Inference walkthrough into an active local inference workspace._
+_Tips & Tricks brings workflow shortcuts and an optional Inference walkthrough into the active workspace._
 
 ## Data, checkpoints, and storage
 

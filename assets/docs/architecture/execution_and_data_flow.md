@@ -1,6 +1,6 @@
 ## Execution And Data Flow
 
-Last updated: 2026-09-03
+Last updated: 2026-09-04
 
 ## Current Layering
 
@@ -165,7 +165,7 @@ sequenceDiagram
 
 The inference start contract does not accept dataset-source labels or strategy overrides. The optional `X-Preserve-Inference-Session` header is an internal replacement boundary used while the client replays a session. The checkpoint owns strategy behavior; the service only overlays the per-session capital and bet. Active sessions are held in `InferenceState` with a bounded in-memory session count and locked mutations. Database rows provide history and snapshots, not a rehydration mechanism for the live `RoulettePlayer` object. A missing live session after backend restart is a clean expiration.
 
-`RoulettePlayer` still returns the existing `confidence` response field for API compatibility, but the value is a softmax normalization of unbounded DQN Q-scores and is not a calibrated success probability. The React boundary maps it to `relativePreference` for user-facing research UX. The Decision Inspector displays that preference together with recent confirmed observations and betting context. No separate inference analytics service or persistence model is introduced.
+`RoulettePlayer` still returns the existing `confidence` response field for API compatibility, but the value is a softmax normalization of unbounded DQN Q-scores and is not a calibrated success probability. The current Inference workspace surfaces the model suggestion alongside the session controls and history; no separate inference analytics service or persistence model is introduced.
 
 Checkpoint handoff from Training to Inference requires the dataset ID recorded by the checkpoint to still exist and satisfy the checkpoint perceptive field. The client no longer silently substitutes the first compatible dataset. Choosing a different dataset remains possible from Inference, but becomes an explicit experimental-context change.
 
