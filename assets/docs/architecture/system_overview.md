@@ -6,7 +6,7 @@ Last updated: 2026-09-01
 
 FAIRS is a Windows-first local web application for roulette training and inference experiments. The repository contains a React/Vite client and a FastAPI server; the server is the system of record for API behavior, training orchestration, inference session state, persistence, and startup readiness.
 
-The application is intentionally a single local deployment. Training is isolated in a worker process, while jobs and active inference sessions remain in memory. SQLite is the embedded default; PostgreSQL is supported as an explicitly configured external backend. Checkpoints and logs are filesystem data rather than database entities. The FastAPI lifespan owns startup/shutdown; one Uvicorn worker is required. Closing the browser does not stop the backend or an active inference session, but backend restart expires live model state.
+The application is intentionally a single local deployment. Training is isolated in a worker process, while jobs and active inference sessions remain in memory. SQLite is the embedded default; PostgreSQL is supported as an explicitly configured external backend. Checkpoints and logs are filesystem data rather than database entities. The FastAPI lifespan owns startup/shutdown; one Uvicorn worker is required. Closing the browser does not stop the backend or an active inference session, while closing the application terminal ends the local application session and backend restart expires live model state.
 
 ```mermaid
 flowchart LR
@@ -112,7 +112,7 @@ The structure below is source-focused and excludes dependency, cache, and genera
 - Backend app: `app/server/app.py`
 - Frontend entry: `app/client/src/main.tsx`
 - Frontend routes: `app/client/src/App.tsx`
-- Windows launcher: `start_on_windows.ps1` (one-worker startup, ownership-aware explicit stop)
+- Windows launcher: `start_on_windows.ps1` (one-worker startup, application-terminal lifecycle)
 
 ## Runtime Boundary
 
