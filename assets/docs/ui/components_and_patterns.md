@@ -1,6 +1,6 @@
 ## Components And Patterns
 
-Last updated: 2026-08-20
+Last updated: 2026-09-04
 
 ## Navigation And Structure
 
@@ -61,7 +61,8 @@ Additional rules:
   - capital and bet controls
   - AI suggestion panel with suggested-bet application
   - Play, Stop, and Clear session controls
-  - editable session history table with observed-value, remove, modify, and next-prediction actions
+  - wide right-hand session history table with observed-value, remove, modify, and next-prediction actions
+  - bounded table body that scrolls independently as the session history grows
 - Guidance content:
   - Training explains the dataset, configuration, and monitor regions through a three-step optional walkthrough, with short help popovers inside the multi-step configuration wizard.
   - Inference explains setup, Play, and the observation loop through an optional three-step walkthrough and adds empty-state guidance when no checkpoint or history exists.

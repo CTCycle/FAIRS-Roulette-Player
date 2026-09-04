@@ -1,6 +1,6 @@
 ## Workflows
 
-Last updated: 2026-09-03
+Last updated: 2026-09-04
 
 ## Training Workflow
 
@@ -40,11 +40,8 @@ Resume uses the same train/validation environment construction as initial traini
 2. Select a trained checkpoint and dataset, or upload an inference dataset.
 3. Set initial capital and bet amount, then start an inference session.
 4. Review the agent suggestion and apply its suggested bet when appropriate.
-5. Use the Decision Inspector to review the active decision, current bet strategy, relative Q preference, and recent confirmed outcomes.
-6. Step through rounds in the session history, entering or modifying observed values as needed.
-7. Use Play, Stop, Clear, and session shutdown controls as the experiment requires.
-
-`Relative Q preference` is derived by normalizing the model's action Q-scores. It is useful for understanding how strongly the selected action is preferred relative to the other actions, but it is not a calibrated probability that the action will win or produce profit.
+5. Step through rounds in the session history, entering or modifying observed values as needed.
+6. Use Play, Stop, Clear, and session shutdown controls as the experiment requires.
 
 For a new session, open Help and choose the Inference walkthrough if the setup-to-observation loop needs a quick refresher. The walkthrough is optional and does not open automatically on every Inference visit.
 
@@ -75,7 +72,6 @@ For a new session, open Help and choose the Inference walkthrough if the setup-t
 - Checkpoint listing, metadata inspection, comparison, and deletion
 - Dataset-provenance-safe checkpoint handoff to Inference
 - Inference sessions with stepwise progression and context controls
-- Compact DQN Decision Inspector with recent roulette sequence context
 - Synthetic dataset generation with the same canonical roulette outcome range as uploaded data
 - Local-first web runtime
 

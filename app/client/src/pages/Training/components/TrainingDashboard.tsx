@@ -122,7 +122,6 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({
 
     return (
         <div className="training-dashboard">
-            <div className="training-dashboard-divider" />
             <div className="dashboard-header">
                 <h3 className="dashboard-title">
                     <Activity size={20} />
@@ -158,23 +157,37 @@ export const TrainingDashboard: React.FC<TrainingDashboardProps> = ({
             <div className="progress-section">
                 <div className="metrics-progress-row">
                     <div className="metrics-panel">
-                        <div className="metrics-grid">
-                            <TrainingMetricCard tone="loss" label="Loss" value={formatMetric(stats.loss)} Icon={TrendingUp} />
-                            <TrainingMetricCard tone="rmse" label="RMSE" value={formatMetric(stats.rmse)} Icon={Target} />
-                            <TrainingMetricCard tone="loss" label="Val Loss" value={formatMetric(stats.val_loss)} Icon={TrendingUp} />
-                            <TrainingMetricCard tone="rmse" label="Val RMSE" value={formatMetric(stats.val_rmse)} Icon={Target} />
-                            <TrainingMetricCard tone="total-reward" label="Total Reward" value={formatMetric(stats.total_reward)} Icon={TrendingUp} />
-                            <TrainingMetricCard tone="total-reward" label="Val Reward" value={formatMetric(stats.val_reward)} Icon={Target} />
-                            <TrainingMetricCard tone="capital-gain" label="Capital Gain" value={formatMetric(stats.capital_gain)} Icon={ArrowUpRight} />
-                            <TrainingMetricCard tone="capital" label="Capital" value={formatMetric(stats.capital)} Icon={DollarSign} />
-                            <TrainingMetricCard tone="capital" label="Current Bet" value={formatMetric(stats.current_bet_amount)} Icon={DollarSign} />
-                            <TrainingMetricCard tone="rmse" label="Epsilon" value={formatMetric(stats.epsilon)} Icon={Target} />
-                        </div>
+                        <div className="metrics-groups" aria-label="Training metrics">
+                            <section className="metric-group">
+                                <h4 className="metric-group-title">Model quality</h4>
+                                <div className="metric-group-grid">
+                                    <TrainingMetricCard tone="loss" label="Loss" value={formatMetric(stats.loss)} Icon={TrendingUp} />
+                                    <TrainingMetricCard tone="rmse" label="RMSE" value={formatMetric(stats.rmse)} Icon={Target} />
+                                    <TrainingMetricCard tone="loss" label="Val Loss" value={formatMetric(stats.val_loss)} Icon={TrendingUp} />
+                                    <TrainingMetricCard tone="rmse" label="Val RMSE" value={formatMetric(stats.val_rmse)} Icon={Target} />
+                                </div>
+                            </section>
 
-                        <div className="metrics-meta-row">
-                            <TrainingMetricCard tone="rmse" label="Strategy" value={stats.current_strategy_name ?? 'Keep'} Icon={Target} compact />
-                            <TrainingMetricCard tone="timestep" label="Time Step" value={formatMetric(stats.time_step)} Icon={Clock} compact />
-                            <TrainingMetricCard tone="timestep" label="Replay Warm-up" value={replayProgress} Icon={Activity} compact />
+                            <section className="metric-group">
+                                <h4 className="metric-group-title">Training outcome</h4>
+                                <div className="metric-group-grid">
+                                    <TrainingMetricCard tone="total-reward" label="Total Reward" value={formatMetric(stats.total_reward)} Icon={TrendingUp} />
+                                    <TrainingMetricCard tone="total-reward" label="Val Reward" value={formatMetric(stats.val_reward)} Icon={Target} />
+                                    <TrainingMetricCard tone="capital-gain" label="Capital Gain" value={formatMetric(stats.capital_gain)} Icon={ArrowUpRight} />
+                                    <TrainingMetricCard tone="capital" label="Capital" value={formatMetric(stats.capital)} Icon={DollarSign} />
+                                </div>
+                            </section>
+
+                            <section className="metric-group metric-group-runtime">
+                                <h4 className="metric-group-title">Run state</h4>
+                                <div className="metric-group-grid metric-group-grid-runtime">
+                                    <TrainingMetricCard tone="capital" label="Current Bet" value={formatMetric(stats.current_bet_amount)} Icon={DollarSign} />
+                                    <TrainingMetricCard tone="rmse" label="Epsilon" value={formatMetric(stats.epsilon)} Icon={Target} />
+                                    <TrainingMetricCard tone="rmse" label="Strategy" value={stats.current_strategy_name ?? 'Keep'} Icon={Target} />
+                                    <TrainingMetricCard tone="timestep" label="Time Step" value={formatMetric(stats.time_step)} Icon={Clock} />
+                                    <TrainingMetricCard tone="timestep" label="Replay Warm-up" value={replayProgress} Icon={Activity} />
+                                </div>
+                            </section>
                         </div>
                     </div>
 

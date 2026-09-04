@@ -1,6 +1,5 @@
 import React, { useCallback, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { DecisionInspector } from '../../components/inference/DecisionInspector';
 import { GameSession } from '../../components/inference/GameSession';
 import type {
     InferenceSessionSnapshot,
@@ -62,11 +61,6 @@ const InferencePage: React.FC = () => {
                     snapshot={snapshot}
                     onSetupChange={handleSetupChange}
                     onSnapshotChange={handleSnapshotChange}
-                />
-                <DecisionInspector
-                    prediction={snapshot.lastPrediction}
-                    history={snapshot.history}
-                    currentBet={snapshot.currentBet}
                 />
             </div>
         </div>

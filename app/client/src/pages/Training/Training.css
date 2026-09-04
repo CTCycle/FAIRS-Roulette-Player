@@ -153,8 +153,8 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
   margin-bottom: 1rem;
-  min-height: 360px;
-  align-items: stretch;
+  min-height: 0;
+  align-items: start;
 }
 
 .info-column {
@@ -439,14 +439,6 @@
   box-shadow: none;
 }
 
-.training-dashboard-divider {
-  height: 3px;
-  width: 100%;
-  background: linear-gradient(90deg, rgba(148, 163, 184, 0.15), rgba(148, 163, 184, 0.8), rgba(148, 163, 184, 0.15));
-  border-radius: 999px;
-  margin-bottom: 1rem;
-}
-
 .dashboard-header {
   display: flex;
   justify-content: space-between;
@@ -591,27 +583,70 @@
 }
 
 .metrics-progress-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.23fr);
+  align-items: stretch;
   gap: 1.25rem;
 }
 
 .metrics-panel {
-  flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 1.05rem;
+  gap: 1.15rem;
+}
+
+.metrics-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  min-width: 0;
+}
+
+.metric-group {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid rgba(42, 58, 85, 0.85);
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+
+.metric-group-runtime {
+  grid-column: 1 / -1;
+}
+
+.metric-group-title {
+  margin: 0 0 0.8rem;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.metric-group-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+  min-width: 0;
+}
+
+.metric-group-grid-runtime {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .progress-side {
-  flex: 0 0 170px;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 0.75rem;
-  min-width: 170px;
+  min-width: 0;
+  padding: 1.1rem 1rem;
+  border: 1px solid rgba(42, 58, 85, 0.85);
+  border-radius: 12px;
+  background: var(--surface-soft);
+  box-sizing: border-box;
 }
 
 .progress-episode-label {
@@ -621,7 +656,7 @@
 }
 
 .progress-side .stop-training-btn {
-  width: 120px;
+  width: min(100%, 160px);
 }
 
 .progress-wheel {
@@ -659,24 +694,12 @@
   color: var(--text-primary);
 }
 
-.metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(145px, 1fr));
-  gap: 0.9rem;
-  min-width: 0;
-}
-
-.metrics-meta-row {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.9rem;
-}
-
 .metric-card {
   background: var(--surface-soft);
   border: 1px solid rgba(42, 58, 85, 0.85);
   border-radius: 12px;
-  padding: 0.85rem 0.95rem;
+  min-height: 84px;
+  padding: 1rem;
   display: flex;
   align-items: center;
   gap: 0.65rem;
@@ -754,12 +777,8 @@
   color: var(--text-primary);
 }
 
-.metric-meta-card {
-  padding: 0.75rem 0.9rem;
-}
-
 .dashboard-visuals {
-  margin-top: 1.5rem;
+  margin-top: 1.75rem;
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
@@ -969,6 +988,16 @@
 @media (prefers-reduced-motion: reduce) {
   .progress-wheel-fill {
     transition: none;
+  }
+}
+
+@media (max-width: 1250px) {
+  .metrics-progress-row {
+    grid-template-columns: minmax(0, 1fr) minmax(190px, 0.27fr);
+  }
+
+  .metric-group-grid-runtime {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
