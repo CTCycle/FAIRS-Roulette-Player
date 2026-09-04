@@ -28,8 +28,6 @@ $pytestCacheDir = Join-Path $testCacheDir 'pytest'
 $ruffCacheDir = Join-Path $testCacheDir 'ruff'
 $script:NextProgressId = 1
 $script:ActiveProgressActivities = [Collections.Generic.Dictionary[int, string]]::new()
-$script:OwnedProcessIds = [Collections.Generic.HashSet[int]]::new()
-$script:OwnedProcessRecords = @{}
 $script:LauncherInteractive = -not [Console]::IsInputRedirected -and -not [Console]::IsOutputRedirected
 
 # -----------------------------------------------------------------------------
@@ -513,164 +511,19 @@ function Test-DependenciesReady {
 }
 
 function Get-PortProcessIds([int]$Port) {
-    $pattern = ":$Port\s+.*LISTENING\s+(\d+)$"
-    return @(netstat.exe -ano -p TCP | ForEach-Object {
-        if ($_ -match $pattern) { [int]$Matches[1] }
+    $listeners = netstat.exe -ano | Select-String -Pattern ":$Port\s+.*LISTENING\s+(\d+)\s*$"
+    return @($listeners | ForEach-Object {
+        if ($_.Matches.Count) { [int]$_.Matches[0].Groups[1].Value }
     } | Sort-Object -Unique)
-}
-
-function Register-LauncherProcess([int]$ProcessId) {
-    if ($ProcessId -gt 0) {
-        [void]$script:OwnedProcessIds.Add($ProcessId)
-        try {
-            $process = Get-Process -Id $ProcessId -ErrorAction Stop
-            $script:OwnedProcessRecords[$ProcessId] = [pscustomobject]@{
-                StartTime   = $process.StartTime
-                CommandLine = Get-ProcessCommandLine $ProcessId
-            }
-        } catch {
-            [void]$script:OwnedProcessRecords.Remove($ProcessId)
-        }
-    }
-}
-
-function Get-ProcessCommandLine([int]$ProcessId) {
-    try {
-        $process = Get-CimInstance -ClassName Win32_Process -Filter "ProcessId = $ProcessId" -ErrorAction Stop
-        return [string]$process.CommandLine
-    } catch {
-        return ''
-    }
-}
-
-function Get-ProcessParentId([int]$ProcessId) {
-    try {
-        $process = Get-CimInstance -ClassName Win32_Process -Filter "ProcessId = $ProcessId" -ErrorAction Stop
-        return [int]$process.ParentProcessId
-    } catch {
-        return 0
-    }
-}
-
-function Test-RecordedProcessIdentity([int]$ProcessId) {
-    if (-not $script:OwnedProcessRecords.ContainsKey($ProcessId)) { return $false }
-    $record = $script:OwnedProcessRecords[$ProcessId]
-    try {
-        $process = Get-Process -Id $ProcessId -ErrorAction Stop
-        if ($process.StartTime -eq $record.StartTime) { return $true }
-    } catch { }
-
-    $currentCommandLine = Get-ProcessCommandLine $ProcessId
-    return -not [string]::IsNullOrWhiteSpace($record.CommandLine) -and
-        $currentCommandLine -eq $record.CommandLine
-}
-
-function Test-LauncherOwnedProcess([int]$ProcessId) {
-    $visited = [Collections.Generic.HashSet[int]]::new()
-    $currentProcessId = $ProcessId
-    for ($depth = 0; $depth -lt 16 -and $currentProcessId -gt 0; $depth++) {
-        if (-not $visited.Add($currentProcessId)) { break }
-        if (Test-RecordedProcessIdentity $currentProcessId) { return $true }
-
-        $commandLine = Get-ProcessCommandLine $currentProcessId
-        if (-not [string]::IsNullOrWhiteSpace($commandLine)) {
-            $inRepository = $commandLine.IndexOf($repoRoot, [StringComparison]::OrdinalIgnoreCase) -ge 0
-            $backendMarker = $commandLine.IndexOf('server.app:app', [StringComparison]::OrdinalIgnoreCase) -ge 0
-            $frontendMarker = $commandLine.IndexOf('run preview', [StringComparison]::OrdinalIgnoreCase) -ge 0 -or
-                $commandLine.IndexOf('vite preview', [StringComparison]::OrdinalIgnoreCase) -ge 0 -or
-                $commandLine -match '(?i)node_modules[\\/].*\bvite(?:\.js)?\b.*\bpreview\b'
-            if ($inRepository -and ($backendMarker -or $frontendMarker)) { return $true }
-        }
-
-        $parentProcessId = Get-ProcessParentId $currentProcessId
-        if ($parentProcessId -le 0 -or $parentProcessId -eq $currentProcessId) { break }
-        $currentProcessId = $parentProcessId
-    }
-
-    if ($script:OwnedProcessRecords.ContainsKey($ProcessId)) {
-        [void]$script:OwnedProcessRecords.Remove($ProcessId)
-        [void]$script:OwnedProcessIds.Remove($ProcessId)
-    }
-    return $false
-}
-
-function Get-ApplicationProcessIds([int[]]$Ports) {
-    $processIds = [Collections.Generic.HashSet[int]]::new()
-    foreach ($port in $Ports) {
-        foreach ($processId in @(Get-PortProcessIds $port)) {
-            [void]$processIds.Add([int]$processId)
-        }
-    }
-    foreach ($processId in @($script:OwnedProcessIds)) {
-        try {
-            if (Get-Process -Id $processId -ErrorAction Stop) {
-                [void]$processIds.Add([int]$processId)
-            }
-        } catch { }
-    }
-    return @($processIds | Sort-Object)
-}
-
-function Stop-LauncherProcess([int]$ProcessId) {
-    try {
-        if (-not (Get-Process -Id $ProcessId -ErrorAction Stop)) {
-            [void]$script:OwnedProcessIds.Remove($ProcessId)
-            [void]$script:OwnedProcessRecords.Remove($ProcessId)
-            return
-        }
-    } catch {
-        [void]$script:OwnedProcessIds.Remove($ProcessId)
-        [void]$script:OwnedProcessRecords.Remove($ProcessId)
-        return
-    }
-    if (-not (Test-LauncherOwnedProcess $ProcessId)) {
-        throw "Refusing to stop unrelated PID $ProcessId. Its command line does not belong to this repository."
-    }
-    Write-Info "Stopping application PID $ProcessId."
-    & taskkill.exe /PID $ProcessId /T /F | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        try {
-            Get-Process -Id $ProcessId -ErrorAction Stop | Out-Null
-            throw "Could not stop application PID $ProcessId (taskkill exit code $LASTEXITCODE)."
-        } catch [Microsoft.PowerShell.Commands.ProcessCommandException] {
-            # The process may already have exited after taskkill terminated its tree.
-        }
-    }
-    [void]$script:OwnedProcessIds.Remove($ProcessId)
-    [void]$script:OwnedProcessRecords.Remove($ProcessId)
-}
-
-function Assert-ApplicationProcessOwnership([int[]]$ProcessIds) {
-    $unowned = foreach ($processId in $ProcessIds) {
-        if (-not (Test-LauncherOwnedProcess $processId)) {
-            $commandLine = Get-ProcessCommandLine $processId
-            if ([string]::IsNullOrWhiteSpace($commandLine)) {
-                "PID $processId (command line unavailable)"
-            } else {
-                "PID $processId ($commandLine)"
-            }
-        }
-    }
-    if (@($unowned).Count -gt 0) {
-        throw "Refusing to stop unrelated process(es). $($unowned -join '; ')"
-    }
 }
 
 function Assert-ApplicationStopped {
     $fastApiPort = [int]$env:FASTAPI_PORT
     $uiPort = [int]$env:UI_PORT
-    $processIds = @(Get-ApplicationProcessIds @($fastApiPort, $uiPort))
+    $processIds = @(Get-PortProcessIds $fastApiPort) + @(Get-PortProcessIds $uiPort) | Sort-Object -Unique
     if ($processIds.Count -eq 0) { return }
 
-    $details = foreach ($processId in $processIds) {
-        $commandLine = Get-ProcessCommandLine $processId
-        if ([string]::IsNullOrWhiteSpace($commandLine)) {
-            "PID $processId (command line unavailable)"
-        } else {
-            "PID $processId ($commandLine)"
-        }
-    }
-    throw "Application processes are still running. Use Stop application first. $($details -join '; ')"
+    throw "Application is still running on configured port(s). Close the application terminal first. PIDs: $($processIds -join ', ')."
 }
 
 function Assert-SingleWorkerConfiguration {
@@ -682,41 +535,6 @@ function Assert-SingleWorkerConfiguration {
             throw "$variableName=$rawValue is unsupported. FAIRS requires exactly one backend worker for process-local training and inference state."
         }
     }
-}
-
-function Stop-Application {
-    Import-DotEnv
-    $fastApiPort = [int]$env:FASTAPI_PORT
-    $uiPort = [int]$env:UI_PORT
-    $processIds = @(Get-ApplicationProcessIds @($fastApiPort, $uiPort))
-    if ($processIds.Count -eq 0) {
-        Write-Info 'No application processes are running.'
-        return
-    }
-
-    Assert-ApplicationProcessOwnership $processIds
-    foreach ($processId in $processIds) {
-        Stop-LauncherProcess $processId
-    }
-    for ($attempt = 0; $attempt -lt 20; $attempt++) {
-        $remainingPorts = @(Get-PortProcessIds $fastApiPort) + @(Get-PortProcessIds $uiPort) |
-            Sort-Object -Unique
-        $remainingOwned = @(Get-ApplicationProcessIds @($fastApiPort, $uiPort))
-        if ($remainingPorts.Count -eq 0 -and $remainingOwned.Count -eq 0) {
-            Write-Ok 'Application stopped.'
-            return
-        }
-        if ($remainingPorts.Count -eq 0 -and $remainingOwned.Count -gt 0) {
-            Assert-ApplicationProcessOwnership $remainingOwned
-            foreach ($processId in $remainingOwned) {
-                Stop-LauncherProcess $processId
-            }
-            continue
-        }
-        Assert-ApplicationProcessOwnership $remainingPorts
-        Start-Sleep -Seconds 1
-    }
-    throw "Application processes or configured ports are still occupied after shutdown."
 }
 
 # -----------------------------------------------------------------------------
@@ -749,31 +567,33 @@ function Start-Application {
     $backendArgs = "-m uvicorn server.app:app --app-dir `"$($repoRoot)\app`" --host $($env:FASTAPI_HOST) --port $fastApiPort --workers 1$reloadArgument --log-level info"
     Write-Step 'Launching backend.'
     if ($env:BACKEND_LOGS_VISIBLE -eq 'true') {
-        $backendCommand = '"' + $venvPython + '" ' + $backendArgs
-        $backendProcess = Start-Process -FilePath 'cmd.exe' -ArgumentList @('/d', '/k', $backendCommand) -WorkingDirectory $repoRoot -PassThru
+        $escapedPython = $venvPython.Replace("'", "''")
+        $escapedApp = (Join-Path $repoRoot 'app').Replace("'", "''")
+        $backendCommand = "& '$escapedPython' -m uvicorn server.app:app --app-dir '$escapedApp' --host $($env:FASTAPI_HOST) --port $fastApiPort --workers 1"
+        if ($env:RELOAD -eq 'true') { $backendCommand += ' --reload' }
+        $backendCommand += ' --log-level info'
+        $backendProcess = Start-Process -FilePath 'powershell.exe' `
+            -ArgumentList @('-NoProfile', '-NoExit', '-Command', $backendCommand) `
+            -WorkingDirectory $repoRoot -WindowStyle Normal -PassThru
     } else {
         $backendProcess = Start-Process -FilePath $venvPython -ArgumentList $backendArgs -WorkingDirectory $repoRoot -WindowStyle Hidden -PassThru
     }
-    Register-LauncherProcess $backendProcess.Id
 
     $backendUrl = "http://$($env:FASTAPI_HOST):$fastApiPort"
     Write-Step "Waiting for backend readiness at $backendUrl/api/health."
     try {
         Invoke-HealthCheck "$backendUrl/api/health" 60
     } catch {
-        try { Stop-Application } catch { Write-Info "Backend cleanup reported: $($_.Exception.Message)" }
-        throw "Backend did not become healthy within 60 seconds."
+        throw "Backend did not become healthy within 60 seconds. Close the application terminal if it is still open."
     }
     $backendPid = (Get-PortProcessIds $fastApiPort | Select-Object -First 1)
     if (-not $backendPid) {
-        try { Stop-Application } catch { Write-Info "Backend cleanup reported: $($_.Exception.Message)" }
-        throw "Backend reported readiness but no listener was found on port $fastApiPort."
+        throw "Backend reported readiness but no listener was found on port $fastApiPort. Close the application terminal if it is still open."
     }
 
     Write-Step 'Launching frontend preview.'
     $frontendArgs = "/c `"`"$npmCmd`" run preview -- --host $($env:UI_HOST) --port $uiPort --strictPort`""
     $frontendProcess = Start-Process -FilePath 'cmd.exe' -ArgumentList $frontendArgs -WorkingDirectory $clientDir -WindowStyle Hidden -PassThru
-    Register-LauncherProcess $frontendProcess.Id
     $uiUrl = "http://$($env:UI_HOST):$uiPort"
     $frontendReady = $false
     for ($attempt = 0; $attempt -lt 30; $attempt++) {
@@ -788,8 +608,7 @@ function Start-Application {
     }
     $frontendPid = (Get-PortProcessIds $uiPort | Select-Object -First 1)
     if (-not $frontendReady -or -not $frontendPid) {
-        try { Stop-Application } catch { Write-Info "Application cleanup reported: $($_.Exception.Message)" }
-        throw "Frontend preview did not become ready at $uiUrl."
+        throw "Frontend preview did not become ready at $uiUrl. Close the application terminal if it is still open."
     }
 
     Start-Process $uiUrl | Out-Null
@@ -1090,7 +909,6 @@ function Wait-ForMenu {
 function Get-LauncherMenuEntries {
     @(
         [pscustomobject]@{ Section = 'APPLICATION'; Key = 'Launch'; Label = 'Launch application'; Description = 'Start the backend and player'; Color = [ConsoleColor]::Cyan }
-        [pscustomobject]@{ Section = 'APPLICATION'; Key = 'Stop'; Label = 'Stop application'; Description = 'Stop only this repository''s backend and player'; Color = [ConsoleColor]::Cyan }
         [pscustomobject]@{ Section = 'SETUP & VALIDATION'; Key = 'Install'; Label = 'Install / update dependencies'; Description = 'Prepare local runtimes and build the frontend'; Color = [ConsoleColor]::Yellow }
         [pscustomobject]@{ Section = 'SETUP & VALIDATION'; Key = 'Rebuild'; Label = 'Rebuild frontend'; Description = 'Build the frontend without updating dependencies'; Color = [ConsoleColor]::Yellow }
         [pscustomobject]@{ Section = 'SETUP & VALIDATION'; Key = 'Database'; Label = 'Create / upgrade database'; Description = 'Create the selected database and apply migrations'; Color = [ConsoleColor]::Yellow }
@@ -1169,7 +987,6 @@ function Show-Menu {
         Invoke-TrackedLauncherAction -Name "menu option $($selectedEntry.Number)" -Action {
             switch ($selectedEntry.Key) {
                 'Launch' { Start-Application; exit 0 }
-                'Stop' { Stop-Application }
                 'Update' { Update-Application }
                 'Check' { Check-ForUpdates }
                 'Install' {

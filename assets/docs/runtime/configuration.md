@@ -1,6 +1,6 @@
 ## Configuration
 
-Last updated: 2026-09-01
+Last updated: 2026-09-03
 
 ## Environment Variables
 
@@ -83,15 +83,15 @@ The application and launcher use the same idempotent runner. Empty databases upg
 ### Backend Log Visibility
 
 - `BACKEND_LOGS_VISIBLE=false` starts the backend detached and hidden.
-- `BACKEND_LOGS_VISIBLE=true` opens a dedicated backend terminal so logs remain visible.
+- `BACKEND_LOGS_VISIBLE=true` opens a dedicated backend terminal so logs remain visible; closing that terminal is the local application stop action.
 - When `BACKEND_LOGS_VISIBLE` is absent, the launcher defaults to `true`.
 
 ### Dependency Installation And Frontend Build
 
 - The launcher checks runtime readiness before installing dependencies.
 - The checked-in `settings/.env.example` template defaults to API port `8890` and UI port `8051`; override them in `settings/.env` when needed.
-- Launcher option 3 selects `Standard` or `Development` installation, installs dependencies, rebuilds the frontend, and runs database create/upgrade; `Development` adds the backend's test extra.
-- Normal application startup skips installation and rebuilding when the environment and frontend build are ready. If either is missing or unusable, option 1 recovers dependencies and rebuilds the frontend; option 3 remains the explicit install/update and rebuild path.
+- Launcher option 2 selects `Standard` or `Development` installation, installs dependencies, rebuilds the frontend, and runs database create/upgrade; `Development` adds the backend's test extra.
+- Normal application startup skips installation and rebuilding when the environment and frontend build are ready. If either is missing or unusable, option 1 recovers dependencies and rebuilds the frontend; option 2 remains the explicit install/update and rebuild path.
 
 When `FAIRS_DATA_DIR` is absent, the application uses `app/resources`.
 

@@ -1,6 +1,6 @@
 ## Windows Automation
 
-Last updated: 2026-09-01
+Last updated: 2026-09-03
 
 ## Scope
 
@@ -20,9 +20,9 @@ This file covers repository-specific conventions for the PowerShell launcher and
 - The current launcher baseline is portable Python `3.14.2`, Node.js `22.13.0`, and a portable `uv` executable.
 - Local launch relies on a prepared virtual environment and a built frontend.
 - Startup checks the runtime executables, the backend environment, the Vite runner, and the built frontend before deciding whether dependency installation or rebuild is needed.
-- The launcher requires the application to be stopped before maintenance, database, testing, update, uninstall, or data-removal actions. It discovers configured-port listeners and refuses to kill a process unless it was started by the launcher or its command line demonstrably belongs to this repository.
-- Option 2 is the explicit application stop action. Closing the browser is not a stop signal.
-- Startup is complete only after backend health and frontend HTTP checks succeed. If either service fails readiness, all processes started by that launch attempt are cleaned up.
+- The launcher requires the application terminal to be closed before maintenance, database, testing, update, uninstall, or data-removal actions. Keep the configured backend and UI ports dedicated to this application.
+- There is no separate application stop action. Closing the application terminal is the local stop signal; closing the browser is not.
+- Startup is complete only after backend health and frontend HTTP checks succeed. If either service fails readiness, close the application terminal before retrying.
 - Uvicorn is always launched with one worker. `RELOAD=true` is development-only because reloads discard process-local state.
 - Cache and data cleanup is best-effort and reproducible: it inventories each target recursively, excludes required sentinels, deletes individual entries deepest-first in stable normalized-path order, and reports locked or protected paths as skipped. Required roots are recreated after cleanup.
 - Any changes to runtime staging should be reflected in both the scripts and the runtime documentation.
