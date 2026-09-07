@@ -3,7 +3,6 @@ from __future__ import annotations
 import math
 from typing import Any
 
-
 ###############################################################################
 def coerce_finite_float(value: Any, default: float = 0.0) -> float:
     if isinstance(value, bool):
@@ -15,7 +14,6 @@ def coerce_finite_float(value: Any, default: float = 0.0) -> float:
     if math.isfinite(candidate):
         return candidate
     return default
-
 
 ###############################################################################
 def coerce_finite_int(

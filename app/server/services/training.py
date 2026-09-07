@@ -22,7 +22,6 @@ from server.services.checkpoints import CheckpointService
 from server.services.training_data import load_training_series
 from server.services.training_run import TrainingRun, TrainingRunManager
 
-
 ###############################################################################
 def calculate_progress(stats: dict[str, Any]) -> float:
     epoch = stats.get("epoch", 0)
@@ -35,7 +34,6 @@ def calculate_progress(stats: dict[str, Any]) -> float:
         return 0.0
     progress = (float(epoch) / float(total_epochs)) * 100.0
     return min(100.0, max(0.0, progress))
-
 
 ###############################################################################
 def build_history_points(
@@ -101,7 +99,6 @@ def build_history_points(
         if isinstance(epoch, int) and epoch > 0:
             results.append(point)
     return results
-
 
 ###############################################################################
 class TrainingService:

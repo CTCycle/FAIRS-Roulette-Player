@@ -5,7 +5,6 @@ import pandas as pd
 from server.common.roulette import encode_roulette_series
 from server.services.training_data import TrainingDataService
 
-
 ###############################################################################
 def test_generated_training_series_matches_environment_contract() -> None:
     service = TrainingDataService(database_settings=None)
@@ -28,7 +27,6 @@ def test_generated_training_series_matches_environment_contract() -> None:
     assert "outcome" not in dataset.columns
     assert dataset["extraction"].between(0, 36).all()
 
-
 ###############################################################################
 def test_roulette_encoding_isolated_from_input_frame() -> None:
     source = pd.DataFrame({"outcome": [0, 1, 32]})
@@ -38,7 +36,6 @@ def test_roulette_encoding_isolated_from_input_frame() -> None:
     assert list(source.columns) == ["outcome"]
     assert encoded["color_code"].notna().all()
     assert encoded["wheel_position"].notna().all()
-
 
 ###############################################################################
 def test_training_subsample_preserves_contiguous_sequence_order() -> None:

@@ -31,7 +31,6 @@ INFERENCE_EXCEPTION_STATUS: ExceptionStatusMap = (
     (KeyError, status.HTTP_404_NOT_FOUND),
 )
 
-
 ###############################################################################
 def _map_inference_exception(exc: Exception) -> HTTPException:
     return http_exception_for_exception(
@@ -39,7 +38,6 @@ def _map_inference_exception(exc: Exception) -> HTTPException:
         INFERENCE_EXCEPTION_STATUS,
         default_detail="Unable to process inference request.",
     )
-
 
 ###############################################################################
 @router.post(
@@ -69,7 +67,6 @@ def start_session(
     except Exception as exc:
         raise _map_inference_exception(exc) from exc
 
-
 ###############################################################################
 @router.get(
     "/sessions/{session_id}",
@@ -87,7 +84,6 @@ def get_session(
     except Exception as exc:
         raise _map_inference_exception(exc) from exc
 
-
 ###############################################################################
 @router.post(
     "/sessions/{session_id}/next",
@@ -102,7 +98,6 @@ def next_prediction(
         return InferenceNextResponse.model_validate(service.next_prediction(session_id))
     except Exception as exc:
         raise _map_inference_exception(exc) from exc
-
 
 ###############################################################################
 @router.post(
@@ -122,7 +117,6 @@ def submit_step(
     except Exception as exc:
         raise _map_inference_exception(exc) from exc
 
-
 ###############################################################################
 @router.post(
     "/sessions/{session_id}/shutdown",
@@ -139,7 +133,6 @@ def shutdown(
         )
     except Exception as exc:
         raise _map_inference_exception(exc) from exc
-
 
 ###############################################################################
 @router.post(
@@ -159,7 +152,6 @@ def update_bet_amount(
     except Exception as exc:
         raise _map_inference_exception(exc) from exc
 
-
 ###############################################################################
 @router.post(
     "/sessions/{session_id}/rows/clear",
@@ -176,7 +168,6 @@ def clear_session_rows(
         )
     except Exception as exc:
         raise _map_inference_exception(exc) from exc
-
 
 ###############################################################################
 @router.post(

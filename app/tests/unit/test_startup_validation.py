@@ -12,7 +12,6 @@ from server.contracts.configuration import (
 )
 from server.services import startup_validation
 
-
 ###############################################################################
 def _embedded_settings() -> ServerSettings:
     return ServerSettings(
@@ -37,7 +36,6 @@ def _embedded_settings() -> ServerSettings:
         ),
     )
 
-
 ###############################################################################
 def _external_settings(engine: str) -> ServerSettings:
     return ServerSettings(
@@ -61,7 +59,6 @@ def _external_settings(engine: str) -> ServerSettings:
             use_mixed_precision=False,
         ),
     )
-
 
 ###############################################################################
 def test_startup_validations_create_runtime_directories(
@@ -88,12 +85,10 @@ def test_startup_validations_create_runtime_directories(
     assert logs_dir.is_dir()
     assert checkpoints_dir.is_dir()
 
-
 ###############################################################################
 def test_external_database_validation_rejects_unsupported_engine() -> None:
     with pytest.raises(RuntimeError, match="Unsupported database engine"):
         startup_validation.run_startup_validations(_external_settings("mysql"))
-
 
 ###############################################################################
 @pytest.mark.parametrize("engine", ["postgres", "postgresql", "postgresql+psycopg2"])

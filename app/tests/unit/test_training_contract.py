@@ -5,7 +5,6 @@ from pydantic import ValidationError
 
 from server.contracts.training import TrainingConfig
 
-
 ###############################################################################
 @pytest.mark.parametrize(
     ("overrides", "message"),
@@ -42,7 +41,6 @@ def test_training_config_rejects_inconsistent_dqn_relationships(
 ) -> None:
     with pytest.raises(ValidationError, match=message):
         TrainingConfig(use_data_generator=True, **overrides)
-
 
 ###############################################################################
 def test_training_config_accepts_consistent_replay_and_exploration_settings() -> None:

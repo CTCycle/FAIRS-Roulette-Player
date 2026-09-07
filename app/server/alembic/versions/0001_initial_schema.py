@@ -16,7 +16,6 @@ down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
-
 ###############################################################################
 def upgrade() -> None:
     # This revision is the immutable representation of the pre-Alembic schema.
@@ -143,7 +142,6 @@ def upgrade() -> None:
         ["session_id", "recorded_at"],
         unique=False,
     )
-
 
 ###############################################################################
 def downgrade() -> None:

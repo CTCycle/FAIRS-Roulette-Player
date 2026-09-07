@@ -7,7 +7,6 @@ from server.common import path as shared_paths
 MAX_CHECKPOINT_NAME_LENGTH = 128
 CHECKPOINT_EMPTY_MESSAGE_TEXT = "Checkpoint name cannot be empty."
 
-
 ###############################################################################
 def normalize_checkpoint_identifier(value: str) -> str:
     candidate = value.strip()
@@ -24,7 +23,6 @@ def normalize_checkpoint_identifier(value: str) -> str:
     if Path(candidate).name != candidate:
         raise ValueError("Invalid checkpoint name.")
     return candidate
-
 
 ###############################################################################
 def resolve_checkpoint_path(checkpoint_name: str) -> Path:

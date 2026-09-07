@@ -8,9 +8,9 @@ from sqlalchemy import delete, select, update
 from server.repositories.database.backend import FAIRSDatabase
 from server.repositories.schemas.models import InferenceSessionSteps, InferenceSessions
 
-
 ###############################################################################
 class InferenceRepository:
+
     # -------------------------------------------------------------------------
     def __init__(self, database: FAIRSDatabase) -> None:
         self.database = database

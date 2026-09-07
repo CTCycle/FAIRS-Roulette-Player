@@ -11,7 +11,6 @@ from server.services.training_run import (
     default_training_stats,
 )
 
-
 ###############################################################################
 def test_default_training_stats_match_the_frontend_status_contract() -> None:
     stats = default_training_stats()
@@ -22,7 +21,6 @@ def test_default_training_stats_match_the_frontend_status_contract() -> None:
     assert stats["epsilon"] is None
     assert stats["experience_count"] == 0
     assert stats["replay_buffer_size"] == 0
-
 
 ###############################################################################
 def test_training_run_projects_dqn_warmup_telemetry_into_history() -> None:
@@ -53,7 +51,6 @@ def test_training_run_projects_dqn_warmup_telemetry_into_history() -> None:
     assert run.history_points[-1]["experience_count"] == 13
     assert run.history_points[-1]["replay_buffer_size"] == 100
 
-
 ###############################################################################
 def test_training_run_manager_owns_the_completed_run_projection() -> None:
     manager = TrainingRunManager()
@@ -80,7 +77,6 @@ def test_training_run_manager_owns_the_completed_run_projection() -> None:
     assert status["latest_stats"]["total_epochs"] == 2
     assert status["latest_stats"]["max_steps"] == 100
 
-
 ###############################################################################
 def test_manager_rejects_a_second_start_while_the_first_run_is_stopping() -> None:
     manager = TrainingRunManager()
@@ -106,24 +102,29 @@ def test_manager_rejects_a_second_start_while_the_first_run_is_stopping() -> Non
     assert manager.get_job_status(job_id)["status"] == "cancelled"
     assert manager.shutdown(timeout_seconds=1.0) is True
 
-
 ###############################################################################
 def test_manager_shutdown_force_terminates_an_unresponsive_worker() -> None:
     manager = TrainingRunManager()
     runner_started = Event()
 
+    ###############################################################################
     class FakeWorker:
+
+        # -------------------------------------------------------------------------
         def __init__(self) -> None:
             self.alive = True
             self.stop_calls = 0
             self.terminate_calls = 0
 
+        # -------------------------------------------------------------------------
         def stop(self) -> None:
             self.stop_calls += 1
 
+        # -------------------------------------------------------------------------
         def is_alive(self) -> bool:
             return self.alive
 
+        # -------------------------------------------------------------------------
         def terminate(self) -> None:
             self.terminate_calls += 1
             self.alive = False

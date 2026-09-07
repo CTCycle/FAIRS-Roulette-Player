@@ -18,7 +18,6 @@ TRAINING_METRIC_KEYS = (
     "epsilon",
 )
 
-
 ###############################################################################
 def coerce_optional_finite_float(value: Any) -> float | None:
     if value is None:
@@ -32,7 +31,6 @@ def coerce_optional_finite_float(value: Any) -> float | None:
     if math.isfinite(candidate):
         return candidate
     return None
-
 
 ###############################################################################
 def sanitize_training_stats(

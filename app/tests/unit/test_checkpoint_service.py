@@ -8,9 +8,9 @@ from server.common import checkpoints as checkpoint_common
 from server.repositories.checkpoints import CheckpointRepository
 from server.services.checkpoints import CheckpointReferenceError, CheckpointService
 
-
 ###############################################################################
 class DummyCheckpointRepository:
+
     # -------------------------------------------------------------------------
     def __init__(self) -> None:
         self._checkpoints = ["cp1"]
@@ -44,13 +44,12 @@ class DummyCheckpointRepository:
     def delete_checkpoint(self, path: str) -> None:
         self.deleted_paths.append(path)
 
-
 ###############################################################################
 class InvalidCheckpointRepository(DummyCheckpointRepository):
+
     # -------------------------------------------------------------------------
     def load_training_configuration(self, path: str) -> tuple[list, dict]:  # noqa: ARG002
         return [], {}
-
 
 ###############################################################################
 def test_resolve_existing_checkpoint_rejects_missing(tmp_path, monkeypatch) -> None:
@@ -58,7 +57,6 @@ def test_resolve_existing_checkpoint_rejects_missing(tmp_path, monkeypatch) -> N
     service = CheckpointService(checkpoint_repository=DummyCheckpointRepository())
     with pytest.raises(FileNotFoundError):
         service.resolve_existing_checkpoint("missing")
-
 
 ###############################################################################
 def test_get_metadata_returns_summary_shape(tmp_path, monkeypatch) -> None:
@@ -73,7 +71,6 @@ def test_get_metadata_returns_summary_shape(tmp_path, monkeypatch) -> None:
     assert metadata["summary"]["final_val_loss"] == 0.4
     assert metadata["summary"]["final_val_rmse"] == 0.5
 
-
 ###############################################################################
 def test_find_dataset_references_reads_checkpoint_configuration(
     tmp_path, monkeypatch
@@ -85,7 +82,6 @@ def test_find_dataset_references_reads_checkpoint_configuration(
     assert service.find_dataset_references(7) == ["cp1"]
     assert service.find_dataset_references(8) == []
 
-
 ###############################################################################
 def test_find_dataset_references_blocks_malformed_configuration(
     tmp_path, monkeypatch
@@ -96,7 +92,6 @@ def test_find_dataset_references_blocks_malformed_configuration(
 
     with pytest.raises(CheckpointReferenceError, match="Unable to inspect checkpoint"):
         service.find_dataset_references(7)
-
 
 ###############################################################################
 def test_delete_checkpoint_delegates_filesystem_ownership(
@@ -111,7 +106,6 @@ def test_delete_checkpoint_delegates_filesystem_ownership(
 
     assert repository.deleted_paths == [str(tmp_path / "cp1")]
 
-
 ###############################################################################
 def test_checkpoint_storage_deletes_checkpoint_folder(tmp_path) -> None:
     checkpoint_path = tmp_path / "cp1"
@@ -121,7 +115,6 @@ def test_checkpoint_storage_deletes_checkpoint_folder(tmp_path) -> None:
     CheckpointRepository().delete_checkpoint(str(checkpoint_path))
 
     assert not checkpoint_path.exists()
-
 
 ###############################################################################
 def test_checkpoint_staging_is_not_visible_until_complete_publish(
@@ -144,7 +137,6 @@ def test_checkpoint_staging_is_not_visible_until_complete_publish(
     assert not staging.exists()
     assert Path(final_path, ".complete").is_file()
     assert repository.scan_checkpoints_folder() == ["cp1"]
-
 
 ###############################################################################
 def test_incomplete_checkpoint_workspaces_are_cleaned_on_startup(

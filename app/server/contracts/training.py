@@ -15,7 +15,6 @@ from server.common.checkpoints import (
     normalize_checkpoint_identifier,
 )
 
-
 ###############################################################################
 class TrainingConfig(BaseModel):
     """Configuration for starting a new training session."""
@@ -108,7 +107,6 @@ class TrainingConfig(BaseModel):
             raise ValueError("bet_max must be greater than or equal to bet_unit.")
         return self
 
-
 ###############################################################################
 class ResumeConfig(BaseModel):
     """Configuration for resuming a training session from a checkpoint."""
@@ -127,7 +125,6 @@ class ResumeConfig(BaseModel):
     def validate_checkpoint(cls, value: str) -> str:
         return normalize_checkpoint_identifier(value)
 
-
 ###############################################################################
 class CheckpointConfiguration(TrainingConfig):
     """Validated configuration persisted in a current checkpoint."""
@@ -136,7 +133,6 @@ class CheckpointConfiguration(TrainingConfig):
         extra="forbid",
         str_strip_whitespace=True,
     )
-
 
 ###############################################################################
 class TrainingStatusResponse(BaseModel):
@@ -147,17 +143,14 @@ class TrainingStatusResponse(BaseModel):
     latest_env: dict[str, object]
     poll_interval: float
 
-
 ###############################################################################
 class TrainingStopResponse(BaseModel):
     status: str
     message: str
 
-
 ###############################################################################
 class TrainingCheckpointListResponse(RootModel[list[str]]):
     pass
-
 
 ###############################################################################
 class TrainingCheckpointSummary(BaseModel):
@@ -183,12 +176,10 @@ class TrainingCheckpointSummary(BaseModel):
     final_val_loss: float | None = None
     final_val_rmse: float | None = None
 
-
 ###############################################################################
 class TrainingCheckpointMetadataResponse(BaseModel):
     checkpoint: str
     summary: TrainingCheckpointSummary
-
 
 ###############################################################################
 class TrainingCheckpointDeleteResponse(BaseModel):

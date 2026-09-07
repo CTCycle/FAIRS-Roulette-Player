@@ -12,7 +12,6 @@ from server.repositories.schemas.models import DatasetOutcomes, Datasets
 
 MAX_DATASET_NAME_LENGTH = 128
 
-
 ###############################################################################
 def normalize_dataset_name(value: str) -> str:
     name = value.strip()
@@ -24,9 +23,9 @@ def normalize_dataset_name(value: str) -> str:
         raise ValueError("Invalid dataset name.")
     return name
 
-
 ###############################################################################
 class DatasetRepository:
+
     # -------------------------------------------------------------------------
     def __init__(self, database: FAIRSDatabase) -> None:
         self.database = database

@@ -6,6 +6,7 @@ import pytest
 from server.learning.training.fitting import DQNTraining
 
 
+###############################################################################
 def build_configuration(**overrides: object) -> dict[str, object]:
     configuration: dict[str, object] = {
         "training_seed": 7,
@@ -22,7 +23,6 @@ def build_configuration(**overrides: object) -> dict[str, object]:
     configuration.update(overrides)
     return configuration
 
-
 ###############################################################################
 def test_training_and_resume_share_validation_environment_builder() -> None:
     trainer = DQNTraining(build_configuration())
@@ -38,7 +38,6 @@ def test_training_and_resume_share_validation_environment_builder() -> None:
     assert validation_environment is not None
     assert len(validation_environment.extractions) == 20
 
-
 ###############################################################################
 def test_validation_partition_must_support_perceptive_window() -> None:
     trainer = DQNTraining(build_configuration(perceptive_field_size=16, validation_size=0.1))
@@ -46,7 +45,6 @@ def test_validation_partition_must_support_perceptive_window() -> None:
 
     with pytest.raises(ValueError, match="Validation partition"):
         trainer._build_environments(data, "checkpoint")
-
 
 ###############################################################################
 def test_latest_stats_does_not_carry_sparse_validation_metrics_forward() -> None:

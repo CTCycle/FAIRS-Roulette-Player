@@ -22,9 +22,9 @@ from server.learning.models.qnet import FAIRSnet
 from server.learning.models.strategy import StrategyNet
 from server.repositories.checkpoints import CheckpointRepository
 
-
 ###############################################################################
 class QueueProgressReporter:
+
     # -------------------------------------------------------------------------
     def __init__(self, target_queue: Any) -> None:
         self.target_queue = target_queue
@@ -50,9 +50,9 @@ class QueueProgressReporter:
         except Exception as exc:  # noqa: BLE001
             logger.debug("Failed to push training update: %s", exc)
 
-
 ###############################################################################
 class WorkerChannels:
+
     # -------------------------------------------------------------------------
     def __init__(
         self,
@@ -68,9 +68,9 @@ class WorkerChannels:
     def is_interrupted(self) -> bool:
         return bool(self.stop_event.is_set())
 
-
 ###############################################################################
 class ProcessWorker:
+
     # -------------------------------------------------------------------------
     def __init__(
         self,
@@ -229,21 +229,19 @@ class ProcessWorker:
             return None
         return self.process.exitcode
 
-
 ###############################################################################
 class TrainingCancelled(Exception):
     """Internal signal used to stop before publishing training artifacts."""
 
+    # -------------------------------------------------------------------------
     def __init__(self, checkpoint_path: str | None = None) -> None:
         super().__init__("Training cancelled")
         self.checkpoint_path = checkpoint_path
-
 
 ###############################################################################
 def _raise_if_stopped(stop_event: Any, checkpoint_path: str | None = None) -> None:
     if stop_event.is_set():
         raise TrainingCancelled(checkpoint_path)
-
 
 ###############################################################################
 def _remove_incomplete_checkpoint(checkpoint_path: str | None) -> None:
@@ -268,7 +266,6 @@ def process_target(
         os.setsid()
     target(worker=worker, **kwargs)
 
-
 ###############################################################################
 def queue_training_update(
     stats: dict[str, Any],
@@ -276,7 +273,6 @@ def queue_training_update(
 ) -> None:
     payload = {"type": "training_update", **stats}
     reporter(payload)
-
 
 ###############################################################################
 async def run_training_async(
@@ -355,7 +351,6 @@ async def run_training_async(
         checkpoint_repository.remove_staging_workspace(staging_path)
         raise
 
-
 ###############################################################################
 async def run_resume_training_async(
     checkpoint: str,
@@ -431,7 +426,6 @@ async def run_resume_training_async(
         checkpoint_repository.remove_staging_workspace(staging_path)
         raise
 
-
 ###############################################################################
 def run_training_process(
     configuration: dict[str, Any],
@@ -503,7 +497,6 @@ def run_training_process(
     except Exception as exc:  # noqa: BLE001
         _remove_incomplete_checkpoint(staging_path)
         result_queue.put({"error": str(exc)})
-
 
 ###############################################################################
 def run_resume_training_process(
