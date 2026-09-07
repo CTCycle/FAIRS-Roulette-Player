@@ -1,6 +1,6 @@
 ## Startup
 
-Last updated: 2026-09-03
+Last updated: 2026-09-07
 
 ## Local Application Startup
 
@@ -24,7 +24,7 @@ From repository root in PowerShell:
 - clearing Python, uv, and tool caches
 - removing saved checkpoints as a separate action
 - removing local database and log data while preserving checkpoints
-- uninstalling local runtimes and build outputs
+- uninstalling local runtimes, dependency caches, and build outputs
 - exiting the launcher
 
 What the launcher does:
@@ -48,7 +48,8 @@ Cache layout and cleanup:
 
 - uv, npm, pip, Python bytecode, and other runtime caches are rooted at `runtimes/cache`
 - pytest, Ruff, coverage, mypy, Playwright, and other test-tool caches are rooted at `app/tests/cache`
-- option 9 removes the canonical runtime and test cache roots; cleanup inventories nested entries deepest-first, preserves required sentinels, and reports locked or administrator-protected entries as skipped
+- option 9 removes the canonical runtime and test cache roots plus known project-local legacy cache directories, including `app/server/.uv-cache`; cleanup inventories nested entries deepest-first, preserves required sentinels, and reports locked or administrator-protected entries as skipped
+- option 12 also removes the test cache root and the same known legacy cache directories while preserving source files, lockfiles, and user data
 - options 8 through 12 require the exact case-sensitive passphrase `DELETE` before removing logs, caches, checkpoints, local user data, runtimes, dependencies, or build outputs
 
 Database behavior:

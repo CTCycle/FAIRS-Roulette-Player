@@ -1,6 +1,6 @@
 ## Windows Automation
 
-Last updated: 2026-09-03
+Last updated: 2026-09-07
 
 ## Scope
 
@@ -24,7 +24,7 @@ This file covers repository-specific conventions for the PowerShell launcher and
 - There is no separate application stop action. Closing the application terminal is the local stop signal; closing the browser is not.
 - Startup is complete only after backend health and frontend HTTP checks succeed. If either service fails readiness, close the application terminal before retrying.
 - Uvicorn is always launched with one worker. `RELOAD=true` is development-only because reloads discard process-local state.
-- Cache and data cleanup is best-effort and reproducible: it inventories each target recursively, excludes required sentinels, deletes individual entries deepest-first in stable normalized-path order, and reports locked or protected paths as skipped. Required roots are recreated after cleanup.
+- Cache and data cleanup is best-effort and reproducible: it inventories each target recursively, includes canonical roots and known project-local legacy locations such as `app/server/.uv-cache`, excludes required sentinels, deletes individual entries deepest-first in stable normalized-path order, and reports locked or protected paths as skipped. Required roots are recreated after cleanup. Uninstall covers the same cache targets as the dedicated cache action.
 - Any changes to runtime staging should be reflected in both the scripts and the runtime documentation.
 
 ## Related Files

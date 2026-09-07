@@ -12,6 +12,7 @@ assets/QA/**
 
 # Python
 __pycache__/
+.uv-cache/
 *.py[cod]
 *.egg-info/
 app/server/.venv/
