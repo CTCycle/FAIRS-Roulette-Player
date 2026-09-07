@@ -4,7 +4,6 @@ from importlib.metadata import PackageNotFoundError, version
 
 PACKAGE_NAME = "fairs-server"
 
-
 ###############################################################################
 def get_application_version() -> str:
     """Return the installed application version from package metadata."""

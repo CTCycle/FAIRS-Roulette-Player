@@ -18,7 +18,6 @@ from server.repositories.database.initializer import (
 )
 from server.repositories.schemas.models import Base
 
-
 ###############################################################################
 def _sqlite_settings() -> DatabaseSettings:
     return DatabaseSettings(
@@ -35,14 +34,12 @@ def _sqlite_settings() -> DatabaseSettings:
         insert_batch_size=1000,
     )
 
-
 ###############################################################################
 def _engine(database_path: Path):
     return create_engine(
         f"sqlite:///{database_path}",
         connect_args={"check_same_thread": False},
     )
-
 
 ###############################################################################
 def _table_names(database_path: Path) -> set[str]:
@@ -51,7 +48,6 @@ def _table_names(database_path: Path) -> set[str]:
         return set(inspect(engine).get_table_names())
     finally:
         engine.dispose()
-
 
 ###############################################################################
 def _copy_test_alembic_environment(
@@ -71,7 +67,6 @@ def _copy_test_alembic_environment(
     )
     return fixture_root / "alembic.ini"
 
-
 ###############################################################################
 def _set_revision(database_path: Path, revision: str) -> None:
     engine = _engine(database_path)
@@ -83,7 +78,6 @@ def _set_revision(database_path: Path, revision: str) -> None:
             )
     finally:
         engine.dispose()
-
 
 ###############################################################################
 def test_clean_sqlite_initialization_creates_exact_alembic_schema(
@@ -112,7 +106,6 @@ def test_clean_sqlite_initialization_creates_exact_alembic_schema(
             initializer.validate_database_metadata(connection)
     finally:
         engine.dispose()
-
 
 ###############################################################################
 def test_at_head_rerun_is_idempotent_and_preserves_rows(tmp_path: Path) -> None:
@@ -144,7 +137,6 @@ def test_at_head_rerun_is_idempotent_and_preserves_rows(tmp_path: Path) -> None:
             )
     finally:
         engine.dispose()
-
 
 ###############################################################################
 def test_populated_unversioned_database_is_rejected_without_mutation(
@@ -182,7 +174,6 @@ def test_populated_unversioned_database_is_rejected_without_mutation(
     finally:
         engine.dispose()
 
-
 ###############################################################################
 def test_partial_legacy_schema_is_rejected_unchanged(tmp_path: Path) -> None:
     database_path = tmp_path / "partial.db"
@@ -199,7 +190,6 @@ def test_partial_legacy_schema_is_rejected_unchanged(tmp_path: Path) -> None:
         initialize_database(_sqlite_settings(), database_path=database_path)
 
     assert _table_names(database_path) == {"datasets"}
-
 
 ###############################################################################
 def test_unknown_or_ahead_revision_is_rejected_before_schema_changes(
@@ -223,7 +213,6 @@ def test_unknown_or_ahead_revision_is_rejected_before_schema_changes(
 
     assert _table_names(database_path) == {"alembic_version"}
 
-
 ###############################################################################
 def test_multiple_database_heads_are_rejected(tmp_path: Path) -> None:
     database_path = tmp_path / "multiple-heads.db"
@@ -246,7 +235,6 @@ def test_multiple_database_heads_are_rejected(tmp_path: Path) -> None:
 
     with pytest.raises(DatabaseRevisionError, match="multiple Alembic heads"):
         initialize_database(_sqlite_settings(), database_path=database_path)
-
 
 ###############################################################################
 def test_metadata_drift_at_head_is_rejected_without_repair(tmp_path: Path) -> None:
@@ -272,7 +260,6 @@ def test_metadata_drift_at_head_is_rejected_without_repair(tmp_path: Path) -> No
         }
     finally:
         engine.dispose()
-
 
 ###############################################################################
 def test_failed_migration_rolls_back_schema_and_revision(tmp_path: Path) -> None:
@@ -314,7 +301,6 @@ def downgrade() -> None:
     finally:
         engine.dispose()
 
-
 ###############################################################################
 def test_known_behind_revision_upgrades_in_order(tmp_path: Path) -> None:
     database_path = tmp_path / "behind.db"
@@ -349,7 +335,6 @@ def downgrade() -> None:
             )
     finally:
         engine.dispose()
-
 
 ###############################################################################
 def test_concurrent_sqlite_initializers_serialize_and_finish_at_head(

@@ -38,31 +38,25 @@ ALEMBIC_CONFIG_PATH = Path(__file__).resolve().parents[2] / "alembic.ini"
 ALEMBIC_VERSION_TABLE = "alembic_version"
 MIGRATION_LOCK_TIMEOUT_SECONDS = 30
 
-
 ###############################################################################
 class DatabaseInitializationError(RuntimeError):
     """Base error raised when the database cannot be initialized safely."""
-
 
 ###############################################################################
 class DatabaseMigrationError(DatabaseInitializationError):
     """Raised when Alembic cannot apply or validate a migration state."""
 
-
 ###############################################################################
 class DatabaseSchemaDriftError(DatabaseMigrationError):
     """Raised when a database schema differs from the current model metadata."""
-
 
 ###############################################################################
 class DatabaseRevisionError(DatabaseMigrationError):
     """Raised when database or script revisions are not a supported linear state."""
 
-
 ###############################################################################
 class DatabaseMigrationLockError(DatabaseMigrationError):
     """Raised when the bounded migration lock wait expires."""
-
 
 ###############################################################################
 def build_postgres_url(
@@ -81,23 +75,19 @@ def build_postgres_url(
         database=database_name,
     )
 
-
 ###############################################################################
 def escape_postgres_identifier(identifier: str) -> str:
     return identifier.replace('"', '""')
-
 
 ###############################################################################
 def _sqlstate(exc: BaseException) -> str | None:
     original = getattr(exc, "orig", None)
     return getattr(original, "sqlstate", None) or getattr(original, "pgcode", None)
 
-
 ###############################################################################
 def is_missing_postgres_database_error(exc: SQLAlchemyError) -> bool:
     """Return true only for PostgreSQL's missing-database SQLSTATE."""
     return _sqlstate(exc) == "3D000"
-
 
 ###############################################################################
 def _redact_error(value: object) -> str:
@@ -114,7 +104,6 @@ def _redact_error(value: object) -> str:
         flags=re.IGNORECASE,
     )
     return message
-
 
 ###############################################################################
 def _advisory_lock_key(
@@ -136,7 +125,6 @@ def _advisory_lock_key(
     ).encode("utf-8")
     return int.from_bytes(sha256(material).digest()[:8], byteorder="big", signed=True)
 
-
 ###############################################################################
 def _engine_advisory_lock_key(engine: Engine) -> int:
     url = engine.url
@@ -148,14 +136,12 @@ def _engine_advisory_lock_key(engine: Engine) -> int:
         database_name=url.database,
     )
 
-
 ###############################################################################
 def _alembic_config(connection: Any, config_path: Path | None = None) -> Config:
     path = config_path or ALEMBIC_CONFIG_PATH
     config = Config(str(path))
     config.attributes["connection"] = connection
     return config
-
 
 ###############################################################################
 def _include_object(
@@ -166,7 +152,6 @@ def _include_object(
     _compare_to: Any,
 ) -> bool:
     return not (object_type == "table" and name == ALEMBIC_VERSION_TABLE)
-
 
 ###############################################################################
 def _alembic_diffs(connection: Any) -> list[Any]:
@@ -180,7 +165,6 @@ def _alembic_diffs(connection: Any) -> list[Any]:
         },
     )
     return list(compare_metadata(migration_context, Base.metadata))
-
 
 ###############################################################################
 def _normalize_sql_expression(value: object) -> str:
@@ -212,7 +196,6 @@ def _normalize_sql_expression(value: object) -> str:
         expression = expression[1:-1].strip()
     return expression
 
-
 ###############################################################################
 def _type_signature(value: Any, *, dialect_name: str | None = None) -> tuple[Any, ...]:
     implementation = getattr(value, "impl", value)
@@ -234,13 +217,11 @@ def _type_signature(value: Any, *, dialect_name: str | None = None) -> tuple[Any
     affinity_name = getattr(affinity, "__name__", type(implementation).__name__)
     return (affinity_name.lower(), str(implementation).lower())
 
-
 ###############################################################################
 def _ondelete(value: object) -> str | None:
     if value is None:
         return None
     return str(value).strip().upper()
-
 
 ###############################################################################
 def _model_signature(*, dialect_name: str | None = None) -> dict[str, Any]:
@@ -306,7 +287,6 @@ def _model_signature(*, dialect_name: str | None = None) -> dict[str, Any]:
             "foreign_keys": foreign_keys,
         }
     return signature
-
 
 ###############################################################################
 def _database_signature(connection: Any) -> dict[str, Any]:
@@ -384,7 +364,6 @@ def _database_signature(connection: Any) -> dict[str, Any]:
         }
     return signature
 
-
 ###############################################################################
 def validate_database_metadata(connection: Any) -> None:
     """Require both Alembic's comparison and exact structural signatures to match."""
@@ -407,12 +386,10 @@ def validate_database_metadata(connection: Any) -> None:
             "Automatic repair is disabled; inspect and explicitly migrate the database."
         )
 
-
 ###############################################################################
 def _current_heads(connection: Any) -> tuple[str, ...]:
     context = MigrationContext.configure(connection)
     return tuple(context.get_current_heads())
-
 
 ###############################################################################
 def _script_and_head(config: Config) -> tuple[ScriptDirectory, str]:
@@ -425,7 +402,6 @@ def _script_and_head(config: Config) -> tuple[ScriptDirectory, str]:
             f"detected {len(heads)} ({found}). Resolve the branch before startup."
         )
     return script, heads[0]
-
 
 ###############################################################################
 def _pending_revisions(
@@ -453,7 +429,6 @@ def _pending_revisions(
         )
     return pending
 
-
 ###############################################################################
 def _assert_current_head(connection: Any, target_revision: str) -> None:
     detected = _current_heads(connection)
@@ -463,7 +438,6 @@ def _assert_current_head(connection: Any, target_revision: str) -> None:
             f"Alembic did not finish at the configured head {target_revision}; "
             f"detected revisions: {rendered}."
         )
-
 
 ###############################################################################
 def _run_locked_migrations(connection: Any, config_path: Path | None = None) -> None:
@@ -529,11 +503,9 @@ def _run_locked_migrations(connection: Any, config_path: Path | None = None) -> 
     validate_database_metadata(connection)
     _assert_current_head(connection, target_revision)
 
-
 ###############################################################################
 def _is_lock_timeout(exc: BaseException) -> bool:
     return _sqlstate(exc) == "55P03" or "lock timeout" in str(exc).lower()
-
 
 ###############################################################################
 def _run_sqlite_migrations(
@@ -558,7 +530,6 @@ def _run_sqlite_migrations(
         except Exception:
             connection.rollback()
             raise
-
 
 ###############################################################################
 def _run_postgres_migrations(
@@ -587,7 +558,6 @@ def _run_postgres_migrations(
                     "initializer or inspect active database sessions, then retry."
                 ) from exc
             raise
-
 
 ###############################################################################
 def run_migrations_on_engine(
@@ -618,7 +588,6 @@ def run_migrations_on_engine(
             "Alembic database migration failed. Review the migration error and "
             "database state before retrying."
         ) from exc
-
 
 ###############################################################################
 def _create_missing_postgres_database(settings: DatabaseSettings) -> None:
@@ -688,7 +657,6 @@ def _create_missing_postgres_database(settings: DatabaseSettings) -> None:
     finally:
         admin.dispose()
 
-
 ###############################################################################
 def _build_postgres_target_engine(settings: DatabaseSettings) -> Engine:
     target_engine = build_postgres_engine(settings)
@@ -702,7 +670,6 @@ def _build_postgres_target_engine(settings: DatabaseSettings) -> Engine:
 
     _create_missing_postgres_database(settings)
     return build_postgres_engine(settings)
-
 
 ###############################################################################
 def initialize_database(

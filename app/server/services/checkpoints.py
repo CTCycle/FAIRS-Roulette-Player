@@ -13,7 +13,6 @@ from server.common.exceptions import CheckpointReferenceError
 from server.contracts.training import TrainingCheckpointSummary
 from server.repositories.checkpoints import CheckpointRepository
 
-
 ###############################################################################
 def get_last_history_value(values: Any) -> float | None:
     if isinstance(values, list):
@@ -25,9 +24,9 @@ def get_last_history_value(values: Any) -> float | None:
                 return numeric_value
     return None
 
-
 ###############################################################################
 class CheckpointService:
+
     # -------------------------------------------------------------------------
     def __init__(
         self,

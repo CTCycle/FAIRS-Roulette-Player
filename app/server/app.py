@@ -51,12 +51,10 @@ InferenceService: Any = None
 TrainingService: Any = None
 TrainingRunManager: Any = None
 
-
 ###############################################################################
 def is_api_docs_enabled() -> bool:
     value = os.getenv("ENABLE_API_DOCS", "true").strip().lower()
     return value in {"1", "true", "yes", "on"}
-
 
 ###############################################################################
 def ensure_single_process_runtime() -> None:
@@ -77,11 +75,9 @@ def ensure_single_process_runtime() -> None:
                 "training jobs and inference models are process-local."
             )
 
-
 ###############################################################################
 def _client_build_available() -> bool:
     return shared_paths.CLIENT_INDEX_FILE_PATH.is_file()
-
 
 ###############################################################################
 def _resolve_client_file(full_path: str) -> Path | None:
@@ -96,11 +92,9 @@ def _resolve_client_file(full_path: str) -> Path | None:
 
     return None
 
-
 ###############################################################################
 def serve_client_root() -> FileResponse:
     return FileResponse(shared_paths.CLIENT_INDEX_FILE_PATH)
-
 
 ###############################################################################
 def serve_client_path(full_path: str) -> FileResponse:
@@ -109,13 +103,11 @@ def serve_client_path(full_path: str) -> FileResponse:
         return FileResponse(client_file)
     return FileResponse(shared_paths.CLIENT_INDEX_FILE_PATH)
 
-
 ###############################################################################
 def redirect_root_to_docs() -> RedirectResponse | RootStatusResponse:
     if is_api_docs_enabled():
         return RedirectResponse(FASTAPI_DOCS_ENDPOINT)
     return RootStatusResponse(status="ok")
-
 
 ###############################################################################
 @asynccontextmanager
@@ -247,7 +239,6 @@ async def app_lifespan(application: FastAPI) -> AsyncIterator[None]:
         except Exception:  # noqa: BLE001
             logger.exception("Application logging shutdown failed")
 
-
 ###############################################################################
 def include_api_routers(application: FastAPI) -> None:
     for router in (
@@ -258,7 +249,6 @@ def include_api_routers(application: FastAPI) -> None:
         system_router,
     ):
         application.include_router(router, prefix=FASTAPI_API_PREFIX)
-
 
 ###############################################################################
 def configure_client_routes(application: FastAPI) -> None:
@@ -291,7 +281,6 @@ def configure_client_routes(application: FastAPI) -> None:
         include_in_schema=False,
         response_model=RootStatusResponse,
     )
-
 
 ###############################################################################
 def create_app() -> FastAPI:

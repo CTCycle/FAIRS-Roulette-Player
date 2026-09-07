@@ -29,7 +29,6 @@ from server.learning.training.environment import RouletteEnvironment
 
 HISTORY_POINTS_PER_EPISODE = 20
 
-
 ###############################################################################
 def has_non_finite_numbers(stats: dict[str, Any], keys: list[str]) -> bool:
     for key in keys:
@@ -44,9 +43,9 @@ def has_non_finite_numbers(stats: dict[str, Any], keys: list[str]) -> bool:
             return True
     return False
 
-
 ###############################################################################
 class DQNTraining:
+
     # -------------------------------------------------------------------------
     def __init__(
         self,

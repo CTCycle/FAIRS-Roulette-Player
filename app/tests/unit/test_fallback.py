@@ -7,22 +7,21 @@ import numpy as np
 import pandas as pd
 import pytest
 
-
 ###############################################################################
 class DummyModel:
+
     # -------------------------------------------------------------------------
     def predict(self, inputs: dict[str, Any], verbose: int = 0) -> np.ndarray:  # noqa: ARG002
         logits = np.zeros((1, 47), dtype=np.float32)
         logits[0, 12] = 1.0
         return logits
 
-
 ###############################################################################
 class EmptyLogitsModel:
+
     # -------------------------------------------------------------------------
     def predict(self, inputs: dict[str, Any], verbose: int = 0) -> np.ndarray:  # noqa: ARG002
         return np.zeros((1, 0), dtype=np.float32)
-
 
 ###############################################################################
 def test_fallback_strategy_is_deterministic_when_model_disabled() -> None:
@@ -53,7 +52,6 @@ def test_fallback_strategy_is_deterministic_when_model_disabled() -> None:
     assert prediction["suggested_bet_amount"] == 10
     assert prediction["current_bet_amount"] == 10
 
-
 ###############################################################################
 def test_predict_next_raises_when_model_returns_empty_logits() -> None:
     os.environ.setdefault("KERAS_BACKEND", "torch")
@@ -75,7 +73,6 @@ def test_predict_next_raises_when_model_returns_empty_logits() -> None:
     with pytest.raises(ValueError, match="empty logits"):
         player.predict_next()
 
-
 ###############################################################################
 def test_predict_next_requires_minimum_context_length() -> None:
     os.environ.setdefault("KERAS_BACKEND", "torch")
@@ -96,7 +93,6 @@ def test_predict_next_requires_minimum_context_length() -> None:
     )
     with pytest.raises(ValueError, match="at least the perceptive field size"):
         player.predict_next()
-
 
 ###############################################################################
 def test_update_with_true_extraction_validates_input() -> None:

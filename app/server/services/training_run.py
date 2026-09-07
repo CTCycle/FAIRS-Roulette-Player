@@ -27,7 +27,6 @@ TRAINING_STATUSES = {
 ACTIVE_RUN_STATUSES = {"pending", "running", "stopping"}
 HISTORY_POINTS_PER_EPISODE = 20
 
-
 ###############################################################################
 def default_training_stats(
     total_epochs: int = 0,
@@ -55,7 +54,6 @@ def default_training_stats(
         "replay_buffer_size": 0,
         "status": status,
     }
-
 
 ###############################################################################
 @dataclass
@@ -193,7 +191,6 @@ class TrainingRun:
                 "created_at": self.created_at,
                 "completed_at": self.completed_at,
             }
-
 
 ###############################################################################
 class TrainingRunManager:

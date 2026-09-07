@@ -13,7 +13,6 @@ UPLOAD_EXCEPTION_STATUS: ExceptionStatusMap = (
     (ValueError, status.HTTP_400_BAD_REQUEST),
 )
 
-
 ###############################################################################
 @router.post(
     "/upload",

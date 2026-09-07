@@ -9,7 +9,6 @@ from server.repositories.database.utils import (
     is_supported_postgres_engine,
 )
 
-
 ###############################################################################
 def build_postgres_engine(settings: DatabaseSettings) -> Engine:
     if not settings.host or not settings.database_name or not settings.username:

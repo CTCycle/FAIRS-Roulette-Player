@@ -11,9 +11,9 @@ from server.contracts.inference import (
 )
 from server.services.inference import InferenceService
 
-
 ###############################################################################
 class FakePlayer:
+
     # -------------------------------------------------------------------------
     def __init__(self, *args, **kwargs):  # noqa: ANN002, ANN003
         self.bet_amount = 10
@@ -31,9 +31,9 @@ class FakePlayer:
     def update_bet_amount(self, bet_amount: int) -> None:
         self.bet_amount = bet_amount
 
-
 ###############################################################################
 class FakeDeviceConfig:
+
     # -------------------------------------------------------------------------
     def __init__(self, configuration):  # noqa: ANN001
         self.configuration = configuration
@@ -41,7 +41,6 @@ class FakeDeviceConfig:
     # -------------------------------------------------------------------------
     def set_device(self) -> None:
         return None
-
 
 ###############################################################################
 def build_service(monkeypatch) -> tuple[InferenceService, Mock]:
@@ -70,7 +69,6 @@ def build_service(monkeypatch) -> tuple[InferenceService, Mock]:
     )
     return service, dataset_repository
 
-
 ###############################################################################
 def test_session_lifecycle_and_prediction_flow(monkeypatch) -> None:
     service, dataset_repository = build_service(monkeypatch)
@@ -95,7 +93,6 @@ def test_session_lifecycle_and_prediction_flow(monkeypatch) -> None:
     assert shutdown["status"] == "closed"
     service.inference_repository.end_session.assert_called_once_with(session_id)
 
-
 ###############################################################################
 def test_clear_rows_preserves_session_header(monkeypatch) -> None:
     service, _ = build_service(monkeypatch)
@@ -103,7 +100,6 @@ def test_clear_rows_preserves_session_header(monkeypatch) -> None:
     assert response == {"session_id": "session_1", "status": "cleared"}
     service.inference_repository.clear_steps.assert_called_once_with("session_1")
     service.inference_repository.delete_session.assert_not_called()
-
 
 ###############################################################################
 def test_capacity_eviction_closes_persisted_session(monkeypatch) -> None:
@@ -121,7 +117,6 @@ def test_capacity_eviction_closes_persisted_session(monkeypatch) -> None:
     assert second_id in service.state.sessions
     service.inference_repository.end_session.assert_called_once_with(first_id)
 
-
 ###############################################################################
 def test_clear_context_rejects_active_session(monkeypatch) -> None:
     service, dataset_repository = build_service(monkeypatch)
@@ -132,7 +127,6 @@ def test_clear_context_rejects_active_session(monkeypatch) -> None:
 
     dataset_repository.clear.assert_not_called()
 
-
 ###############################################################################
 def test_clear_context_succeeds_after_session_shutdown(monkeypatch) -> None:
     service, dataset_repository = build_service(monkeypatch)
@@ -141,7 +135,6 @@ def test_clear_context_succeeds_after_session_shutdown(monkeypatch) -> None:
 
     assert service.clear_context() == {"status": "cleared"}
     dataset_repository.clear.assert_called_once_with("inference")
-
 
 ###############################################################################
 def test_shutdown_session_keeps_live_state_when_persistence_close_fails(monkeypatch) -> None:
@@ -157,7 +150,6 @@ def test_shutdown_session_keeps_live_state_when_persistence_close_fails(monkeypa
     assert service.state.get_optional(start["session_id"]) is not None
     assert service.state.get_session(start["session_id"]).player is not None
 
-
 ###############################################################################
 def test_session_start_rolls_back_persistence_and_model_on_registration_failure(
     monkeypatch,
@@ -165,7 +157,10 @@ def test_session_start_rolls_back_persistence_and_model_on_registration_failure(
     service, _ = build_service(monkeypatch)
     released_players: list[FakePlayer] = []
 
+    ###############################################################################
     class TrackingPlayer(FakePlayer):
+
+        # -------------------------------------------------------------------------
         def __init__(self, *args, **kwargs):  # noqa: ANN002, ANN003
             super().__init__(*args, **kwargs)
             self.model = object()
@@ -182,7 +177,6 @@ def test_session_start_rolls_back_persistence_and_model_on_registration_failure(
     service.inference_repository.delete_session.assert_called_once()
     assert not service.state.has_sessions()
     assert released_players[0].model is None
-
 
 ###############################################################################
 def test_session_snapshot_returns_authoritative_persisted_steps(monkeypatch) -> None:
@@ -219,7 +213,6 @@ def test_session_snapshot_returns_authoritative_persisted_steps(monkeypatch) -> 
         }
     ]
 
-
 ###############################################################################
 def test_capacity_eviction_failure_keeps_existing_session_live(monkeypatch) -> None:
     service, _ = build_service(monkeypatch)
@@ -237,7 +230,6 @@ def test_capacity_eviction_failure_keeps_existing_session_live(monkeypatch) -> N
     assert service.state.get_optional(first["session_id"]) is not None
     assert len(service.state.session_ids()) == 1
     service.inference_repository.delete_session.assert_called()
-
 
 ###############################################################################
 def test_shutdown_is_failure_isolated_and_idempotent(monkeypatch) -> None:

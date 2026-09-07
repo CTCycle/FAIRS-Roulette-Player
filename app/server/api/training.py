@@ -26,7 +26,6 @@ TRAINING_EXCEPTION_STATUS: ExceptionStatusMap = (
     (ValueError, status.HTTP_400_BAD_REQUEST),
 )
 
-
 ###############################################################################
 def _map_training_exception(exc: Exception) -> HTTPException:
     return http_exception_for_exception(
@@ -34,7 +33,6 @@ def _map_training_exception(exc: Exception) -> HTTPException:
         TRAINING_EXCEPTION_STATUS,
         default_detail="Unable to process training request.",
     )
-
 
 ###############################################################################
 @router.post(
@@ -51,7 +49,6 @@ def start_training(
     except Exception as exc:
         raise _map_training_exception(exc) from exc
 
-
 ###############################################################################
 @router.post(
     "/resume",
@@ -67,7 +64,6 @@ def resume_training(
     except Exception as exc:
         raise _map_training_exception(exc) from exc
 
-
 ###############################################################################
 @router.get(
     "/status",
@@ -78,7 +74,6 @@ def get_status(
     service: Any = Depends(get_training_service),
 ) -> TrainingStatusResponse:
     return TrainingStatusResponse.model_validate(service.get_status())
-
 
 ###############################################################################
 @router.post(
@@ -94,7 +89,6 @@ def stop_training(
     except Exception as exc:
         raise _map_training_exception(exc) from exc
 
-
 ###############################################################################
 @router.get(
     "/checkpoints",
@@ -105,7 +99,6 @@ def get_checkpoints(
     service: Any = Depends(get_training_service),
 ) -> TrainingCheckpointListResponse:
     return TrainingCheckpointListResponse.model_validate(service.list_checkpoints())
-
 
 ###############################################################################
 @router.get(
@@ -124,7 +117,6 @@ def get_checkpoint_metadata(
     except Exception as exc:
         raise _map_training_exception(exc) from exc
 
-
 ###############################################################################
 @router.delete(
     "/checkpoints/{checkpoint}",
@@ -142,7 +134,6 @@ def delete_checkpoint(
     except Exception as exc:
         raise _map_training_exception(exc) from exc
 
-
 ###############################################################################
 @router.get(
     "/jobs/{job_id}",
@@ -157,7 +148,6 @@ def get_training_job_status(
         return JobStatusResponse.model_validate(service.get_job(job_id))
     except Exception as exc:
         raise _map_training_exception(exc) from exc
-
 
 ###############################################################################
 @router.delete(

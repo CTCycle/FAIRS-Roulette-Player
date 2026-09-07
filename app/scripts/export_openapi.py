@@ -8,7 +8,6 @@ from pathlib import Path
 
 OPENAPI_PATH = Path(__file__).resolve().parents[1] / "shared" / "openapi.json"
 
-
 ###############################################################################
 def render_openapi() -> str:
     """Render the runtime FastAPI contract as a stable JSON document."""
@@ -18,7 +17,6 @@ def render_openapi() -> str:
     app.version = get_application_version()
 
     return json.dumps(app.openapi(), indent=2) + "\n"
-
 
 ###############################################################################
 def main(arguments: Sequence[str] | None = None) -> int:

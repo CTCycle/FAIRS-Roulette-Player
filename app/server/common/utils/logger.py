@@ -8,7 +8,6 @@ from typing import Any
 
 from server.common import path as shared_paths
 
-
 ###############################################################################
 def _build_log_config(log_directory: Path) -> dict[str, Any]:
     current_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -62,7 +61,6 @@ def _build_log_config(log_directory: Path) -> dict[str, Any]:
 logger = logging.getLogger()
 _configured = False
 
-
 ###############################################################################
 def configure_logging(*, force: bool = False) -> None:
     """Configure application logging at an explicit runtime boundary."""
@@ -74,7 +72,6 @@ def configure_logging(*, force: bool = False) -> None:
     resolved_directory.mkdir(parents=True, exist_ok=True)
     logging.config.dictConfig(_build_log_config(resolved_directory))
     _configured = True
-
 
 ###############################################################################
 def close_application_logging() -> None:
