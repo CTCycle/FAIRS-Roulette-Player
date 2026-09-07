@@ -71,10 +71,10 @@ Close the application terminal to stop the local application session.
 | 6 | Check whether the local checkout knows about newer application changes without downloading or applying them. |
 | 7 | Update the application from the main release line. This requires a clean checkout and does not switch branches or overwrite local edits. |
 | 8 | Remove application log files. |
-| 9 | Clear local runtime and test caches. |
+| 9 | Clear local runtime, test, and legacy project-local caches. |
 | 10 | Remove saved checkpoints only. |
 | 11 | Remove the local database and logs while preserving saved checkpoints. An external PostgreSQL database is not deleted by this action. |
-| 12 | Remove local runtimes, dependencies, and build output so the environment can be prepared again. Source files and user data are preserved. |
+| 12 | Remove local runtimes, dependency caches, dependencies, and build output so the environment can be prepared again. Source files and user data are preserved. |
 | 13 | Exit the launcher. |
 
 Options 8 through 12 require an affirmative response at a `[y/N]` confirmation prompt. Read the description carefully before confirming a cleanup action.

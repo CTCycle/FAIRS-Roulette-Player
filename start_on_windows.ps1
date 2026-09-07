@@ -26,6 +26,24 @@ $runtimeCacheDir = Join-Path $runtimeRoot 'cache'
 $testCacheDir = Join-Path $testsDir 'cache'
 $pytestCacheDir = Join-Path $testCacheDir 'pytest'
 $ruffCacheDir = Join-Path $testCacheDir 'ruff'
+$knownLegacyCachePaths = @(
+    (Join-Path $runtimeRoot '.uv-cache'),
+    (Join-Path $repoRoot '.uv-cache'),
+    (Join-Path $repoRoot 'app\.uv-cache'),
+    (Join-Path $serverDir '.uv-cache'),
+    (Join-Path $testsDir '.uv-cache'),
+    (Join-Path $clientDir '.uv-cache'),
+    (Join-Path $repoRoot '.pytest_cache'),
+    (Join-Path $serverDir '.pytest_cache'),
+    (Join-Path $testsDir '.pytest_cache'),
+    (Join-Path $repoRoot '.ruff_cache'),
+    (Join-Path $serverDir '.ruff_cache'),
+    (Join-Path $testsDir '.ruff_cache'),
+    (Join-Path $repoRoot '.mypy_cache'),
+    (Join-Path $serverDir '.mypy_cache'),
+    (Join-Path $testsDir '.mypy_cache'),
+    (Join-Path $clientDir 'node_modules\.vite')
+)
 $script:NextProgressId = 1
 $script:ActiveProgressActivities = [Collections.Generic.Dictionary[int, string]]::new()
 $script:LauncherInteractive = -not [Console]::IsInputRedirected -and -not [Console]::IsOutputRedirected
@@ -197,7 +215,6 @@ function Remove-LauncherPath {
             [void]$enumerationErrors.Add("$($errorRecord.Exception.Message)")
             Write-Info "Skipped inaccessible path below $fullPath ($($errorRecord.Exception.Message))"
         }
-        if (-not $KeepRoot) { $found += $item }
         $found
     } else { @($item) }
     $protectedDirectories = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
@@ -212,6 +229,9 @@ function Remove-LauncherPath {
                 $ancestor = [IO.Path]::GetDirectoryName($ancestor)
             }
         }
+    }
+    if ($item.PSIsContainer -and -not $KeepRoot -and $preservedPaths.Count -eq 0 -and $enumerationErrors.Count -eq 0) {
+        $entries += $item
     }
     $candidates = @($entries |
         Where-Object { -not $preservedPaths.Contains($_.FullName) -and -not $protectedDirectories.Contains($_.FullName) } |
@@ -253,6 +273,47 @@ function Remove-LauncherPath {
 function Remove-PathBestEffort([string]$Path) {
     $result = Remove-LauncherPath -Path $Path -Activity "FAIRS: remove $([IO.Path]::GetFileName($Path))"
     return $result.Skipped -eq 0 -and $result.EnumerationErrors.Count -eq 0
+}
+
+function Get-DiscoveredLegacyCachePaths {
+    $cacheDirectoryNames = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    foreach ($name in @('.uv-cache', '.pytest_cache', '.ruff_cache', '.mypy_cache')) {
+        [void]$cacheDirectoryNames.Add($name)
+    }
+    $skippedDirectoryNames = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    foreach ($name in @('.git', '.venv', 'venv', 'node_modules', 'runtimes', 'dist', 'dist-ssr', '.angular')) {
+        [void]$skippedDirectoryNames.Add($name)
+    }
+
+    $discovered = [Collections.Generic.List[string]]::new()
+    $pending = [Collections.Generic.Queue[string]]::new()
+    [void]$pending.Enqueue($repoRoot)
+    while ($pending.Count -gt 0) {
+        $currentPath = $pending.Dequeue()
+        $children = @(Get-ChildItem -LiteralPath $currentPath -Directory -Force -ErrorAction SilentlyContinue)
+        foreach ($child in $children) {
+            if (($child.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { continue }
+            if ($cacheDirectoryNames.Contains($child.Name)) {
+                [void]$discovered.Add($child.FullName)
+                continue
+            }
+            if ($skippedDirectoryNames.Contains($child.Name) -or
+                $child.FullName.Equals($runtimeCacheDir, [StringComparison]::OrdinalIgnoreCase) -or
+                $child.FullName.Equals($testCacheDir, [StringComparison]::OrdinalIgnoreCase)) {
+                continue
+            }
+            [void]$pending.Enqueue($child.FullName)
+        }
+    }
+    return @($discovered | ForEach-Object { [string]$_ })
+}
+
+function Get-LegacyCachePaths {
+    return @($knownLegacyCachePaths + @(Get-DiscoveredLegacyCachePaths) | Sort-Object -Unique)
+}
+
+function Get-CacheCleanupPaths {
+    return @($runtimeCacheDir, $testCacheDir) + @(Get-LegacyCachePaths)
 }
 
 # -----------------------------------------------------------------------------
@@ -705,7 +766,7 @@ function Clear-Cache {
     Assert-ApplicationStopped
     if (-not (Confirm-DestructiveAction 'clear Python, uv, and tool caches')) { return }
 
-    $cachePaths = @($runtimeCacheDir, $testCacheDir)
+    $cachePaths = @(Get-CacheCleanupPaths)
     $progressId = Start-LauncherProgress -Activity 'FAIRS: clear caches' -Status "0 of $($cachePaths.Count) roots"
     try {
         for ($index = 0; $index -lt $cachePaths.Count; $index++) {
@@ -803,16 +864,17 @@ function Remove-AllData {
 function Uninstall-Application {
     Import-DotEnv
     Assert-ApplicationStopped
-    if (-not (Confirm-DestructiveAction 'remove local runtimes and build outputs')) { return }
+    if (-not (Confirm-DestructiveAction 'remove local runtimes, caches, dependencies, and build outputs')) { return }
 
     $paths = @(
         $runtimeRoot,
+        $testCacheDir,
         (Join-Path $serverDir '.venv'),
         (Join-Path $repoRoot '.venv'),
         (Join-Path $clientDir 'node_modules'),
         (Join-Path $clientDir '.angular'),
         (Join-Path $clientDir 'dist')
-    )
+    ) + @(Get-LegacyCachePaths)
     $progressId = Start-LauncherProgress -Activity 'FAIRS: uninstall application' -Status "0 of $($paths.Count) paths"
     try {
         for ($index = 0; $index -lt $paths.Count; $index++) {
@@ -827,7 +889,7 @@ function Uninstall-Application {
     New-Item -ItemType Directory -Path $runtimeRoot -Force | Out-Null
     New-Item -ItemType File -Path (Join-Path $runtimeRoot '.gitkeep') -Force | Out-Null
     Remove-PythonCaches
-    Write-Ok 'Application runtimes, dependencies, and build outputs removed. Dependency lockfiles and user data were preserved.'
+    Write-Ok 'Application runtimes, caches, dependencies, and build outputs removed. Dependency lockfiles and user data were preserved.'
 }
 
 # -----------------------------------------------------------------------------
@@ -916,10 +978,10 @@ function Get-LauncherMenuEntries {
         [pscustomobject]@{ Section = 'SOURCE CONTROL'; Key = 'Check'; Label = 'Check for updates'; Description = 'Report local main-branch update status only'; Color = [ConsoleColor]::Yellow }
         [pscustomobject]@{ Section = 'SOURCE CONTROL'; Key = 'Update'; Label = 'Update application'; Description = 'Pull application changes from the main branch'; Color = [ConsoleColor]::Yellow }
         [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'Logs'; Label = 'Remove logs'; Description = 'Delete application log files'; Color = [ConsoleColor]::DarkYellow }
-        [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'Cache'; Label = 'Clear cache'; Description = 'Remove Python, uv, and tool caches'; Color = [ConsoleColor]::DarkYellow }
+        [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'Cache'; Label = 'Clear cache'; Description = 'Remove runtime, test, and legacy caches'; Color = [ConsoleColor]::DarkYellow }
         [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'Checkpoints'; Label = 'Remove checkpoints'; Description = 'Delete saved checkpoints only'; Color = [ConsoleColor]::Red }
         [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'AllData'; Label = 'Remove all data'; Description = 'Delete local database and logs, preserving checkpoints'; Color = [ConsoleColor]::Red }
-        [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'Uninstall'; Label = 'Uninstall application'; Description = 'Remove local runtimes and build outputs'; Color = [ConsoleColor]::Red }
+        [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'Uninstall'; Label = 'Uninstall application'; Description = 'Remove local runtimes, caches, dependencies, and build outputs'; Color = [ConsoleColor]::Red }
         [pscustomobject]@{ Section = 'EXIT'; Key = 'Exit'; Label = 'Exit'; Description = 'Close this launcher'; Color = [ConsoleColor]::DarkGray }
     )
 }
