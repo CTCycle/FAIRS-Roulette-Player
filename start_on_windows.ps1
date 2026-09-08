@@ -717,7 +717,11 @@ function Invoke-TestSuite {
 # Cleanup and data management
 # -----------------------------------------------------------------------------
 function Confirm-DestructiveAction([string]$Description) {
-    $confirmation = ([string](Read-Host "Continue to $Description? [y/N]")).Trim()
+    if (-not $script:LauncherInteractive) {
+        throw "The destructive action '$Description' requires an interactive console; no files were changed."
+    }
+    Clear-LauncherProgress
+    $confirmation = ([string](Read-Host "Continue to $($Description)? [y/N]")).Trim()
     if ($confirmation -notmatch '^(?i:y|yes)$') {
         Write-Info "Operation cancelled. No changes were made."
         return $false
