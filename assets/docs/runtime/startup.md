@@ -50,7 +50,7 @@ Cache layout and cleanup:
 - pytest, Ruff, coverage, mypy, Playwright, and other test-tool caches are rooted at `app/tests/cache`
 - option 9 removes the canonical runtime and test cache roots plus known project-local legacy cache directories, including `app/server/.uv-cache`; cleanup inventories nested entries deepest-first, preserves required sentinels, and reports locked or administrator-protected entries as skipped
 - option 12 also removes the test cache root and the same known legacy cache directories while preserving source files, lockfiles, and user data
-- options 8 through 12 require the exact case-sensitive passphrase `DELETE` before removing logs, caches, checkpoints, local user data, runtimes, dependencies, or build outputs
+- options 8 through 12 require an interactive `[y/N]` confirmation before removing logs, caches, checkpoints, local user data, runtimes, dependencies, or build outputs; only `y` or `yes` proceeds, while blank, `n`, invalid, and redirected input cancel or fail closed
 
 Database behavior:
 
