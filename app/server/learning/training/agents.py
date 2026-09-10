@@ -7,8 +7,8 @@ from typing import Any
 import numpy as np
 from keras import Model
 
-from server.common.constants import PAD_VALUE, STATES
 from server.common import path as shared_paths
+from server.common.constants import PAD_VALUE, STATES
 from server.learning.betting.types import STRATEGY_COUNT
 from server.learning.training.environment import RouletteEnvironment
 
@@ -22,15 +22,15 @@ class DQNAgent:
         memory: Any | None = None,
         action_size: int | None = None,
     ) -> None:
-        self.rng = np.random.default_rng(seed=configuration.get("training_seed", 42))
+        self.rng = np.random.default_rng(seed=int(configuration["training_seed"]))
         self.action_size = int(action_size) if action_size is not None else STATES
-        self.state_size = configuration.get("perceptive_field_size", 64)
-        self.gamma = configuration.get("discount_rate", 0.5)
-        self.epsilon = configuration.get("exploration_rate", 0.75)
-        self.epsilon_decay = configuration.get("exploration_rate_decay", 0.995)
-        self.epsilon_min = configuration.get("minimum_exploration_rate", 0.1)
-        self.memory_size = configuration.get("max_memory_size", 10000)
-        self.replay_size = configuration.get("replay_buffer_size", 1000)
+        self.state_size = int(configuration["perceptive_field_size"])
+        self.gamma = float(configuration["discount_rate"])
+        self.epsilon = float(configuration["exploration_rate"])
+        self.epsilon_decay = float(configuration["exploration_rate_decay"])
+        self.epsilon_min = float(configuration["minimum_exploration_rate"])
+        self.memory_size = int(configuration["max_memory_size"])
+        self.replay_size = int(configuration["replay_buffer_size"])
         self.memory = deque(maxlen=self.memory_size) if memory is None else memory
 
     # -------------------------------------------------------------------------
@@ -143,10 +143,7 @@ class DQNAgent:
         memory_buffer: deque,
         batch_size: int,
     ) -> dict[str, Any]:
-        """
-        Evaluates the model on a batch of transitions without updating weights.
-        Returns loss and metric values.
-        """
+        """Evaluate a batch of transitions without updating weights."""
         if len(memory_buffer) < batch_size:
             return {"loss": 0.0, "root_mean_squared_error": 0.0}
 
@@ -188,14 +185,12 @@ class DQNAgent:
         batch_indices = np.arange(batch_size, dtype=np.int32)
         targets[batch_indices, actions] = updated_targets
 
-        results = model.evaluate(
+        return model.evaluate(
             {"timeseries": states, "gain": gains},
             targets,
             verbose=0,
             return_dict=True,  # type: ignore
         )
-
-        return results
 
 ###############################################################################
 class StrategyAgent(DQNAgent):
