@@ -4,7 +4,7 @@ import {
     parseDatasetSummaryItems,
 } from './frontendApiParsers';
 import type { CheckpointMetadataResponse, DatasetSummaryItem } from '../types/frontendApi';
-import { requestReadOnlyJson } from './apiClient';
+import { requestJson, requestReadOnlyJson } from './apiClient';
 
 const getJson = async (endpoint: string, signal?: AbortSignal): Promise<unknown> => (
     requestReadOnlyJson(endpoint, { signal })
@@ -29,3 +29,19 @@ export const fetchCheckpointMetadata = async (
         ),
     )
 );
+
+export const validateTrainingConfiguration = async (
+    payload: Record<string, unknown>,
+    signal?: AbortSignal,
+): Promise<void> => {
+    await requestJson(
+        '/api/training/validate',
+        {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            signal,
+        },
+        'Training configuration is invalid.',
+    );
+};
