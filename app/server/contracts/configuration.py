@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import os
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 ###############################################################################
 @dataclass(frozen=True)
@@ -41,6 +41,8 @@ class ServerSettings:
 
 ###############################################################################
 class EnvDatabaseSettings(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     embedded_database: bool = True
     engine: str = "postgresql+psycopg"
     host: str | None = None
@@ -129,10 +131,14 @@ class EnvDatabaseSettings(BaseModel):
 
 ###############################################################################
 class JsonJobsSettings(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     polling_interval: float = Field(default=1.0, ge=0.1, le=10.0)
 
 ###############################################################################
 class JsonDeviceSettings(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     jit_compile: bool = False
     jit_backend: str = "inductor"
 
@@ -145,6 +151,8 @@ class JsonDeviceSettings(BaseModel):
 
 ###############################################################################
 class JsonServerSettings(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     jobs: JsonJobsSettings = Field(default_factory=JsonJobsSettings)
     device: JsonDeviceSettings = Field(default_factory=JsonDeviceSettings)
 
