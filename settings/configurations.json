@@ -4,7 +4,6 @@
   },
   "device": {
     "jit_compile": false,
-    "jit_backend": "inductor",
-    "use_mixed_precision": false
+    "jit_backend": "inductor"
   }
 }
