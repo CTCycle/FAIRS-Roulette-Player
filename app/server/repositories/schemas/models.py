@@ -155,7 +155,7 @@ class InferenceSessionSteps(Base):
     step_number: Mapped[int] = mapped_column(Integer, primary_key=True)
     bet_amount: Mapped[int] = mapped_column(Integer, nullable=False)
     predicted_action: Mapped[int] = mapped_column(Integer, nullable=False)
-    predicted_confidence: Mapped[float | None] = mapped_column(Float)
+    predicted_relative_preference: Mapped[float | None] = mapped_column(Float)
     observed_outcome_id: Mapped[int | None] = mapped_column(SmallInteger)
     reward: Mapped[int | None] = mapped_column(Integer)
     capital_after: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -177,8 +177,8 @@ class InferenceSessionSteps(Base):
             name="ck_inference_steps_observed_outcome",
         ),
         CheckConstraint(
-            "predicted_confidence IS NULL OR (predicted_confidence >= 0 AND predicted_confidence <= 1)",
-            name="ck_inference_steps_confidence",
+            "predicted_relative_preference IS NULL OR (predicted_relative_preference >= 0 AND predicted_relative_preference <= 1)",
+            name="ck_inference_steps_relative_preference",
         ),
         Index("ix_inference_steps_session_recorded", "session_id", "recorded_at"),
     )
