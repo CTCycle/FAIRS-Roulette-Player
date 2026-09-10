@@ -82,11 +82,11 @@ export type InferenceSessionStatusResponse = {
 export type InferenceSessionStepResponse = {
     "bet_amount": number;
     "capital_after": number;
-    "observed_outcome_id"?: number | null;
+    "observed_outcome_id": number | null;
     "predicted_action": number;
     "predicted_action_desc": string;
-    "predicted_relative_preference"?: number | null;
-    "reward"?: number | null;
+    "predicted_relative_preference": number | null;
+    "reward": number | null;
     "step": number;
 };
 
@@ -177,25 +177,25 @@ export type TrainingCheckpointMetadataResponse = {
 };
 
 export type TrainingCheckpointSummary = {
-    "batch_size"?: number | null;
-    "bet_amount"?: number | null;
-    "dataset_id"?: number | null;
-    "discount_rate"?: number | null;
-    "embedding_dimensions"?: number | null;
-    "episodes"?: number | null;
-    "exploration_rate"?: number | null;
-    "exploration_rate_decay"?: number | null;
-    "final_loss"?: number | null;
-    "final_rmse"?: number | null;
-    "final_val_loss"?: number | null;
-    "final_val_rmse"?: number | null;
-    "initial_capital"?: number | null;
-    "learning_rate"?: number | null;
-    "model_update_frequency"?: number | null;
-    "perceptive_field_size"?: number | null;
-    "qnet_neurons"?: number | null;
-    "sample_size"?: number | null;
-    "seed"?: number | null;
+    "batch_size": number;
+    "bet_amount": number;
+    "dataset_id": number | null;
+    "discount_rate": number;
+    "embedding_dimensions": number;
+    "episodes": number;
+    "exploration_rate": number;
+    "exploration_rate_decay": number;
+    "final_loss": number | null;
+    "final_rmse": number | null;
+    "final_val_loss": number | null;
+    "final_val_rmse": number | null;
+    "initial_capital": number;
+    "learning_rate": number;
+    "model_update_frequency": number;
+    "perceptive_field_size": number;
+    "qnet_neurons": number;
+    "sample_size": number;
+    "seed": number;
 };
 
 export type TrainingConfig = {
