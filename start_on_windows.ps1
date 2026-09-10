@@ -26,24 +26,6 @@ $runtimeCacheDir = Join-Path $runtimeRoot 'cache'
 $testCacheDir = Join-Path $testsDir 'cache'
 $pytestCacheDir = Join-Path $testCacheDir 'pytest'
 $ruffCacheDir = Join-Path $testCacheDir 'ruff'
-$knownLegacyCachePaths = @(
-    (Join-Path $runtimeRoot '.uv-cache'),
-    (Join-Path $repoRoot '.uv-cache'),
-    (Join-Path $repoRoot 'app\.uv-cache'),
-    (Join-Path $serverDir '.uv-cache'),
-    (Join-Path $testsDir '.uv-cache'),
-    (Join-Path $clientDir '.uv-cache'),
-    (Join-Path $repoRoot '.pytest_cache'),
-    (Join-Path $serverDir '.pytest_cache'),
-    (Join-Path $testsDir '.pytest_cache'),
-    (Join-Path $repoRoot '.ruff_cache'),
-    (Join-Path $serverDir '.ruff_cache'),
-    (Join-Path $testsDir '.ruff_cache'),
-    (Join-Path $repoRoot '.mypy_cache'),
-    (Join-Path $serverDir '.mypy_cache'),
-    (Join-Path $testsDir '.mypy_cache'),
-    (Join-Path $clientDir 'node_modules\.vite')
-)
 $script:NextProgressId = 1
 $script:ActiveProgressActivities = [Collections.Generic.Dictionary[int, string]]::new()
 $script:LauncherInteractive = -not [Console]::IsInputRedirected -and -not [Console]::IsOutputRedirected
@@ -275,45 +257,8 @@ function Remove-PathBestEffort([string]$Path) {
     return $result.Skipped -eq 0 -and $result.EnumerationErrors.Count -eq 0
 }
 
-function Get-DiscoveredLegacyCachePaths {
-    $cacheDirectoryNames = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
-    foreach ($name in @('.uv-cache', '.pytest_cache', '.ruff_cache', '.mypy_cache')) {
-        [void]$cacheDirectoryNames.Add($name)
-    }
-    $skippedDirectoryNames = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
-    foreach ($name in @('.git', '.venv', 'venv', 'node_modules', 'runtimes', 'dist', 'dist-ssr', '.angular')) {
-        [void]$skippedDirectoryNames.Add($name)
-    }
-
-    $discovered = [Collections.Generic.List[string]]::new()
-    $pending = [Collections.Generic.Queue[string]]::new()
-    [void]$pending.Enqueue($repoRoot)
-    while ($pending.Count -gt 0) {
-        $currentPath = $pending.Dequeue()
-        $children = @(Get-ChildItem -LiteralPath $currentPath -Directory -Force -ErrorAction SilentlyContinue)
-        foreach ($child in $children) {
-            if (($child.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { continue }
-            if ($cacheDirectoryNames.Contains($child.Name)) {
-                [void]$discovered.Add($child.FullName)
-                continue
-            }
-            if ($skippedDirectoryNames.Contains($child.Name) -or
-                $child.FullName.Equals($runtimeCacheDir, [StringComparison]::OrdinalIgnoreCase) -or
-                $child.FullName.Equals($testCacheDir, [StringComparison]::OrdinalIgnoreCase)) {
-                continue
-            }
-            [void]$pending.Enqueue($child.FullName)
-        }
-    }
-    return @($discovered | ForEach-Object { [string]$_ })
-}
-
-function Get-LegacyCachePaths {
-    return @($knownLegacyCachePaths + @(Get-DiscoveredLegacyCachePaths) | Sort-Object -Unique)
-}
-
 function Get-CacheCleanupPaths {
-    return @($runtimeCacheDir, $testCacheDir) + @(Get-LegacyCachePaths)
+    return @($runtimeCacheDir, $testCacheDir)
 }
 
 # -----------------------------------------------------------------------------
@@ -391,17 +336,7 @@ function Initialize-EnvironmentFile {
 
 function Import-DotEnv {
     Initialize-EnvironmentFile
-    $defaults = [ordered]@{
-        FASTAPI_HOST = '127.0.0.1'
-        FASTAPI_PORT = '8890'
-        UI_HOST = '127.0.0.1'
-        UI_PORT = '8051'
-        RELOAD = 'false'
-        BACKEND_LOGS_VISIBLE = 'true'
-    }
-    foreach ($entry in $defaults.GetEnumerator()) {
-        [Environment]::SetEnvironmentVariable($entry.Key, $entry.Value, 'Process')
-    }
+    $loadedKeys = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
     foreach ($rawLine in Get-Content -LiteralPath $envFile) {
         $line = $rawLine.Trim()
         if (-not $line -or $line.StartsWith('#') -or $line.StartsWith(';') -or -not $line.Contains('=')) { continue }
@@ -411,7 +346,27 @@ function Import-DotEnv {
         if (($value.StartsWith('"') -and $value.EndsWith('"')) -or ($value.StartsWith("'") -and $value.EndsWith("'"))) {
             $value = $value.Substring(1, $value.Length - 2)
         }
-        if ($key) { [Environment]::SetEnvironmentVariable($key, $value, 'Process') }
+        if ($key) {
+            [Environment]::SetEnvironmentVariable($key, $value, 'Process')
+            [void]$loadedKeys.Add($key)
+        }
+    }
+
+    $requiredLauncherVariables = @(
+        'FASTAPI_HOST',
+        'FASTAPI_PORT',
+        'UI_HOST',
+        'UI_PORT',
+        'RELOAD',
+        'BACKEND_LOGS_VISIBLE',
+        'EMBEDDED_DATABASE'
+    )
+    $missingVariables = @($requiredLauncherVariables | Where-Object {
+        -not $loadedKeys.Contains($_) -or
+        [string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($_, 'Process'))
+    })
+    if ($missingVariables.Count -gt 0) {
+        throw "settings\.env is missing required launcher variable(s): $($missingVariables -join ', '). Update it from settings\.env.example."
     }
 }
 
@@ -444,13 +399,13 @@ function Ensure-PortableRuntimes {
         if (-not $nodeNeedsInstall) { Write-Info "Node.js $installedNodeVersion already matches the launcher baseline." }
     }
     if ($nodeNeedsInstall) {
-if (Test-Path -LiteralPath $nodeDir) { [void](Remove-LauncherPath -Path $nodeDir -Activity 'FAIRS: replace portable Node.js runtime' -Strict) }
+        if (Test-Path -LiteralPath $nodeDir) { [void](Remove-LauncherPath -Path $nodeDir -Activity 'FAIRS: replace portable Node.js runtime' -Strict) }
         New-Item -ItemType Directory -Path $nodeDir -Force | Out-Null
         Invoke-DownloadAndExtract $nodeUrl (Join-Path $nodeDir 'node.zip') $nodeDir
         $nestedNodeDir = Join-Path $nodeDir $nodeArchiveName
         if (Test-Path -LiteralPath (Join-Path $nestedNodeDir 'node.exe')) {
             Get-ChildItem -LiteralPath $nestedNodeDir -Force | Move-Item -Destination $nodeDir -Force
-[void](Remove-LauncherPath -Path $nestedNodeDir -Activity 'FAIRS: flatten Node.js runtime archive' -Strict)
+            [void](Remove-LauncherPath -Path $nestedNodeDir -Activity 'FAIRS: flatten Node.js runtime archive' -Strict)
         }
     }
     if (-not (Test-Path -LiteralPath $nodeExe) -or -not (Test-Path -LiteralPath $npmCmd)) {
@@ -484,11 +439,6 @@ function Install-Dependencies {
     Push-Location $serverDir
     try {
         & $uvExe @syncArguments
-        if ($LASTEXITCODE -ne 0) {
-            Write-Info 'Recreating a virtual environment that may reference an older repository location.'
-if (Test-Path -LiteralPath $venvDir) { [void](Remove-LauncherPath -Path $venvDir -Activity 'FAIRS: recreate Python environment' -Strict) }
-            & $uvExe @syncArguments
-        }
         if ($LASTEXITCODE -ne 0) { throw "uv sync failed with exit code $LASTEXITCODE." }
     } finally { Pop-Location }
 
@@ -756,19 +706,10 @@ function Remove-UserLogFiles([string]$Path) {
     }
 }
 
-function Remove-PythonCaches {
-    $pythonCacheDirs = @(Get-ChildItem -LiteralPath $repoRoot -Directory -Recurse -Force -ErrorAction SilentlyContinue |
-        Where-Object Name -eq '__pycache__' |
-        Sort-Object @{ Expression = { $_.FullName.Length }; Descending = $true }, @{ Expression = { $_.FullName.ToUpperInvariant() }; Descending = $false })
-    foreach ($pythonCacheDir in $pythonCacheDirs) {
-        Remove-PathBestEffort $pythonCacheDir.FullName | Out-Null
-    }
-}
-
 function Clear-Cache {
     Import-DotEnv
     Assert-ApplicationStopped
-    if (-not (Confirm-DestructiveAction 'clear Python, uv, and tool caches')) { return }
+    if (-not (Confirm-DestructiveAction 'clear canonical runtime and test caches')) { return }
 
     $cachePaths = @(Get-CacheCleanupPaths)
     $progressId = Start-LauncherProgress -Activity 'FAIRS: clear caches' -Status "0 of $($cachePaths.Count) roots"
@@ -782,9 +723,8 @@ function Clear-Cache {
     finally {
         Complete-LauncherProgress $progressId
     }
-    Remove-PythonCaches
     Set-CacheEnvironment
-    Write-Ok 'Python, uv, and tool caches cleared. Locked or protected entries were skipped.'
+    Write-Ok 'Canonical runtime and test caches cleared. Locked or protected entries were skipped.'
 }
 
 function Resolve-LauncherPath([string]$Path) {
@@ -873,12 +813,10 @@ function Uninstall-Application {
     $paths = @(
         $runtimeRoot,
         $testCacheDir,
-        (Join-Path $serverDir '.venv'),
-        (Join-Path $repoRoot '.venv'),
+        $venvDir,
         (Join-Path $clientDir 'node_modules'),
-        (Join-Path $clientDir '.angular'),
         (Join-Path $clientDir 'dist')
-    ) + @(Get-LegacyCachePaths)
+    )
     $progressId = Start-LauncherProgress -Activity 'FAIRS: uninstall application' -Status "0 of $($paths.Count) paths"
     try {
         for ($index = 0; $index -lt $paths.Count; $index++) {
@@ -892,7 +830,6 @@ function Uninstall-Application {
     }
     New-Item -ItemType Directory -Path $runtimeRoot -Force | Out-Null
     New-Item -ItemType File -Path (Join-Path $runtimeRoot '.gitkeep') -Force | Out-Null
-    Remove-PythonCaches
     Write-Ok 'Application runtimes, caches, dependencies, and build outputs removed. Dependency lockfiles and user data were preserved.'
 }
 
@@ -982,7 +919,7 @@ function Get-LauncherMenuEntries {
         [pscustomobject]@{ Section = 'SOURCE CONTROL'; Key = 'Check'; Label = 'Check for updates'; Description = 'Report local main-branch update status only'; Color = [ConsoleColor]::Yellow }
         [pscustomobject]@{ Section = 'SOURCE CONTROL'; Key = 'Update'; Label = 'Update application'; Description = 'Pull application changes from the main branch'; Color = [ConsoleColor]::Yellow }
         [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'Logs'; Label = 'Remove logs'; Description = 'Delete application log files'; Color = [ConsoleColor]::DarkYellow }
-        [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'Cache'; Label = 'Clear cache'; Description = 'Remove runtime, test, and legacy caches'; Color = [ConsoleColor]::DarkYellow }
+        [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'Cache'; Label = 'Clear cache'; Description = 'Remove canonical runtime and test caches'; Color = [ConsoleColor]::DarkYellow }
         [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'Checkpoints'; Label = 'Remove checkpoints'; Description = 'Delete saved checkpoints only'; Color = [ConsoleColor]::Red }
         [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'AllData'; Label = 'Remove all data'; Description = 'Delete local database and logs, preserving checkpoints'; Color = [ConsoleColor]::Red }
         [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'Uninstall'; Label = 'Uninstall application'; Description = 'Remove local runtimes, caches, dependencies, and build outputs'; Color = [ConsoleColor]::Red }
@@ -1050,27 +987,27 @@ function Show-Menu {
         $selectedEntry = $entries[$selectedNumber - 1]
         if ($selectedEntry.Key -eq 'Exit') { break }
         try {
-        Invoke-TrackedLauncherAction -Name "menu option $($selectedEntry.Number)" -Action {
-            switch ($selectedEntry.Key) {
-                'Launch' { Start-Application; exit 0 }
-                'Update' { Update-Application }
-                'Check' { Check-ForUpdates }
-                'Install' {
-                    $installationType = Read-InstallationType
-                    Install-Dependencies -PruneCache -InstallationType $installationType
-                    Build-Frontend
-                    Initialize-Database
+            Invoke-TrackedLauncherAction -Name "menu option $($selectedEntry.Number)" -Action {
+                switch ($selectedEntry.Key) {
+                    'Launch' { Start-Application; exit 0 }
+                    'Update' { Update-Application }
+                    'Check' { Check-ForUpdates }
+                    'Install' {
+                        $installationType = Read-InstallationType
+                        Install-Dependencies -PruneCache -InstallationType $installationType
+                        Build-Frontend
+                        Initialize-Database
+                    }
+                    'Rebuild' { Build-Frontend }
+                    'Database' { Initialize-Database }
+                    'Tests' { Invoke-TestSuite }
+                    'Logs' { Remove-Logs }
+                    'Cache' { Clear-Cache }
+                    'Checkpoints' { Remove-Checkpoints }
+                    'AllData' { Remove-AllData }
+                    'Uninstall' { Uninstall-Application }
                 }
-                'Rebuild' { Build-Frontend }
-                'Database' { Initialize-Database }
-                'Tests' { Invoke-TestSuite }
-                'Logs' { Remove-Logs }
-                'Cache' { Clear-Cache }
-                'Checkpoints' { Remove-Checkpoints }
-                'AllData' { Remove-AllData }
-                'Uninstall' { Uninstall-Application }
             }
-        }
             if (-not $script:LauncherInteractive) { break }
         } catch {
             Write-Fatal $_.Exception.Message
