@@ -95,12 +95,15 @@ class CheckpointService:
                         checkpoint_path
                     )
                 )
-            except (OSError, TypeError, ValueError) as exc:
+                if not isinstance(configuration, dict):
+                    raise TypeError("Checkpoint training configuration must be an object.")
+                referenced_dataset_id = configuration["dataset_id"]
+            except (KeyError, OSError, TypeError, ValueError) as exc:
                 raise CheckpointReferenceError(
                     f"Unable to inspect checkpoint '{checkpoint}' before deleting a dataset."
                 ) from exc
 
-            if configuration["dataset_id"] == dataset_id:
+            if referenced_dataset_id == dataset_id:
                 references.append(checkpoint)
         return references
 
