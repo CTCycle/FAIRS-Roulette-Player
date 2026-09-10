@@ -67,7 +67,7 @@ class CheckpointService:
                 "batch_size": configuration.get("batch_size"),
                 "learning_rate": configuration.get("learning_rate"),
                 "perceptive_field_size": configuration.get("perceptive_field_size"),
-                "neurons": configuration.get("qnet_neurons"),
+                "qnet_neurons": configuration.get("qnet_neurons"),
                 "embedding_dimensions": configuration.get("embedding_dimensions"),
                 "exploration_rate": configuration.get("exploration_rate"),
                 "exploration_rate_decay": configuration.get("exploration_rate_decay"),
