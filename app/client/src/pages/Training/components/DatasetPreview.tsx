@@ -3,7 +3,7 @@ import { ChevronDown, Database, Play, RefreshCw, X } from 'lucide-react';
 import type { TrainingNewConfig } from '../../../types/training';
 import { initialTrainingNewConfig } from '../../../types/training';
 import { useWizardStep } from '../../../hooks/useWizardStep';
-import { buildTrainingPayload, validateTrainingConfig, validateTrainingStep } from './trainingPayload';
+import { buildTrainingPayload } from './trainingPayload';
 import { WizardActions } from './WizardActions';
 import { parseDatasetSummaryItems } from '../../../utils/frontendApiParsers';
 import {
@@ -11,6 +11,7 @@ import {
     requestJson,
     requestReadOnlyJson,
 } from '../../../utils/apiClient';
+import { startTraining, validateTrainingPayload } from '../../../utils/trainingApi';
 import { WizardSummaryRows, type WizardSummaryRow } from '../../../components/wizard/WizardSummaryRows';
 import { FeatureTip } from '../../../components/guidance/FeatureTip';
 import { HelpPopover } from '../../../components/guidance/HelpPopover';
@@ -47,7 +48,7 @@ const BET_STRATEGY_OPTIONS = [
 const WIZARD_STEP_HELP: Partial<Record<number, { title: string; body: string }>> = {
     2: {
         title: 'Dynamic betting',
-        body: 'Leave dynamic betting off for a fixed-bet baseline. Enable it when you want the agent to change stake size through a strategy model or fallback strategy.',
+        body: 'Leave dynamic betting off for a fixed-bet baseline. Enable it when you want the agent to change stake size through a strategy model or an explicit fixed strategy.',
     },
     3: {
         title: 'Dataset split',
@@ -255,23 +256,14 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
             setWizardError('Training is already in progress.');
             return;
         }
-        const validationError = validateTrainingConfig(newConfig, wizardDatasetId ?? undefined);
-        if (validationError) {
-            setWizardError(validationError);
-            return;
-        }
 
         const config = buildTrainingPayload(newConfig, wizardDatasetId ?? undefined);
         setWizardSubmitting(true);
         setWizardError(null);
 
         try {
-            await requestJson('/api/training/start', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(config),
-            }, 'Unknown error.');
-
+            const validatedConfig = await validateTrainingPayload(config);
+            await startTraining(validatedConfig);
             closeWizard();
         } catch (startError) {
             if (mountedRef.current) {
@@ -285,11 +277,6 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
     };
 
     const handleNextWizardStep = () => {
-        const validationError = validateTrainingStep(newConfig, wizardDatasetId ?? undefined, wizardStep);
-        if (validationError) {
-            setWizardError(validationError);
-            return;
-        }
         setWizardError(null);
         goToNextWizardStep();
     };
@@ -537,7 +524,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                                                 <span>Use strategy model (5 actions)</span>
                                             </label>
                                             <div className="form-group">
-                                                <label className="form-label">Fallback Strategy</label>
+                                                <label className="form-label">Fixed Strategy</label>
                                                 <div className="wizard-select-wrap">
                                                     <select
                                                         name="betStrategyFixedId"
@@ -762,4 +749,3 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
         </div>
     );
 };
-
