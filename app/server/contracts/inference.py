@@ -29,7 +29,7 @@ class InferenceStartRequest(BaseModel):
 class PredictionResponse(BaseModel):
     action: int
     description: str
-    confidence: float | None = None
+    relative_preference: float | None = Field(None, ge=0.0, le=1.0)
     bet_strategy_id: int | None = None
     bet_strategy_name: str | None = None
     suggested_bet_amount: int | None = None
@@ -92,7 +92,7 @@ class InferenceSessionStepResponse(BaseModel):
     bet_amount: int
     predicted_action: int
     predicted_action_desc: str
-    predicted_confidence: float | None = None
+    predicted_relative_preference: float | None = Field(None, ge=0.0, le=1.0)
     observed_outcome_id: int | None = None
     reward: int | None = None
     capital_after: int
