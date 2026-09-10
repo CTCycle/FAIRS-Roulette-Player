@@ -32,7 +32,6 @@ def _embedded_settings() -> ServerSettings:
         device=DeviceSettings(
             jit_compile=False,
             jit_backend="inductor",
-            use_mixed_precision=False,
         ),
     )
 
@@ -56,7 +55,6 @@ def _external_settings(engine: str) -> ServerSettings:
         device=DeviceSettings(
             jit_compile=False,
             jit_backend="inductor",
-            use_mixed_precision=False,
         ),
     )
 
