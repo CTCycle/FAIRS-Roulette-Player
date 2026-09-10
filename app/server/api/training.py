@@ -36,6 +36,16 @@ def _map_training_exception(exc: Exception) -> HTTPException:
 
 ###############################################################################
 @router.post(
+    "/validate",
+    response_model=TrainingConfig,
+    status_code=status.HTTP_200_OK,
+)
+def validate_training(config: TrainingConfig) -> TrainingConfig:
+    """Validate and normalize a training payload without starting work."""
+    return config
+
+###############################################################################
+@router.post(
     "/start",
     response_model=JobStartResponse,
     status_code=status.HTTP_202_ACCEPTED,
