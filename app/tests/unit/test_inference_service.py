@@ -68,7 +68,7 @@ def build_service(monkeypatch) -> tuple[InferenceService, Mock]:
 
     service = InferenceService(
         dataset_repository=dataset_repository,
- inference_repository=inference_repository,
+        inference_repository=inference_repository,
         checkpoint_service=checkpoint_service,
     )
     return service, dataset_repository
