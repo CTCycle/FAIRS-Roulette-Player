@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { GameSession } from '../../components/inference/GameSession';
+import { INFERENCE_START_REQUEST_DEFAULTS } from '../../generated/api';
 import type {
     InferenceSessionSnapshot,
     InferenceSetupState,
@@ -12,8 +13,8 @@ interface InferenceNavigationState {
 }
 
 const initialSetup: InferenceSetupState = {
-    initialCapital: 100,
-    betAmount: 1,
+    initialCapital: INFERENCE_START_REQUEST_DEFAULTS.game_capital,
+    betAmount: INFERENCE_START_REQUEST_DEFAULTS.game_bet,
     checkpoint: '',
     selectedDataset: null,
     uploadedDatasetId: null,
