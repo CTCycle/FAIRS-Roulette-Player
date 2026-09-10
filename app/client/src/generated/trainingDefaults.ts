@@ -35,3 +35,7 @@ export const TRAINING_DEFAULTS = {
     "use_mixed_precision": false,
     "validation_size": 0.2
 } as const;
+
+export const RESUME_DEFAULTS = {
+    "additional_episodes": 10
+} as const;
