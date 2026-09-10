@@ -15,7 +15,11 @@ from pydantic import ValidationError
 from server.common import path as shared_paths
 from server.common.checkpoints import normalize_checkpoint_identifier
 from server.common.utils.logger import logger
-from server.contracts.training import CheckpointConfiguration
+from server.contracts.training import (
+    CHECKPOINT_FORMAT_VERSION,
+    CheckpointConfiguration,
+    TrainingConfig,
+)
 from server.learning import models as custom_layers_registry  # noqa: F401
 
 ###############################################################################
@@ -231,7 +235,11 @@ class CheckpointRepository:
         checkpoint_path = shared_paths.as_path(path)
         config_path = shared_paths.checkpoint_configuration_file(checkpoint_path)
         history_path = shared_paths.checkpoint_session_history_file(checkpoint_path)
-        validated_configuration = CheckpointConfiguration.model_validate(configuration)
+        training = TrainingConfig.model_validate(configuration)
+        validated_configuration = CheckpointConfiguration(
+            format_version=CHECKPOINT_FORMAT_VERSION,
+            training=training,
+        )
 
         self._write_text_atomically(
             config_path,
@@ -258,11 +266,11 @@ class CheckpointRepository:
             configuration = CheckpointConfiguration.model_validate(raw_configuration)
         except (OSError, json.JSONDecodeError, TypeError, ValidationError) as exc:
             raise ValueError(
-                f"Checkpoint configuration is invalid: {config_path}"
+                f"Checkpoint configuration is invalid or uses an unsupported format: {config_path}"
             ) from exc
         if not isinstance(raw_history, dict):
             raise ValueError(f"Checkpoint history is invalid: {history_path}")
-        return configuration.model_dump(), raw_history
+        return configuration.training.model_dump(), raw_history
 
     # -------------------------------------------------------------------------
     def scan_checkpoints_folder(self) -> list[str]:
