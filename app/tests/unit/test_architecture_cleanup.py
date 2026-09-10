@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from scripts.export_openapi import render_openapi
+
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2].parent
 APP_ROOT = REPOSITORY_ROOT / "app"
@@ -26,6 +28,7 @@ def test_legacy_state_and_persistence_paths_are_removed() -> None:
         CLIENT_SOURCE_ROOT / "context" / "AppStateContext.tsx",
         CLIENT_SOURCE_ROOT / "context" / "AppStateStore.ts",
         CLIENT_SOURCE_ROOT / "hooks" / "useAppState.ts",
+        APP_ROOT / "shared" / "openapi.json",
     )
     assert all(not path.exists() for path in obsolete_paths)
 
@@ -38,16 +41,23 @@ def test_legacy_state_and_persistence_paths_are_removed() -> None:
         "sessionState",
         "gameConfig",
         "uploadedDatasetName",
+        "predicted_confidence",
     ):
         assert forbidden not in client_source
+
+    runtime_source = _source_text(SERVER_ROOT)
+    for forbidden in (
+        "normalize_strategy_id",
+        "fallback_strategy_id",
+        "get_poll_interval_seconds",
+    ):
+        assert forbidden not in runtime_source
 
     app_source = (SERVER_ROOT / "app.py").read_text(encoding="utf-8")
     assert "DataStore" not in app_source
     assert "JobManager" not in app_source
 
-    openapi = json.loads(
-        (APP_ROOT / "shared" / "openapi.json").read_text(encoding="utf-8")
-    )
+    openapi = json.loads(render_openapi())
     assert set(
         openapi["components"]["schemas"]["InferenceStartRequest"]["properties"]
     ) == {
@@ -61,6 +71,17 @@ def test_legacy_state_and_persistence_paths_are_removed() -> None:
         "application",
         "version",
     }
+    prediction_properties = openapi["components"]["schemas"]["PredictionResponse"][
+        "properties"
+    ]
+    assert "relative_preference" in prediction_properties
+    assert "confidence" not in prediction_properties
+
+    checkpoint_summary = openapi["components"]["schemas"][
+        "TrainingCheckpointSummary"
+    ]["properties"]
+    assert "qnet_neurons" in checkpoint_summary
+    assert "neurons" not in checkpoint_summary
 
 ###############################################################################
 def test_frontend_package_does_not_duplicate_backend_version_authority() -> None:
