@@ -31,7 +31,6 @@ class JobsSettings:
 class DeviceSettings:
     jit_compile: bool
     jit_backend: str
-    use_mixed_precision: bool
 
 ###############################################################################
 @dataclass(frozen=True)
@@ -134,9 +133,10 @@ class JsonJobsSettings(BaseModel):
 
 ###############################################################################
 class JsonDeviceSettings(BaseModel):
+    """Process-wide compiler settings, not per-training device preferences."""
+
     jit_compile: bool = False
     jit_backend: str = "inductor"
-    use_mixed_precision: bool = False
 
     # -------------------------------------------------------------------------
     @field_validator("jit_backend", mode="before")
@@ -199,7 +199,6 @@ class JsonServerSettings(BaseModel):
             device=DeviceSettings(
                 jit_compile=self.device.jit_compile,
                 jit_backend=self.device.jit_backend,
-                use_mixed_precision=self.device.use_mixed_precision,
             ),
         )
 
