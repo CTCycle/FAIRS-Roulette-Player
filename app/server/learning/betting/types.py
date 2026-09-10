@@ -20,19 +20,15 @@ BET_OUTCOME_LOSS = "loss"
 BET_OUTCOME_NEUTRAL = "neutral"
 
 ###############################################################################
-def is_valid_strategy(strategy_id: int) -> bool:
-    return 0 <= int(strategy_id) < STRATEGY_COUNT
-
-###############################################################################
-def normalize_strategy_id(strategy_id: int | None, default: int = STRATEGY_KEEP) -> int:
-    if strategy_id is None:
-        return int(default)
-    candidate = int(strategy_id)
-    if is_valid_strategy(candidate):
-        return candidate
-    return int(default)
+def validate_strategy_id(strategy_id: int) -> int:
+    if isinstance(strategy_id, bool) or not isinstance(strategy_id, int):
+        raise ValueError("Strategy id must be an integer.")
+    if strategy_id < 0 or strategy_id >= STRATEGY_COUNT:
+        raise ValueError(
+            f"Strategy id must be between 0 and {STRATEGY_COUNT - 1}."
+        )
+    return strategy_id
 
 ###############################################################################
 def strategy_name(strategy_id: int) -> str:
-    normalized = normalize_strategy_id(strategy_id)
-    return STRATEGY_NAMES.get(normalized, STRATEGY_NAMES[STRATEGY_KEEP])
+    return STRATEGY_NAMES[validate_strategy_id(strategy_id)]
