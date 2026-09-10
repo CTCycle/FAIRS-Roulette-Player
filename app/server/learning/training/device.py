@@ -16,16 +16,16 @@ class DeviceConfig:
 
     # -------------------------------------------------------------------------
     def set_device(self) -> torch.device:
-        use_gpu = self.configuration.get("use_device_gpu", False)
+        use_gpu = bool(self.configuration["use_device_gpu"])
+        mixed_precision = bool(self.configuration["use_mixed_precision"])
         device_name = "cuda" if use_gpu else "cpu"
-        mixed_precision = self.configuration.get("use_mixed_precision", False)
 
         if device_name == "cuda":
             if not torch.cuda.is_available():
                 raise RuntimeError(
                     "GPU training was requested, but CUDA is unavailable."
                 )
-            device_id = self.configuration.get("device_id", 0)
+            device_id = self.configuration["device_id"]
             if (
                 isinstance(device_id, bool)
                 or not isinstance(device_id, int)
@@ -40,6 +40,8 @@ class DeviceConfig:
                 set_global_policy("mixed_float16")
                 logger.info("Mixed precision policy is active during training")
         else:
+            if mixed_precision:
+                raise RuntimeError("Mixed precision requires GPU training.")
             device = torch.device("cpu")
             logger.info("CPU is set as the active device.")
 
