@@ -1,36 +1,43 @@
 import type {
+    DatasetSummaryResponse,
     JobStartResponse,
+    TrainingCheckpointListResponse,
+    TrainingCheckpointMetadataResponse,
     TrainingConfig as ApiTrainingConfig,
 } from '../generated/api';
 import type { CheckpointMetadataResponse, DatasetSummaryItem } from '../types/frontendApi';
 import { requestJson, requestReadOnlyJson } from './apiClient';
-import {
-    parseCheckpointList,
-    parseCheckpointMetadataResponse,
-    parseDatasetSummaryItems,
-} from './frontendApiParsers';
 
-const getJson = async (endpoint: string, signal?: AbortSignal): Promise<unknown> => (
-    requestReadOnlyJson(endpoint, { signal })
+export const fetchTrainingCheckpoints = async (
+    signal?: AbortSignal,
+): Promise<TrainingCheckpointListResponse> => (
+    requestReadOnlyJson<TrainingCheckpointListResponse>(
+        '/api/training/checkpoints',
+        { signal },
+    )
 );
 
-export const fetchTrainingCheckpoints = async (signal?: AbortSignal): Promise<string[]> => (
-    parseCheckpointList(await getJson('/api/training/checkpoints', signal))
-);
-
-export const fetchTrainingDatasetSummaries = async (signal?: AbortSignal): Promise<DatasetSummaryItem[]> => (
-    parseDatasetSummaryItems(await getJson('/api/datasets/training/summary', signal))
-);
+export const fetchTrainingDatasetSummaries = async (
+    signal?: AbortSignal,
+): Promise<DatasetSummaryItem[]> => {
+    const payload = await requestReadOnlyJson<DatasetSummaryResponse>(
+        '/api/datasets/training/summary',
+        { signal },
+    );
+    return payload.datasets.map((entry) => ({
+        datasetId: entry.dataset_id,
+        datasetName: entry.dataset_name,
+        rowCount: entry.row_count,
+    }));
+};
 
 export const fetchCheckpointMetadata = async (
     checkpoint: string,
     signal?: AbortSignal,
 ): Promise<CheckpointMetadataResponse> => (
-    parseCheckpointMetadataResponse(
-        await getJson(
-            `/api/training/checkpoints/${encodeURIComponent(checkpoint)}/metadata`,
-            signal,
-        ),
+    requestReadOnlyJson<TrainingCheckpointMetadataResponse>(
+        `/api/training/checkpoints/${encodeURIComponent(checkpoint)}/metadata`,
+        { signal },
     )
 );
 
@@ -38,7 +45,7 @@ export const validateTrainingPayload = async (
     payload: ApiTrainingConfig,
     signal?: AbortSignal,
 ): Promise<ApiTrainingConfig> => (
-    requestJson(
+    requestJson<ApiTrainingConfig>(
         '/api/training/validate',
         {
             method: 'POST',
@@ -47,14 +54,14 @@ export const validateTrainingPayload = async (
             signal,
         },
         'Training configuration is invalid.',
-    ) as Promise<ApiTrainingConfig>
+    )
 );
 
 export const startTraining = async (
     payload: ApiTrainingConfig,
     signal?: AbortSignal,
 ): Promise<JobStartResponse> => (
-    requestJson(
+    requestJson<JobStartResponse>(
         '/api/training/start',
         {
             method: 'POST',
@@ -63,5 +70,5 @@ export const startTraining = async (
             signal,
         },
         'Unable to start training.',
-    ) as Promise<JobStartResponse>
+    )
 );
