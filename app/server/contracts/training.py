@@ -104,6 +104,10 @@ class TrainingConfig(BaseModel):
             and self.bet_max < self.bet_unit
         ):
             raise ValueError("bet_max must be greater than or equal to bet_unit.")
+        if not self.use_data_generator and self.dataset_id is None:
+            raise ValueError(
+                "dataset_id is required when use_data_generator is false."
+            )
         return self
 
 ###############################################################################
