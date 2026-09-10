@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import base64
 import asyncio
+import base64
 import math
 import time
 from collections import deque
@@ -19,11 +19,7 @@ from server.common.utils.trainingstats import (
     sanitize_training_stats,
 )
 from server.common.utils.types import coerce_finite_float, coerce_finite_int
-from server.learning.betting.types import (
-    STRATEGY_KEEP,
-    normalize_strategy_id,
-    strategy_name,
-)
+from server.learning.betting.types import require_strategy_id, strategy_name
 from server.learning.training.agents import DQNAgent, StrategyAgent
 from server.learning.training.environment import RouletteEnvironment
 
@@ -54,17 +50,17 @@ class DQNTraining:
         stop_event: Any | None = None,
         polling_interval_seconds: float = 1.0,
     ) -> None:
-        set_random_seed(configuration.get("training_seed", 42))
-        self.batch_size = configuration.get("batch_size", 32)
-        self.update_frequency = configuration.get("model_update_frequency", 10)
-        self.replay_size = configuration.get("replay_buffer_size", 1000)
-        use_gpu = configuration.get("use_device_gpu", False)
+        set_random_seed(int(configuration["training_seed"]))
+        self.batch_size = int(configuration["batch_size"])
+        self.update_frequency = int(configuration["model_update_frequency"])
+        self.replay_size = int(configuration["replay_buffer_size"])
+        use_gpu = bool(configuration["use_device_gpu"])
         self.selected_device = "cuda" if use_gpu else "cpu"
-        self.device_id = configuration.get("device_id", 0)
-        self.mixed_precision = configuration.get("use_mixed_precision", False)
+        self.device_id = int(configuration["device_id"])
+        self.mixed_precision = bool(configuration["use_mixed_precision"])
         self.render_environment = False
         self.configuration = configuration
-        self.max_steps = int(configuration.get("max_steps_episode", 2000))
+        self.max_steps = int(configuration["max_steps_episode"])
         self.history_bucket_size = (
             self.max_steps / float(HISTORY_POINTS_PER_EPISODE)
             if self.max_steps > 0
@@ -72,22 +68,19 @@ class DQNTraining:
         )
         self.last_history_episode: int | None = None
         self.last_history_bucket: int | None = None
-        self.dynamic_betting_enabled = bool(
-            configuration.get("dynamic_betting_enabled", False)
-        )
+        self.dynamic_betting_enabled = bool(configuration["dynamic_betting_enabled"])
         self.bet_strategy_model_enabled = bool(
-            configuration.get("bet_strategy_model_enabled", False)
+            configuration["bet_strategy_model_enabled"]
         )
-        self.strategy_fixed_id = normalize_strategy_id(
-            configuration.get("bet_strategy_fixed_id", STRATEGY_KEEP),
-            STRATEGY_KEEP,
+        self.strategy_fixed_id = require_strategy_id(
+            configuration["bet_strategy_fixed_id"]
         )
-        self.latest_runtime_state: dict[str, float | int] = {
+        self.latest_runtime_state: dict[str, float | int | str] = {
             "time_step": 0,
             "reward": 0.0,
             "total_reward": 0.0,
             "capital": 0.0,
-            "current_bet_amount": float(configuration.get("bet_amount", 10)),
+            "current_bet_amount": float(configuration["bet_amount"]),
             "current_strategy_id": self.strategy_fixed_id,
             "current_strategy_name": strategy_name(self.strategy_fixed_id),
         }
@@ -177,7 +170,7 @@ class DQNTraining:
                 }
             )
         except Exception:
-            pass
+            logger.exception("Failed to publish training environment frame.")
 
     # -------------------------------------------------------------------------
     def update_session_stats(
@@ -201,8 +194,8 @@ class DQNTraining:
             return
         self.last_history_bucket = bucket
 
-        loss = scores.get("loss", None)
-        metric = scores.get("root_mean_squared_error", None)
+        loss = scores.get("loss")
+        metric = scores.get("root_mean_squared_error")
         self.session_stats["episode"].append(episode + 1)
         self.session_stats["time_step"].append(coerce_finite_int(time_step))
         self.session_stats["loss"].append(coerce_finite_float(loss))
@@ -234,11 +227,8 @@ class DQNTraining:
         total_episodes: int,
         training_ready: bool,
     ) -> dict[str, Any]:
-        initial_capital = self.configuration.get("initial_capital", 0.0)
-        initial_capital_value = (
-            float(initial_capital) if isinstance(initial_capital, (int, float)) else 0.0
-        )
-        max_steps = int(self.configuration.get("max_steps_episode", 2000))
+        initial_capital_value = float(self.configuration["initial_capital"])
+        max_steps = int(self.configuration["max_steps_episode"])
         experience_count = len(self.agent.memory)
         common_stats = {
             "epsilon": coerce_finite_float(self.agent.epsilon, 0.0),
@@ -314,11 +304,9 @@ class DQNTraining:
         val_loss_value = coerce_optional_finite_float(
             self.latest_metric_state.get("val_loss")
         )
-
         val_rmse_value = coerce_optional_finite_float(
             self.latest_metric_state.get("val_rmse")
         )
-
         val_reward_value = coerce_optional_finite_float(
             self.latest_metric_state.get("val_reward")
         )
@@ -389,9 +377,7 @@ class DQNTraining:
     def should_stop(self) -> bool:
         if self.is_cancelled:
             return True
-        if self.stop_event is not None and self.stop_event.is_set():
-            return True
-        return False
+        return self.stop_event is not None and self.stop_event.is_set()
 
     # -------------------------------------------------------------------------
     def _run_validation(
@@ -440,7 +426,6 @@ class DQNTraining:
             next_state, reward, done, _ = val_env.step(action, strategy_action)
             val_total_reward += reward
             next_state = np.reshape(next_state, [1, state_size])
-
             next_gain = val_env.capital / val_env.initial_capital
             next_gain = np.reshape(next_gain, shape=(1, 1))
 
@@ -618,20 +603,15 @@ class DQNTraining:
             environment.capital, 0.0
         )
         self.latest_runtime_state["current_bet_amount"] = coerce_finite_float(
-            getattr(environment, "current_bet_amount", 0.0),
-            0.0,
+            environment.current_bet_amount, 0.0
         )
         self.latest_runtime_state["current_strategy_id"] = coerce_finite_int(
-            getattr(environment, "current_strategy_id", self.strategy_fixed_id),
+            environment.current_strategy_id,
             self.strategy_fixed_id,
             minimum=0,
         )
         self.latest_runtime_state["current_strategy_name"] = str(
-            getattr(
-                environment,
-                "current_strategy_name",
-                strategy_name(self.strategy_fixed_id),
-            )
+            environment.current_strategy_name
         )
 
         should_send_update = self.should_send_ws_update()
@@ -644,7 +624,7 @@ class DQNTraining:
             try:
                 ws_callback(stats)
             except Exception:
-                pass
+                logger.exception("Failed to publish training statistics update.")
 
         if should_send_update:
             self.maybe_send_environment_update(
@@ -665,13 +645,13 @@ class DQNTraining:
         data: pd.DataFrame,
         checkpoint_path: str,
     ) -> tuple[RouletteEnvironment, RouletteEnvironment | None, int]:
-        perceptive_size = int(self.configuration.get("perceptive_field_size", 64))
+        perceptive_size = int(self.configuration["perceptive_field_size"])
         if len(data) <= perceptive_size:
             raise ValueError(
                 "Training data must contain more rows than the perceptive field size."
             )
 
-        validation_split = float(self.configuration.get("validation_size", 0.0))
+        validation_split = float(self.configuration["validation_size"])
         if validation_split <= 0.0:
             environment = RouletteEnvironment(data, self.configuration, checkpoint_path)
             return environment, None, int(environment.observation_window.shape[0])
@@ -736,21 +716,24 @@ class DQNTraining:
                 )
                 strategy_action: int | None = None
                 if self.dynamic_betting_enabled:
-                    if (
-                        self.bet_strategy_model_enabled
-                        and self.strategy_agent is not None
-                        and strategy_model is not None
-                        and target_strategy_model is not None
-                    ):
+                    if self.bet_strategy_model_enabled:
+                        if (
+                            self.strategy_agent is None
+                            or strategy_model is None
+                            or target_strategy_model is None
+                        ):
+                            raise RuntimeError(
+                                "Strategy-model training is enabled but its runtime components are missing."
+                            )
                         selected_strategy = self.strategy_agent.act(
                             strategy_model, state, gain
                         )
-                        strategy_action = int(selected_strategy)
+                        strategy_action = require_strategy_id(int(selected_strategy))
                     else:
                         strategy_action = self.strategy_fixed_id
                 action = self.agent.act(model, state, gain)
                 next_state, reward, done, extraction = environment.step(
-                    action, strategy_action
+                    int(action), strategy_action
                 )
 
                 total_reward += reward
@@ -762,12 +745,7 @@ class DQNTraining:
                 self.agent.remember(
                     state, action, reward, gain, next_gain, next_state, done
                 )
-                if (
-                    strategy_action is not None
-                    and self.strategy_agent is not None
-                    and strategy_model is not None
-                    and target_strategy_model is not None
-                ):
+                if strategy_action is not None and self.strategy_agent is not None:
                     self.strategy_agent.remember(
                         state,
                         np.int32(strategy_action),
@@ -805,8 +783,8 @@ class DQNTraining:
                     episode,
                     episodes,
                     time_step,
-                    action,
-                    extraction,
+                    int(action),
+                    int(extraction),
                     reward,
                     total_reward,
                 )
@@ -835,8 +813,7 @@ class DQNTraining:
         environment, val_environment, state_size = self._build_environments(
             data, checkpoint_path
         )
-        episodes = self.configuration.get("episodes", 10)
-        start_episode = 0
+        episodes = int(self.configuration["episodes"])
 
         logger.info(
             "Size of the observation space (previous extractions): %s", state_size
@@ -848,7 +825,7 @@ class DQNTraining:
             strategy_model,
             target_strategy_model,
             environment,
-            start_episode,
+            0,
             episodes,
             state_size,
             ws_callback=ws_callback,
@@ -861,9 +838,7 @@ class DQNTraining:
             "val_history": None,
             "total_episodes": episodes,
         }
-
         self.agent.dump_memory(checkpoint_path)
-
         return model, history
 
     # -------------------------------------------------------------------------
@@ -883,7 +858,7 @@ class DQNTraining:
         environment, val_environment, state_size = self._build_environments(
             data, checkpoint_path
         )
-        from_episode = 0 if not session else session.get("total_episodes", 0)
+        from_episode = 0 if not session else int(session.get("total_episodes", 0))
         total_episodes = from_episode + additional_epochs
 
         logger.info(
@@ -908,7 +883,5 @@ class DQNTraining:
             "val_history": None,
             "total_episodes": total_episodes,
         }
-
         self.agent.dump_memory(checkpoint_path)
-
         return model, history
