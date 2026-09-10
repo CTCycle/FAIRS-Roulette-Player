@@ -71,6 +71,19 @@ def test_legacy_state_and_persistence_paths_are_removed() -> None:
     ):
         assert forbidden not in runtime_source
 
+    launcher_source = (REPOSITORY_ROOT / "start_on_windows.ps1").read_text(
+        encoding="utf-8"
+    )
+    for forbidden in (
+        "knownLegacyCachePaths",
+        "Get-DiscoveredLegacyCachePaths",
+        "Get-LegacyCachePaths",
+        ".angular",
+        "Recreating a virtual environment that may reference an older repository location",
+        "$defaults = [ordered]@{",
+    ):
+        assert forbidden not in launcher_source
+
     app_source = (SERVER_ROOT / "app.py").read_text(encoding="utf-8")
     assert "DataStore" not in app_source
     assert "JobManager" not in app_source
