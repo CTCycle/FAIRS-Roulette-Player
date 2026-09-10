@@ -21,7 +21,7 @@ class FakePlayer:
 
     # -------------------------------------------------------------------------
     def predict_next(self) -> dict[str, object]:
-        return {"action": 1, "description": "bet red", "confidence": 0.9}
+        return {"action": 1, "description": "bet red", "relative_preference": 0.9}
 
     # -------------------------------------------------------------------------
     def update_with_true_extraction(self, extraction: int) -> tuple[int, int]:
@@ -188,7 +188,7 @@ def test_session_snapshot_returns_authoritative_persisted_steps(monkeypatch) -> 
             "step_number": 1,
             "bet_amount": 10,
             "predicted_action": 1,
-            "predicted_confidence": 0.9,
+            "predicted_relative_preference": 0.9,
             "observed_outcome_id": 12,
             "reward": 1,
             "capital_after": 101,
@@ -206,7 +206,7 @@ def test_session_snapshot_returns_authoritative_persisted_steps(monkeypatch) -> 
             "bet_amount": 10,
             "predicted_action": 1,
             "predicted_action_desc": "action 1",
-            "predicted_confidence": 0.9,
+            "predicted_relative_preference": 0.9,
             "observed_outcome_id": 12,
             "reward": 1,
             "capital_after": 101,
