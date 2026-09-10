@@ -1,10 +1,15 @@
 ## Persistence
 
-Last updated: 2026-09-01
+Last updated: 2026-09-10
 
-## Current Persistence Model
+## Canonical Persistence Model
 
-The relational schema is defined by SQLAlchemy models in `app/server/repositories/schemas/models.py`, and Alembic is the authoritative schema-evolution mechanism. The immutable baseline is `app/server/alembic/versions/0001_initial_schema.py`; runtime initialization never calls `Base.metadata.create_all()` and never uses a native SQLite schema marker.
+The relational schema is defined by SQLAlchemy models in `app/server/repositories/schemas/models.py`. Alembic is the only schema-evolution mechanism. Runtime initialization never calls `Base.metadata.create_all()` and never stamps or repairs an unknown schema.
+
+The current migration chain is:
+
+1. `0001_initial_schema`, immutable baseline.
+2. `0002_rename_relative_preference`, renames the inference preference column and its check constraint without changing stored numeric values.
 
 ```mermaid
 erDiagram
@@ -41,7 +46,7 @@ erDiagram
         int step_number PK
         int bet_amount
         int predicted_action
-        float predicted_confidence "nullable"
+        float predicted_relative_preference "nullable"
         smallint observed_outcome_id "nullable"
         int reward "nullable"
         int capital_after
@@ -53,66 +58,87 @@ erDiagram
 
 ### `datasets`
 
-- Integer auto-increment primary key `dataset_id`.
-- `dataset_kind` is constrained to `training` or `inference` by `ck_datasets_kind`.
-- `dataset_name_key` stores the case-folded name used for replacement/import uniqueness.
-- The pair `(dataset_kind, dataset_name_key)` is unique through `uq_datasets_kind_name_key`.
-- `ix_datasets_kind_name` supports kind/name ordering and lookup.
-- A dataset owns its outcome rows and inference sessions.
+- `dataset_id` is the integer primary key.
+- `dataset_kind` is constrained to `training` or `inference`.
+- `(dataset_kind, dataset_name_key)` is unique.
+- Dataset outcomes and inference sessions are owned by the dataset and cascade on deletion where permitted by application policy.
 
 ### `dataset_outcomes`
 
-- Composite primary key `(dataset_id, sequence_index)` makes each sequence position unique within a dataset.
-- `dataset_id` references `datasets.dataset_id` with `ON DELETE CASCADE`.
-- `sequence_index >= 0` through `ck_dataset_outcomes_sequence`.
-- `outcome_id` is restricted to the single-zero roulette range `0..36` through `ck_dataset_outcomes_outcome`.
-- `ix_dataset_outcomes_dataset_outcome` supports dataset/outcome lookups.
+- `(dataset_id, sequence_index)` is the composite primary key.
+- `outcome_id` is constrained to the single-zero roulette range `0..36`.
 
 ### `inference_sessions`
 
-- String `session_id` is the primary key and is normalized before persistence.
-- `dataset_id` references `datasets.dataset_id` with `ON DELETE CASCADE`.
-- `checkpoint_name` is a bounded filesystem checkpoint identifier, not a foreign key to a relational table.
-- `initial_capital > 0` through `ck_inference_sessions_initial_capital`.
-- `ended_at` is nullable for active sessions.
-- `ix_inference_sessions_dataset_started` supports dataset history ordered by start time.
+- `session_id` is the normalized string primary key.
+- `dataset_id` references `datasets.dataset_id`.
+- `checkpoint_name` identifies a filesystem checkpoint, not a relational checkpoint row.
+- `ended_at` is nullable while a persisted session is active.
 
 ### `inference_session_steps`
 
-- Composite primary key `(session_id, step_number)` makes each step unique within a session.
-- `session_id` references `inference_sessions.session_id` with `ON DELETE CASCADE`.
-- `step_number > 0` through `ck_inference_steps_step_number`, and `bet_amount > 0` through `ck_inference_steps_bet_amount`.
-- `predicted_action` is bounded to `0..46` through `ck_inference_steps_action`, matching the model action space.
-- `observed_outcome_id` is nullable and, when present, is bounded to `0..36` through `ck_inference_steps_observed_outcome`.
-- `predicted_confidence` is nullable and, when present, is bounded to `0..1` through `ck_inference_steps_confidence`.
-- `capital_after`, `recorded_at` are required.
-- `ix_inference_steps_session_recorded` supports session history retrieval.
+- `(session_id, step_number)` is the composite primary key.
+- `predicted_action` is constrained to `0..46`, matching the canonical action space.
+- `predicted_relative_preference` is nullable and, when present, is constrained to `0..1` by `ck_inference_steps_relative_preference`.
+- `observed_outcome_id` is nullable and constrained to `0..36` when present.
+- `reward` is nullable until an outcome is supplied.
+- The old `predicted_confidence` column and `ck_inference_steps_confidence` constraint are migrated by Alembic revision `0002_rename_relative_preference`; runtime code does not carry aliases for them.
 
 ## Storage Surfaces
 
-- **Embedded relational data:** `app/resources/database.db` by default, or `<FAIRS_DATA_DIR>/database.db` when a custom data root is configured.
-- **External relational data:** PostgreSQL selected through `settings/.env`, validated at startup with a connection probe and required table/column check.
-- **Checkpoints:** `<data-root>/checkpoints/<checkpoint_id>/` containing model files and JSON configuration/history. Training writes to a hidden staging workspace and publishes only a complete artifact; incomplete staging workspaces are cleaned on startup.
-- **Logs:** `<data-root>/logs/*.log`.
+- Embedded relational data: `app/resources/database.db` by default, or `<FAIRS_DATA_DIR>/database.db` when a custom data root is configured.
+- External relational data: PostgreSQL through the same repository/schema model when explicitly selected in `settings/.env`.
+- Checkpoints: `<data-root>/checkpoints/<checkpoint_id>/`.
+- Logs: `<data-root>/logs/*.log`.
 
-The checkpoint configuration stores values such as `dataset_id`, but the database cannot enforce a relationship to a checkpoint directory. Dataset deletion therefore scans checkpoint metadata and returns a conflict when a readable checkpoint references the dataset; unreadable metadata also blocks deletion. Immutable dataset snapshots remain deferred.
+SQLite and PostgreSQL are both current supported persistence modes. They are not parallel application architectures: the same SQLAlchemy schema, repositories, Alembic chain, and service contracts are used for both.
 
-## Initialization and Migration Rules
+## Database Initialization Rules
 
-- `server.repositories.database.initializer.initialize_database()` is the single shared create/upgrade runner used by FastAPI lifespan, the CLI, and launcher actions.
-- SQLite creates the parent directory as needed, uses Python 3.14 transaction control with `autocommit=False`, preserves foreign-key/WAL/busy-timeout pragmas, and serializes the migration transaction with `BEGIN IMMEDIATE`.
-- PostgreSQL first connects to the configured target. Only SQLSTATE `3D000` triggers an AUTOCOMMIT connection to `postgres`; database creation is rechecked under a deterministic advisory lock and requires the configured role to have `CREATEDB`. Target migrations use a transaction-level advisory lock and a bounded lock timeout.
-- An empty database upgrades to `head`.
-- Any non-empty database without an Alembic revision is rejected unchanged. Partial, unknown, or drifted unversioned schemas fail before services start; there is no runtime adoption or stamping path.
-- Unknown/ahead revisions, multiple database heads, multiple script heads, and post-upgrade drift fail before services start. Automatic repair is intentionally disabled.
-- A known revision behind `head` upgrades in order. A database already at `head` performs strict drift validation and then a no-op.
-- Application startup runs this state machine before constructing repositories/services. The explicit launcher/CLI path is idempotent and means create/upgrade.
-- The database engine/pool is application-owned and disposed during FastAPI lifespan shutdown. Worker processes create and dispose their own process-local database engine; they do not inherit the application engine.
-- There is no seed/catalog workflow.
+`server.repositories.database.initializer.initialize_database()` is the single create/upgrade runner used by FastAPI lifespan, the CLI, and the Windows launcher.
+
+- Empty databases upgrade to Alembic `head`.
+- Known revisions behind `head` upgrade in order.
+- A database already at `head` receives strict metadata validation and otherwise remains unchanged.
+- Non-empty unversioned databases are rejected unchanged.
+- Unknown or ahead revisions, multiple heads, and structural drift fail before services start.
+- There is no runtime adoption, compatibility stamping, destructive reset, or automatic schema repair.
+- SQLite serializes migrations with `BEGIN IMMEDIATE`.
+- PostgreSQL uses advisory locks for database creation and target migrations.
+
+## Versioned Checkpoint Contract
+
+Checkpoint JSON is also explicit and versioned. `CheckpointConfiguration` in `app/server/contracts/training.py` is the persisted contract and currently requires:
+
+```text
+format_version = 1
+training = complete TrainingConfig payload
+```
+
+`CheckpointRepository` saves this versioned shape and rejects unversioned, incomplete, or unsupported checkpoint configuration at runtime. It does not inject current defaults into old checkpoint files.
+
+A one-time migration utility exists for the known former unversioned shape:
+
+```powershell
+$env:PYTHONPATH='app'
+uv --project app/server run python app/scripts/migrate_checkpoints.py
+uv --project app/server run python app/scripts/migrate_checkpoints.py --apply
+```
+
+The first command is a read-only preflight. It scans every checkpoint configuration, validates the complete migration set, and reports which files require conversion. `--apply` performs atomic writes only after the preflight has succeeded for the full set. Unsupported or ambiguous checkpoint data aborts instead of being silently normalized.
+
+## Checkpoint and Dataset Ownership
+
+- `CheckpointRepository` owns checkpoint filesystem I/O and persisted checkpoint validation.
+- `CheckpointService` owns checkpoint lifecycle policy.
+- `DatasetRepository` owns dataset SQL persistence.
+- `InferenceRepository` owns inference session and step persistence.
+- Dataset deletion scans checkpoint metadata first. A referenced dataset or unreadable checkpoint configuration blocks deletion rather than creating a broken cross-storage reference.
+- Active inference model objects remain process-local and are not reconstructed from persisted session history after restart.
 
 ## Development Migration Workflow
 
-From `app/server`, generate a candidate revision, review it manually, and apply it only after checking the SQL and both upgrade/downgrade paths:
+From `app/server`, create and review a new Alembic revision rather than editing an existing migration:
 
 ```powershell
 uv run alembic -c alembic.ini revision --autogenerate -m "describe schema change"
@@ -121,23 +147,10 @@ uv run alembic -c alembic.ini current --check-heads
 uv run alembic -c alembic.ini upgrade head
 ```
 
-Use `uv run alembic -c alembic.ini upgrade head --sql` for offline SQL generation. `alembic.ini` contains no credentials; commands resolve the configured database from the normal environment settings or receive a URL through the command configuration. Future constraints must have explicit names. Do not rename the existing unnamed foreign-key constraints for dialect-specific consistency.
-
-## Persistence Boundaries
-
-- API modules do not embed direct database logic.
-- Dataset operations flow through `DatasetRepository`, the sole SQL dataset authority. Inference session and step operations flow through `InferenceRepository`. Session creation persists the header and initial step in one transaction; live model state remains process-local and is not reconstructed from persisted history after restart.
-- `TrainingDataService` owns stored/synthetic training-series selection, calls `DatasetRepository.training_outcomes()`, and applies the shared roulette encoding before learning runs.
-- `CheckpointRepository` owns checkpoint filesystem I/O and current configuration validation; `CheckpointService` owns checkpoint lifecycle policy outside the relational schema.
-- Schema, serializer, and API contract changes should be reviewed together.
-
-## Architectural Assessment
-
-The relational ownership and cascade rules are coherent for datasets, outcomes, sessions, and steps. Current startup checks make stale/newer schema state observable, and checkpoint-aware dataset deletion prevents the known cross-storage reference hazard. Migration history, immutable dataset snapshots, and a relational checkpoint reference remain deferred; no schema or persisted checkpoint format change is included in this review.
+New database schema changes must be represented by a new migration. The initial migration remains immutable.
 
 ## Related Files
 
-- Read `execution_and_data_flow.md` for repository and serializer call chains.
-- Read `../runtime/configuration.md` for database settings.
-- Read `../runtime/startup.md` for initialization commands and lifecycle behavior.
-- Read `findings_and_remediation.md` for schema-versioning and checkpoint lifecycle risks.
+- Read `execution_and_data_flow.md` for persistence call chains.
+- Read `../runtime/configuration.md` for database selection.
+- Read `../runtime/startup.md` for startup and migration behavior.
