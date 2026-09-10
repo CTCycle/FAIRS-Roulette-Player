@@ -20,9 +20,3 @@ def get_server_settings() -> ServerSettings:
 def reload_settings_for_tests(config_path: str | None = None) -> ServerSettings:
     load_environment(force=True)
     return get_configuration_manager().reload(config_path=config_path)
-
-###############################################################################
-def get_poll_interval_seconds(minimum: float = 0.25) -> float:
-    settings = get_server_settings()
-    value = float(settings.jobs.polling_interval)
-    return max(minimum, value)
