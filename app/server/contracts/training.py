@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any, Literal
+
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -15,14 +17,15 @@ from server.common.checkpoints import (
     normalize_checkpoint_identifier,
 )
 
+CHECKPOINT_SCHEMA_VERSION = 1
+
 ###############################################################################
-class TrainingConfig(BaseModel):
-    """Configuration for starting a new training session."""
+class TrainingSettings(BaseModel):
+    """Canonical configuration shared by training requests and checkpoints."""
 
     model_config = ConfigDict(
         extra="forbid",
         str_strip_whitespace=True,
-        populate_by_name=True,
     )
 
     # Agent parameters
@@ -64,12 +67,10 @@ class TrainingConfig(BaseModel):
     training_seed: int = 42
     checkpoint_name: str | None = Field(None, max_length=MAX_CHECKPOINT_NAME_LENGTH)
 
-    # Device parameters
+    # Per-run device parameters
     use_device_gpu: bool = False
     device_id: int = Field(0, ge=0)
     use_mixed_precision: bool = False
-    jit_compile: bool = False
-    jit_backend: str = Field("inductor", min_length=1)
 
     # -------------------------------------------------------------------------
     @field_validator("checkpoint_name")
@@ -83,7 +84,7 @@ class TrainingConfig(BaseModel):
 
     # -------------------------------------------------------------------------
     @model_validator(mode="after")
-    def validate_training_relationships(self) -> TrainingConfig:
+    def validate_training_relationships(self) -> TrainingSettings:
         if self.minimum_exploration_rate > self.exploration_rate:
             raise ValueError(
                 "minimum_exploration_rate must not exceed exploration_rate."
@@ -105,7 +106,15 @@ class TrainingConfig(BaseModel):
             and self.bet_max < self.bet_unit
         ):
             raise ValueError("bet_max must be greater than or equal to bet_unit.")
+        if not self.use_data_generator and self.dataset_id is None:
+            raise ValueError(
+                "dataset_id is required when use_data_generator is false."
+            )
         return self
+
+###############################################################################
+class TrainingConfig(TrainingSettings):
+    """Configuration for starting a new training session."""
 
 ###############################################################################
 class ResumeConfig(BaseModel):
@@ -126,13 +135,28 @@ class ResumeConfig(BaseModel):
         return normalize_checkpoint_identifier(value)
 
 ###############################################################################
-class CheckpointConfiguration(TrainingConfig):
-    """Validated configuration persisted in a current checkpoint."""
+class CheckpointConfiguration(TrainingSettings):
+    """Strict, versioned configuration persisted in a current checkpoint."""
 
-    model_config = ConfigDict(
-        extra="forbid",
-        str_strip_whitespace=True,
-    )
+    schema_version: Literal[CHECKPOINT_SCHEMA_VERSION]
+
+    # -------------------------------------------------------------------------
+    @model_validator(mode="before")
+    @classmethod
+    def require_complete_current_schema(cls, value: Any) -> Any:
+        if not isinstance(value, dict):
+            return value
+        missing = sorted(set(cls.model_fields).difference(value))
+        if missing:
+            raise ValueError(
+                "Checkpoint configuration is incomplete for schema version "
+                f"{CHECKPOINT_SCHEMA_VERSION}: missing {', '.join(missing)}."
+            )
+        return value
+
+###############################################################################
+class TrainingValidationResponse(BaseModel):
+    valid: Literal[True] = True
 
 ###############################################################################
 class TrainingStatusResponse(BaseModel):
@@ -163,7 +187,7 @@ class TrainingCheckpointSummary(BaseModel):
     batch_size: int | None = None
     learning_rate: float | None = None
     perceptive_field_size: int | None = None
-    neurons: int | None = None
+    qnet_neurons: int | None = None
     embedding_dimensions: int | None = None
     exploration_rate: float | None = None
     exploration_rate_decay: float | None = None
