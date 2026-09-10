@@ -92,9 +92,9 @@ class InferenceSessionStepResponse(BaseModel):
     bet_amount: int
     predicted_action: int
     predicted_action_desc: str
-    predicted_relative_preference: float | None = None
-    observed_outcome_id: int | None = None
-    reward: int | None = None
+    predicted_relative_preference: float | None
+    observed_outcome_id: int | None
+    reward: int | None
     capital_after: int
 
 ###############################################################################
