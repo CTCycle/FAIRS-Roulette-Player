@@ -60,21 +60,21 @@ class CheckpointService:
         history = session.get("history", {}) if isinstance(session, dict) else {}
         summary = TrainingCheckpointSummary.model_validate(
             {
-                "dataset_id": configuration.get("dataset_id"),
-                "sample_size": configuration.get("sample_size"),
-                "seed": configuration.get("seed"),
+                "dataset_id": configuration["dataset_id"],
+                "sample_size": configuration["sample_size"],
+                "seed": configuration["seed"],
                 "episodes": configuration["episodes"],
-                "batch_size": configuration.get("batch_size"),
-                "learning_rate": configuration.get("learning_rate"),
-                "perceptive_field_size": configuration.get("perceptive_field_size"),
-                "neurons": configuration.get("qnet_neurons"),
-                "embedding_dimensions": configuration.get("embedding_dimensions"),
-                "exploration_rate": configuration.get("exploration_rate"),
-                "exploration_rate_decay": configuration.get("exploration_rate_decay"),
-                "discount_rate": configuration.get("discount_rate"),
-                "model_update_frequency": configuration.get("model_update_frequency"),
-                "bet_amount": configuration.get("bet_amount"),
-                "initial_capital": configuration.get("initial_capital"),
+                "batch_size": configuration["batch_size"],
+                "learning_rate": configuration["learning_rate"],
+                "perceptive_field_size": configuration["perceptive_field_size"],
+                "qnet_neurons": configuration["qnet_neurons"],
+                "embedding_dimensions": configuration["embedding_dimensions"],
+                "exploration_rate": configuration["exploration_rate"],
+                "exploration_rate_decay": configuration["exploration_rate_decay"],
+                "discount_rate": configuration["discount_rate"],
+                "model_update_frequency": configuration["model_update_frequency"],
+                "bet_amount": configuration["bet_amount"],
+                "initial_capital": configuration["initial_capital"],
                 "final_loss": get_last_history_value(history.get("loss")),
                 "final_rmse": get_last_history_value(history.get("metrics")),
                 "final_val_loss": get_last_history_value(history.get("val_loss")),
@@ -100,18 +100,7 @@ class CheckpointService:
                     f"Unable to inspect checkpoint '{checkpoint}' before deleting a dataset."
                 ) from exc
 
-            if not isinstance(configuration, dict):
-                raise CheckpointReferenceError(
-                    f"Unable to inspect checkpoint '{checkpoint}' before deleting a dataset."
-                )
-            reference = configuration.get("dataset_id")
-            if reference is not None and (
-                isinstance(reference, bool) or not isinstance(reference, int)
-            ):
-                raise CheckpointReferenceError(
-                    f"Unable to inspect checkpoint '{checkpoint}' before deleting a dataset."
-                )
-            if reference == dataset_id:
+            if configuration["dataset_id"] == dataset_id:
                 references.append(checkpoint)
         return references
 
