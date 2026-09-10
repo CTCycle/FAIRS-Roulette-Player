@@ -21,6 +21,9 @@ from server.repositories.datasets import DatasetRepository
 from server.repositories.inference import InferenceRepository
 from server.repositories.schemas.models import Base
 
+CURRENT_REVISION = "0002_relative_preference"
+TEST_REVISION = "0003_test_revision"
+
 ###############################################################################
 def _test_database_settings() -> DatabaseSettings:
     return DatabaseSettings(
@@ -69,9 +72,11 @@ def exercise_contract(database: FAIRSDatabase) -> None:
             "step_number": 1,
             "bet_amount": 1,
             "predicted_action": 0,
+            "predicted_relative_preference": 0.25,
             "capital_after": 99,
         }
     )
+    assert inference.list_steps("contract-session")[0]["predicted_relative_preference"] == 0.25
     datasets.delete(first["dataset_id"])
     with database.Session() as session:
         assert (
@@ -128,7 +133,7 @@ def _copy_test_alembic_environment(tmp_path: Path, body: str) -> Path:
         ALEMBIC_CONFIG_PATH.read_text(encoding="utf-8"),
         encoding="utf-8",
     )
-    (fixture_root / "alembic" / "versions" / "0002_test_revision.py").write_text(
+    (fixture_root / "alembic" / "versions" / "0003_test_revision.py").write_text(
         body,
         encoding="utf-8",
     )
@@ -151,7 +156,7 @@ def test_postgresql_clean_and_current_are_idempotent(postgres_engine) -> None:
             connection.execute(
                 text("SELECT version_num FROM alembic_version")
             ).scalar_one()
-            == "0001_initial_schema"
+            == CURRENT_REVISION
         )
 
 ###############################################################################
@@ -187,11 +192,11 @@ def test_postgresql_synthetic_rollback_and_behind_revision(
     run_migrations_on_engine(postgres_engine)
     failure_config = _copy_test_alembic_environment(
         tmp_path,
-        '''"""Test-only failing revision."""
+        f'''"""Test-only failing revision."""
 from alembic import op
 
-revision = "0002_test_revision"
-down_revision = "0001_initial_schema"
+revision = "{TEST_REVISION}"
+down_revision = "{CURRENT_REVISION}"
 branch_labels = None
 depends_on = None
 
@@ -211,14 +216,14 @@ def downgrade() -> None:
             connection.execute(
                 text("SELECT version_num FROM alembic_version")
             ).scalar_one()
-            == "0001_initial_schema"
+            == CURRENT_REVISION
         )
 
     behind_config = _copy_test_alembic_environment(
         tmp_path / "behind",
-        '''"""Test-only no-op revision."""
-revision = "0002_test_revision"
-down_revision = "0001_initial_schema"
+        f'''"""Test-only no-op revision."""
+revision = "{TEST_REVISION}"
+down_revision = "{CURRENT_REVISION}"
 branch_labels = None
 depends_on = None
 
@@ -229,14 +234,14 @@ def downgrade() -> None:
     pass
 ''',
     )
-    _set_postgres_revision(postgres_engine, "0001_initial_schema")
+    _set_postgres_revision(postgres_engine, CURRENT_REVISION)
     run_migrations_on_engine(postgres_engine, config_path=behind_config)
     with postgres_engine.connect() as connection:
         assert (
             connection.execute(
                 text("SELECT version_num FROM alembic_version")
             ).scalar_one()
-            == "0002_test_revision"
+            == TEST_REVISION
         )
 
 ###############################################################################
@@ -258,7 +263,7 @@ def test_postgresql_concurrent_initializers_serialize(postgres_engine) -> None:
             connection.execute(
                 text("SELECT version_num FROM alembic_version")
             ).scalar_one()
-            == "0001_initial_schema"
+            == CURRENT_REVISION
         )
 
 ###############################################################################
