@@ -1,4 +1,4 @@
-// Generated from the canonical FastAPI OpenAPI contract.
+// Generated from the canonical FastAPI/Pydantic contract.
 // Do not edit manually. Run app/scripts/generate_frontend_contracts.py.
 
 export type Body_upload_api_data_upload_post = {
@@ -268,8 +268,12 @@ export const TRAINING_CONFIG_DEFAULTS = {
     "batch_size": 32,
     "bet_amount": 10,
     "bet_enforce_capital": true,
+    "bet_max": null,
     "bet_strategy_fixed_id": 0,
     "bet_strategy_model_enabled": false,
+    "bet_unit": null,
+    "checkpoint_name": null,
+    "dataset_id": null,
     "device_id": 0,
     "discount_rate": 0.5,
     "dynamic_betting_enabled": false,
@@ -295,4 +299,4 @@ export const TRAINING_CONFIG_DEFAULTS = {
     "use_device_gpu": false,
     "use_mixed_precision": false,
     "validation_size": 0.2,
-} as const satisfies Partial<TrainingConfig>;
+} as const satisfies TrainingConfig;
