@@ -1,53 +1,70 @@
 ## System Overview
 
-Last updated: 2026-09-01
+Last updated: 2026-09-10
 
 ## Current State
 
-FAIRS is a Windows-first local web application for roulette training and inference experiments. The repository contains a React/Vite client and a FastAPI server; the server is the system of record for API behavior, training orchestration, inference session state, persistence, and startup readiness.
+FAIRS is a Windows-first local web application for roulette training and inference experiments. It is intentionally a layered local monolith with one current implementation for each major responsibility.
 
-The application is intentionally a single local deployment. Training is isolated in a worker process, while jobs and active inference sessions remain in memory. SQLite is the embedded default; PostgreSQL is supported as an explicitly configured external backend. Checkpoints and logs are filesystem data rather than database entities. The FastAPI lifespan owns startup/shutdown; one Uvicorn worker is required. Closing the browser does not stop the backend or an active inference session, while closing the application terminal ends the local application session and backend restart expires live model state.
+The repository contains a React/Vite client and a FastAPI backend. Training runs in a child worker process, while active job state and live inference models remain process-local. SQLite is the embedded default and PostgreSQL is an explicitly configured alternative using the same SQLAlchemy repositories and Alembic schema. Checkpoints and logs are filesystem data.
 
 ```mermaid
 flowchart LR
     User[User in browser]
-    Client[React/Vite client\napp/client/src]
-    API[FastAPI interface\napp/server/api]
-    Services[Application services\napp/server/services]
-    Learning[ML execution\napp/server/learning]
-    Repos[Persistence adapters\napp/server/repositories]
+    Client[React/Vite client]
+    API[FastAPI interface]
+    Services[Application services]
+    Learning[ML execution]
+    Repos[Persistence adapters]
     DB[(SQLite or PostgreSQL)]
-    Files[(Datasets, checkpoints, logs\nfilesystem data root)]
-    Config[Configuration and startup\napp/server/bootstrap.py + configurations]
-    External[External PostgreSQL\nwhen selected]
+    Files[(Checkpoints and logs)]
+    Config[Typed runtime configuration]
 
     User --> Client
     Client -->|/api/*| API
     API --> Services
-    API --> Config
     Services --> Learning
     Services --> Repos
-    Services --> Files
     Repos --> DB
-    DB -.-> External
-    Config --> Files
+    Services --> Files
+    Config --> API
+    Config --> Services
 ```
 
-The diagram reflects the current implementation. Application services own process orchestration and pass explicit data/configuration into learning execution; learning modules do not import persistence adapters. Checkpoint deserialization remains a repository-owned custom-layer concern documented in `execution_and_data_flow.md`.
+## Canonical Ownership
+
+| Responsibility | Canonical owner |
+| --- | --- |
+| HTTP request/response schema | `app/server/contracts` plus FastAPI/Pydantic |
+| Frontend transport types | generated `app/client/src/generated/api.ts` |
+| Training defaults and semantic validation | `TrainingConfig` |
+| Per-training GPU/device/mixed precision | `TrainingConfig` |
+| Global JIT/compiler behavior | `ServerSettings.device` from `settings/configurations.json` |
+| Deployment/database environment | typed `.env` settings |
+| Relational schema | SQLAlchemy models plus current Alembic head |
+| Database migration | Alembic only |
+| Checkpoint persisted configuration | versioned `CheckpointConfiguration` |
+| Checkpoint conversion from known old shape | one-time `app/scripts/migrate_checkpoints.py` |
+| Dataset SQL persistence | `DatasetRepository` |
+| Inference SQL persistence | `InferenceRepository` |
+| Checkpoint filesystem I/O | `CheckpointRepository` |
+| Active training state | `TrainingRunManager` |
+| Active inference state | `InferenceState` |
+| Frontend workflow/view state | feature-local React state/hooks |
+| Launcher cache ownership | `runtimes/cache` and `app/tests/cache` |
+| Application lifecycle | FastAPI lifespan and `bootstrap_runtime()` |
+| Application version | backend package metadata |
+
+Generated TypeScript is a derived artifact, not a parallel authority. CI regenerates it conceptually from the live backend contract and fails if the checked-in result is stale.
 
 ## Source Tree
-
-The structure below is source-focused and excludes dependency, cache, and generated folders.
 
 ```text
 .
 ├─ app/
 │  ├─ client/
-│  │  ├─ package.json
-│  │  ├─ vite.config.ts
 │  │  └─ src/
-│  │     ├─ App.tsx
-│  │     ├─ main.tsx
+│  │     ├─ generated/api.ts
 │  │     ├─ components/
 │  │     ├─ hooks/
 │  │     ├─ pages/
@@ -60,11 +77,12 @@ The structure below is source-focused and excludes dependency, cache, and genera
 │  │  └─ database.db
 │  ├─ scripts/
 │  │  ├─ export_openapi.py
-│  │  └─ initialize_database.py
+│  │  ├─ generate_frontend_contracts.py
+│  │  ├─ initialize_database.py
+│  │  └─ migrate_checkpoints.py
 │  ├─ server/
 │  │  ├─ app.py
 │  │  ├─ bootstrap.py
-│  │  ├─ pyproject.toml
 │  │  ├─ api/
 │  │  ├─ common/
 │  │  ├─ configurations/
@@ -72,55 +90,45 @@ The structure below is source-focused and excludes dependency, cache, and genera
 │  │  ├─ learning/
 │  │  ├─ repositories/
 │  │  └─ services/
-│  ├─ shared/
-│  │  └─ openapi.json
 │  └─ tests/
-│     ├─ conftest.py
-│     ├─ e2e/
-│     └─ unit/
-├─ assets/
-│  ├─ docs/
-│  └─ figures/
+├─ assets/docs/
 ├─ runtimes/
 ├─ settings/
+│  ├─ .env.example
 │  └─ configurations.json
 └─ start_on_windows.ps1
 ```
 
-## Backend Ownership
+`app/shared/openapi.json` is intentionally absent. Runtime OpenAPI is derived directly from FastAPI and can be exported to an explicitly selected location when needed.
 
-- `app/server/app.py` constructs the import-safe FastAPI transport surface. Its lifespan invokes `app/server/bootstrap.py`, then validates configuration/schema state, constructs application-owned resources, and wires runtime services; cleanup is reverse-ordered and failure-isolated.
-- `app/server/api` contains transport handlers, request validation, response validation, and HTTP exception translation. It does not access SQLAlchemy directly.
-- `app/server/contracts` contains Pydantic request/response contracts and validated runtime settings. These are boundary contracts, not persistent entities or a separate domain model.
-- `app/server/services` owns application orchestration: dataset import, checkpoint lifecycle, training jobs, inference sessions, startup checks, in-process job state, and the training worker process orchestration.
-- `app/server/learning` owns roulette betting logic, neural models, environments, training algorithms, and inference players. Learning receives prepared data and explicit runtime inputs rather than constructing persistence adapters.
-- `app/server/repositories` owns SQLAlchemy schema definitions, database engines/transactions, dataset and inference persistence, and checkpoint filesystem/configuration I/O.
-- `app/server/common` contains narrowly scoped cross-cutting primitives such as paths, constants, error mapping, logging, session/checkpoint normalization, and roulette feature encoding.
-- `app/server/configurations` resolves environment and JSON settings and exposes the runtime configuration used by composition and selected ML components.
+## Backend Boundaries
 
-## Frontend Ownership
+- `app/server/app.py` is the composition root and lifecycle owner.
+- `app/server/api` handles HTTP translation only.
+- `app/server/contracts` contains Pydantic transport and configuration contracts.
+- `app/server/services` owns application orchestration and process-local session/job lifecycle.
+- `app/server/learning` owns roulette rules, neural models, training, and inference execution.
+- `app/server/repositories` owns relational persistence and checkpoint filesystem persistence.
+- `app/server/common` contains narrow shared primitives only.
+- `app/server/configurations` resolves global technical settings and typed environment configuration.
 
-- `src/App.tsx` composes `BrowserRouter`, the guidance provider, and the two application routes.
-- `src/pages` owns route-level composition for Training and Inference.
-- `src/components` owns reusable layout, guidance, upload, wizard, dashboard, and session views.
-- `src/hooks` own feature-local request/status orchestration; Training and Inference pages own their workflow snapshots.
-- `src/types` defines frontend state and response shapes; `src/utils` contains defensive API parsing and upload helpers.
-- Styling is token-driven through `src/styles/global.css`, feature stylesheets, and CSS modules.
+Learning code receives explicit validated configuration and prepared data. It does not construct persistence adapters or invent fallback defaults for missing required configuration.
 
-## Entry Points
+## Frontend Boundaries
 
-- Backend app: `app/server/app.py`
-- Frontend entry: `app/client/src/main.tsx`
-- Frontend routes: `app/client/src/App.tsx`
-- Windows launcher: `start_on_windows.ps1` (one-worker startup, application-terminal lifecycle)
+- `src/generated/api.ts` contains backend-derived transport types and request defaults.
+- `src/types` contains browser/view-state models rather than independent HTTP contracts.
+- `src/utils/*Api.ts` performs typed transport calls and maps transport fields to UI representations where needed.
+- `src/pages`, `src/components`, and `src/hooks` own feature-local workflow and presentation state.
+- Browser inference storage is advisory replay/setup metadata only. Backend `InferenceState` remains authoritative for a live session.
 
 ## Runtime Boundary
 
-The repository provides local web mode. It does not contain a desktop installer, packaged executable path, container deployment, WebSocket API, or distributed job/session store.
+The repository supports one local backend process. It does not implement a distributed job store, distributed inference-session store, or multi-worker coordination. One Uvicorn worker is therefore an explicit runtime invariant.
 
 ## Related Files
 
-- Read `backend_api.md` for the mounted HTTP surface.
-- Read `execution_and_data_flow.md` for current and target dependency direction and critical flows.
-- Read `persistence.md` for relational and filesystem storage.
-- Read `findings_and_remediation.md` for evidence-backed architectural findings and priorities.
+- `backend_api.md` for HTTP contract ownership.
+- `execution_and_data_flow.md` for process and data flows.
+- `persistence.md` for relational and checkpoint persistence.
+- `findings_and_remediation.md` for the completed single-source-of-truth audit.
