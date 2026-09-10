@@ -323,9 +323,6 @@ class TrainingService:
             if checkpoint_name in existing_checkpoints:
                 raise FileExistsError(f"Checkpoint already exists: {checkpoint_name}")
 
-        if not config.use_data_generator and config.dataset_id is None:
-            raise ValueError("dataset_id is required when use_data_generator is false.")
-
         job_id = self.training_run_manager.start_job(
             job_type=self.JOB_TYPE,
             runner=self.run_training_job,
