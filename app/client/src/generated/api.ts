@@ -264,6 +264,15 @@ export type ValidationError = {
     "type": string;
 };
 
+export const INFERENCE_START_REQUEST_DEFAULTS = {
+    "game_bet": 1,
+    "game_capital": 100,
+} as const satisfies Partial<InferenceStartRequest>;
+
+export const RESUME_CONFIG_DEFAULTS = {
+    "additional_episodes": 10,
+} as const satisfies Partial<ResumeConfig>;
+
 export const TRAINING_CONFIG_DEFAULTS = {
     "batch_size": 32,
     "bet_amount": 10,
@@ -299,4 +308,4 @@ export const TRAINING_CONFIG_DEFAULTS = {
     "use_device_gpu": false,
     "use_mixed_precision": false,
     "validation_size": 0.2,
-} as const satisfies TrainingConfig;
+} as const satisfies Partial<TrainingConfig>;
