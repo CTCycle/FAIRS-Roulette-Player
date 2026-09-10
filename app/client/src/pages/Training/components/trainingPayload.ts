@@ -1,9 +1,10 @@
+import type { TrainingConfig as ApiTrainingConfig } from '../../../generated/api';
 import type { TrainingNewConfig } from '../../../types/training';
 
 export const buildTrainingPayload = (
     config: TrainingNewConfig,
     datasetIdOverride?: number,
-): Record<string, unknown> => {
+): ApiTrainingConfig => {
     const checkpointName = config.checkpointName.trim();
     return ({
         // Agent
