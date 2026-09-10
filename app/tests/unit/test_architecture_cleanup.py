@@ -10,13 +10,31 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2].parent
 APP_ROOT = REPOSITORY_ROOT / "app"
 CLIENT_SOURCE_ROOT = APP_ROOT / "client" / "src"
 SERVER_ROOT = APP_ROOT / "server"
+TEXT_SOURCE_SUFFIXES = {
+    ".bat",
+    ".ini",
+    ".js",
+    ".jsx",
+    ".json",
+    ".md",
+    ".ps1",
+    ".py",
+    ".toml",
+    ".ts",
+    ".tsx",
+    ".txt",
+    ".yaml",
+    ".yml",
+}
 
 ###############################################################################
 def _source_text(root: Path) -> str:
     return "\n".join(
         path.read_text(encoding="utf-8")
         for path in root.rglob("*")
-        if path.is_file() and "node_modules" not in path.parts
+        if path.is_file()
+        and path.suffix.lower() in TEXT_SOURCE_SUFFIXES
+        and "node_modules" not in path.parts
     )
 
 ###############################################################################
