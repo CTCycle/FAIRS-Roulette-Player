@@ -1,11 +1,8 @@
 """Dynamic betting engine used by training and inference.
 
-Enable with `dynamic_betting_enabled=true` and strategy controls:
-`bet_strategy_model_enabled`, `bet_strategy_fixed_id`, `strategy_hold_steps`.
-Tune amounts with `bet_amount`/`game_bet` (base), `bet_unit`, `bet_max`,
-and `bet_enforce_capital`. In inference, suggestions can be auto-applied with
-`auto_apply_bet_suggestions`; otherwise user-selected bet remains authoritative.
-Rewards always use the currently applied bet via `BetsAndRewards.bet_amount`.
+The engine consumes the canonical training betting keys. Inference explicitly maps
+its game capital and bet into those keys before constructing the engine, so there is
+no secondary ``game_*`` compatibility path inside this module.
 """
 
 from __future__ import annotations
@@ -21,7 +18,7 @@ from server.learning.betting.types import (
     STRATEGY_KEEP,
     STRATEGY_MARTINGALE,
     STRATEGY_REVERSE,
-    normalize_strategy_id,
+    require_strategy_id,
 )
 
 ###############################################################################
@@ -29,16 +26,13 @@ class BetSizer:
 
     # -------------------------------------------------------------------------
     def __init__(self, configuration: dict[str, Any]) -> None:
-        configured_base = configuration.get("bet_amount")
-        if configured_base is None:
-            configured_base = configuration.get("game_bet", 1)
-        self.base_bet = max(1, int(configured_base))
+        self.base_bet = max(1, int(configuration["bet_amount"]))
 
-        configured_unit = configuration.get("bet_unit")
+        configured_unit = configuration["bet_unit"]
         if configured_unit is None:
             configured_unit = self.base_bet
         self.unit = max(1, int(configured_unit))
-        self.bet_enforce_capital = bool(configuration.get("bet_enforce_capital", True))
+        self.bet_enforce_capital = bool(configuration["bet_enforce_capital"])
         self.bet_max = self._resolve_bet_max(configuration)
 
         self.current_bet = self.base_bet
@@ -48,14 +42,11 @@ class BetSizer:
 
     # -------------------------------------------------------------------------
     def _resolve_bet_max(self, configuration: dict[str, Any]) -> int:
-        configured_bet_max = configuration.get("bet_max")
+        configured_bet_max = configuration["bet_max"]
         if configured_bet_max is not None:
             return max(1, int(configured_bet_max))
 
-        initial_capital = configuration.get(
-            "initial_capital", configuration.get("game_capital", self.base_bet * 128)
-        )
-        capital_cap = max(1, int(initial_capital))
+        capital_cap = max(1, int(configuration["initial_capital"]))
         conservative_cap = max(self.base_bet, self.base_bet * 128)
         return max(1, min(capital_cap, conservative_cap))
 
@@ -132,21 +123,21 @@ class BetSizer:
             self._ensure_fib_index(self.fib_index)
             return self.fib_values[self.fib_index]
 
-        return self.current_bet
+        raise ValueError(f"Unsupported betting strategy id: {strategy_id}")
 
     # -------------------------------------------------------------------------
     def preview(self, strategy_id: int, capital: int | float | None = None) -> int:
-        normalized_strategy = normalize_strategy_id(strategy_id)
+        validated_strategy = require_strategy_id(strategy_id)
         previous_bet = self.current_bet
         previous_index = self.fib_index
-        next_bet = self._resolve_next_bet(normalized_strategy)
+        next_bet = self._resolve_next_bet(validated_strategy)
         self.current_bet = previous_bet
         self.fib_index = previous_index
         return self._clamp_bet(next_bet, capital)
 
     # -------------------------------------------------------------------------
     def apply(self, strategy_id: int, capital: int | float | None = None) -> int:
-        normalized_strategy = normalize_strategy_id(strategy_id)
-        next_bet = self._resolve_next_bet(normalized_strategy)
+        validated_strategy = require_strategy_id(strategy_id)
+        next_bet = self._resolve_next_bet(validated_strategy)
         self.current_bet = self._clamp_bet(next_bet, capital)
         return self.current_bet
