@@ -19,9 +19,9 @@ from server.common.constants import (
 from server.learning.betting.hold import StrategyHold
 from server.learning.betting.sizer import BetSizer
 from server.learning.betting.types import (
-    STRATEGY_KEEP,
-    normalize_strategy_id,
+    STRATEGY_COUNT,
     strategy_name,
+    validate_strategy_id,
 )
 
 ###############################################################################
@@ -29,13 +29,13 @@ class BetsAndRewards:
 
     # -------------------------------------------------------------------------
     def __init__(self, configuration: dict[str, Any]) -> None:
-        self.seed = configuration.get("training_seed", 42)
-        self.bet_amount = configuration.get("bet_amount", 10)
+        self.seed = configuration["training_seed"]
+        self.bet_amount = configuration["bet_amount"]
         self.numbers = list(range(NUMBERS))
         self.red_numbers = ROULETTE_COLOR_MAP["red"]
         self.black_numbers = ROULETTE_COLOR_MAP["black"]
 
-        self.num_actions = 47
+        self.num_actions = STATES
         self.action_descriptions = {i: f"Bet on number {i}" for i in range(37)}
         self.action_descriptions.update(
             {
@@ -166,7 +166,7 @@ class BetsAndRewards:
         elif action == 46:
             reward, done = self.bet_on_third_dozen(next_extraction)
         else:
-            reward = 0
+            raise ValueError(f"Unsupported roulette action: {action}")
 
         capital += reward
         return reward, capital, done
@@ -302,6 +302,8 @@ class RouletteWheelRenderer:
             return set(self.red_numbers)
         if action == 38:
             return set(self.black_numbers)
+        if action == 39:
+            return set()
         if action == 40:
             return set(self.odd_numbers)
         if action == 41:
@@ -316,7 +318,7 @@ class RouletteWheelRenderer:
             return set(self.second_dozen_numbers)
         if action == 46:
             return set(self.third_dozen_numbers)
-        return set()
+        raise ValueError(f"Unsupported roulette action: {action}")
 
 ###############################################################################
 class RouletteEnvironment(gym.Env):
@@ -338,24 +340,20 @@ class RouletteEnvironment(gym.Env):
             else np.zeros(len(self.extractions), dtype=np.int32)
         )
         self.checkpoint_path = checkpoint_path
-        self._rng = np.random.default_rng(configuration.get("training_seed", 42))
+        self._rng = np.random.default_rng(configuration["training_seed"])
 
-        self.perceptive_size = configuration.get("perceptive_field_size", 64)
-        self.initial_capital = configuration.get("initial_capital", 1000)
-        self.bet_amount = configuration.get("bet_amount", 10)
-        self.dynamic_betting_enabled = bool(
-            configuration.get("dynamic_betting_enabled", False)
+        self.perceptive_size = configuration["perceptive_field_size"]
+        self.initial_capital = configuration["initial_capital"]
+        self.bet_amount = configuration["bet_amount"]
+        self.dynamic_betting_enabled = bool(configuration["dynamic_betting_enabled"])
+        self.bet_strategy_fixed_id = validate_strategy_id(
+            int(configuration["bet_strategy_fixed_id"])
         )
-        self.bet_strategy_fixed_id = normalize_strategy_id(
-            configuration.get("bet_strategy_fixed_id", STRATEGY_KEEP),
-            STRATEGY_KEEP,
-        )
-        self.max_steps = configuration.get("max_steps_episode", 2000)
+        self.max_steps = configuration["max_steps_episode"]
         self.player = BetsAndRewards(configuration)
         self.bet_sizer = BetSizer(configuration)
         self.strategy_hold = StrategyHold(
-            hold_steps=int(configuration.get("strategy_hold_steps", 1)),
-            fallback_strategy_id=self.bet_strategy_fixed_id,
+            hold_steps=int(configuration["strategy_hold_steps"])
         )
         self.current_strategy_id = self.bet_strategy_fixed_id
         self.current_strategy_name = strategy_name(self.current_strategy_id)
@@ -370,7 +368,7 @@ class RouletteEnvironment(gym.Env):
 
         self.numbers = list(range(NUMBERS))
         self.action_space = spaces.Discrete(STATES)
-        self.strategy_action_space = spaces.Discrete(5)
+        self.strategy_action_space = spaces.Discrete(STRATEGY_COUNT)
         self.observation_window = spaces.Box(
             low=0, high=36, shape=(self.perceptive_size,), dtype=np.int32
         )
@@ -459,10 +457,10 @@ class RouletteEnvironment(gym.Env):
             selected_strategy = (
                 self.bet_strategy_fixed_id
                 if strategy_action is None
-                else int(strategy_action)
+                else validate_strategy_id(int(strategy_action))
             )
             resolved_strategy = self.strategy_hold.resolve(selected_strategy)
-            self.current_strategy_id = int(resolved_strategy)
+            self.current_strategy_id = resolved_strategy
             self.current_strategy_name = strategy_name(self.current_strategy_id)
             self.current_bet_amount = int(
                 self.bet_sizer.apply(self.current_strategy_id, capital=self.capital)
