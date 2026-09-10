@@ -1,10 +1,20 @@
 ## Configuration
 
-Last updated: 2026-09-03
+Last updated: 2026-09-10
+
+## Configuration Ownership
+
+FAIRS uses three distinct configuration surfaces with non-overlapping responsibilities:
+
+1. `settings/.env` for deployment/runtime environment values such as hosts, ports, storage location, database connection, backend visibility, API docs, reload behavior, and ML backend selection.
+2. `settings/configurations.json` for application-wide technical settings that are not environment secrets or per-training choices. It currently owns job polling and global JIT/compiler behavior.
+3. `TrainingConfig` in `app/server/contracts/training.py` for all per-training defaults, semantic constraints, dataset choices, model parameters, device selection, and mixed precision.
+
+No setting should be independently defaulted in more than one of these surfaces.
 
 ## Environment Variables
 
-The runtime scripts and backend consume these environment keys:
+The runtime consumes these environment keys:
 
 - `FASTAPI_HOST`
 - `FASTAPI_PORT`
@@ -13,6 +23,7 @@ The runtime scripts and backend consume these environment keys:
 - `BACKEND_LOGS_VISIBLE`
 - `ENABLE_API_DOCS`
 - `RELOAD`
+- `FAIRS_DATA_DIR`
 - `EMBEDDED_DATABASE`
 - `DATABASE_ENGINE`
 - `DATABASE_HOST`
@@ -28,74 +39,59 @@ The runtime scripts and backend consume these environment keys:
 - `KERAS_BACKEND`
 - `WEB_CONCURRENCY`, `UVICORN_WORKERS`, `FAIRS_WORKERS`
 
+`settings/.env.example` is the canonical environment template. The Windows launcher copies it to `settings/.env` only when `.env` does not yet exist. It never overlays a hardcoded default map on an existing `.env`.
+
+For launcher operations, the following values must be explicitly present and non-empty in `.env`: `FASTAPI_HOST`, `FASTAPI_PORT`, `UI_HOST`, `UI_PORT`, `RELOAD`, `BACKEND_LOGS_VISIBLE`, and `EMBEDDED_DATABASE`. An existing stale `.env` that omits them fails with an actionable message instead of silently inheriting compatibility defaults.
+
+`FAIRS_DATA_DIR` may be empty. An empty value means the normal `app/resources` data root.
+
 ## Internal Runtime Settings
 
-- `UV_PROJECT_ENVIRONMENT`
-  - set by the launcher to target the runtime virtual environment
-- `UV_CACHE_DIR`, `NPM_CONFIG_CACHE`, `PIP_CACHE_DIR`, and `PYTHONPYCACHEPREFIX`
-  - set by the launcher below `runtimes/cache`
-- `RUFF_CACHE_DIR`, `MYPY_CACHE_DIR`, `COVERAGE_FILE`, and `PLAYWRIGHT_BROWSERS_PATH`
-  - set by the launcher below `app/tests/cache`
-- `FAIRS_DATA_DIR`
-  - overrides the mutable database, logs, and checkpoints directory
+The launcher sets only execution-scoped tool variables:
 
-For external PostgreSQL mode, `DATABASE_ENGINE` must be `postgresql+psycopg`. Legacy aliases such as `postgres`, `postgresql`, and `postgresql+psycopg2` are rejected during startup validation.
+- `UV_PROJECT_ENVIRONMENT` targets `app/server/.venv`.
+- `UV_CACHE_DIR`, `NPM_CONFIG_CACHE`, `PIP_CACHE_DIR`, and `PYTHONPYCACHEPREFIX` are rooted below `runtimes/cache`.
+- `RUFF_CACHE_DIR`, `MYPY_CACHE_DIR`, `COVERAGE_FILE`, and `PLAYWRIGHT_BROWSERS_PATH` are rooted below `app/tests/cache`.
 
-The backend creates timestamped `FAIRS_*.log` files under the active data root's `logs` directory.
+These cache roots are canonical. The launcher does not scan the repository for historical `.uv-cache`, `.pytest_cache`, `.ruff_cache`, `.mypy_cache`, Vite cache, or other legacy locations.
 
-The FastAPI lifespan calls `server.bootstrap.bootstrap_runtime()` before importing Keras-backed application modules. Direct construction/import of `server.app`, `server`, common path helpers, and logging helpers does not load `.env`, resolve mutable paths from the environment, create directories, or configure the global logging tree.
+## Database Configuration
 
-### Lifecycle And Worker Contract
+`settings/configurations.json` must not contain a database block. Database configuration is accepted only from the environment model so connection ownership is unambiguous.
 
-- FastAPI application construction is import-safe; runtime bootstrap, database initialization, service construction, and logging setup occur inside the lifespan.
-- Lifespan state transitions are `starting`, `ready`, `stopping`, and `stopped`. Startup rolls back acquired resources on failure, and shutdown attempts every owned cleanup operation even when one cleanup fails.
-- `WEB_CONCURRENCY`, `UVICORN_WORKERS`, and `FAIRS_WORKERS` must be unset or exactly `1`. The launcher also passes `--workers 1` explicitly. This application does not provide a shared store for process-local training jobs or live inference models.
-- `RELOAD=true` is development-only. A reload replaces the in-memory process and expires active training and inference state.
-- `FAIRS_DATA_DIR` controls persistent database/checkpoint/log ownership; it does not make in-memory jobs or live models durable.
+For external PostgreSQL mode, `DATABASE_ENGINE` must be `postgresql+psycopg`. Legacy aliases such as `postgres`, `postgresql`, and `postgresql+psycopg2` are rejected rather than normalized.
+
+- `EMBEDDED_DATABASE=true` selects SQLite.
+- `EMBEDDED_DATABASE=false` selects PostgreSQL and requires valid connection settings.
+
+Both modes use the same SQLAlchemy repositories and Alembic schema.
 
 ## Structured Settings
 
-`settings/configurations.json` contains non-env technical settings such as:
+`settings/configurations.json` currently owns:
 
 - `jobs.polling_interval`
-- device-related options such as JIT and mixed-precision defaults
+- `device.jit_compile`
+- `device.jit_backend`
 
-`settings/configurations.json` must not contain a `database` block. Database configuration is accepted only from `settings/.env`, and startup rejects JSON database settings to avoid ambiguous sources of truth.
+Global mixed precision is intentionally not present. `use_mixed_precision`, `use_device_gpu`, and `device_id` are per-training values owned by `TrainingConfig`.
 
-## Behavior Differences Driven By Configuration
+## Training Configuration
 
-### API Docs
+`TrainingConfig` is the canonical owner of training defaults and cross-field semantic validation. The frontend obtains generated default values from `app/client/src/generated/api.ts`, which is derived from the Pydantic model by `app/scripts/generate_frontend_contracts.py`.
 
-- `ENABLE_API_DOCS` controls whether `/docs`, `/redoc`, and OpenAPI routes are mounted.
+The training wizard may provide presentation-level input constraints, but it does not maintain a second implementation of semantic rules. Submission validation goes through `POST /api/training/validate`, using the same Pydantic contract that starts the training run.
 
-### Database Mode
+## Lifecycle and Worker Contract
 
-- `EMBEDDED_DATABASE=true`
-  - uses SQLite and runs the Alembic create/upgrade runner against the configured data-root database
-  - uses an immediate migration lock and strict metadata validation; it never resets or repairs drift automatically
-- `EMBEDDED_DATABASE=false`
-  - uses PostgreSQL and requires explicit connection settings
-  - first tries the configured database and creates it only after SQLSTATE `3D000`, under an admin advisory lock
-  - requires `CREATEDB` for automatic database creation; migrations then run under a target transaction advisory lock
-
-The application and launcher use the same idempotent runner. Empty databases upgrade to `head`; non-empty unversioned databases are rejected unchanged and must be migrated explicitly. Partial/drifted/unknown/ahead states fail before service construction.
-
-### Backend Log Visibility
-
-- `BACKEND_LOGS_VISIBLE=false` starts the backend detached and hidden.
-- `BACKEND_LOGS_VISIBLE=true` opens a dedicated backend terminal so logs remain visible; closing that terminal is the local application stop action.
-- When `BACKEND_LOGS_VISIBLE` is absent, the launcher defaults to `true`.
-
-### Dependency Installation And Frontend Build
-
-- The launcher checks runtime readiness before installing dependencies.
-- The checked-in `settings/.env.example` template defaults to API port `8890` and UI port `8051`; override them in `settings/.env` when needed.
-- Launcher option 2 selects `Standard` or `Development` installation, installs dependencies, rebuilds the frontend, and runs database create/upgrade; `Development` adds the backend's test extra.
-- Normal application startup skips installation and rebuilding when the environment and frontend build are ready. If either is missing or unusable, option 1 recovers dependencies and rebuilds the frontend; option 2 remains the explicit install/update and rebuild path.
-
-When `FAIRS_DATA_DIR` is absent, the application uses `app/resources`.
+- FastAPI construction remains import-safe. Runtime bootstrap and mutable environment loading occur in lifespan startup.
+- `WEB_CONCURRENCY`, `UVICORN_WORKERS`, and `FAIRS_WORKERS` must be unset or exactly `1` because live jobs and inference models are process-local.
+- `RELOAD=true` is development-only and expires process-local training/inference state when the process reloads.
+- `BACKEND_LOGS_VISIBLE` is an explicit launcher configuration value, not an implicit launcher default.
+- The backend creates timestamped `FAIRS_*.log` files under the active data root.
 
 ## Related Files
 
-- Read `modes.md` for the runtime surfaces these settings affect.
-- Read `../architecture/persistence.md` for the storage consequences of database configuration.
+- Read `startup.md` for launcher behavior.
+- Read `../architecture/persistence.md` for database and checkpoint consequences.
+- Read `../architecture/backend_api.md` for generated transport contracts.
