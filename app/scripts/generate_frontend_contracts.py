@@ -6,7 +6,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-from export_openapi import render_openapi
+from scripts.export_openapi import render_openapi
 from server.contracts.training import TrainingConfig
 
 OUTPUT_PATH = (
