@@ -1,16 +1,14 @@
+import type { TrainingCheckpointMetadataResponse } from '../generated/api';
+
 export interface DatasetSummaryItem {
     datasetId: number;
     datasetName: string;
     rowCount: number;
 }
 
-export interface CheckpointMetadataResponse {
-    checkpoint: string;
-    summary: Record<string, unknown>;
-}
+export type CheckpointMetadataResponse = TrainingCheckpointMetadataResponse;
 
 export interface CheckpointOptionMetadata {
     datasetId: number | null;
     perceptiveFieldSize: number | null;
 }
-
