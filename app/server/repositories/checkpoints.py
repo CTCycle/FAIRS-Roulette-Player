@@ -15,7 +15,10 @@ from pydantic import ValidationError
 from server.common import path as shared_paths
 from server.common.checkpoints import normalize_checkpoint_identifier
 from server.common.utils.logger import logger
-from server.contracts.training import CheckpointConfiguration
+from server.contracts.training import (
+    CHECKPOINT_SCHEMA_VERSION,
+    CheckpointConfiguration,
+)
 from server.learning import models as custom_layers_registry  # noqa: F401
 
 ###############################################################################
@@ -231,7 +234,13 @@ class CheckpointRepository:
         checkpoint_path = shared_paths.as_path(path)
         config_path = shared_paths.checkpoint_configuration_file(checkpoint_path)
         history_path = shared_paths.checkpoint_session_history_file(checkpoint_path)
-        validated_configuration = CheckpointConfiguration.model_validate(configuration)
+        current_configuration = {
+            "schema_version": CHECKPOINT_SCHEMA_VERSION,
+            **configuration,
+        }
+        validated_configuration = CheckpointConfiguration.model_validate(
+            current_configuration
+        )
 
         self._write_text_atomically(
             config_path,
@@ -262,7 +271,9 @@ class CheckpointRepository:
             ) from exc
         if not isinstance(raw_history, dict):
             raise ValueError(f"Checkpoint history is invalid: {history_path}")
-        return configuration.model_dump(), raw_history
+        dumped = configuration.model_dump()
+        dumped.pop("schema_version")
+        return dumped, raw_history
 
     # -------------------------------------------------------------------------
     def scan_checkpoints_folder(self) -> list[str]:
@@ -280,6 +291,7 @@ class CheckpointRepository:
                     shared_paths.checkpoint_saved_model_file(entry),
                     shared_paths.checkpoint_configuration_file(entry),
                     shared_paths.checkpoint_session_history_file(entry),
+                    entry / shared_paths.CHECKPOINT_COMPLETE_FILE_NAME,
                 )
             ):
                 model_folders.append(entry.name)
