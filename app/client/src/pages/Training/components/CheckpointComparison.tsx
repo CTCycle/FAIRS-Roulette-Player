@@ -98,47 +98,48 @@ export const CheckpointComparison: React.FC = () => {
         return () => controller.abort();
     }, [leftCheckpoint, metadata, rightCheckpoint]);
 
-    const rows = useMemo(
-        () => COMPARISON_FIELDS.map(([label, key]) => ({
+    const comparisonRows = useMemo(() => {
+        const leftSummary = leftCheckpoint ? metadata[leftCheckpoint]?.summary : undefined;
+        const rightSummary = rightCheckpoint ? metadata[rightCheckpoint]?.summary : undefined;
+        return COMPARISON_FIELDS.map(([label, key]) => ({
             label,
-            left: leftCheckpoint ? metadata[leftCheckpoint]?.summary[key] : undefined,
-            right: rightCheckpoint ? metadata[rightCheckpoint]?.summary[key] : undefined,
-        })),
-        [leftCheckpoint, metadata, rightCheckpoint],
-    );
+            left: formatValue(leftSummary?.[key]),
+            right: formatValue(rightSummary?.[key]),
+        }));
+    }, [leftCheckpoint, metadata, rightCheckpoint]);
 
-    if (checkpoints.length === 0) {
-        return (
-            <div className="checkpoint-comparison checkpoint-comparison--empty">
-                <GitCompareArrows size={18} aria-hidden="true" />
-                <span>Train at least one checkpoint to compare experiments.</span>
-            </div>
-        );
+    if (checkpoints.length < 2) {
+        return null;
     }
 
     return (
-        <div className="checkpoint-comparison">
-            <div className="checkpoint-comparison__controls">
+        <section className="checkpoint-comparison" aria-labelledby="checkpoint-comparison-title">
+            <div className="checkpoint-comparison-header">
+                <div>
+                    <h3 id="checkpoint-comparison-title"><GitCompareArrows size={18} /> Compare Checkpoints</h3>
+                    <p>Compare configuration and stored training summaries. These values are not a standardized benchmark.</p>
+                </div>
+            </div>
+
+            <div className="checkpoint-comparison-selectors">
                 <label>
-                    Baseline
+                    Checkpoint A
                     <select value={leftCheckpoint} onChange={(event) => setLeftCheckpoint(event.target.value)}>
-                        {checkpoints.map((checkpoint) => (
-                            <option key={`left-${checkpoint}`} value={checkpoint}>{checkpoint}</option>
-                        ))}
+                        {checkpoints.map((checkpoint) => <option key={checkpoint} value={checkpoint}>{checkpoint}</option>)}
                     </select>
                 </label>
                 <label>
-                    Comparison
+                    Checkpoint B
                     <select value={rightCheckpoint} onChange={(event) => setRightCheckpoint(event.target.value)}>
-                        {checkpoints.map((checkpoint) => (
-                            <option key={`right-${checkpoint}`} value={checkpoint}>{checkpoint}</option>
-                        ))}
+                        {checkpoints.map((checkpoint) => <option key={checkpoint} value={checkpoint}>{checkpoint}</option>)}
                     </select>
                 </label>
             </div>
-            {error && <div className="checkpoint-comparison__error" role="alert">{error}</div>}
-            <div className="checkpoint-comparison__table-wrap">
-                <table className="checkpoint-comparison__table">
+
+            {error && <div className="checkpoint-comparison-error" role="alert">{error}</div>}
+
+            <div className="checkpoint-comparison-table-wrap">
+                <table className="checkpoint-comparison-table">
                     <thead>
                         <tr>
                             <th>Metric</th>
@@ -147,16 +148,16 @@ export const CheckpointComparison: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {rows.map((row) => (
+                        {comparisonRows.map((row) => (
                             <tr key={row.label}>
                                 <td>{row.label}</td>
-                                <td>{formatValue(row.left)}</td>
-                                <td>{formatValue(row.right)}</td>
+                                <td>{row.left}</td>
+                                <td>{row.right}</td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
             </div>
-        </div>
+        </section>
     );
 };
