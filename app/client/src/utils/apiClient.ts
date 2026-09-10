@@ -21,11 +21,11 @@ const readJson = async (response: Response): Promise<unknown> => (
     response.json().catch(() => null)
 );
 
-export const requestJson = async (
+export const requestJson = async <T = unknown>(
     endpoint: string,
     init: RequestInit = {},
     fallbackMessage = 'Request failed.',
-): Promise<unknown> => {
+): Promise<T> => {
     const response = await fetch(endpoint, init);
     const payload = await readJson(response);
     if (!response.ok) {
@@ -35,7 +35,7 @@ export const requestJson = async (
             payload,
         );
     }
-    return payload;
+    return payload as T;
 };
 
 const READ_ONLY_MAX_ATTEMPTS = 6;
@@ -90,11 +90,11 @@ const waitForReadinessRetry = (
  * Callers must use requestJson directly for mutations so retries never repeat
  * a state-changing operation.
  */
-export const requestReadOnlyJson = async (
+export const requestReadOnlyJson = async <T = unknown>(
     endpoint: string,
     init: RequestInit = {},
     fallbackMessage = 'Request failed.',
-): Promise<unknown> => {
+): Promise<T> => {
     const method = (init.method ?? 'GET').toUpperCase();
     if (method !== 'GET') {
         throw new Error('Read-only requests must use GET.');
@@ -103,7 +103,7 @@ export const requestReadOnlyJson = async (
     const signal = init.signal ?? undefined;
     for (let attempt = 0; attempt < READ_ONLY_MAX_ATTEMPTS; attempt += 1) {
         try {
-            return await requestJson(endpoint, init, fallbackMessage);
+            return await requestJson<T>(endpoint, init, fallbackMessage);
         } catch (error) {
             const isLastAttempt = attempt === READ_ONLY_MAX_ATTEMPTS - 1;
             if (isLastAttempt || isAbortError(error) || !isRetryableReadError(error)) {
