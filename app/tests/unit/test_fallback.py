@@ -7,6 +7,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from server.contracts.training import TrainingConfig
+
 ###############################################################################
 class DummyModel:
 
@@ -24,20 +26,32 @@ class EmptyLogitsModel:
         return np.zeros((1, 0), dtype=np.float32)
 
 ###############################################################################
-def test_fallback_strategy_is_deterministic_when_model_disabled() -> None:
+def build_configuration(**overrides: object) -> dict[str, object]:
+    configuration = TrainingConfig(use_data_generator=True).model_dump()
+    configuration.update(
+        {
+            "game_capital": configuration["initial_capital"],
+            "game_bet": configuration["bet_amount"],
+        }
+    )
+    configuration.update(overrides)
+    return configuration
+
+###############################################################################
+def test_fixed_strategy_is_deterministic_when_strategy_model_disabled() -> None:
     os.environ.setdefault("KERAS_BACKEND", "torch")
     from server.learning.inference.player import RoulettePlayer
 
-    config = {
-        "seed": 42,
-        "perceptive_field_size": 4,
-        "game_capital": 100,
-        "game_bet": 10,
-        "dynamic_betting_enabled": True,
-        "bet_strategy_model_enabled": False,
-        "bet_strategy_fixed_id": 3,
-        "strategy_hold_steps": 2,
-    }
+    config = build_configuration(
+        seed=42,
+        perceptive_field_size=4,
+        game_capital=100,
+        game_bet=10,
+        dynamic_betting_enabled=True,
+        bet_strategy_model_enabled=False,
+        bet_strategy_fixed_id=3,
+        strategy_hold_steps=2,
+    )
     player = RoulettePlayer(
         model=DummyModel(),  # type: ignore[arg-type]
         configuration=config,
@@ -53,24 +67,24 @@ def test_fallback_strategy_is_deterministic_when_model_disabled() -> None:
     assert prediction["current_bet_amount"] == 10
 
 ###############################################################################
-def test_predict_next_raises_when_model_returns_empty_logits() -> None:
+def test_predict_next_rejects_wrong_action_output_size() -> None:
     os.environ.setdefault("KERAS_BACKEND", "torch")
     from server.learning.inference.player import RoulettePlayer
 
-    config = {
-        "seed": 42,
-        "perceptive_field_size": 4,
-        "game_capital": 100,
-        "game_bet": 10,
-        "dynamic_betting_enabled": False,
-    }
+    config = build_configuration(
+        seed=42,
+        perceptive_field_size=4,
+        game_capital=100,
+        game_bet=10,
+        dynamic_betting_enabled=False,
+    )
     player = RoulettePlayer(
         model=EmptyLogitsModel(),  # type: ignore[arg-type]
         configuration=config,
         session_id="session",
         dataset_context=pd.DataFrame({"outcome": [1, 2, 3, 4, 5, 6, 7, 8]}),
     )
-    with pytest.raises(ValueError, match="empty logits"):
+    with pytest.raises(ValueError, match="canonical roulette action count"):
         player.predict_next()
 
 ###############################################################################
@@ -78,13 +92,13 @@ def test_predict_next_requires_minimum_context_length() -> None:
     os.environ.setdefault("KERAS_BACKEND", "torch")
     from server.learning.inference.player import RoulettePlayer
 
-    config = {
-        "seed": 42,
-        "perceptive_field_size": 8,
-        "game_capital": 100,
-        "game_bet": 10,
-        "dynamic_betting_enabled": False,
-    }
+    config = build_configuration(
+        seed=42,
+        perceptive_field_size=8,
+        game_capital=100,
+        game_bet=10,
+        dynamic_betting_enabled=False,
+    )
     player = RoulettePlayer(
         model=DummyModel(),  # type: ignore[arg-type]
         configuration=config,
@@ -99,13 +113,13 @@ def test_update_with_true_extraction_validates_input() -> None:
     os.environ.setdefault("KERAS_BACKEND", "torch")
     from server.learning.inference.player import RoulettePlayer
 
-    config = {
-        "seed": 42,
-        "perceptive_field_size": 4,
-        "game_capital": 100,
-        "game_bet": 10,
-        "dynamic_betting_enabled": False,
-    }
+    config = build_configuration(
+        seed=42,
+        perceptive_field_size=4,
+        game_capital=100,
+        game_bet=10,
+        dynamic_betting_enabled=False,
+    )
     player = RoulettePlayer(
         model=DummyModel(),  # type: ignore[arg-type]
         configuration=config,
