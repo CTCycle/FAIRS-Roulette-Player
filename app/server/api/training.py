@@ -8,14 +8,16 @@ from server.common.api_errors import ExceptionStatusMap, http_exception_for_exce
 from server.configurations.dependencies import get_training_service
 from server.contracts.jobs import JobCancelResponse, JobStartResponse, JobStatusResponse
 from server.contracts.training import (
-    TrainingCheckpointListResponse,
     ResumeConfig,
     TrainingCheckpointDeleteResponse,
+    TrainingCheckpointListResponse,
     TrainingCheckpointMetadataResponse,
     TrainingConfig,
     TrainingStatusResponse,
     TrainingStopResponse,
+    TrainingValidationResponse,
 )
+
 router = APIRouter(prefix="/training", tags=["training"])
 
 TRAINING_EXCEPTION_STATUS: ExceptionStatusMap = (
@@ -33,6 +35,16 @@ def _map_training_exception(exc: Exception) -> HTTPException:
         TRAINING_EXCEPTION_STATUS,
         default_detail="Unable to process training request.",
     )
+
+###############################################################################
+@router.post(
+    "/validate",
+    response_model=TrainingValidationResponse,
+    status_code=status.HTTP_200_OK,
+)
+def validate_training(config: TrainingConfig) -> TrainingValidationResponse:  # noqa: ARG001
+    """Validate a complete training configuration using the canonical contract."""
+    return TrainingValidationResponse()
 
 ###############################################################################
 @router.post(
