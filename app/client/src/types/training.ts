@@ -1,4 +1,7 @@
-import { TRAINING_CONFIG_DEFAULTS } from '../generated/api';
+import {
+    RESUME_CONFIG_DEFAULTS,
+    TRAINING_CONFIG_DEFAULTS,
+} from '../generated/api';
 
 export interface TrainingNewConfig {
     perceptiveField: number;
@@ -87,7 +90,7 @@ export interface TrainingResumeConfig {
 
 export const initialTrainingResumeConfig: TrainingResumeConfig = {
     selectedCheckpoint: '',
-    numAdditionalEpisodes: 10,
+    numAdditionalEpisodes: RESUME_CONFIG_DEFAULTS.additional_episodes,
 };
 
 export type TrainingStatusCode =
