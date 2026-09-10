@@ -5,22 +5,19 @@ import time
 from pathlib import Path
 from typing import Any
 
-from server.common.checkpoints import normalize_checkpoint_identifier
 from server.common.utils.logger import logger
-from server.common.utils.trainingstats import (
-    coerce_optional_finite_float,
-)
+from server.common.utils.trainingstats import coerce_optional_finite_float
 from server.common.utils.types import coerce_finite_float, coerce_finite_int
 from server.contracts.configuration import DatabaseSettings
 from server.contracts.training import ResumeConfig, TrainingConfig
+from server.services.checkpoints import CheckpointService
+from server.services.training_data import load_training_series
+from server.services.training_run import TrainingRun, TrainingRunManager
 from server.services.training_worker import (
     ProcessWorker,
     run_resume_training_process,
     run_training_process,
 )
-from server.services.checkpoints import CheckpointService
-from server.services.training_data import load_training_series
-from server.services.training_run import TrainingRun, TrainingRunManager
 
 ###############################################################################
 def calculate_progress(stats: dict[str, Any]) -> float:
@@ -120,7 +117,7 @@ class TrainingService:
         self.database_settings = database_settings
         self.database_path = database_path
         self.polling_interval_seconds = polling_interval_seconds
-        self.jit_compile = jit_compile
+        self.jit_compile = bool(jit_compile)
         self.jit_backend = jit_backend
 
     # -------------------------------------------------------------------------
@@ -272,6 +269,8 @@ class TrainingService:
                     "database_settings": self.database_settings,
                     "database_path": self.database_path,
                     "polling_interval_seconds": self.polling_interval_seconds,
+                    "jit_compile": self.jit_compile,
+                    "jit_backend": self.jit_backend,
                 },
             )
             result = self._monitor_training_process(
@@ -319,39 +318,24 @@ class TrainingService:
         if self.training_run_manager.is_job_running(self.JOB_TYPE):
             raise RuntimeError("Training is already in progress.")
 
-        base_config = TrainingConfig.model_validate({}).model_dump()
-        overrides = config.model_dump(exclude_unset=True)
-        configuration = {**base_config, **overrides}
+        configuration = config.model_dump()
+        checkpoint_name = config.checkpoint_name
+        if checkpoint_name is not None:
+            existing_checkpoints = set(self.checkpoint_service.list_checkpoints())
+            if checkpoint_name in existing_checkpoints:
+                raise FileExistsError(f"Checkpoint already exists: {checkpoint_name}")
 
-        checkpoint_name = configuration.get("checkpoint_name")
-        if isinstance(checkpoint_name, str):
-            trimmed_checkpoint_name = checkpoint_name.strip()
-            if trimmed_checkpoint_name:
-                normalized = normalize_checkpoint_identifier(trimmed_checkpoint_name)
-                existing_checkpoints = set(self.checkpoint_service.list_checkpoints())
-                if normalized in existing_checkpoints:
-                    raise FileExistsError(f"Checkpoint already exists: {normalized}")
-                configuration["checkpoint_name"] = normalized
-            else:
-                configuration["checkpoint_name"] = None
-        else:
-            configuration["checkpoint_name"] = None
-
-        if not bool(
-            configuration.get("use_data_generator", False)
-        ) and not configuration.get("dataset_id"):
+        if not config.use_data_generator and config.dataset_id is None:
             raise ValueError("dataset_id is required when use_data_generator is false.")
 
-        total_epochs = int(configuration.get("episodes", 10))
-        max_steps = int(configuration.get("max_steps_episode", 2000))
         job_id = self.training_run_manager.start_job(
             job_type=self.JOB_TYPE,
             runner=self.run_training_job,
             kwargs={"configuration": configuration},
             initializer=partial(
                 self._initialize_training_run,
-                total_epochs=total_epochs,
-                max_steps=max_steps,
+                total_epochs=config.episodes,
+                max_steps=config.max_steps_episode,
             ),
         )
 
@@ -386,16 +370,12 @@ class TrainingService:
         )
 
         from_epoch = int(session.get("total_episodes", 0))
-        initial_capital = configuration.get("initial_capital")
-        initial_capital_value = (
-            float(initial_capital)
-            if isinstance(initial_capital, (int, float))
-            else None
+        restored_points = build_history_points(
+            session, float(configuration["initial_capital"])
         )
-        restored_points = build_history_points(session, initial_capital_value)
 
         total_epochs = from_epoch + int(config.additional_episodes)
-        max_steps = int(configuration.get("max_steps_episode", 2000))
+        max_steps = int(configuration["max_steps_episode"])
         job_id = self.training_run_manager.start_job(
             job_type=self.JOB_TYPE,
             runner=self.run_resume_training_job,
