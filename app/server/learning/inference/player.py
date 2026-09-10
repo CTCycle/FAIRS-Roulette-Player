@@ -7,13 +7,13 @@ import pandas as pd
 from keras import Model
 from keras.utils import set_random_seed
 
-from server.common.constants import PAD_VALUE
+from server.common.constants import PAD_VALUE, STATES
 from server.learning.betting.hold import StrategyHold
 from server.learning.betting.sizer import BetSizer
 from server.learning.betting.types import (
     BET_OUTCOME_NEUTRAL,
-    STRATEGY_KEEP,
-    normalize_strategy_id,
+    STRATEGY_COUNT,
+    require_strategy_id,
     strategy_name,
 )
 from server.learning.training.environment import BetsAndRewards
@@ -30,21 +30,18 @@ class RoulettePlayer:
         dataset_context: pd.DataFrame,
         strategy_model: Model | None = None,
     ) -> None:
-        set_random_seed(configuration.get("seed", 42))
+        set_random_seed(int(configuration["seed"]))
 
         self.session_id = session_id
-        self.perceptive_size = int(configuration.get("perceptive_field_size", 64))
-        self.initial_capital = int(configuration.get("game_capital", 100))
-        self.bet_amount = int(configuration.get("game_bet", 1))
-        self.dynamic_betting_enabled = bool(
-            configuration.get("dynamic_betting_enabled", False)
-        )
+        self.perceptive_size = int(configuration["perceptive_field_size"])
+        self.initial_capital = int(configuration["game_capital"])
+        self.bet_amount = int(configuration["game_bet"])
+        self.dynamic_betting_enabled = bool(configuration["dynamic_betting_enabled"])
         self.bet_strategy_model_enabled = bool(
-            configuration.get("bet_strategy_model_enabled", False)
+            configuration["bet_strategy_model_enabled"]
         )
-        self.fixed_strategy_id = normalize_strategy_id(
-            configuration.get("bet_strategy_fixed_id", STRATEGY_KEEP),
-            STRATEGY_KEEP,
+        self.fixed_strategy_id = require_strategy_id(
+            configuration["bet_strategy_fixed_id"]
         )
 
         actions = BetsAndRewards({**configuration, "bet_amount": self.bet_amount})
@@ -69,8 +66,7 @@ class RoulettePlayer:
             }
         )
         self.strategy_hold = StrategyHold(
-            hold_steps=int(configuration.get("strategy_hold_steps", 1)),
-            fallback_strategy_id=self.fixed_strategy_id,
+            hold_steps=int(configuration["strategy_hold_steps"])
         )
 
         self.context = dataset_context
@@ -84,45 +80,48 @@ class RoulettePlayer:
             raise ValueError("Inference context contains no outcomes.")
 
         perceptive_candidates = outcomes.to_numpy(dtype=np.int32)
-        state = np.full(
-            shape=(self.perceptive_size,),
-            fill_value=PAD_VALUE,
-            dtype=np.int32,
-        )
         if perceptive_candidates.size < self.perceptive_size:
             raise ValueError(
                 "Inference context must contain at least the perceptive field size."
             )
-        state = perceptive_candidates[-self.perceptive_size :]
-        self.last_state = state
+        self.last_state = perceptive_candidates[-self.perceptive_size :]
 
     # -------------------------------------------------------------------------
     def softmax(self, values: np.ndarray) -> np.ndarray:
-        shifted = values - np.max(values)
+        logits = np.asarray(values, dtype=np.float64).reshape(-1)
+        if logits.size == 0 or not np.all(np.isfinite(logits)):
+            raise ValueError("Model logits must be non-empty and finite.")
+        shifted = logits - np.max(logits)
         exp_values = np.exp(shifted)
         denom = float(np.sum(exp_values))
-        if denom <= 0:
-            return np.full_like(exp_values, fill_value=1.0 / float(exp_values.size))
+        if not np.isfinite(denom) or denom <= 0:
+            raise ValueError("Model logits produced an invalid softmax denominator.")
         return exp_values / denom
 
     # -------------------------------------------------------------------------
     def predict_strategy(
         self, current_state: np.ndarray, gain_input: np.ndarray
     ) -> int:
-        if (
-            not self.dynamic_betting_enabled
-            or not self.bet_strategy_model_enabled
-            or self.strategy_model is None
-        ):
+        if not self.dynamic_betting_enabled or not self.bet_strategy_model_enabled:
             return self.fixed_strategy_id
+        if self.strategy_model is None:
+            raise RuntimeError(
+                "Strategy-model betting is enabled but the strategy model is unavailable."
+            )
+
         strategy_logits = self.strategy_model.predict(
             {"timeseries": current_state, "gain": gain_input},
             verbose=0,  # type: ignore
         )
         logits = np.asarray(strategy_logits).reshape(-1)
-        if logits.size == 0:
-            return self.fixed_strategy_id
-        return int(np.argmax(logits))
+        if logits.size != STRATEGY_COUNT:
+            raise ValueError(
+                "Strategy model output does not match the canonical strategy count: "
+                f"expected {STRATEGY_COUNT}, got {logits.size}."
+            )
+        if not np.all(np.isfinite(logits)):
+            raise ValueError("Strategy model returned non-finite logits.")
+        return require_strategy_id(int(np.argmax(logits)))
 
     # -------------------------------------------------------------------------
     def predict_next(self) -> dict[str, Any]:
@@ -143,22 +142,25 @@ class RoulettePlayer:
             verbose=0,  # type: ignore
         )
         logits = np.asarray(action_logits).reshape(-1)
-        if logits.size == 0:
-            raise ValueError("Model returned empty logits.")
+        if logits.size != STATES:
+            raise ValueError(
+                "Q model output does not match the canonical roulette action count: "
+                f"expected {STATES}, got {logits.size}."
+            )
+        if not np.all(np.isfinite(logits)):
+            raise ValueError("Q model returned non-finite logits.")
 
         self.next_action = int(np.argmax(logits))
         self.last_action = self.next_action
-        self.next_action_desc = self.action_descriptions.get(
-            self.next_action, f"action {self.next_action}"
-        )
+        self.next_action_desc = self.action_descriptions[self.next_action]
 
         probabilities = self.softmax(logits)
-        confidence = float(probabilities[self.next_action])
+        relative_preference = float(probabilities[self.next_action])
 
         prediction: dict[str, Any] = {
             "action": self.next_action,
             "description": self.next_action_desc,
-            "confidence": confidence,
+            "relative_preference": relative_preference,
         }
 
         if self.dynamic_betting_enabled:
@@ -167,9 +169,9 @@ class RoulettePlayer:
             suggested_bet = int(
                 self.bet_sizer.apply(resolved_strategy, capital=self.current_capital)
             )
-            prediction["bet_strategy_id"] = int(resolved_strategy)
+            prediction["bet_strategy_id"] = resolved_strategy
             prediction["bet_strategy_name"] = strategy_name(resolved_strategy)
-            prediction["suggested_bet_amount"] = int(suggested_bet)
+            prediction["suggested_bet_amount"] = suggested_bet
             prediction["current_bet_amount"] = int(self.bet_amount)
 
         return prediction
@@ -209,7 +211,3 @@ class RoulettePlayer:
         if self.dynamic_betting_enabled and reset_strategy_state:
             self.bet_sizer.set_base_bet(self.bet_amount, self.current_capital)
             self.bet_sizer.last_outcome = BET_OUTCOME_NEUTRAL
-        self.fixed_strategy_id = normalize_strategy_id(
-            self.configuration.get("bet_strategy_fixed_id", STRATEGY_KEEP),
-            STRATEGY_KEEP,
-        )
