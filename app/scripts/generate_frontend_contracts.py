@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from export_openapi import render_openapi
+from server.contracts.training import TrainingConfig
 
 OUTPUT_PATH = (
     Path(__file__).resolve().parents[1]
@@ -94,28 +95,19 @@ def _schema_to_typescript(schema: Mapping[str, Any]) -> str:
 
 
 ###############################################################################
-def _render_training_defaults(schemas: Mapping[str, Any]) -> list[str]:
-    training_schema = schemas.get("TrainingConfig")
-    if not isinstance(training_schema, Mapping):
-        raise RuntimeError("OpenAPI schema does not define TrainingConfig.")
-    properties = training_schema.get("properties")
-    if not isinstance(properties, Mapping):
-        raise RuntimeError("TrainingConfig has no OpenAPI properties.")
+def _render_training_defaults() -> list[str]:
+    defaults = TrainingConfig(use_data_generator=True).model_dump()
+    defaults["use_data_generator"] = TrainingConfig.model_fields[
+        "use_data_generator"
+    ].default
+    defaults["dataset_id"] = TrainingConfig.model_fields["dataset_id"].default
 
-    defaults: dict[str, Any] = {}
-    for name in sorted(properties):
-        property_schema = properties[name]
-        if isinstance(property_schema, Mapping) and "default" in property_schema:
-            defaults[name] = property_schema["default"]
-
-    lines = [
-        "export const TRAINING_CONFIG_DEFAULTS = {",
-    ]
-    for name, value in defaults.items():
-        lines.append(f"    {json.dumps(name)}: {_literal(value)},")
+    lines = ["export const TRAINING_CONFIG_DEFAULTS = {"]
+    for name in sorted(defaults):
+        lines.append(f"    {json.dumps(name)}: {_literal(defaults[name])},")
     lines.extend(
         [
-            "} as const satisfies Partial<TrainingConfig>;",
+            "} as const satisfies TrainingConfig;",
             "",
         ]
     )
@@ -130,7 +122,7 @@ def render_typescript() -> str:
         raise RuntimeError("OpenAPI schema components are missing.")
 
     lines = [
-        "// Generated from the canonical FastAPI OpenAPI contract.",
+        "// Generated from the canonical FastAPI/Pydantic contract.",
         "// Do not edit manually. Run app/scripts/generate_frontend_contracts.py.",
         "",
     ]
@@ -139,20 +131,17 @@ def render_typescript() -> str:
         if not isinstance(schema, Mapping):
             raise RuntimeError(f"OpenAPI component {name} is not an object schema.")
         rendered = _schema_to_typescript(schema)
-        if "\n" in rendered:
-            lines.append(f"export type {name} = {rendered};")
-        else:
-            lines.append(f"export type {name} = {rendered};")
+        lines.append(f"export type {name} = {rendered};")
         lines.append("")
 
-    lines.extend(_render_training_defaults(schemas))
+    lines.extend(_render_training_defaults())
     return "\n".join(lines)
 
 
 ###############################################################################
 def main(arguments: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Generate or check frontend transport contracts from FastAPI OpenAPI."
+        description="Generate or check frontend transport contracts from FastAPI/Pydantic."
     )
     parser.add_argument(
         "--check",
