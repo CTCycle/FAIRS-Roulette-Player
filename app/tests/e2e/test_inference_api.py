@@ -66,7 +66,6 @@ class TestInferenceEndpoints:
     def test_start_session_with_invalid_checkpoint_returns_404(
         self, api_context: APIRequestContext
     ):
-        """POST /inference/sessions/start with invalid checkpoint should return 404."""
         response = api_context.post(
             "/api/inference/sessions/start",
             data={
@@ -76,9 +75,7 @@ class TestInferenceEndpoints:
                 "game_bet": 10,
             },
         )
-        # Expect 404 because checkpoint doesn't exist
         assert response.status == 404
-
         data = response.json()
         assert "detail" in data
 
@@ -86,12 +83,10 @@ class TestInferenceEndpoints:
     def test_get_next_prediction_invalid_session_returns_404(
         self, api_context: APIRequestContext
     ):
-        """POST /inference/sessions/{invalid_id}/next should return 404."""
         response = api_context.post(
             "/api/inference/sessions/invalid_session_id_12345/next"
         )
         assert response.status == 404
-
         data = response.json()
         assert "detail" in data
         assert "not found" in data["detail"].lower()
@@ -100,25 +95,16 @@ class TestInferenceEndpoints:
     def test_submit_step_invalid_session_returns_404(
         self, api_context: APIRequestContext
     ):
-        """POST /inference/sessions/{invalid_id}/step should return 404."""
         response = api_context.post(
             "/api/inference/sessions/invalid_session_id_12345/step",
-            data={
-                "extraction": 17,
-            },
+            data={"extraction": 17},
         )
         assert response.status == 404
 
     # -------------------------------------------------------------------------
     def test_shutdown_invalid_session_succeeds(self, api_context: APIRequestContext):
-        """
-        POST /inference/sessions/{invalid_id}/shutdown should succeed (idempotent).
-        Shutting down a non-existent session should not fail.
-        """
         response = api_context.post("/api/inference/sessions/any_session_id/shutdown")
-        # The current implementation deletes from dict silently, so it returns 200
         assert response.ok
-
         data = response.json()
         assert data.get("status") == "closed"
 
@@ -146,17 +132,10 @@ class TestInferenceEndpoints:
 
 ###############################################################################
 class TestInferenceSessionFlow:
-    """
-    Integration tests for the full inference session lifecycle.
-    These tests require a valid checkpoint to exist.
-    """
+    """Integration tests for the full inference session lifecycle."""
 
     # -------------------------------------------------------------------------
     def test_full_inference_session_flow(self, api_context: APIRequestContext):
-        """
-        Tests the complete lifecycle: start -> step -> next -> shutdown.
-        Skipped if no checkpoints are available.
-        """
         checkpoint_name = require_checkpoint(api_context)
         dataset_id = require_dataset_id(api_context)
         start_data = start_inference_session(api_context, checkpoint_name, dataset_id)
@@ -170,18 +149,16 @@ class TestInferenceSessionFlow:
         assert isinstance(prediction, dict)
         assert isinstance(prediction.get("action"), int)
         assert isinstance(prediction.get("description"), str)
-        confidence = prediction.get("confidence")
-        if confidence is not None:
-            assert isinstance(confidence, (int, float))
-            assert 0.0 <= float(confidence) <= 1.0
+        relative_preference = prediction.get("relative_preference")
+        if relative_preference is not None:
+            assert isinstance(relative_preference, (int, float))
+            assert 0.0 <= float(relative_preference) <= 1.0
+        assert "confidence" not in prediction
 
         try:
-            # Submit the observed result for the initial prediction.
             step_response = api_context.post(
                 f"/api/inference/sessions/{session_id}/step",
-                data={
-                    "extraction": 17,
-                },
+                data={"extraction": 17},
             )
             assert step_response.ok
             step_data = step_response.json()
@@ -195,7 +172,6 @@ class TestInferenceSessionFlow:
             assert isinstance(step_data.get("reward"), int)
             assert isinstance(step_data.get("capital_after"), int)
 
-            # Request the next prediction only after the observed result.
             next_response = api_context.post(
                 f"/api/inference/sessions/{session_id}/next"
             )
@@ -206,9 +182,8 @@ class TestInferenceSessionFlow:
             assert next_data.get("session_id") == session_id
             assert isinstance(next_data["prediction"].get("action"), int)
             assert isinstance(next_data["prediction"].get("description"), str)
-
+            assert "confidence" not in next_data["prediction"]
         finally:
-            # Always shutdown the session
             shutdown_response = api_context.post(
                 f"/api/inference/sessions/{session_id}/shutdown"
             )
