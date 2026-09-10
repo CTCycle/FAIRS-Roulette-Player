@@ -240,18 +240,14 @@ const parseSessionStatusResponse = (value: unknown): InferenceSessionStatusRespo
     }
     const steps = rawSteps.map((rawStep) => {
         const step = requireRecord(rawStep, 'Inference session step');
-        const relativePreference = step.predicted_relative_preference === null
-            ? null
-            : optionalNumber(step, 'predicted_relative_preference') ?? null;
-        if (relativePreference !== null && (relativePreference < 0 || relativePreference > 1)) {
-            throw new Error('Inference session field predicted_relative_preference is invalid.');
-        }
         return {
             step: requireInteger(step, 'step'),
             bet_amount: requireInteger(step, 'bet_amount'),
             predicted_action: requireInteger(step, 'predicted_action'),
             predicted_action_desc: requireString(step, 'predicted_action_desc'),
-            predicted_relative_preference: relativePreference,
+            predicted_relative_preference: step.predicted_relative_preference === null
+                ? null
+                : optionalNumber(step, 'predicted_relative_preference') ?? null,
             observed_outcome_id: nullableInteger(step, 'observed_outcome_id'),
             reward: nullableInteger(step, 'reward'),
             capital_after: requireInteger(step, 'capital_after'),
@@ -332,9 +328,9 @@ export const shutdownInferenceSession = async (
 ): Promise<Record<string, unknown>> => (
     requireRecord(
         await requestApiJson(
-            `/api/inference/sessions/${sessionId}/shutdown`,
-            { method: 'POST', signal },
-            'Stop failed.',
+        `/api/inference/sessions/${sessionId}/shutdown`,
+        { method: 'POST', signal },
+        'Stop failed.',
         ),
         'API response',
     )
@@ -346,9 +342,9 @@ export const clearInferenceSessionRows = async (
 ): Promise<Record<string, unknown>> => (
     requireRecord(
         await requestApiJson(
-            `/api/inference/sessions/${sessionId}/rows/clear`,
-            { method: 'POST', signal },
-            'Unable to clear session rows.',
+        `/api/inference/sessions/${sessionId}/rows/clear`,
+        { method: 'POST', signal },
+        'Unable to clear session rows.',
         ),
         'API response',
     )
@@ -361,14 +357,14 @@ export const updateInferenceBet = async (
 ): Promise<Record<string, unknown>> => (
     requireRecord(
         await requestApiJson(
-            `/api/inference/sessions/${sessionId}/bet`,
-            {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ bet_amount: betAmount }),
-                signal,
-            },
-            'Bet update failed.',
+        `/api/inference/sessions/${sessionId}/bet`,
+        {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ bet_amount: betAmount }),
+            signal,
+        },
+        'Bet update failed.',
         ),
         'API response',
     )
