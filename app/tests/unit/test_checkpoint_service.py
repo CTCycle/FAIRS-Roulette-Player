@@ -24,10 +24,21 @@ class DummyCheckpointRepository:
     def load_training_configuration(self, path: str) -> tuple[dict, dict]:  # noqa: ARG002
         return (
             {
+                "dataset_id": 7,
+                "sample_size": 1.0,
+                "seed": 42,
                 "episodes": 3,
                 "batch_size": 8,
+                "learning_rate": 0.0001,
+                "perceptive_field_size": 64,
                 "qnet_neurons": 16,
-                "dataset_id": 7,
+                "embedding_dimensions": 200,
+                "exploration_rate": 0.75,
+                "exploration_rate_decay": 0.995,
+                "discount_rate": 0.5,
+                "model_update_frequency": 10,
+                "bet_amount": 10,
+                "initial_capital": 1000,
             },
             {
                 "total_episodes": 3,
