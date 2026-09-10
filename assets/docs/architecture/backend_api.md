@@ -1,17 +1,14 @@
 ## Backend API
 
-Last updated: 2026-09-01
+Last updated: 2026-09-10
 
 ## Mounting Model
 
 - `app/server/app.py` mounts all routers with the shared `/api` prefix.
-- Routers are defined in:
-  - `app/server/api/upload.py`
-  - `app/server/api/training.py`
-  - `app/server/api/datasets.py`
-  - `app/server/api/inference.py`
-  - `app/server/api/system.py`
-- No WebSocket routes are currently implemented in `app/server/api`; long-running training is polled through job/status endpoints.
+- Routers are defined in `app/server/api` and delegate application work to services.
+- Request and response schemas are Pydantic models in `app/server/contracts`.
+- FastAPI/Pydantic is the canonical HTTP contract authority. There is no checked-in OpenAPI snapshot acting as a second stored contract.
+- No WebSocket routes are implemented. Long-running training is polled through job/status endpoints.
 
 ## Upload Endpoints
 
@@ -23,6 +20,7 @@ Router prefix: `/data`
 
 Router prefix: `/training`
 
+- `POST /api/training/validate`
 - `POST /api/training/start`
 - `POST /api/training/resume`
 - `GET /api/training/status`
@@ -32,6 +30,8 @@ Router prefix: `/training`
 - `DELETE /api/training/checkpoints/{checkpoint}`
 - `GET /api/training/jobs/{job_id}`
 - `DELETE /api/training/jobs/{job_id}`
+
+`POST /api/training/validate` validates the same `TrainingConfig` contract used by training start. The frontend does not maintain an independent copy of semantic training validation rules.
 
 ## Dataset Endpoints
 
@@ -54,41 +54,54 @@ Router prefix: `/inference`
 - `POST /api/inference/sessions/{session_id}/rows/clear`
 - `POST /api/inference/context/clear`
 
-`GET /api/inference/sessions/{session_id}` returns the authoritative live-session snapshot: configuration, capital, current bet, prediction state, step count, last prediction, and persisted step history. A `404` after a backend restart means the in-memory model is gone; persisted history is intentionally not treated as a rehydratable live session.
+`GET /api/inference/sessions/{session_id}` returns the authoritative live-session snapshot plus persisted step history. A `404` after a backend restart means the in-memory player is gone. Persisted history is not treated as a rehydratable live model session.
+
+Prediction preference is exposed as `relative_preference`. This is the softmax-normalized relative preference of the DQN action scores, not a calibrated probability of success. The superseded `confidence` name is not accepted or returned.
 
 ## System Endpoints
 
-- `GET /api/health`
-  - returns a typed `HealthResponse` with `status`, `application`, and `version`.
+- `GET /api/health` returns `HealthResponse` with `status`, `application`, and `version`.
 
 ## Non-API Routes
 
 - When `app/client/dist/index.html` exists, the backend serves the built SPA from `/`.
-- When no built frontend is available, `/` redirects to `/docs` if API docs are enabled.
-- When no built frontend is available and API docs are disabled, `/` returns the typed `RootStatusResponse` payload `{ "status": "ok" }`.
+- Without a built frontend, `/` redirects to `/docs` when API docs are enabled.
+- Without a built frontend and with API docs disabled, `/` returns `{ "status": "ok" }` through `RootStatusResponse`.
 - Static SPA assets are mounted from `/assets` when the frontend build exists.
 
 ## API Design Notes
 
-- Endpoints use explicit resource identifiers such as `job_id` and `session_id`.
-- `POST /api/inference/sessions/start` accepts only `checkpoint`, numeric `dataset_id`, `game_capital`, and `game_bet`; strategy behavior comes from the checkpoint configuration.
-- The optional `X-Preserve-Inference-Session` request header is used only for transactional client-side session replacement during recomputation; the existing session remains authoritative until the replacement is fully replayed.
-- Training start and resume requests return `202 Accepted` because work is tracked as a background job.
-- Upload, dataset, checkpoint, inference, and job-management operations return `200 OK` on success unless a documented validation or conflict error applies.
-- `DELETE /api/datasets/training/{dataset_id}` returns `409 Conflict` when checkpoint metadata still references the dataset; the successful response contract and route are unchanged.
-- `POST /api/inference/context/clear` returns `409 Conflict` while an inference session is active, preventing removal of data still used by the live player. It returns `200 OK` when no active session exists.
-- HTTP handlers validate and marshal payloads using `app/server/contracts/*` at the API boundary, then delegate orchestration to services.
-- API modules do not access SQLAlchemy, checkpoint files, or learning models directly; those concerns remain behind services and their collaborators.
+- Resource identifiers such as `job_id` and `session_id` are explicit.
+- `POST /api/inference/sessions/start` accepts `checkpoint`, numeric `dataset_id`, `game_capital`, and `game_bet`. Strategy behavior comes from the checkpoint configuration.
+- `X-Preserve-Inference-Session` is retained only for transactional client-side session replacement during replay. The existing session remains authoritative until replacement succeeds.
+- Training start and resume return `202 Accepted` because work is tracked as a background job.
+- Dataset deletion returns `409 Conflict` when checkpoint metadata references the dataset or cannot be safely inspected.
+- Inference context clearing returns `409 Conflict` while a live inference session exists.
+- API modules do not access SQLAlchemy, checkpoint files, or learning models directly.
 - API docs exposure is controlled by `ENABLE_API_DOCS`.
 
-## Shared Contract
+## Derived Frontend Contract
 
-- The checked-in runtime contract is `app/shared/openapi.json`.
-- Regenerate it from the FastAPI application in PowerShell with `$env:PYTHONPATH='app'; & '.\\app\\server\\.venv\\Scripts\\python.exe' '.\\app\\scripts\\export_openapi.py'`.
-- CI runs the same exporter in check mode and fails when the snapshot differs from `app.openapi()`.
+`app/client/src/generated/api.ts` is a generated transport artifact, not an independent contract source. `app/scripts/generate_frontend_contracts.py` derives it from the live FastAPI/Pydantic schema and also exports frontend defaults from the corresponding Pydantic request models.
+
+Regenerate it from repository root with:
+
+```powershell
+$env:PYTHONPATH='app'
+uv --project app/server run python app/scripts/generate_frontend_contracts.py
+```
+
+CI verifies that the checked-in generated TypeScript matches the runtime backend contract:
+
+```powershell
+$env:PYTHONPATH='app'
+uv --project app/server run python app/scripts/generate_frontend_contracts.py --check
+```
+
+OpenAPI itself remains runtime-derived. `app/scripts/export_openapi.py` prints it to stdout or writes it to an explicitly supplied `--output` path when an external artifact is required.
 
 ## Related Files
 
 - Read `execution_and_data_flow.md` for endpoint-to-service chains.
-- Read `../../runtime/configuration.md` for the flags that change API visibility and backend behavior.
-- Read `findings_and_remediation.md` for the API boundary assessment and incremental remediation priorities.
+- Read `persistence.md` for database and checkpoint persistence.
+- Read `../runtime/configuration.md` for flags that change runtime behavior.
