@@ -1,10 +1,14 @@
+import type {
+    JobStartResponse,
+    TrainingConfig as ApiTrainingConfig,
+} from '../generated/api';
+import type { CheckpointMetadataResponse, DatasetSummaryItem } from '../types/frontendApi';
+import { requestJson, requestReadOnlyJson } from './apiClient';
 import {
     parseCheckpointList,
     parseCheckpointMetadataResponse,
     parseDatasetSummaryItems,
 } from './frontendApiParsers';
-import type { CheckpointMetadataResponse, DatasetSummaryItem } from '../types/frontendApi';
-import { requestJson, requestReadOnlyJson } from './apiClient';
 
 const getJson = async (endpoint: string, signal?: AbortSignal): Promise<unknown> => (
     requestReadOnlyJson(endpoint, { signal })
@@ -31,9 +35,9 @@ export const fetchCheckpointMetadata = async (
 );
 
 export const validateTrainingPayload = async (
-    payload: Record<string, unknown>,
+    payload: ApiTrainingConfig,
     signal?: AbortSignal,
-): Promise<Record<string, unknown>> => (
+): Promise<ApiTrainingConfig> => (
     requestJson(
         '/api/training/validate',
         {
@@ -43,13 +47,13 @@ export const validateTrainingPayload = async (
             signal,
         },
         'Training configuration is invalid.',
-    ) as Promise<Record<string, unknown>>
+    ) as Promise<ApiTrainingConfig>
 );
 
 export const startTraining = async (
-    payload: Record<string, unknown>,
+    payload: ApiTrainingConfig,
     signal?: AbortSignal,
-): Promise<unknown> => (
+): Promise<JobStartResponse> => (
     requestJson(
         '/api/training/start',
         {
@@ -59,5 +63,5 @@ export const startTraining = async (
             signal,
         },
         'Unable to start training.',
-    )
+    ) as Promise<JobStartResponse>
 );
