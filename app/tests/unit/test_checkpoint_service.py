@@ -67,7 +67,8 @@ def test_get_metadata_returns_summary_shape(tmp_path, monkeypatch) -> None:
     assert metadata["checkpoint"] == "cp1"
     assert "summary" in metadata
     assert metadata["summary"]["episodes"] == 3
-    assert metadata["summary"]["neurons"] == 16
+    assert metadata["summary"]["qnet_neurons"] == 16
+    assert "neurons" not in metadata["summary"]
     assert metadata["summary"]["final_val_loss"] == 0.4
     assert metadata["summary"]["final_val_rmse"] == 0.5
 
