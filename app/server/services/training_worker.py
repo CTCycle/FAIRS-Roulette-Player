@@ -10,16 +10,16 @@ import queue
 import signal
 import shutil
 import subprocess
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from collections.abc import Callable
-
 from server.common.utils.logger import logger
-from server.learning.training.device import DeviceConfig
-from server.learning.training.fitting import DQNTraining
+from server.contracts.training import TrainingConfig
 from server.learning.models.qnet import FAIRSnet
 from server.learning.models.strategy import StrategyNet
+from server.learning.training.device import DeviceConfig
+from server.learning.training.fitting import DQNTraining
 from server.repositories.checkpoints import CheckpointRepository
 
 ###############################################################################
@@ -285,10 +285,11 @@ async def run_training_async(
     jit_compile: bool = False,
     jit_backend: str = "inductor",
     polling_interval_seconds: float = 1.0,
-) -> tuple[Any, Any | None, dict[str, Any], str, str]:
+) -> tuple[Any, Any | None, dict[str, Any], dict[str, Any], str, str]:
+    configuration = TrainingConfig.model_validate(configuration).model_dump()
     checkpoint_repository = CheckpointRepository()
     checkpoint_path, staging_path = checkpoint_repository.create_checkpoint_workspace(
-        configuration.get("checkpoint_name")
+        configuration["checkpoint_name"]
     )
     try:
         _raise_if_stopped(stop_event, staging_path)
@@ -306,8 +307,7 @@ async def run_training_async(
             logger.info("Roulette series has been loaded (%s extractions)", len(dataset))
 
         logger.info("Setting device for training operations")
-        device = DeviceConfig(configuration)
-        device.set_device()
+        DeviceConfig(configuration).set_device()
 
         logger.info("Building FAIRS reinforcement learning model")
         learner = FAIRSnet(
@@ -317,8 +317,8 @@ async def run_training_async(
         )
         q_model = learner.get_model(model_summary=True)
         target_model = learner.get_model(model_summary=False)
-        dynamic_enabled = bool(configuration.get("dynamic_betting_enabled", False))
-        strategy_enabled = bool(configuration.get("bet_strategy_model_enabled", False))
+        dynamic_enabled = bool(configuration["dynamic_betting_enabled"])
+        strategy_enabled = bool(configuration["bet_strategy_model_enabled"])
         strategy_model: Any | None = None
         target_strategy_model: Any | None = None
         if dynamic_enabled and strategy_enabled:
@@ -346,7 +346,14 @@ async def run_training_async(
         )
         _raise_if_stopped(stop_event, staging_path)
 
-        return model, strategy_model, history, checkpoint_path, staging_path
+        return (
+            model,
+            strategy_model,
+            history,
+            configuration,
+            checkpoint_path,
+            staging_path,
+        )
     except Exception:
         checkpoint_repository.remove_staging_workspace(staging_path)
         raise
@@ -367,11 +374,12 @@ async def run_resume_training_async(
     model, train_config, session, checkpoint_path = (
         checkpoint_repository.load_checkpoint(checkpoint)
     )
+    train_config = TrainingConfig.model_validate(train_config).model_dump()
     staging_path = checkpoint_repository.create_resume_workspace(checkpoint_path)
     try:
         _raise_if_stopped(stop_event, staging_path)
-        dynamic_enabled = bool(train_config.get("dynamic_betting_enabled", False))
-        strategy_enabled = bool(train_config.get("bet_strategy_model_enabled", False))
+        dynamic_enabled = bool(train_config["dynamic_betting_enabled"])
+        strategy_enabled = bool(train_config["bet_strategy_model_enabled"])
         strategy_model: Any | None = None
         target_strategy_model: Any | None = None
         if dynamic_enabled and strategy_enabled:
@@ -396,8 +404,7 @@ async def run_resume_training_async(
             logger.info("Roulette series has been loaded (%s extractions)", len(dataset))
 
         logger.info("Setting device for training operations")
-        device = DeviceConfig(train_config)
-        device.set_device()
+        DeviceConfig(train_config).set_device()
 
         trainer = DQNTraining(
             train_config,
@@ -447,7 +454,14 @@ def run_training_process(
     try:
         _raise_if_stopped(stop_event)
 
-        model, strategy_model, history, checkpoint_path, staging_path = asyncio.run(
+        (
+            model,
+            strategy_model,
+            history,
+            configuration,
+            checkpoint_path,
+            staging_path,
+        ) = asyncio.run(
             run_training_async(
                 configuration,
                 reporter,
