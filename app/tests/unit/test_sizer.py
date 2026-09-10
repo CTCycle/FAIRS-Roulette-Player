@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from server.contracts.training import TrainingConfig
 from server.learning.betting.sizer import BetSizer
 from server.learning.betting.types import (
     STRATEGY_DALEMBERT,
@@ -10,15 +11,21 @@ from server.learning.betting.types import (
 )
 
 ###############################################################################
+def build_configuration(**overrides: object) -> dict[str, object]:
+    configuration = TrainingConfig(use_data_generator=True).model_dump()
+    configuration.update(overrides)
+    return configuration
+
+###############################################################################
 def test_keep_strategy_preserves_bet() -> None:
-    sizer = BetSizer({"bet_amount": 10, "initial_capital": 1000})
+    sizer = BetSizer(build_configuration(bet_amount=10, initial_capital=1000))
     assert sizer.apply(STRATEGY_KEEP, capital=1000) == 10
     sizer.set_last_outcome_from_reward(-10)
     assert sizer.apply(STRATEGY_KEEP, capital=1000) == 10
 
 ###############################################################################
 def test_martingale_strategy_updates_deterministically() -> None:
-    sizer = BetSizer({"bet_amount": 10, "initial_capital": 1000})
+    sizer = BetSizer(build_configuration(bet_amount=10, initial_capital=1000))
     sizer.set_last_outcome_from_reward(-10)
     assert sizer.apply(STRATEGY_MARTINGALE, capital=1000) == 20
     sizer.set_last_outcome_from_reward(10)
@@ -26,7 +33,7 @@ def test_martingale_strategy_updates_deterministically() -> None:
 
 ###############################################################################
 def test_reverse_strategy_updates_deterministically() -> None:
-    sizer = BetSizer({"bet_amount": 10, "initial_capital": 1000})
+    sizer = BetSizer(build_configuration(bet_amount=10, initial_capital=1000))
     sizer.set_last_outcome_from_reward(10)
     assert sizer.apply(STRATEGY_REVERSE, capital=1000) == 20
     sizer.set_last_outcome_from_reward(10)
@@ -36,7 +43,9 @@ def test_reverse_strategy_updates_deterministically() -> None:
 
 ###############################################################################
 def test_dalembert_strategy_updates_deterministically() -> None:
-    sizer = BetSizer({"bet_amount": 10, "bet_unit": 5, "initial_capital": 1000})
+    sizer = BetSizer(
+        build_configuration(bet_amount=10, bet_unit=5, initial_capital=1000)
+    )
     sizer.set_last_outcome_from_reward(-10)
     assert sizer.apply(STRATEGY_DALEMBERT, capital=1000) == 15
     sizer.set_last_outcome_from_reward(-10)
@@ -48,7 +57,7 @@ def test_dalembert_strategy_updates_deterministically() -> None:
 
 ###############################################################################
 def test_fibonacci_strategy_updates_deterministically() -> None:
-    sizer = BetSizer({"bet_amount": 10, "initial_capital": 1000})
+    sizer = BetSizer(build_configuration(bet_amount=10, initial_capital=1000))
     sizer.set_last_outcome_from_reward(-10)
     assert sizer.apply(STRATEGY_FIBONACCI, capital=1000) == 10
     sizer.set_last_outcome_from_reward(-10)
@@ -61,12 +70,12 @@ def test_fibonacci_strategy_updates_deterministically() -> None:
 ###############################################################################
 def test_bounds_with_bet_max_and_capital_limit() -> None:
     sizer = BetSizer(
-        {
-            "bet_amount": 10,
-            "initial_capital": 1000,
-            "bet_max": 25,
-            "bet_enforce_capital": True,
-        }
+        build_configuration(
+            bet_amount=10,
+            initial_capital=1000,
+            bet_max=25,
+            bet_enforce_capital=True,
+        )
     )
     sizer.set_last_outcome_from_reward(-10)
     assert sizer.apply(STRATEGY_MARTINGALE, capital=1000) == 20
@@ -77,7 +86,7 @@ def test_bounds_with_bet_max_and_capital_limit() -> None:
 
 ###############################################################################
 def test_neutral_outcome_does_not_progress_sequences() -> None:
-    sizer = BetSizer({"bet_amount": 10, "initial_capital": 1000})
+    sizer = BetSizer(build_configuration(bet_amount=10, initial_capital=1000))
     sizer.set_last_outcome_from_reward(0)
     assert sizer.apply(STRATEGY_MARTINGALE, capital=1000) == 10
     sizer.set_last_outcome_from_reward(0)
@@ -85,12 +94,14 @@ def test_neutral_outcome_does_not_progress_sequences() -> None:
 
 ###############################################################################
 def test_none_bet_unit_falls_back_to_base_bet() -> None:
-    sizer = BetSizer({"bet_amount": 10, "bet_unit": None, "initial_capital": 1000})
+    sizer = BetSizer(
+        build_configuration(bet_amount=10, bet_unit=None, initial_capital=1000)
+    )
     assert sizer.unit == 10
 
 ###############################################################################
 def test_preview_does_not_mutate_sizer_state() -> None:
-    sizer = BetSizer({"bet_amount": 10, "initial_capital": 1000})
+    sizer = BetSizer(build_configuration(bet_amount=10, initial_capital=1000))
     sizer.set_last_outcome_from_reward(-10)
     before_bet = sizer.current_bet
     before_index = sizer.fib_index
@@ -104,12 +115,12 @@ def test_preview_does_not_mutate_sizer_state() -> None:
 ###############################################################################
 def test_set_base_and_current_bet_respect_bounds() -> None:
     sizer = BetSizer(
-        {
-            "bet_amount": 10,
-            "initial_capital": 1000,
-            "bet_max": 50,
-            "bet_enforce_capital": True,
-        }
+        build_configuration(
+            bet_amount=10,
+            initial_capital=1000,
+            bet_max=50,
+            bet_enforce_capital=True,
+        )
     )
     sizer.set_base_bet(40, capital=30)
     assert sizer.base_bet == 40
