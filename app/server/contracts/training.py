@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any, Literal
+
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -15,14 +17,15 @@ from server.common.checkpoints import (
     normalize_checkpoint_identifier,
 )
 
+CHECKPOINT_FORMAT_VERSION = 1
+
 ###############################################################################
 class TrainingConfig(BaseModel):
-    """Configuration for starting a new training session."""
+    """Canonical configuration for starting a new training session."""
 
     model_config = ConfigDict(
         extra="forbid",
         str_strip_whitespace=True,
-        populate_by_name=True,
     )
 
     # Agent parameters
@@ -64,20 +67,16 @@ class TrainingConfig(BaseModel):
     training_seed: int = 42
     checkpoint_name: str | None = Field(None, max_length=MAX_CHECKPOINT_NAME_LENGTH)
 
-    # Device parameters
+    # Per-training device parameters
     use_device_gpu: bool = False
     device_id: int = Field(0, ge=0)
     use_mixed_precision: bool = False
-    jit_compile: bool = False
-    jit_backend: str = Field("inductor", min_length=1)
 
     # -------------------------------------------------------------------------
     @field_validator("checkpoint_name")
     @classmethod
     def validate_checkpoint_name(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        if not value:
+        if value is None or not value:
             return None
         return normalize_checkpoint_identifier(value)
 
@@ -126,13 +125,30 @@ class ResumeConfig(BaseModel):
         return normalize_checkpoint_identifier(value)
 
 ###############################################################################
-class CheckpointConfiguration(TrainingConfig):
-    """Validated configuration persisted in a current checkpoint."""
+class CheckpointConfiguration(BaseModel):
+    """Versioned persisted checkpoint configuration for the current format."""
 
-    model_config = ConfigDict(
-        extra="forbid",
-        str_strip_whitespace=True,
-    )
+    model_config = ConfigDict(extra="forbid")
+
+    format_version: Literal[1]
+    training: TrainingConfig
+
+    # -------------------------------------------------------------------------
+    @model_validator(mode="before")
+    @classmethod
+    def require_complete_training_configuration(cls, value: Any) -> Any:
+        if not isinstance(value, dict):
+            return value
+        training = value.get("training")
+        if not isinstance(training, dict):
+            return value
+        missing = set(TrainingConfig.model_fields) - set(training)
+        if missing:
+            joined = ", ".join(sorted(missing))
+            raise ValueError(
+                f"Checkpoint training configuration is incomplete: {joined}"
+            )
+        return value
 
 ###############################################################################
 class TrainingStatusResponse(BaseModel):
@@ -163,7 +179,7 @@ class TrainingCheckpointSummary(BaseModel):
     batch_size: int | None = None
     learning_rate: float | None = None
     perceptive_field_size: int | None = None
-    neurons: int | None = None
+    qnet_neurons: int | None = None
     embedding_dimensions: int | None = None
     exploration_rate: float | None = None
     exploration_rate_decay: float | None = None
