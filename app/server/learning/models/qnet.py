@@ -20,13 +20,13 @@ class FAIRSnet:
         jit_compile: bool = False,
         jit_backend: str = "inductor",
     ) -> None:
-        self.perceptive_size = configuration.get("perceptive_field_size", 64)
-        self.embedding_dims = configuration.get("embedding_dimensions", 200)
-        self.neurons = configuration.get("qnet_neurons", 64)
+        self.perceptive_size = configuration["perceptive_field_size"]
+        self.embedding_dims = configuration["embedding_dimensions"]
+        self.neurons = configuration["qnet_neurons"]
         self.jit_compile = bool(jit_compile)
-        self.jit_backend = jit_backend.strip() or "inductor"
-        self.learning_rate = configuration.get("learning_rate", 0.0001)
-        self.seed = configuration.get("training_seed", 42)
+        self.jit_backend = jit_backend
+        self.learning_rate = configuration["learning_rate"]
+        self.seed = configuration["training_seed"]
         self.q_neurons = self.neurons * 2
         self.action_size = STATES
         self.numbers = NUMBERS
@@ -58,7 +58,6 @@ class FAIRSnet:
         layer = BatchNormDense(self.neurons)(embeddings)
         layer = BatchNormDense(self.neurons)(layer)
         layer = layers.Dropout(rate=0.3, seed=self.seed)(layer)
-        # Flatten the 3D timeseries output to 2D before merging with gain context
         layer = layers.Flatten()(layer)
         layer = BatchNormDense(self.neurons)(layer)
 
