@@ -269,8 +269,6 @@ class TrainingService:
                     "database_settings": self.database_settings,
                     "database_path": self.database_path,
                     "polling_interval_seconds": self.polling_interval_seconds,
-                    "jit_compile": self.jit_compile,
-                    "jit_backend": self.jit_backend,
                 },
             )
             result = self._monitor_training_process(
