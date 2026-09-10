@@ -1,3 +1,5 @@
+import { RESUME_DEFAULTS, TRAINING_DEFAULTS } from '../generated/trainingDefaults';
+
 export interface TrainingNewConfig {
     perceptiveField: number;
     numNeurons: number;
@@ -38,42 +40,42 @@ export interface TrainingNewConfig {
 }
 
 export const initialTrainingNewConfig: TrainingNewConfig = {
-    perceptiveField: 64,
-    numNeurons: 64,
-    embeddingDims: 200,
-    explorationRate: 0.75,
-    explorationRateDecay: 0.995,
-    minExplorationRate: 0.10,
-    discountRate: 0.50,
-    modelUpdateFreq: 10,
-    betAmount: 10,
-    initialCapital: 1000,
-    datasetId: null,
-    useDataGen: false,
-    numGeneratedSamples: 10000,
-    trainSampleSize: 1.0,
-    validationSize: 0.20,
-    splitSeed: 42,
-    episodes: 10,
-    maxStepsEpisode: 2000,
-    batchSize: 32,
-    learningRate: 0.0001,
-    trainingSeed: 42,
-    deviceGPU: false,
-    deviceID: 0,
-    useMixedPrecision: false,
-    maxMemorySize: 10000,
-    replayBufferSize: 1000,
-    dynamicBettingEnabled: false,
-    betStrategyModelEnabled: false,
-    betStrategyFixedId: 0,
-    strategyHoldSteps: 1,
-    betUnitEnabled: false,
-    betUnit: 10,
-    betMaxEnabled: false,
-    betMax: 1000,
-    betEnforceCapital: true,
-    checkpointName: '',
+    perceptiveField: TRAINING_DEFAULTS.perceptive_field_size,
+    numNeurons: TRAINING_DEFAULTS.qnet_neurons,
+    embeddingDims: TRAINING_DEFAULTS.embedding_dimensions,
+    explorationRate: TRAINING_DEFAULTS.exploration_rate,
+    explorationRateDecay: TRAINING_DEFAULTS.exploration_rate_decay,
+    minExplorationRate: TRAINING_DEFAULTS.minimum_exploration_rate,
+    discountRate: TRAINING_DEFAULTS.discount_rate,
+    modelUpdateFreq: TRAINING_DEFAULTS.model_update_frequency,
+    betAmount: TRAINING_DEFAULTS.bet_amount,
+    initialCapital: TRAINING_DEFAULTS.initial_capital,
+    datasetId: TRAINING_DEFAULTS.dataset_id,
+    useDataGen: TRAINING_DEFAULTS.use_data_generator,
+    numGeneratedSamples: TRAINING_DEFAULTS.num_generated_samples,
+    trainSampleSize: TRAINING_DEFAULTS.sample_size,
+    validationSize: TRAINING_DEFAULTS.validation_size,
+    splitSeed: TRAINING_DEFAULTS.seed,
+    episodes: TRAINING_DEFAULTS.episodes,
+    maxStepsEpisode: TRAINING_DEFAULTS.max_steps_episode,
+    batchSize: TRAINING_DEFAULTS.batch_size,
+    learningRate: TRAINING_DEFAULTS.learning_rate,
+    trainingSeed: TRAINING_DEFAULTS.training_seed,
+    deviceGPU: TRAINING_DEFAULTS.use_device_gpu,
+    deviceID: TRAINING_DEFAULTS.device_id,
+    useMixedPrecision: TRAINING_DEFAULTS.use_mixed_precision,
+    maxMemorySize: TRAINING_DEFAULTS.max_memory_size,
+    replayBufferSize: TRAINING_DEFAULTS.replay_buffer_size,
+    dynamicBettingEnabled: TRAINING_DEFAULTS.dynamic_betting_enabled,
+    betStrategyModelEnabled: TRAINING_DEFAULTS.bet_strategy_model_enabled,
+    betStrategyFixedId: TRAINING_DEFAULTS.bet_strategy_fixed_id,
+    strategyHoldSteps: TRAINING_DEFAULTS.strategy_hold_steps,
+    betUnitEnabled: TRAINING_DEFAULTS.bet_unit !== null,
+    betUnit: TRAINING_DEFAULTS.bet_unit ?? TRAINING_DEFAULTS.bet_amount,
+    betMaxEnabled: TRAINING_DEFAULTS.bet_max !== null,
+    betMax: TRAINING_DEFAULTS.bet_max ?? TRAINING_DEFAULTS.initial_capital,
+    betEnforceCapital: TRAINING_DEFAULTS.bet_enforce_capital,
+    checkpointName: TRAINING_DEFAULTS.checkpoint_name ?? '',
 };
 
 export interface TrainingResumeConfig {
@@ -83,7 +85,7 @@ export interface TrainingResumeConfig {
 
 export const initialTrainingResumeConfig: TrainingResumeConfig = {
     selectedCheckpoint: '',
-    numAdditionalEpisodes: 10,
+    numAdditionalEpisodes: RESUME_DEFAULTS.additional_episodes,
 };
 
 export type TrainingStatusCode =
