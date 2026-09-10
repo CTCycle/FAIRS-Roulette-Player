@@ -7,8 +7,8 @@ from typing import Any
 import numpy as np
 from keras import Model
 
-from server.common.constants import PAD_VALUE, STATES
 from server.common import path as shared_paths
+from server.common.constants import PAD_VALUE, STATES
 from server.learning.betting.types import STRATEGY_COUNT
 from server.learning.training.environment import RouletteEnvironment
 
@@ -22,15 +22,15 @@ class DQNAgent:
         memory: Any | None = None,
         action_size: int | None = None,
     ) -> None:
-        self.rng = np.random.default_rng(seed=configuration.get("training_seed", 42))
+        self.rng = np.random.default_rng(seed=configuration["training_seed"])
         self.action_size = int(action_size) if action_size is not None else STATES
-        self.state_size = configuration.get("perceptive_field_size", 64)
-        self.gamma = configuration.get("discount_rate", 0.5)
-        self.epsilon = configuration.get("exploration_rate", 0.75)
-        self.epsilon_decay = configuration.get("exploration_rate_decay", 0.995)
-        self.epsilon_min = configuration.get("minimum_exploration_rate", 0.1)
-        self.memory_size = configuration.get("max_memory_size", 10000)
-        self.replay_size = configuration.get("replay_buffer_size", 1000)
+        self.state_size = configuration["perceptive_field_size"]
+        self.gamma = configuration["discount_rate"]
+        self.epsilon = configuration["exploration_rate"]
+        self.epsilon_decay = configuration["exploration_rate_decay"]
+        self.epsilon_min = configuration["minimum_exploration_rate"]
+        self.memory_size = configuration["max_memory_size"]
+        self.replay_size = configuration["replay_buffer_size"]
         self.memory = deque(maxlen=self.memory_size) if memory is None else memory
 
     # -------------------------------------------------------------------------
@@ -49,11 +49,19 @@ class DQNAgent:
     def act(self, model: Model, state: Any, gain: float | Any) -> np.int32:
         random_threshold = self.rng.random()
         if np.all(state == PAD_VALUE) or random_threshold <= self.epsilon:
-            random_action = np.int32(self.rng.integers(0, self.action_size))
-            return random_action
-        q_values = model.predict({"timeseries": state, "gain": gain}, verbose=0)  # type: ignore
-        best_q = np.int32(np.argmax(q_values))
-        return best_q
+            return np.int32(self.rng.integers(0, self.action_size))
+
+        q_values = np.asarray(
+            model.predict({"timeseries": state, "gain": gain}, verbose=0)  # type: ignore
+        )
+        if q_values.size == 0 or q_values.shape[-1] != self.action_size:
+            raise ValueError(
+                "Model returned an invalid action dimension: "
+                f"expected {self.action_size}."
+            )
+        if not np.all(np.isfinite(q_values)):
+            raise ValueError("Model returned non-finite Q-scores.")
+        return np.int32(np.argmax(q_values))
 
     # -------------------------------------------------------------------------
     def remember(
@@ -143,10 +151,7 @@ class DQNAgent:
         memory_buffer: deque,
         batch_size: int,
     ) -> dict[str, Any]:
-        """
-        Evaluates the model on a batch of transitions without updating weights.
-        Returns loss and metric values.
-        """
+        """Evaluate a transition batch without updating model weights."""
         if len(memory_buffer) < batch_size:
             return {"loss": 0.0, "root_mean_squared_error": 0.0}
 
