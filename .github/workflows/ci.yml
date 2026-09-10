@@ -34,30 +34,30 @@ jobs:
       - name: Install dependencies
         working-directory: app/server
         run: uv sync --locked --extra test
-      - name: Render canonical contract artifacts
-        run: |
-          uv --project app/server run python app/scripts/export_openapi.py
-          uv --project app/server run python app/scripts/generate_frontend_contracts.py
-      - name: Upload canonical contract artifacts
+      - name: Render generated frontend contract
+        run: uv --project app/server run python app/scripts/generate_frontend_contracts.py
+      - name: Upload generated frontend contract
         uses: actions/upload-artifact@v4
         with:
-          name: canonical-contracts-${{ github.sha }}
-          path: |
-            app/shared/openapi.json
-            app/client/src/generated/api.ts
-      - name: Restore checked-in contract state
-        run: |
-          git checkout -- app/shared/openapi.json
-          rm -rf app/client/src/generated
+          name: generated-contract-${{ github.sha }}
+          path: app/client/src/generated/api.ts
+      - name: Restore checked-in generated contract
+        run: git checkout -- app/client/src/generated/api.ts
       - name: Ruff
         run: uv --project app/server run ruff check --config app/server/pyproject.toml app/server app/tests
       - name: Unit tests
-        run: uv --project app/server run pytest -q app/tests/unit
+        run: uv --project app/server run pytest -q app/tests/unit --junitxml=unit-tests.xml
+      - name: Upload unit test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-tests-${{ github.sha }}
+          path: unit-tests.xml
       - name: Alembic history and model consistency
         working-directory: app/server
         run: uv run alembic -c alembic.ini heads
-      - name: OpenAPI snapshot check
-        run: uv --project app/server run python app/scripts/export_openapi.py --check
+      - name: Generated frontend contract check
+        run: uv --project app/server run python app/scripts/generate_frontend_contracts.py --check
   persistence-conformance:
     runs-on: ubuntu-latest
     timeout-minutes: 20
