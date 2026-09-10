@@ -174,27 +174,29 @@ class TrainingCheckpointListResponse(RootModel[list[str]]):
 
 ###############################################################################
 class TrainingCheckpointSummary(BaseModel):
+    """Canonical checkpoint summary derived from a complete current checkpoint."""
+
     model_config = ConfigDict(extra="forbid")
 
-    dataset_id: StrictInt | None = None
-    sample_size: float | None = None
-    seed: int | None = None
-    episodes: int | None = None
-    batch_size: int | None = None
-    learning_rate: float | None = None
-    perceptive_field_size: int | None = None
-    qnet_neurons: int | None = None
-    embedding_dimensions: int | None = None
-    exploration_rate: float | None = None
-    exploration_rate_decay: float | None = None
-    discount_rate: float | None = None
-    model_update_frequency: int | None = None
-    bet_amount: int | None = None
-    initial_capital: int | None = None
-    final_loss: float | None = None
-    final_rmse: float | None = None
-    final_val_loss: float | None = None
-    final_val_rmse: float | None = None
+    dataset_id: StrictInt | None
+    sample_size: float
+    seed: int
+    episodes: int
+    batch_size: int
+    learning_rate: float
+    perceptive_field_size: int
+    qnet_neurons: int
+    embedding_dimensions: int
+    exploration_rate: float
+    exploration_rate_decay: float
+    discount_rate: float
+    model_update_frequency: int
+    bet_amount: int
+    initial_capital: int
+    final_loss: float | None
+    final_rmse: float | None
+    final_val_loss: float | None
+    final_val_rmse: float | None
 
 ###############################################################################
 class TrainingCheckpointMetadataResponse(BaseModel):
