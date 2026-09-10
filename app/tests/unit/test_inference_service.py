@@ -18,6 +18,7 @@ class FakePlayer:
     def __init__(self, *args, **kwargs):  # noqa: ANN002, ANN003
         self.bet_amount = 10
         self.current_capital = 100
+        self.action_descriptions = {index: f"action {index}" for index in range(47)}
 
     # -------------------------------------------------------------------------
     def predict_next(self) -> dict[str, object]:
