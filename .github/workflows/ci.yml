@@ -34,6 +34,21 @@ jobs:
       - name: Install dependencies
         working-directory: app/server
         run: uv sync --locked --extra test
+      - name: Render canonical contract artifacts
+        run: |
+          uv --project app/server run python app/scripts/export_openapi.py
+          uv --project app/server run python app/scripts/generate_frontend_contracts.py
+      - name: Upload canonical contract artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: canonical-contracts-${{ github.sha }}
+          path: |
+            app/shared/openapi.json
+            app/client/src/generated/api.ts
+      - name: Restore checked-in contract state
+        run: |
+          git checkout -- app/shared/openapi.json
+          rm -rf app/client/src/generated
       - name: Ruff
         run: uv --project app/server run ruff check --config app/server/pyproject.toml app/server app/tests
       - name: Unit tests
