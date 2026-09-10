@@ -170,10 +170,10 @@ class TestInferenceSessionFlow:
         assert isinstance(prediction, dict)
         assert isinstance(prediction.get("action"), int)
         assert isinstance(prediction.get("description"), str)
-        confidence = prediction.get("confidence")
-        if confidence is not None:
-            assert isinstance(confidence, (int, float))
-            assert 0.0 <= float(confidence) <= 1.0
+        relative_preference = prediction.get("relative_preference")
+        assert isinstance(relative_preference, (int, float))
+        assert 0.0 <= float(relative_preference) <= 1.0
+        assert "confidence" not in prediction
 
         try:
             # Submit the observed result for the initial prediction.
