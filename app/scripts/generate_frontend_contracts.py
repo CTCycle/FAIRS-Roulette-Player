@@ -6,8 +6,11 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+from pydantic import BaseModel
+
 from scripts.export_openapi import render_openapi
-from server.contracts.training import TrainingConfig
+from server.contracts.inference import InferenceStartRequest
+from server.contracts.training import ResumeConfig, TrainingConfig
 
 OUTPUT_PATH = (
     Path(__file__).resolve().parents[1]
@@ -95,19 +98,22 @@ def _schema_to_typescript(schema: Mapping[str, Any]) -> str:
 
 
 ###############################################################################
-def _render_training_defaults() -> list[str]:
-    defaults = TrainingConfig(use_data_generator=True).model_dump()
-    defaults["use_data_generator"] = TrainingConfig.model_fields[
-        "use_data_generator"
-    ].default
-    defaults["dataset_id"] = TrainingConfig.model_fields["dataset_id"].default
-
-    lines = ["export const TRAINING_CONFIG_DEFAULTS = {"]
+def _render_model_defaults(
+    constant_name: str,
+    model_name: str,
+    model: type[BaseModel],
+) -> list[str]:
+    defaults = {
+        name: field.default
+        for name, field in model.model_fields.items()
+        if not field.is_required()
+    }
+    lines = [f"export const {constant_name} = {{"]
     for name in sorted(defaults):
         lines.append(f"    {json.dumps(name)}: {_literal(defaults[name])},")
     lines.extend(
         [
-            "} as const satisfies TrainingConfig;",
+            f"}} as const satisfies Partial<{model_name}>;",
             "",
         ]
     )
@@ -134,7 +140,27 @@ def render_typescript() -> str:
         lines.append(f"export type {name} = {rendered};")
         lines.append("")
 
-    lines.extend(_render_training_defaults())
+    lines.extend(
+        _render_model_defaults(
+            "INFERENCE_START_REQUEST_DEFAULTS",
+            "InferenceStartRequest",
+            InferenceStartRequest,
+        )
+    )
+    lines.extend(
+        _render_model_defaults(
+            "RESUME_CONFIG_DEFAULTS",
+            "ResumeConfig",
+            ResumeConfig,
+        )
+    )
+    lines.extend(
+        _render_model_defaults(
+            "TRAINING_CONFIG_DEFAULTS",
+            "TrainingConfig",
+            TrainingConfig,
+        )
+    )
     return "\n".join(lines)
 
 
