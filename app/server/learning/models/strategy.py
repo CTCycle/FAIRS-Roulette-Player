@@ -14,11 +14,11 @@ class StrategyNet:
 
     # -------------------------------------------------------------------------
     def __init__(self, configuration: dict[str, Any]) -> None:
-        self.perceptive_size = int(configuration.get("perceptive_field_size", 64))
-        self.embedding_dims = int(configuration.get("embedding_dimensions", 200))
-        self.neurons = int(configuration.get("qnet_neurons", 64))
-        self.learning_rate = float(configuration.get("learning_rate", 0.0001))
-        self.seed = int(configuration.get("training_seed", 42))
+        self.perceptive_size = int(configuration["perceptive_field_size"])
+        self.embedding_dims = int(configuration["embedding_dimensions"])
+        self.neurons = int(configuration["qnet_neurons"])
+        self.learning_rate = float(configuration["learning_rate"])
+        self.seed = int(configuration["training_seed"])
         self.q_neurons = self.neurons * 2
         self.action_size = STRATEGY_COUNT
         self.numbers = NUMBERS
