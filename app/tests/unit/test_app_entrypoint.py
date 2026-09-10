@@ -34,7 +34,6 @@ def _build_settings() -> ServerSettings:
         device=DeviceSettings(
             jit_compile=False,
             jit_backend="inductor",
-            use_mixed_precision=False,
         ),
     )
 
