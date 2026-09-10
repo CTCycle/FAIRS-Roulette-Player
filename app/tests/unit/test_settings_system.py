@@ -50,7 +50,6 @@ def _default_json_config() -> dict[str, object]:
         "device": {
             "jit_compile": False,
             "jit_backend": "inductor",
-            "use_mixed_precision": False,
         },
     }
 
@@ -203,6 +202,26 @@ def test_server_settings_use_json_configuration_file(
     assert settings.jobs.polling_interval == 1.0
     assert settings.device.jit_compile is False
     assert settings.device.jit_backend == "inductor"
+
+###############################################################################
+def test_obsolete_device_setting_is_rejected(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    config_path = tmp_path / "configurations.json"
+    payload = _default_json_config()
+    payload["device"] = {
+        "jit_compile": False,
+        "jit_backend": "inductor",
+        "use_mixed_precision": False,
+    }
+    _write_json(config_path, payload)
+
+    env_path = tmp_path / ".env"
+    _write_env(env_path, ["EMBEDDED_DATABASE=true"])
+    monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
+
+    with pytest.raises(RuntimeError, match="Unable to load configuration"):
+        startup.reload_settings_for_tests(config_path=str(config_path))
 
 ###############################################################################
 def test_database_settings_are_loaded_from_env(
