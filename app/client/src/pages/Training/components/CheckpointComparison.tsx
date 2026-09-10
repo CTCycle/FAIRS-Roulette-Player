@@ -15,7 +15,7 @@ const COMPARISON_FIELDS = [
     ['Batch Size', 'batch_size'],
     ['Learning Rate', 'learning_rate'],
     ['Perceptive Field', 'perceptive_field_size'],
-    ['QNet Neurons', 'neurons'],
+    ['QNet Neurons', 'qnet_neurons'],
     ['Embedding Dims', 'embedding_dimensions'],
     ['Exploration Rate', 'exploration_rate'],
     ['Exploration Decay', 'exploration_rate_decay'],
@@ -98,48 +98,47 @@ export const CheckpointComparison: React.FC = () => {
         return () => controller.abort();
     }, [leftCheckpoint, metadata, rightCheckpoint]);
 
-    const comparisonRows = useMemo(() => {
-        const leftSummary = leftCheckpoint ? metadata[leftCheckpoint]?.summary : undefined;
-        const rightSummary = rightCheckpoint ? metadata[rightCheckpoint]?.summary : undefined;
-        return COMPARISON_FIELDS.map(([label, key]) => ({
+    const rows = useMemo(
+        () => COMPARISON_FIELDS.map(([label, key]) => ({
             label,
-            left: formatValue(leftSummary?.[key]),
-            right: formatValue(rightSummary?.[key]),
-        }));
-    }, [leftCheckpoint, metadata, rightCheckpoint]);
+            left: leftCheckpoint ? metadata[leftCheckpoint]?.summary[key] : undefined,
+            right: rightCheckpoint ? metadata[rightCheckpoint]?.summary[key] : undefined,
+        })),
+        [leftCheckpoint, metadata, rightCheckpoint],
+    );
 
-    if (checkpoints.length < 2) {
-        return null;
+    if (checkpoints.length === 0) {
+        return (
+            <div className="checkpoint-comparison checkpoint-comparison--empty">
+                <GitCompareArrows size={18} aria-hidden="true" />
+                <span>Train at least one checkpoint to compare experiments.</span>
+            </div>
+        );
     }
 
     return (
-        <section className="checkpoint-comparison" aria-labelledby="checkpoint-comparison-title">
-            <div className="checkpoint-comparison-header">
-                <div>
-                    <h3 id="checkpoint-comparison-title"><GitCompareArrows size={18} /> Compare Checkpoints</h3>
-                    <p>Compare configuration and stored training summaries. These values are not a standardized benchmark.</p>
-                </div>
-            </div>
-
-            <div className="checkpoint-comparison-selectors">
+        <div className="checkpoint-comparison">
+            <div className="checkpoint-comparison__controls">
                 <label>
-                    Checkpoint A
+                    Baseline
                     <select value={leftCheckpoint} onChange={(event) => setLeftCheckpoint(event.target.value)}>
-                        {checkpoints.map((checkpoint) => <option key={checkpoint} value={checkpoint}>{checkpoint}</option>)}
+                        {checkpoints.map((checkpoint) => (
+                            <option key={`left-${checkpoint}`} value={checkpoint}>{checkpoint}</option>
+                        ))}
                     </select>
                 </label>
                 <label>
-                    Checkpoint B
+                    Comparison
                     <select value={rightCheckpoint} onChange={(event) => setRightCheckpoint(event.target.value)}>
-                        {checkpoints.map((checkpoint) => <option key={checkpoint} value={checkpoint}>{checkpoint}</option>)}
+                        {checkpoints.map((checkpoint) => (
+                            <option key={`right-${checkpoint}`} value={checkpoint}>{checkpoint}</option>
+                        ))}
                     </select>
                 </label>
             </div>
-
-            {error && <div className="checkpoint-comparison-error" role="alert">{error}</div>}
-
-            <div className="checkpoint-comparison-table-wrap">
-                <table className="checkpoint-comparison-table">
+            {error && <div className="checkpoint-comparison__error" role="alert">{error}</div>}
+            <div className="checkpoint-comparison__table-wrap">
+                <table className="checkpoint-comparison__table">
                     <thead>
                         <tr>
                             <th>Metric</th>
@@ -148,16 +147,16 @@ export const CheckpointComparison: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {comparisonRows.map((row) => (
+                        {rows.map((row) => (
                             <tr key={row.label}>
                                 <td>{row.label}</td>
-                                <td>{row.left}</td>
-                                <td>{row.right}</td>
+                                <td>{formatValue(row.left)}</td>
+                                <td>{formatValue(row.right)}</td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
             </div>
-        </section>
+        </div>
     );
 };
