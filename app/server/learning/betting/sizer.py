@@ -21,7 +21,7 @@ from server.learning.betting.types import (
     STRATEGY_KEEP,
     STRATEGY_MARTINGALE,
     STRATEGY_REVERSE,
-    normalize_strategy_id,
+    validate_strategy_id,
 )
 
 ###############################################################################
@@ -132,21 +132,21 @@ class BetSizer:
             self._ensure_fib_index(self.fib_index)
             return self.fib_values[self.fib_index]
 
-        return self.current_bet
+        raise ValueError(f"Unsupported strategy id: {strategy_id}")
 
     # -------------------------------------------------------------------------
     def preview(self, strategy_id: int, capital: int | float | None = None) -> int:
-        normalized_strategy = normalize_strategy_id(strategy_id)
+        strategy = validate_strategy_id(strategy_id)
         previous_bet = self.current_bet
         previous_index = self.fib_index
-        next_bet = self._resolve_next_bet(normalized_strategy)
+        next_bet = self._resolve_next_bet(strategy)
         self.current_bet = previous_bet
         self.fib_index = previous_index
         return self._clamp_bet(next_bet, capital)
 
     # -------------------------------------------------------------------------
     def apply(self, strategy_id: int, capital: int | float | None = None) -> int:
-        normalized_strategy = normalize_strategy_id(strategy_id)
-        next_bet = self._resolve_next_bet(normalized_strategy)
+        strategy = validate_strategy_id(strategy_id)
+        next_bet = self._resolve_next_bet(strategy)
         self.current_bet = self._clamp_bet(next_bet, capital)
         return self.current_bet
