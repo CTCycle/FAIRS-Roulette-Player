@@ -15,7 +15,7 @@ const COMPARISON_FIELDS = [
     ['Batch Size', 'batch_size'],
     ['Learning Rate', 'learning_rate'],
     ['Perceptive Field', 'perceptive_field_size'],
-    ['QNet Neurons', 'neurons'],
+    ['QNet Neurons', 'qnet_neurons'],
     ['Embedding Dims', 'embedding_dimensions'],
     ['Exploration Rate', 'exploration_rate'],
     ['Exploration Decay', 'exploration_rate_decay'],
