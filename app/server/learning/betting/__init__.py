@@ -13,7 +13,8 @@ from server.learning.betting.types import (
     STRATEGY_MARTINGALE,
     STRATEGY_NAMES,
     STRATEGY_REVERSE,
-    normalize_strategy_id,
+    is_valid_strategy,
+    require_strategy_id,
     strategy_name,
 )
 
@@ -30,6 +31,7 @@ __all__ = [
     "STRATEGY_DALEMBERT",
     "STRATEGY_FIBONACCI",
     "STRATEGY_NAMES",
-    "normalize_strategy_id",
+    "is_valid_strategy",
+    "require_strategy_id",
     "strategy_name",
 ]
