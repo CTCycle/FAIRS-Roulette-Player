@@ -50,7 +50,6 @@ def _default_json_config() -> dict[str, object]:
         "device": {
             "jit_compile": False,
             "jit_backend": "inductor",
-            "use_mixed_precision": False,
         },
     }
 
