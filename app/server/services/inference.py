@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-import time
 import threading
+import time
 import uuid
 from datetime import datetime, timezone
 from typing import Any
 
+from server.common.utils.logger import logger
 from server.contracts.inference import (
     InferenceBetUpdateRequest,
     InferenceStartRequest,
@@ -16,7 +17,6 @@ from server.learning.training.device import DeviceConfig
 from server.repositories.datasets import DatasetRepository
 from server.repositories.inference import InferenceRepository
 from server.services.checkpoints import CheckpointService
-from server.common.utils.logger import logger
 
 ###############################################################################
 class InferenceSession:
@@ -70,13 +70,14 @@ class InferenceSession:
         if self.last_prediction is None or not self.prediction_pending:
             raise ValueError("No prediction available for this step.")
 
-        predicted_action = int(self.last_prediction["action"])
-        predicted_action_desc = str(self.last_prediction["description"])
+        prediction = self.last_prediction
+        predicted_action = int(prediction["action"])
+        predicted_action_desc = str(prediction["description"])
         reward, capital_after = self.player.update_with_true_extraction(extraction)
 
         self.step_count += 1
         step_payload = {
-            "step": int(self.step_count),
+            "step": self.step_count,
             "real_extraction": int(extraction),
             "predicted_action": predicted_action,
             "predicted_action_desc": predicted_action_desc,
@@ -84,7 +85,7 @@ class InferenceSession:
             "capital_after": int(capital_after),
         }
         self.prediction_pending = False
-        return step_payload, self.last_prediction
+        return step_payload, prediction
 
     # -------------------------------------------------------------------------
     def update_bet(self, bet_amount: int) -> None:
@@ -113,12 +114,6 @@ class InferenceState:
         self.sessions: dict[str, InferenceSession] = {}
         self.max_sessions = 16
         self.lock = threading.RLock()
-
-    # -------------------------------------------------------------------------
-    def create_session(self, session: InferenceSession) -> list[InferenceSession]:
-        with self.lock:
-            self.sessions[session.session_id] = session
-            return self._cleanup_locked()
 
     # -------------------------------------------------------------------------
     def add_session(self, session: InferenceSession) -> None:
@@ -174,18 +169,6 @@ class InferenceState:
         with self.lock:
             return bool(self.sessions)
 
-    # -------------------------------------------------------------------------
-    def cleanup(self) -> list[InferenceSession]:
-        with self.lock:
-            return self._cleanup_locked()
-
-    # -------------------------------------------------------------------------
-    def _cleanup_locked(self) -> list[InferenceSession]:
-        if len(self.sessions) <= self.max_sessions:
-            return []
-        ordered = sorted(self.sessions.values(), key=lambda item: item.last_seen)
-        return ordered[: max(0, len(ordered) - self.max_sessions)]
-
 ###############################################################################
 class InferenceService:
 
@@ -210,18 +193,6 @@ class InferenceService:
             raise RuntimeError("Inference service is shutting down.")
 
     # -------------------------------------------------------------------------
-    def persist_session_header(self, session: InferenceSession) -> None:
-        row = {
-            "session_id": session.session_id,
-            "dataset_id": session.dataset_id,
-            "checkpoint_name": session.checkpoint,
-            "initial_capital": session.initial_capital,
-            "started_at": session.started_at,
-            "ended_at": None,
-        }
-        self.inference_repository.upsert_session(row)
-
-    # -------------------------------------------------------------------------
     def _build_session_header(self, session: InferenceSession) -> dict[str, Any]:
         return {
             "session_id": session.session_id,
@@ -233,29 +204,6 @@ class InferenceService:
         }
 
     # -------------------------------------------------------------------------
-    def persist_session_step(
-        self,
-        session: InferenceSession,
-        prediction: dict[str, Any],
-        step_number: int,
-        observed_outcome: int | None,
-        reward: int | None,
-        capital_after: int | None,
-    ) -> None:
-        row = {
-            "session_id": session.session_id,
-            "step_number": step_number,
-            "bet_amount": session.current_bet,
-            "predicted_action": int(prediction.get("action", 0)),
-            "predicted_confidence": prediction.get("confidence"),
-            "observed_outcome_id": observed_outcome,
-            "reward": reward,
-            "capital_after": capital_after,
-            "recorded_at": datetime.now(timezone.utc),
-        }
-        self.inference_repository.upsert_step(row)
-
-    # -------------------------------------------------------------------------
     def _build_session_step(
         self,
         session: InferenceSession,
@@ -263,19 +211,40 @@ class InferenceService:
         step_number: int,
         observed_outcome: int | None,
         reward: int | None,
-        capital_after: int | None,
+        capital_after: int,
     ) -> dict[str, Any]:
         return {
             "session_id": session.session_id,
             "step_number": step_number,
             "bet_amount": session.current_bet,
-            "predicted_action": int(prediction.get("action", 0)),
-            "predicted_confidence": prediction.get("confidence"),
+            "predicted_action": int(prediction["action"]),
+            "predicted_relative_preference": prediction["relative_preference"],
             "observed_outcome_id": observed_outcome,
             "reward": reward,
             "capital_after": capital_after,
             "recorded_at": datetime.now(timezone.utc),
         }
+
+    # -------------------------------------------------------------------------
+    def persist_session_step(
+        self,
+        session: InferenceSession,
+        prediction: dict[str, Any],
+        step_number: int,
+        observed_outcome: int | None,
+        reward: int | None,
+        capital_after: int,
+    ) -> None:
+        self.inference_repository.upsert_step(
+            self._build_session_step(
+                session,
+                prediction,
+                step_number,
+                observed_outcome,
+                reward,
+                capital_after,
+            )
+        )
 
     # -------------------------------------------------------------------------
     def _close_session(
@@ -300,7 +269,9 @@ class InferenceService:
         except Exception:
             if not force:
                 raise
-            logger.exception("Failed to persist shutdown for inference session %s", session_id)
+            logger.exception(
+                "Failed to persist shutdown for inference session %s", session_id
+            )
         if closed or force:
             self.state.delete_session(session_id)
             active_session.release()
@@ -329,16 +300,8 @@ class InferenceService:
                 persisted.append(session)
         except Exception:
             for session in reversed(persisted):
-                restore = getattr(self.inference_repository, "restore_session", None)
-                if not callable(restore):
-                    logger.error(
-                        "Cannot roll back inference eviction for session %s; "
-                        "repository has no restore operation",
-                        session.session_id,
-                    )
-                    continue
                 try:
-                    restore(session.session_id)
+                    self.inference_repository.restore_session(session.session_id)
                 except Exception:  # noqa: BLE001
                     logger.exception(
                         "Failed to roll back inference eviction for session %s",
@@ -386,12 +349,11 @@ class InferenceService:
                     "game_bet": payload.game_bet,
                 }
 
-                device = DeviceConfig(configuration)
-                device.set_device()
+                DeviceConfig(configuration).set_device()
 
-                if bool(configuration.get("dynamic_betting_enabled", False)) and bool(
-                    configuration.get("bet_strategy_model_enabled", False)
-                ):
+                if configuration["dynamic_betting_enabled"] and configuration[
+                    "bet_strategy_model_enabled"
+                ]:
                     strategy_model = self.checkpoint_service.load_strategy_model(
                         checkpoint_path, required=True
                     )
@@ -446,17 +408,17 @@ class InferenceService:
                         logger.exception(
                             "Failed to roll back inference session %s", session_id
                         )
-                if session is not None:
                     session.release()
                 elif player is not None:
+                    player.release() if hasattr(player, "release") else None
                     for attribute in ("model", "strategy_model", "context"):
                         if hasattr(player, attribute):
                             setattr(player, attribute, None)
-                    player = None
                 model = None
                 strategy_model = None
                 raise
 
+            assert player is not None
             return {
                 "session_id": session_id,
                 "checkpoint": checkpoint,
@@ -475,6 +437,7 @@ class InferenceService:
                 if session.prediction_pending:
                     raise RuntimeError("Prediction already pending for this session.")
                 prediction = session.predict()
+                assert session.player is not None
                 try:
                     self.persist_session_step(
                         session,
@@ -482,15 +445,12 @@ class InferenceService:
                         session.prediction_step,
                         None,
                         None,
-                        int(session.player.current_capital) if session.player else None,
+                        int(session.player.current_capital),
                     )
                 except Exception:
                     self._discard_session_after_failure(session_id, session)
                     raise
-                return {
-                    "session_id": session_id,
-                    "prediction": prediction,
-                }
+                return {"session_id": session_id, "prediction": prediction}
 
     # -------------------------------------------------------------------------
     def step_session(
@@ -506,7 +466,7 @@ class InferenceService:
                 try:
                     self.persist_session_step(
                         session,
-                        last_prediction or {},
+                        last_prediction,
                         int(step_payload["step"]),
                         int(step_payload["real_extraction"]),
                         int(step_payload["reward"]),
@@ -535,6 +495,7 @@ class InferenceService:
             with session.lock:
                 session.update_bet(payload.bet_amount)
                 if session.prediction_pending and session.last_prediction is not None:
+                    assert session.player is not None
                     try:
                         self.persist_session_step(
                             session,
@@ -542,9 +503,7 @@ class InferenceService:
                             session.prediction_step,
                             None,
                             None,
-                            int(session.player.current_capital)
-                            if session.player
-                            else None,
+                            int(session.player.current_capital),
                         )
                     except Exception:
                         self._discard_session_after_failure(session_id, session)
@@ -587,7 +546,6 @@ class InferenceService:
                 player = session.player
                 if player is None:
                     raise KeyError("Session not found.")
-                descriptions = getattr(player, "action_descriptions", {})
                 steps = []
                 for row in self.inference_repository.list_steps(session_id):
                     action = int(row["predicted_action"])
@@ -596,12 +554,12 @@ class InferenceService:
                             "step": int(row["step_number"]),
                             "bet_amount": int(row["bet_amount"]),
                             "predicted_action": action,
-                            "predicted_action_desc": str(
-                                descriptions.get(action, f"action {action}")
-                            ),
-                            "predicted_confidence": row.get("predicted_confidence"),
-                            "observed_outcome_id": row.get("observed_outcome_id"),
-                            "reward": row.get("reward"),
+                            "predicted_action_desc": player.action_descriptions[action],
+                            "predicted_relative_preference": row[
+                                "predicted_relative_preference"
+                            ],
+                            "observed_outcome_id": row["observed_outcome_id"],
+                            "reward": row["reward"],
                             "capital_after": int(row["capital_after"]),
                         }
                     )
