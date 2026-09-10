@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from numbers import Integral
+
 STRATEGY_KEEP = 0
 STRATEGY_MARTINGALE = 1
 STRATEGY_REVERSE = 2
@@ -20,19 +22,21 @@ BET_OUTCOME_LOSS = "loss"
 BET_OUTCOME_NEUTRAL = "neutral"
 
 ###############################################################################
-def is_valid_strategy(strategy_id: int) -> bool:
-    return 0 <= int(strategy_id) < STRATEGY_COUNT
+def is_valid_strategy(strategy_id: object) -> bool:
+    return (
+        isinstance(strategy_id, Integral)
+        and not isinstance(strategy_id, bool)
+        and 0 <= int(strategy_id) < STRATEGY_COUNT
+    )
 
 ###############################################################################
-def normalize_strategy_id(strategy_id: int | None, default: int = STRATEGY_KEEP) -> int:
-    if strategy_id is None:
-        return int(default)
-    candidate = int(strategy_id)
-    if is_valid_strategy(candidate):
-        return candidate
-    return int(default)
+def require_strategy_id(strategy_id: object) -> int:
+    if not is_valid_strategy(strategy_id):
+        raise ValueError(
+            f"Invalid betting strategy id {strategy_id!r}; expected 0-{STRATEGY_COUNT - 1}."
+        )
+    return int(strategy_id)
 
 ###############################################################################
 def strategy_name(strategy_id: int) -> str:
-    normalized = normalize_strategy_id(strategy_id)
-    return STRATEGY_NAMES.get(normalized, STRATEGY_NAMES[STRATEGY_KEEP])
+    return STRATEGY_NAMES[require_strategy_id(strategy_id)]
