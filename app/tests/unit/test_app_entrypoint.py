@@ -34,7 +34,6 @@ def _build_settings() -> ServerSettings:
         device=DeviceSettings(
             jit_compile=False,
             jit_backend="inductor",
-            use_mixed_precision=False,
         ),
     )
 
@@ -221,7 +220,6 @@ def test_postgresql_startup_reports_connection_failure(monkeypatch) -> None:
 
     _stub_lifespan_dependencies(monkeypatch, app_module, _build_external_settings())
 
-    ###############################################################################
     monkeypatch.setattr(
         app_module,
         "initialize_database",
