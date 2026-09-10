@@ -7,7 +7,7 @@ import pandas as pd
 from keras import Model
 from keras.utils import set_random_seed
 
-from server.common.constants import PAD_VALUE, STATES
+from server.common.constants import STATES
 from server.learning.betting.hold import StrategyHold
 from server.learning.betting.sizer import BetSizer
 from server.learning.betting.types import (
