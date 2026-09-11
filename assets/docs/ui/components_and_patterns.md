@@ -1,6 +1,6 @@
 ## Components And Patterns
 
-Last updated: 2026-09-04
+Last updated: 2026-09-11
 
 ## Navigation And Structure
 
@@ -51,7 +51,7 @@ Additional rules:
 ## Feature-Specific Patterns
 
 - Training page patterns:
-  - dataset upload
+  - dataset upload with automatic CSV delimiter detection
   - dataset preview
   - checkpoint preview and management
   - multi-step training configuration wizard with summary confirmation

@@ -3,6 +3,31 @@ import { requestJson } from './apiClient';
 export type DatasetUploadStatus = 'idle' | 'uploading' | 'success' | 'error';
 
 const DATASET_UPLOAD_ENDPOINT = '/api/data/upload?dataset_kind=training';
+const CSV_SEPARATOR_CANDIDATES = [',', ';', '\t', '|'] as const;
+
+export const detectCsvSeparator = async (file: File): Promise<string> => {
+    try {
+        const sample = await file.slice(0, 64 * 1024).text();
+        const lines = sample
+            .split(/\r?\n/)
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .slice(0, 10);
+        const scores = CSV_SEPARATOR_CANDIDATES.map((separator) => ({
+            separator,
+            score: lines.reduce(
+                (total, line) => total + line.split(separator).length - 1,
+                0,
+            ),
+        }));
+        const detected = scores.reduce((best, current) => (
+            current.score > best.score ? current : best
+        ));
+        return detected.score > 0 ? detected.separator : ',';
+    } catch {
+        return ',';
+    }
+};
 
 const isObjectRecord = (value: unknown): value is Record<string, unknown> => (
     typeof value === 'object' && value !== null
@@ -34,8 +59,12 @@ export async function uploadDatasetFile(file: File, signal?: AbortSignal): Promi
     const formData = new FormData();
     formData.append('file', file);
 
+    const endpoint = file.name.toLowerCase().endsWith('.csv')
+        ? `${DATASET_UPLOAD_ENDPOINT}&csv_separator=${encodeURIComponent(await detectCsvSeparator(file))}`
+        : DATASET_UPLOAD_ENDPOINT;
+
     const payload = await requestJson(
-        DATASET_UPLOAD_ENDPOINT,
+        endpoint,
         { method: 'POST', body: formData, signal },
         'Upload failed.',
     );

@@ -18,7 +18,7 @@ The frontend is a React 19 + TypeScript + Vite single-page client for the local 
 
 All backend calls use the same-origin `/api/*` routes exposed by FastAPI. Training is started asynchronously and polled through `/api/training/status`; inference sessions are stateful within the backend process. The client does not access the database, checkpoint files, or ML modules directly.
 
-The checked-in `app/shared/openapi.json` documents the backend route and payload contract. Client parsers remain defensive because runtime payloads can be malformed or evolve between versions.
+The runtime FastAPI/Pydantic schemas are the canonical backend contract. `src/generated/api.ts` is generated from those schemas; OpenAPI is exported from the running backend when an external artifact is needed, and no checked-in `app/shared/openapi.json` is required. Client parsers remain defensive because runtime payloads can be malformed or evolve between versions.
 
 ## Development commands
 

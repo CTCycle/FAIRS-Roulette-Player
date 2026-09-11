@@ -1,6 +1,6 @@
 ## Testing And Quality
 
-Last updated: 2026-08-30
+Last updated: 2026-09-11
 
 ## Quality Baseline
 
@@ -34,7 +34,7 @@ Primary automated test surfaces live under `app/tests`:
 - `app/tests/run_tests.bat`
   - repository-standard Windows test entry point
 - `app/tests/pytest.ini`
-  - keeps pytest's cache under `app/tests/cache/pytest`; Ruff and other test tooling use sibling paths below `app/tests/cache`
+  - keeps pytest's cache under `app/tests/cache/pytest`, limits collection to `unit` and `e2e`, and excludes generated/cache directories; Ruff and other test tooling use sibling paths below `app/tests/cache`
 - `.github/workflows/ci.yml`
   - Linux CI runs the backend Ruff/unit/Alembic/OpenAPI/PostgreSQL checks and a separate frontend lint/build job. Python dependencies resolve from `app/server/pyproject.toml` when `uv.lock` is absent, and Ruff reads that same project file directly; neither a committed lockfile nor a standalone `ruff.toml` is required by the workflow.
 

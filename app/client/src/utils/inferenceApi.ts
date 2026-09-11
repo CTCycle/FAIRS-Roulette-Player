@@ -19,6 +19,7 @@ import {
     requestJson as requestApiJson,
     requestReadOnlyJson,
 } from './apiClient';
+import { detectCsvSeparator } from './datasetUpload';
 
 export interface InferenceSessionStartOptions {
     checkpoint: string;
@@ -59,8 +60,11 @@ export const uploadInferenceDataset = async (
 ): Promise<InferenceDatasetUploadResponse> => {
     const formData = new FormData();
     formData.append('file', file);
+    const endpoint = file.name.toLowerCase().endsWith('.csv')
+        ? `/api/data/upload?dataset_kind=inference&csv_separator=${encodeURIComponent(await detectCsvSeparator(file))}`
+        : '/api/data/upload?dataset_kind=inference';
     return requestApiJson<UploadResponse>(
-        '/api/data/upload?dataset_kind=inference',
+        endpoint,
         { method: 'POST', body: formData, signal },
         'Upload failed.',
     );
