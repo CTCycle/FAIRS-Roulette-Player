@@ -1,6 +1,6 @@
 ## Experience
 
-Last updated: 2026-09-04
+Last updated: 2026-09-11
 
 ## Page Composition
 
@@ -32,6 +32,7 @@ Composition rules:
   - choose checkpoint or configuration
   - start the workflow
 - Prevent invalid actions with disabled controls and local validation messages.
+- Detect common CSV delimiters during Training uploads while preserving XLSX support.
 - Training configuration validates relationships between exploration settings, replay memory, batch size, and dynamic-betting options before submission; the backend remains authoritative for the same constraints.
 - Keep error feedback local to the action that failed.
 - Preserve explicit loading states for long-running or multi-step actions.

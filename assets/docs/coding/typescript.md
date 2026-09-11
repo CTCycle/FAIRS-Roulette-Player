@@ -18,7 +18,7 @@ Last updated: 2026-09-01
 - Reusable view units belong in `app/client/src/components`.
 - Keep API requests scoped to the consuming feature unless extraction clearly reduces duplication.
 - Keep fetch, response parsing, loading, and error state together in a feature hook/helper when extracting them reduces duplication; do not create a generic client layer for one endpoint.
-- Treat `app/shared/openapi.json` as the backend contract source for route and payload review, while keeping defensive parsing at the browser boundary.
+- Treat the runtime FastAPI/Pydantic schemas and generated `app/client/src/generated/api.ts` as the backend contract source for route and payload review; OpenAPI is runtime-derived, while defensive parsing remains at the browser boundary.
 
 ## React Patterns
 

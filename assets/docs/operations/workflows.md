@@ -1,11 +1,11 @@
 ## Workflows
 
-Last updated: 2026-09-04
+Last updated: 2026-09-11
 
 ## Training Workflow
 
 1. Open `Training`.
-2. Upload a roulette dataset such as `CSV` or `XLSX`, or start the synthetic generator from the dataset preview.
+2. Upload a roulette dataset such as `CSV` or `XLSX`, or start the synthetic generator from the dataset preview. CSV delimiters are detected automatically for comma-, semicolon-, tab-, and pipe-separated files.
 3. Open training configuration and work through the six sections: Agent Configuration, Environment & Memory, Bet Strategy Policy, Dataset Configuration, Session & Compute, and Summary.
 4. Use the wizard breadcrumbs to revisit a section, confirm the summary, and start training.
 5. Monitor status, episode/step progress, loss/RMSE, validation metrics, reward, capital, current bet, strategy, epsilon, replay-buffer warm-up, and history charts.

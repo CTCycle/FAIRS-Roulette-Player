@@ -1,5 +1,5 @@
 # FAIRS: Fabulous Automated Intelligent Roulette System
-Last updated: 2026-09-04
+Last updated: 2026-09-11
 
 [![Release](https://img.shields.io/github/v/release/CTCycle/FAIRS-Roulette-Player?display_name=tag)](https://github.com/CTCycle/FAIRS-Roulette-Player/releases) [![Python](https://img.shields.io/badge/python-%3E%3D3.14-3776AB?logo=python&logoColor=white)](https://www.python.org/) [![Node.js](https://img.shields.io/badge/node.js-22.13.0-339933?logo=node.js&logoColor=white)](https://nodejs.org/) [![React](https://img.shields.io/badge/react-19.2.8-61DAFB?logo=react&logoColor=black)](https://react.dev/) [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE) [![CI](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml?query=branch%3Adevelop)
 [![CTCycle Portfolio](https://img.shields.io/badge/CTCycle-Portfolio-58a6ff?style=flat-square)](https://ctcycle.github.io/CTCycle/)
@@ -35,7 +35,7 @@ macOS and Linux are not supported launch targets for this checkout. There is no 
 
 ## Download the source
 
-The current source release is v3.2.0. Download the version you want from the [GitHub Releases page](https://github.com/CTCycle/FAIRS-Roulette-Player/releases), extract it completely, and keep the extracted folder in a writable location.
+The current source release is v3.3.0. Download the version you want from the [GitHub Releases page](https://github.com/CTCycle/FAIRS-Roulette-Player/releases), extract it completely, and keep the extracted folder in a writable location.
 
 ## Install and launch on Windows
 
@@ -92,7 +92,7 @@ FAIRS separates an experiment into two related phases:
 ## Training workflow
 
 1. Open **Training**.
-2. Upload a CSV/XLSX roulette dataset or start the synthetic generator.
+2. Upload a CSV/XLSX roulette dataset or start the synthetic generator. CSV delimiters are detected automatically for comma-, semicolon-, tab-, and pipe-separated files.
 3. Inspect the dataset preview before using it. Synthetic data is useful for a quick baseline and does not represent proof of a real-world advantage.
 4. Open the training wizard and work through its six sections: **Agent Configuration**, **Environment & Memory**, **Bet Strategy Policy**, **Dataset Configuration**, **Session & Compute**, and **Summary**. Use the breadcrumbs to revisit a section and review the summary before starting.
 5. Start training and monitor status, progress, loss/RMSE, reward, simulated capital, current bet, strategy, timestep, and history charts. Loss/RMSE is an error measure; reward and simulated capital show how the configuration performed in the experiment.
@@ -132,7 +132,7 @@ Change only one or two controls at a time, and keep the dataset, validation spli
 ## Inference sessions
 
 1. Open **Inference**.
-2. Select a trained checkpoint and compatible dataset, or upload an inference dataset.
+2. Select a trained checkpoint and compatible dataset, or upload an inference dataset. Inference CSV uploads use the outcome column; delimiters are detected automatically.
 3. Set the initial capital and bet amount, then start the session with **Play**.
 4. Review the AI suggestion and decide whether to apply it for the experiment.
 5. Enter the observed wheel value, confirm it, and then request the next prediction. Repeat this loop for each round.
