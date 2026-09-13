@@ -6,7 +6,6 @@ import pytest
 from server.contracts.training import TrainingConfig
 from server.learning.training.fitting import DQNTraining
 
-
 ###############################################################################
 def build_configuration(**overrides: object) -> dict[str, object]:
     configuration = TrainingConfig(use_data_generator=True).model_dump()

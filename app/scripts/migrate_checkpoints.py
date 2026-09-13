@@ -18,14 +18,12 @@ from server.contracts.training import (
 
 KNOWN_LEGACY_ONLY_FIELDS = {"jit_compile", "jit_backend"}
 
-
 ###############################################################################
 def _load_json(path: Path) -> Any:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise ValueError(f"Cannot read checkpoint configuration: {path}") from exc
-
 
 ###############################################################################
 def _render_current_configuration(raw: Any, path: Path) -> dict[str, Any] | None:
@@ -67,7 +65,6 @@ def _render_current_configuration(raw: Any, path: Path) -> dict[str, Any] | None
         raise ValueError(f"Legacy checkpoint values are invalid: {path}") from exc
     return current.model_dump()
 
-
 ###############################################################################
 def _write_json_atomically(path: Path, payload: dict[str, Any]) -> None:
     temporary_path = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
@@ -77,7 +74,6 @@ def _write_json_atomically(path: Path, payload: dict[str, Any]) -> None:
     finally:
         if temporary_path.exists():
             temporary_path.unlink()
-
 
 ###############################################################################
 def _configuration_paths(root: Path) -> list[Path]:
@@ -91,7 +87,6 @@ def _configuration_paths(root: Path) -> list[Path]:
         if config_path.is_file():
             paths.append(config_path)
     return paths
-
 
 ###############################################################################
 def main(arguments: Sequence[str] | None = None) -> int:

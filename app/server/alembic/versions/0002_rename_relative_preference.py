@@ -15,7 +15,6 @@ down_revision: Union[str, Sequence[str], None] = "0001_initial_schema"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
-
 ###############################################################################
 def upgrade() -> None:
     with op.batch_alter_table("inference_session_steps") as batch_op:
@@ -30,7 +29,6 @@ def upgrade() -> None:
             "(predicted_relative_preference >= 0 AND "
             "predicted_relative_preference <= 1)",
         )
-
 
 ###############################################################################
 def downgrade() -> None:
