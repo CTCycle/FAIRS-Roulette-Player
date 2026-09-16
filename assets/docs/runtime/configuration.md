@@ -1,13 +1,13 @@
 ## Configuration
 
-Last updated: 2026-09-16
+Last updated: 2026-09-17
 
 ## Configuration Ownership
 
 FAIRS uses three distinct configuration surfaces with non-overlapping responsibilities:
 
 1. `settings/.env` for deployment/runtime environment values such as hosts, ports, storage location, database connection, backend visibility, API docs, reload behavior, and ML backend selection.
-2. `<data-root>/runtime-settings.json` for the application-wide technical settings exposed by the Settings UI/API. It owns job polling and global JIT/compiler behavior.
+2. `<data-root>/runtime-settings.json` for the application-wide settings exposed by the Settings UI/API. It owns job polling, global JIT/compiler behavior, roulette outcome-pool rules, and roulette rendering preferences.
 3. `TrainingConfig` in `app/server/contracts/training.py` for all per-training defaults, semantic constraints, dataset choices, model parameters, device selection, and mixed precision.
 
 No setting should be independently defaulted in more than one of these surfaces.
@@ -63,8 +63,9 @@ Startup resolution is strict and deterministic:
 
 - An existing runtime file is parsed and validated. Malformed or invalid content fails startup.
 - When the runtime file is absent, the validated defaults are written to the runtime path.
+- Existing runtime files that predate the `roulette` block remain valid. Missing roulette fields resolve to the current backend defaults and are persisted on the next settings write.
 
-Writes use a same-directory temporary file, flush and `fsync`, then `os.replace` so readers see either the previous complete document or the new complete document. The Settings API merges strict partial updates, persists the runtime file, and applies the accepted snapshot to the live `TrainingService`; it does not read or write `.env`, the database, or `TrainingConfig`.
+Writes use a same-directory temporary file, flush and `fsync`, then `os.replace` so readers see either the previous complete document or the new complete document. The Settings API merges strict partial updates, validates the complete merged document, persists the runtime file, and applies live technical settings to the running application. It does not read or write `.env`, the database, or `TrainingConfig`.
 
 ## Database Configuration
 
@@ -79,11 +80,22 @@ Both modes use the same SQLAlchemy repositories and Alembic schema.
 
 ## Structured Settings
 
-The runtime settings document currently owns:
+The runtime settings document owns:
 
 - `jobs.polling_interval`
 - `device.jit_compile`
 - `device.jit_backend`
+- `roulette.minimum_number`, default `0`
+- `roulette.maximum_number`, default `36`
+- `roulette.exclude_zero`, default `false`
+- `roulette.invert_colors`, default `false`
+- `roulette.show_number_labels`, default `true`
+
+Roulette range values are inclusive and must stay between `0` and `36`. The minimum cannot exceed the maximum, and excluding zero cannot leave an empty number pool.
+
+`minimum_number`, `maximum_number`, and `exclude_zero` affect the actual outcome pool used by newly generated synthetic training data. Stored training outcomes outside the configured pool are filtered before a new training run starts. Live inference observations are rejected at the API boundary when they fall outside the current pool. The canonical model action space remains unchanged, so existing checkpoints keep their expected output dimensions and betting semantics.
+
+`invert_colors` is visual only. It swaps red and black slice rendering while leaving zero green and does not alter canonical roulette color features, reward rules, or red/black betting semantics. `show_number_labels` controls whether numeric labels are drawn on newly rendered roulette wheel frames.
 
 Global mixed precision is intentionally not present. `use_mixed_precision`, `use_device_gpu`, and `device_id` are per-training values owned by `TrainingConfig`.
 
@@ -100,7 +112,8 @@ The training wizard may provide presentation-level input constraints, but it doe
 - `RELOAD=true` is development-only and expires process-local training/inference state when the process reloads.
 - `BACKEND_LOGS_VISIBLE` is an explicit launcher configuration value, not an implicit launcher default.
 - The backend creates timestamped `FAIRS_*.log` files under the active data root.
-- Settings changes update future parent polling immediately. A newly started worker receives a launch snapshot of polling and JIT values; an active worker keeps its existing snapshot. Resuming a checkpoint uses the current polling interval while preserving the checkpoint's model configuration.
+- Settings changes update future parent polling immediately. A newly started worker reads the current roulette settings and receives the current polling and JIT launch snapshot; an active worker keeps the values captured when it started. Resuming a checkpoint uses the current runtime settings while preserving the checkpoint's model configuration.
+- Live inference step validation reads the current roulette number-pool settings, so changing the range or zero exclusion affects subsequent observations in the same application session without a restart.
 
 ## Related Files
 
