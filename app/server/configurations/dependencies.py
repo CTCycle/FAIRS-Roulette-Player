@@ -13,5 +13,9 @@ def get_training_service(request: Request) -> Any:
     return request.app.state.training_service
 
 ###############################################################################
+def get_settings_service(request: Request) -> Any:
+    return request.app.state.settings_service
+
+###############################################################################
 def get_inference_service(request: Request) -> Any:
     return request.app.state.inference_service

@@ -3,12 +3,17 @@ from __future__ import annotations
 from functools import partial
 import time
 from pathlib import Path
+from threading import RLock
 from typing import Any
 
 from server.common.utils.logger import logger
 from server.common.utils.trainingstats import coerce_optional_finite_float
 from server.common.utils.types import coerce_finite_float, coerce_finite_int
-from server.contracts.configuration import DatabaseSettings
+from server.contracts.configuration import (
+    DatabaseSettings,
+    DeviceSettings,
+    JobsSettings,
+)
 from server.contracts.training import ResumeConfig, TrainingConfig
 from server.services.checkpoints import CheckpointService
 from server.services.training_data import load_training_series
@@ -116,9 +121,46 @@ class TrainingService:
         self.checkpoint_service = checkpoint_service
         self.database_settings = database_settings
         self.database_path = database_path
-        self.polling_interval_seconds = polling_interval_seconds
+        self._runtime_settings_lock = RLock()
+        self.polling_interval_seconds = float(polling_interval_seconds)
         self.jit_compile = bool(jit_compile)
         self.jit_backend = jit_backend
+
+    # -------------------------------------------------------------------------
+    def get_runtime_settings(self) -> tuple[JobsSettings, DeviceSettings]:
+        with self._runtime_settings_lock:
+            return (
+                JobsSettings(polling_interval=self.polling_interval_seconds),
+                DeviceSettings(
+                    jit_compile=self.jit_compile,
+                    jit_backend=self.jit_backend,
+                ),
+            )
+
+    # -------------------------------------------------------------------------
+    def apply_runtime_settings(
+        self,
+        jobs: JobsSettings,
+        device: DeviceSettings,
+    ) -> None:
+        with self._runtime_settings_lock:
+            self.polling_interval_seconds = float(jobs.polling_interval)
+            self.jit_compile = bool(device.jit_compile)
+            self.jit_backend = device.jit_backend
+
+    # -------------------------------------------------------------------------
+    def _runtime_snapshot(self) -> tuple[float, bool, str]:
+        with self._runtime_settings_lock:
+            return (
+                self.polling_interval_seconds,
+                self.jit_compile,
+                self.jit_backend,
+            )
+
+    # -------------------------------------------------------------------------
+    def _polling_interval(self) -> float:
+        with self._runtime_settings_lock:
+            return self.polling_interval_seconds
 
     # -------------------------------------------------------------------------
     def _handle_training_progress(self, job_id: str, message: dict[str, Any]) -> None:
@@ -129,7 +171,7 @@ class TrainingService:
         progress = calculate_progress(stats)
         self.training_run_manager.update_progress(job_id, progress)
         current_status = self.training_run_manager.training_status(
-            self.polling_interval_seconds
+            self._polling_interval()
         )
         self.training_run_manager.update_result(
             job_id,
@@ -197,6 +239,7 @@ class TrainingService:
     ) -> dict[str, Any]:
         worker = ProcessWorker()
         self.training_run_manager.set_worker(job_id, worker)
+        polling_interval_seconds, jit_compile, jit_backend = self._runtime_snapshot()
         try:
             worker.start(
                 target=run_training_process,
@@ -205,9 +248,9 @@ class TrainingService:
                     "training_data_loader": load_training_series,
                     "database_settings": self.database_settings,
                     "database_path": self.database_path,
-                    "polling_interval_seconds": self.polling_interval_seconds,
-                    "jit_compile": self.jit_compile,
-                    "jit_backend": self.jit_backend,
+                    "polling_interval_seconds": polling_interval_seconds,
+                    "jit_compile": jit_compile,
+                    "jit_backend": jit_backend,
                 },
             )
             result = self._monitor_training_process(
@@ -219,7 +262,7 @@ class TrainingService:
                 )
             else:
                 current_status = self.training_run_manager.training_status(
-                    self.polling_interval_seconds
+                    self._polling_interval()
                 )
                 final_epoch = current_status["latest_stats"].get("total_epochs", 0)
                 self.training_run_manager.update_training_stats(
@@ -259,6 +302,7 @@ class TrainingService:
     ) -> dict[str, Any]:
         worker = ProcessWorker()
         self.training_run_manager.set_worker(job_id, worker)
+        polling_interval_seconds = self._polling_interval()
         try:
             worker.start(
                 target=run_resume_training_process,
@@ -268,7 +312,7 @@ class TrainingService:
                     "training_data_loader": load_training_series,
                     "database_settings": self.database_settings,
                     "database_path": self.database_path,
-                    "polling_interval_seconds": self.polling_interval_seconds,
+                    "polling_interval_seconds": polling_interval_seconds,
                 },
             )
             result = self._monitor_training_process(
@@ -280,7 +324,7 @@ class TrainingService:
                 )
             else:
                 current_status = self.training_run_manager.training_status(
-                    self.polling_interval_seconds
+                    self._polling_interval()
                 )
                 final_epoch = current_status["latest_stats"].get("total_epochs", 0)
                 self.training_run_manager.update_training_stats(
@@ -334,9 +378,8 @@ class TrainingService:
             ),
         )
 
-        status = self.training_run_manager.training_status(
-            self.polling_interval_seconds
-        )
+        polling_interval = self._polling_interval()
+        status = self.training_run_manager.training_status(polling_interval)
         self.training_run_manager.update_result(
             job_id,
             {
@@ -349,7 +392,7 @@ class TrainingService:
             "message": "Training started successfully",
             "job_id": job_id,
             "job_type": self.JOB_TYPE,
-            "poll_interval": self.polling_interval_seconds,
+            "poll_interval": polling_interval,
         }
 
     # -------------------------------------------------------------------------
@@ -387,9 +430,8 @@ class TrainingService:
             ),
         )
 
-        status = self.training_run_manager.training_status(
-            self.polling_interval_seconds
-        )
+        polling_interval = self._polling_interval()
+        status = self.training_run_manager.training_status(polling_interval)
         self.training_run_manager.update_result(
             job_id,
             {
@@ -402,12 +444,12 @@ class TrainingService:
             "message": f"Resuming training from {checkpoint}",
             "job_id": job_id,
             "job_type": self.JOB_TYPE,
-            "poll_interval": self.polling_interval_seconds,
+            "poll_interval": polling_interval,
         }
 
     # -------------------------------------------------------------------------
     def get_status(self) -> dict[str, Any]:
-        return self.training_run_manager.training_status(self.polling_interval_seconds)
+        return self.training_run_manager.training_status(self._polling_interval())
 
     # -------------------------------------------------------------------------
     def stop(self) -> dict[str, Any]:
@@ -443,7 +485,7 @@ class TrainingService:
             raise KeyError(f"Job not found: {job_id}")
         return {
             **job_status,
-            "poll_interval": self.polling_interval_seconds,
+            "poll_interval": self._polling_interval(),
         }
 
     # -------------------------------------------------------------------------

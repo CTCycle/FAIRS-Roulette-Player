@@ -11,6 +11,7 @@ DATA_DIR: Path | None = None
 RESOURCES_PATH = APP_DIR / "resources"
 LOGS_PATH = RESOURCES_PATH / "logs"
 CHECKPOINT_PATH = RESOURCES_PATH / "checkpoints"
+RUNTIME_SETTINGS_FILE = RESOURCES_PATH / "runtime-settings.json"
 ENV_FILE_PATH = SETTINGS_DIR / ".env"
 ENV_EXAMPLE_FILE_PATH = SETTINGS_DIR / ".env.example"
 CONFIGURATIONS_FILE = SETTINGS_DIR / "configurations.json"
@@ -31,12 +32,14 @@ CHECKPOINT_COMPLETE_FILE_NAME = ".complete"
 def configure_runtime_paths(data_dir: str | Path | None = None) -> None:
     """Resolve mutable runtime paths after environment loading."""
     global CHECKPOINT_PATH, DATABASE_PATH, DATA_DIR, LOGS_PATH, RESOURCES_PATH
+    global RUNTIME_SETTINGS_FILE
 
     configured = str(data_dir).strip() if data_dir is not None else ""
     DATA_DIR = Path(configured).expanduser().resolve() if configured else None
     RESOURCES_PATH = DATA_DIR if DATA_DIR is not None else APP_DIR / "resources"
     LOGS_PATH = RESOURCES_PATH / "logs"
     CHECKPOINT_PATH = RESOURCES_PATH / "checkpoints"
+    RUNTIME_SETTINGS_FILE = RESOURCES_PATH / "runtime-settings.json"
     DATABASE_PATH = RESOURCES_PATH / "database.db"
 
 ###############################################################################

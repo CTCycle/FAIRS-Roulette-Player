@@ -12,6 +12,12 @@ from server.contracts.jobs import (
     JobStatusResponse,
     JobCancelResponse,
 )
+from server.contracts.settings import (
+    SettingsDeviceResponse,
+    SettingsJobsResponse,
+    SettingsPatchRequest,
+    SettingsResponse,
+)
 
 __all__ = [
     "TrainingConfig",
@@ -23,4 +29,8 @@ __all__ = [
     "JobStartResponse",
     "JobStatusResponse",
     "JobCancelResponse",
+    "SettingsPatchRequest",
+    "SettingsJobsResponse",
+    "SettingsDeviceResponse",
+    "SettingsResponse",
 ]

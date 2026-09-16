@@ -315,3 +315,128 @@ def test_invalid_configuration_file_fails_fast(
 
     with pytest.raises(RuntimeError, match="Unable to load configuration"):
         _ = startup.reload_settings_for_tests(config_path=str(config_path))
+
+###############################################################################
+def test_runtime_settings_migrate_legacy_file_without_modifying_legacy(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runtime_path = tmp_path / "runtime-settings.json"
+    legacy_path = tmp_path / "configurations.json"
+    legacy_payload = {
+        "jobs": {"polling_interval": 2.25},
+        "device": {"jit_compile": True, "jit_backend": "eager"},
+    }
+    _write_json(legacy_path, legacy_payload)
+    legacy_before = legacy_path.read_text(encoding="utf-8")
+
+    monkeypatch.setattr(environment.shared_paths, "RUNTIME_SETTINGS_FILE", runtime_path)
+    monkeypatch.setattr(environment.shared_paths, "CONFIGURATIONS_FILE", legacy_path)
+    monkeypatch.setenv("EMBEDDED_DATABASE", "true")
+
+    settings = startup.reload_settings_for_tests(
+        runtime_path=str(runtime_path),
+        legacy_config_path=str(legacy_path),
+    )
+
+    assert settings.jobs.polling_interval == 2.25
+    assert settings.device.jit_compile is True
+    assert json.loads(runtime_path.read_text(encoding="utf-8")) == {
+        "device": {"jit_backend": "eager", "jit_compile": True},
+        "jobs": {"polling_interval": 2.25},
+    }
+    assert legacy_path.read_text(encoding="utf-8") == legacy_before
+
+###############################################################################
+def test_existing_runtime_file_wins_over_legacy_file(
+    tmp_path: Path,
+) -> None:
+    from server.configurations.management import ConfigurationManager
+
+    runtime_path = tmp_path / "runtime-settings.json"
+    legacy_path = tmp_path / "configurations.json"
+    _write_json(
+        runtime_path,
+        {
+            "jobs": {"polling_interval": 3.0},
+            "device": {"jit_compile": False, "jit_backend": "eager"},
+        },
+    )
+    _write_json(legacy_path, _default_json_config())
+
+    manager = ConfigurationManager(
+        runtime_path=runtime_path,
+        legacy_config_path=legacy_path,
+    )
+
+    assert manager.get_all().jobs.polling_interval == 3.0
+    assert manager.get_all().device.jit_backend == "eager"
+
+###############################################################################
+def test_missing_runtime_and_legacy_files_create_defaults(tmp_path: Path) -> None:
+    from server.configurations.management import ConfigurationManager
+
+    runtime_path = tmp_path / "nested" / "runtime-settings.json"
+    manager = ConfigurationManager(runtime_path=runtime_path)
+
+    assert runtime_path.is_file()
+    assert manager.get_json_settings().model_dump() == _default_json_config()
+
+###############################################################################
+def test_invalid_runtime_file_does_not_fall_back_to_legacy(tmp_path: Path) -> None:
+    from server.configurations.management import ConfigurationManager
+
+    runtime_path = tmp_path / "runtime-settings.json"
+    legacy_path = tmp_path / "configurations.json"
+    runtime_path.write_text("{not-json", encoding="utf-8")
+    _write_json(legacy_path, _default_json_config())
+
+    with pytest.raises(RuntimeError, match="runtime-settings.json"):
+        ConfigurationManager(runtime_path=runtime_path, legacy_config_path=legacy_path)
+
+###############################################################################
+def test_unknown_runtime_keys_are_rejected(tmp_path: Path) -> None:
+    from server.configurations.management import ConfigurationManager
+
+    runtime_path = tmp_path / "runtime-settings.json"
+    _write_json(
+        runtime_path,
+        {
+            "jobs": {"polling_interval": 1.0, "stale": True},
+            "device": {"jit_compile": False, "jit_backend": "inductor"},
+        },
+    )
+
+    with pytest.raises(RuntimeError, match="stale"):
+        ConfigurationManager(runtime_path=runtime_path)
+
+###############################################################################
+def test_atomic_write_failure_preserves_previous_runtime_file(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from server.configurations.management import ConfigurationManager
+    import server.configurations.management as management
+    from server.contracts.configuration import JsonServerSettings
+
+    runtime_path = tmp_path / "runtime-settings.json"
+    manager = ConfigurationManager(runtime_path=runtime_path)
+    before = runtime_path.read_text(encoding="utf-8")
+    monkeypatch.setattr(
+        management.os,
+        "replace",
+        lambda *_args: (_ for _ in ()).throw(OSError("replace failed")),
+    )
+
+    with pytest.raises(RuntimeError, match="Unable to persist runtime settings"):
+        manager.replace_json_settings(
+            JsonServerSettings.model_validate(
+                {
+                    "jobs": {"polling_interval": 2.0},
+                    "device": {"jit_compile": False, "jit_backend": "inductor"},
+                }
+            )
+        )
+
+    assert runtime_path.read_text(encoding="utf-8") == before
+    assert manager.get_json_settings().jobs.polling_interval == 1.0
