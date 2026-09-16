@@ -1,6 +1,6 @@
 ## Python
 
-Last updated: 2026-09-01
+Last updated: 2026-09-16
 
 ## Runtime Baseline
 
@@ -75,8 +75,8 @@ Last updated: 2026-09-01
 - Route data access through `DatasetRepository`, `InferenceRepository`, and `CheckpointRepository`; do not construct databases inside API handlers.
 - Keep schema, serializer, and API contracts synchronized.
 - Runtime flags come from environment variables.
-- Structured non-env settings live in `settings/configurations.json`.
-- Database connection and selection settings live in `settings/.env`; do not add a `database` block to the JSON settings file.
+- Structured non-env settings are persisted in `<data-root>/runtime-settings.json` through the Settings UI/API.
+- Database connection and selection settings live in `settings/.env`; the runtime settings payload does not accept a `database` block.
 - Synthetic training data must preserve the canonical roulette `outcome` input through encoding and expose the training environment's `extraction` column at the serializer boundary.
 
 ## Related Files

@@ -187,8 +187,7 @@ class JsonServerSettings(BaseModel):
     def reject_database_block(cls, value: Any) -> Any:
         if isinstance(value, dict) and "database" in value:
             raise ValueError(
-                "Database configuration must be provided via settings/.env, "
-                "not settings/configurations.json."
+                "Database configuration must be provided via settings/.env."
             )
         return value
 

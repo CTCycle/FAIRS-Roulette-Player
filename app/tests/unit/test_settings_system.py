@@ -44,7 +44,7 @@ def _write_env(path: Path, lines: list[str]) -> None:
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 ###############################################################################
-def _default_json_config() -> dict[str, object]:
+def _default_runtime_settings() -> dict[str, object]:
     return {
         "jobs": {"polling_interval": 1.0},
         "device": {
@@ -172,11 +172,11 @@ def test_server_package_import_does_not_load_environment(
     assert os.getenv("KERAS_BACKEND") == "tensorflow"
 
 ###############################################################################
-def test_server_settings_use_json_configuration_file(
+def test_server_settings_use_runtime_settings_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    config_path = tmp_path / "configurations.json"
-    _write_json(config_path, _default_json_config())
+    runtime_path = tmp_path / "runtime-settings.json"
+    _write_json(runtime_path, _default_runtime_settings())
 
     env_path = tmp_path / ".env"
     _write_env(
@@ -193,7 +193,7 @@ def test_server_settings_use_json_configuration_file(
     )
     monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
 
-    settings = startup.reload_settings_for_tests(config_path=str(config_path))
+    settings = startup.reload_settings_for_tests(runtime_path=str(runtime_path))
 
     assert settings.database.host == "env-db"
     assert settings.database.port == 5432
@@ -207,8 +207,8 @@ def test_server_settings_use_json_configuration_file(
 def test_database_settings_are_loaded_from_env(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    config_path = tmp_path / "configurations.json"
-    _write_json(config_path, _default_json_config())
+    runtime_path = tmp_path / "runtime-settings.json"
+    _write_json(runtime_path, _default_runtime_settings())
 
     env_path = tmp_path / ".env"
     _write_env(
@@ -224,7 +224,7 @@ def test_database_settings_are_loaded_from_env(
     )
     monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
 
-    settings = startup.reload_settings_for_tests(config_path=str(config_path))
+    settings = startup.reload_settings_for_tests(runtime_path=str(runtime_path))
 
     assert settings.database.host == "env-host"
     assert settings.database.port == 5544
@@ -235,8 +235,8 @@ def test_database_settings_are_loaded_from_env(
 def test_manager_get_block_and_get_value(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    config_path = tmp_path / "configurations.json"
-    _write_json(config_path, _default_json_config())
+    runtime_path = tmp_path / "runtime-settings.json"
+    _write_json(runtime_path, _default_runtime_settings())
 
     env_path = tmp_path / ".env"
     _write_env(
@@ -253,7 +253,7 @@ def test_manager_get_block_and_get_value(
     )
     monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
 
-    startup.reload_settings_for_tests(config_path=str(config_path))
+    startup.reload_settings_for_tests(runtime_path=str(runtime_path))
     manager = startup.get_configuration_manager()
 
     database_block = manager.get_block("database")
@@ -266,9 +266,9 @@ def test_manager_get_block_and_get_value(
 def test_reload_updates_cached_manager_values(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    config_path = tmp_path / "configurations.json"
-    payload = _default_json_config()
-    _write_json(config_path, payload)
+    runtime_path = tmp_path / "runtime-settings.json"
+    payload = _default_runtime_settings()
+    _write_json(runtime_path, payload)
 
     env_path = tmp_path / ".env"
     _write_env(
@@ -280,119 +280,48 @@ def test_reload_updates_cached_manager_values(
     )
     monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
 
-    first = startup.reload_settings_for_tests(config_path=str(config_path))
+    first = startup.reload_settings_for_tests(runtime_path=str(runtime_path))
     assert first.jobs.polling_interval == 1.0
 
     payload["jobs"] = {"polling_interval": 2.25}
-    _write_json(config_path, payload)
+    _write_json(runtime_path, payload)
 
-    second = startup.reload_settings_for_tests(config_path=str(config_path))
+    second = startup.reload_settings_for_tests(runtime_path=str(runtime_path))
     assert second.jobs.polling_interval == 2.25
 
 ###############################################################################
-def test_missing_configuration_file_fails_fast(
+def test_invalid_runtime_settings_file_fails_fast(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    env_path = tmp_path / ".env"
-    _write_env(env_path, ["FASTAPI_HOST=127.0.0.1", "EMBEDDED_DATABASE=true"])
-    monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
-
-    with pytest.raises(RuntimeError, match="Configuration file not found"):
-        _ = startup.reload_settings_for_tests(
-            config_path=str(tmp_path / "missing.json")
-        )
-
-###############################################################################
-def test_invalid_configuration_file_fails_fast(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    config_path = tmp_path / "configurations.json"
-    config_path.write_text("{not-json", encoding="utf-8")
+    runtime_path = tmp_path / "runtime-settings.json"
+    runtime_path.write_text("{not-json", encoding="utf-8")
 
     env_path = tmp_path / ".env"
     _write_env(env_path, ["FASTAPI_HOST=127.0.0.1", "EMBEDDED_DATABASE=true"])
     monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
 
     with pytest.raises(RuntimeError, match="Unable to load configuration"):
-        _ = startup.reload_settings_for_tests(config_path=str(config_path))
+        _ = startup.reload_settings_for_tests(runtime_path=str(runtime_path))
 
 ###############################################################################
-def test_runtime_settings_migrate_legacy_file_without_modifying_legacy(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    runtime_path = tmp_path / "runtime-settings.json"
-    legacy_path = tmp_path / "configurations.json"
-    legacy_payload = {
-        "jobs": {"polling_interval": 2.25},
-        "device": {"jit_compile": True, "jit_backend": "eager"},
-    }
-    _write_json(legacy_path, legacy_payload)
-    legacy_before = legacy_path.read_text(encoding="utf-8")
-
-    monkeypatch.setattr(environment.shared_paths, "RUNTIME_SETTINGS_FILE", runtime_path)
-    monkeypatch.setattr(environment.shared_paths, "CONFIGURATIONS_FILE", legacy_path)
-    monkeypatch.setenv("EMBEDDED_DATABASE", "true")
-
-    settings = startup.reload_settings_for_tests(
-        runtime_path=str(runtime_path),
-        legacy_config_path=str(legacy_path),
-    )
-
-    assert settings.jobs.polling_interval == 2.25
-    assert settings.device.jit_compile is True
-    assert json.loads(runtime_path.read_text(encoding="utf-8")) == {
-        "device": {"jit_backend": "eager", "jit_compile": True},
-        "jobs": {"polling_interval": 2.25},
-    }
-    assert legacy_path.read_text(encoding="utf-8") == legacy_before
-
-###############################################################################
-def test_existing_runtime_file_wins_over_legacy_file(
-    tmp_path: Path,
-) -> None:
-    from server.configurations.management import ConfigurationManager
-
-    runtime_path = tmp_path / "runtime-settings.json"
-    legacy_path = tmp_path / "configurations.json"
-    _write_json(
-        runtime_path,
-        {
-            "jobs": {"polling_interval": 3.0},
-            "device": {"jit_compile": False, "jit_backend": "eager"},
-        },
-    )
-    _write_json(legacy_path, _default_json_config())
-
-    manager = ConfigurationManager(
-        runtime_path=runtime_path,
-        legacy_config_path=legacy_path,
-    )
-
-    assert manager.get_all().jobs.polling_interval == 3.0
-    assert manager.get_all().device.jit_backend == "eager"
-
-###############################################################################
-def test_missing_runtime_and_legacy_files_create_defaults(tmp_path: Path) -> None:
+def test_missing_runtime_file_creates_defaults(tmp_path: Path) -> None:
     from server.configurations.management import ConfigurationManager
 
     runtime_path = tmp_path / "nested" / "runtime-settings.json"
     manager = ConfigurationManager(runtime_path=runtime_path)
 
     assert runtime_path.is_file()
-    assert manager.get_json_settings().model_dump() == _default_json_config()
+    assert manager.get_json_settings().model_dump() == _default_runtime_settings()
 
 ###############################################################################
-def test_invalid_runtime_file_does_not_fall_back_to_legacy(tmp_path: Path) -> None:
+def test_invalid_runtime_file_fails_fast(tmp_path: Path) -> None:
     from server.configurations.management import ConfigurationManager
 
     runtime_path = tmp_path / "runtime-settings.json"
-    legacy_path = tmp_path / "configurations.json"
     runtime_path.write_text("{not-json", encoding="utf-8")
-    _write_json(legacy_path, _default_json_config())
 
     with pytest.raises(RuntimeError, match="runtime-settings.json"):
-        ConfigurationManager(runtime_path=runtime_path, legacy_config_path=legacy_path)
+        ConfigurationManager(runtime_path=runtime_path)
 
 ###############################################################################
 def test_unknown_runtime_keys_are_rejected(tmp_path: Path) -> None:

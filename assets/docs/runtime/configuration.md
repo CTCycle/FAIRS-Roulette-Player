@@ -4,12 +4,11 @@ Last updated: 2026-09-16
 
 ## Configuration Ownership
 
-FAIRS uses four distinct configuration surfaces with non-overlapping responsibilities:
+FAIRS uses three distinct configuration surfaces with non-overlapping responsibilities:
 
 1. `settings/.env` for deployment/runtime environment values such as hosts, ports, storage location, database connection, backend visibility, API docs, reload behavior, and ML backend selection.
 2. `<data-root>/runtime-settings.json` for the application-wide technical settings exposed by the Settings UI/API. It owns job polling and global JIT/compiler behavior.
-3. `settings/configurations.json` is a legacy migration input for the structured settings file. It is validated and left unchanged when runtime settings are first created; it is not written by the Settings UI/API.
-4. `TrainingConfig` in `app/server/contracts/training.py` for all per-training defaults, semantic constraints, dataset choices, model parameters, device selection, and mixed precision.
+3. `TrainingConfig` in `app/server/contracts/training.py` for all per-training defaults, semantic constraints, dataset choices, model parameters, device selection, and mixed precision.
 
 No setting should be independently defaulted in more than one of these surfaces.
 
@@ -62,15 +61,14 @@ The runtime settings file is `<FAIRS_DATA_DIR>/runtime-settings.json` when `FAIR
 
 Startup resolution is strict and deterministic:
 
-- An existing runtime file is parsed and validated. Malformed or invalid content fails startup; the legacy file and defaults are not used as a fallback.
-- When the runtime file is absent and `settings/configurations.json` exists, the legacy file is validated, the current runtime file is created, and the legacy file is left unchanged.
-- When neither file exists, the validated defaults are written to the runtime path.
+- An existing runtime file is parsed and validated. Malformed or invalid content fails startup.
+- When the runtime file is absent, the validated defaults are written to the runtime path.
 
 Writes use a same-directory temporary file, flush and `fsync`, then `os.replace` so readers see either the previous complete document or the new complete document. The Settings API merges strict partial updates, persists the runtime file, and applies the accepted snapshot to the live `TrainingService`; it does not read or write `.env`, the database, or `TrainingConfig`.
 
 ## Database Configuration
 
-`settings/configurations.json` must not contain a database block. Database configuration is accepted only from the environment model so connection ownership is unambiguous.
+Database configuration is accepted only from the environment model so connection ownership is unambiguous.
 
 For external PostgreSQL mode, `DATABASE_ENGINE` must be `postgresql+psycopg`. Legacy aliases such as `postgres`, `postgresql`, and `postgresql+psycopg2` are rejected rather than normalized.
 

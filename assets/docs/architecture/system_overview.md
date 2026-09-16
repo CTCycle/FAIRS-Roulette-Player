@@ -96,8 +96,7 @@ Generated TypeScript is a derived artifact, not a parallel authority. CI regener
 ├─ assets/docs/
 ├─ runtimes/
 ├─ settings/
-│  ├─ .env.example
-│  └─ configurations.json
+│  └─ .env.example
 └─ start_on_windows.ps1
 ```
 
