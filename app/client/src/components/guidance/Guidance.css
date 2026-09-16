@@ -434,35 +434,6 @@
     opacity: 0.5;
 }
 
-.app-shell-actions {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 0.5rem;
-    margin-left: auto;
-}
-
-.app-shell-help {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.45rem;
-    min-height: 35px;
-    padding: 0.4rem 0.75rem;
-    color: var(--text-secondary);
-    border: 1px solid transparent;
-    border-radius: var(--radius-md);
-    font-size: 0.9rem;
-    font-weight: 600;
-}
-
-.app-shell-help:hover,
-.app-shell-help[aria-expanded="true"] {
-    color: var(--text-primary);
-    background: var(--bg-tertiary);
-    border-color: var(--border-color);
-}
-
 @media (prefers-reduced-motion: reduce) {
     .guidance-media-track {
         animation: none;

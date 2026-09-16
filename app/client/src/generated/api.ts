@@ -164,6 +164,34 @@ export type ResumeConfig = {
     "checkpoint": string;
 };
 
+export type SettingsDevicePatch = {
+    "jit_backend"?: string | null;
+    "jit_compile"?: boolean | null;
+};
+
+export type SettingsDeviceResponse = {
+    "jit_backend": string;
+    "jit_compile": boolean;
+};
+
+export type SettingsJobsPatch = {
+    "polling_interval"?: number | null;
+};
+
+export type SettingsJobsResponse = {
+    "polling_interval": number;
+};
+
+export type SettingsPatchRequest = {
+    "device"?: SettingsDevicePatch | null;
+    "jobs"?: SettingsJobsPatch | null;
+};
+
+export type SettingsResponse = {
+    "device": SettingsDeviceResponse;
+    "jobs": SettingsJobsResponse;
+};
+
 export type TrainingCheckpointDeleteResponse = {
     "message": string;
     "status": string;
