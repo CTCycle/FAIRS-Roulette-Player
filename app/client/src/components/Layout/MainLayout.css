@@ -52,6 +52,36 @@
     z-index: 10;
 }
 
+.app-shell-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-left: auto;
+}
+
+.app-shell-utility-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 35px;
+    padding: 0.4rem 0.75rem;
+    color: var(--text-secondary);
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.app-shell-utility-action:hover,
+.app-shell-utility-action.active,
+.app-shell-utility-action[aria-expanded="true"] {
+    color: var(--text-primary);
+    background: var(--bg-tertiary);
+    border-color: var(--border-color);
+}
+
 .app-shell-brand {
     display: inline-flex;
     align-items: center;

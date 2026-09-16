@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from './components/Layout/MainLayout';
 import TrainingPage from './pages/Training/TrainingPage';
 import InferencePage from './pages/Inference/InferencePage';
+import SettingsPage from './pages/Settings/SettingsPage';
 import { GuidanceProvider } from './components/guidance/GuidanceProvider';
 import './styles/global.css';
 
@@ -14,6 +15,7 @@ function App() {
             <Route index element={<Navigate to="/training" replace />} />
             <Route path="training" element={<TrainingPage />} />
             <Route path="inference" element={<InferencePage />} />
+            <Route path="settings" element={<SettingsPage />} />
           </Route>
         </Routes>
       </GuidanceProvider>

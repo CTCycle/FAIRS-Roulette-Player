@@ -1,5 +1,6 @@
 import React from 'react';
-import { CircleHelp } from 'lucide-react';
+import { CircleHelp, Settings as SettingsIcon } from 'lucide-react';
+import { NavLink } from 'react-router-dom';
 import TopNavigation from './TopNavigation';
 import { useGuidance } from '../guidance/GuidanceContext';
 
@@ -17,9 +18,16 @@ const HeaderBar: React.FC = () => {
             </div>
             <div className="app-shell-actions">
                 <TopNavigation />
+                <NavLink
+                    to="/settings"
+                    className={({ isActive }) => `app-shell-utility-action ${isActive ? 'active' : ''}`}
+                >
+                    <SettingsIcon size={17} aria-hidden="true" />
+                    <span>Settings</span>
+                </NavLink>
                 <button
                     type="button"
-                    className="app-shell-help"
+                    className="app-shell-utility-action"
                     onClick={openTips}
                     aria-haspopup="dialog"
                     aria-expanded={tipsOpen}
