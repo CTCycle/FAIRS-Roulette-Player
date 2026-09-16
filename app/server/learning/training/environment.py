@@ -16,6 +16,7 @@ from server.common.constants import (
     ROULETTE_COLOR_MAP,
     STATES,
 )
+from server.common.roulette import ROULETTE_RUNTIME_ATTR
 from server.contracts.configuration import RouletteSettings
 from server.learning.betting.hold import StrategyHold
 from server.learning.betting.sizer import BetSizer
@@ -382,12 +383,20 @@ class RouletteEnvironment(gym.Env):
             self.bet_sizer.bet_max if self.dynamic_betting_enabled else self.bet_amount
         )
 
+        resolved_roulette = roulette_settings
+        if resolved_roulette is None:
+            runtime_metadata = data.attrs.get(ROULETTE_RUNTIME_ATTR)
+            if runtime_metadata is not None:
+                if not isinstance(runtime_metadata, dict):
+                    raise ValueError("Invalid roulette runtime metadata on training data.")
+                resolved_roulette = RouletteSettings(**runtime_metadata)
+
         self.black_numbers = self.player.black_numbers
         self.red_numbers = self.player.red_numbers
         self.renderer = RouletteWheelRenderer(
             self.red_numbers,
             self.black_numbers,
-            roulette_settings,
+            resolved_roulette,
         )
 
         self.numbers = list(range(NUMBERS))
