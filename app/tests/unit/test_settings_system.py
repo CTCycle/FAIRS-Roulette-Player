@@ -51,6 +51,13 @@ def _default_runtime_settings() -> dict[str, object]:
             "jit_compile": False,
             "jit_backend": "inductor",
         },
+        "roulette": {
+            "minimum_number": 0,
+            "maximum_number": 36,
+            "exclude_zero": False,
+            "invert_colors": False,
+            "show_number_labels": True,
+        },
     }
 
 ###############################################################################
@@ -202,6 +209,8 @@ def test_server_settings_use_runtime_settings_file(
     assert settings.jobs.polling_interval == 1.0
     assert settings.device.jit_compile is False
     assert settings.device.jit_backend == "inductor"
+    assert settings.roulette.minimum_number == 0
+    assert settings.roulette.maximum_number == 36
 
 ###############################################################################
 def test_database_settings_are_loaded_from_env(
@@ -260,6 +269,7 @@ def test_manager_get_block_and_get_value(
     assert database_block["host"] == "env-db"
     assert "database_url" not in database_block
     assert manager.get_value("jobs", "polling_interval") == 1.0
+    assert manager.get_value("roulette", "maximum_number") == 36
     assert manager.get_value("device", "missing", default="fallback") == "fallback"
 
 ###############################################################################
@@ -312,6 +322,28 @@ def test_missing_runtime_file_creates_defaults(tmp_path: Path) -> None:
 
     assert runtime_path.is_file()
     assert manager.get_json_settings().model_dump() == _default_runtime_settings()
+
+###############################################################################
+def test_legacy_runtime_file_without_roulette_block_uses_defaults(tmp_path: Path) -> None:
+    from server.configurations.management import ConfigurationManager
+
+    runtime_path = tmp_path / "runtime-settings.json"
+    legacy_payload = {
+        "jobs": {"polling_interval": 2.0},
+        "device": {"jit_compile": True, "jit_backend": "eager"},
+    }
+    _write_json(runtime_path, legacy_payload)
+
+    manager = ConfigurationManager(runtime_path=runtime_path)
+    settings = manager.get_json_settings()
+
+    assert settings.jobs.polling_interval == 2.0
+    assert settings.device.jit_backend == "eager"
+    assert settings.roulette.minimum_number == 0
+    assert settings.roulette.maximum_number == 36
+    assert settings.roulette.exclude_zero is False
+    assert settings.roulette.invert_colors is False
+    assert settings.roulette.show_number_labels is True
 
 ###############################################################################
 def test_invalid_runtime_file_fails_fast(tmp_path: Path) -> None:
