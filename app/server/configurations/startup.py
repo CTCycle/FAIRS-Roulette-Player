@@ -13,7 +13,6 @@ def get_configuration_manager() -> ConfigurationManager:
     if _configuration_manager is None:
         _configuration_manager = ConfigurationManager(
             runtime_path=shared_paths.RUNTIME_SETTINGS_FILE,
-            legacy_config_path=shared_paths.CONFIGURATIONS_FILE,
         )
     return _configuration_manager
 
@@ -33,21 +32,13 @@ def get_server_settings() -> ServerSettings:
 
 ###############################################################################
 def reload_settings_for_tests(
-    config_path: str | None = None,
-    *,
     runtime_path: str | None = None,
-    legacy_config_path: str | None = None,
 ) -> ServerSettings:
     global _configuration_manager
     load_environment(force=True)
     get_configuration_manager.cache_clear()  # type: ignore[attr-defined]
-    if config_path is not None:
-        _configuration_manager = ConfigurationManager(config_path=config_path)
-    elif runtime_path is not None or legacy_config_path is not None:
-        _configuration_manager = ConfigurationManager(
-            runtime_path=runtime_path,
-            legacy_config_path=legacy_config_path,
-        )
+    if runtime_path is not None:
+        _configuration_manager = ConfigurationManager(runtime_path=runtime_path)
     else:
         _configuration_manager = get_configuration_manager()
     return _configuration_manager.get_all()

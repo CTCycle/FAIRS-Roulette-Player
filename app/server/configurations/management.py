@@ -14,35 +14,12 @@ from server.contracts.configuration import JsonServerSettings, ServerSettings
 class ConfigurationManager:
 
     # -------------------------------------------------------------------------
-    def __init__(
-        self,
-        runtime_path: str | Path | None = None,
-        legacy_config_path: str | Path | None = None,
-        *,
-        config_path: str | Path | None = None,
-    ) -> None:
-        if config_path is not None:
-            if runtime_path is not None or legacy_config_path is not None:
-                raise ValueError(
-                    "config_path cannot be combined with runtime or legacy paths."
-                )
-            runtime_path = config_path
-
+    def __init__(self, runtime_path: str | Path | None = None) -> None:
         self._lock = RLock()
-        self._require_explicit_runtime_path = config_path is not None
         self._runtime_path = (
             Path(runtime_path)
             if runtime_path is not None
             else shared_paths.RUNTIME_SETTINGS_FILE
-        )
-        self._legacy_config_path = (
-            Path(legacy_config_path)
-            if legacy_config_path is not None
-            else (
-                shared_paths.CONFIGURATIONS_FILE
-                if runtime_path is None
-                else None
-            )
         )
         self._json_settings: JsonServerSettings | None = None
         self._server_settings: ServerSettings | None = None
@@ -50,19 +27,8 @@ class ConfigurationManager:
 
     # -------------------------------------------------------------------------
     @property
-    def config_path(self) -> Path:
-        """Return the active runtime path for older callers."""
-        return self._runtime_path
-
-    # -------------------------------------------------------------------------
-    @property
     def runtime_path(self) -> Path:
         return self._runtime_path
-
-    # -------------------------------------------------------------------------
-    @property
-    def legacy_config_path(self) -> Path | None:
-        return self._legacy_config_path
 
     # -------------------------------------------------------------------------
     @staticmethod
@@ -125,12 +91,7 @@ class ConfigurationManager:
     def _reload_locked(self) -> ServerSettings:
         if self._runtime_path.exists():
             json_settings = self._parse_settings(self._runtime_path)
-        elif self._legacy_config_path is not None and self._legacy_config_path.exists():
-            json_settings = self._parse_settings(self._legacy_config_path)
-            self._persist_json_settings(json_settings)
         else:
-            if self._require_explicit_runtime_path:
-                raise RuntimeError(f"Configuration file not found: {self._runtime_path}")
             json_settings = JsonServerSettings()
             self._persist_json_settings(json_settings)
 
@@ -142,22 +103,12 @@ class ConfigurationManager:
     # -------------------------------------------------------------------------
     def reload(
         self,
-        config_path: str | Path | None = None,
         *,
         runtime_path: str | Path | None = None,
-        legacy_config_path: str | Path | None = None,
     ) -> ServerSettings:
         with self._lock:
-            if config_path is not None:
-                self._runtime_path = Path(config_path)
-                self._legacy_config_path = None
-                self._require_explicit_runtime_path = True
-            elif runtime_path is not None:
+            if runtime_path is not None:
                 self._runtime_path = Path(runtime_path)
-                if legacy_config_path is not None:
-                    self._legacy_config_path = Path(legacy_config_path)
-            elif legacy_config_path is not None:
-                self._legacy_config_path = Path(legacy_config_path)
             return self._reload_locked()
 
     # -------------------------------------------------------------------------

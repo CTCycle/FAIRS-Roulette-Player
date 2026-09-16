@@ -1,9 +1,0 @@
-{
-  "jobs": {
-    "polling_interval": 1
-  },
-  "device": {
-    "jit_compile": false,
-    "jit_backend": "inductor"
-  }
-}
