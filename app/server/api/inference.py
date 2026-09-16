@@ -8,7 +8,8 @@ from server.common.api_errors import (
     ExceptionStatusMap,
     http_exception_for_exception,
 )
-from server.configurations.dependencies import get_inference_service
+from server.common.roulette import validate_roulette_outcome
+from server.configurations.dependencies import get_inference_service, get_settings_service
 from server.contracts.inference import (
     InferenceBetUpdateRequest,
     InferenceBetUpdateResponse,
@@ -109,8 +110,16 @@ def submit_step(
     session_id: str,
     payload: InferenceStepRequest,
     service: Annotated[Any, Depends(get_inference_service)],
+    settings_service: Annotated[Any, Depends(get_settings_service)],
 ) -> InferenceStepResponse:
     try:
+        roulette_settings = settings_service.get_settings().roulette
+        validate_roulette_outcome(
+            payload.extraction,
+            minimum_number=roulette_settings.minimum_number,
+            maximum_number=roulette_settings.maximum_number,
+            exclude_zero=roulette_settings.exclude_zero,
+        )
         return InferenceStepResponse.model_validate(
             service.step_session(session_id, payload)
         )
