@@ -10,6 +10,7 @@ from server.common.api_errors import (
 )
 from server.common.roulette import validate_roulette_outcome
 from server.configurations.dependencies import get_inference_service, get_settings_service
+from server.contracts.configuration import RouletteSettings
 from server.contracts.inference import (
     InferenceBetUpdateRequest,
     InferenceBetUpdateResponse,
@@ -41,6 +42,17 @@ def _map_inference_exception(exc: Exception) -> HTTPException:
     )
 
 ###############################################################################
+def _roulette_settings(settings_service: Any) -> RouletteSettings:
+    settings = settings_service.get_settings().roulette
+    return RouletteSettings(
+        minimum_number=settings.minimum_number,
+        maximum_number=settings.maximum_number,
+        exclude_zero=settings.exclude_zero,
+        invert_colors=settings.invert_colors,
+        show_number_labels=settings.show_number_labels,
+    )
+
+###############################################################################
 @router.post(
     "/sessions/start",
     response_model=InferenceStartResponse,
@@ -49,18 +61,24 @@ def _map_inference_exception(exc: Exception) -> HTTPException:
 def start_session(
     payload: InferenceStartRequest,
     service: Annotated[Any, Depends(get_inference_service)],
+    settings_service: Annotated[Any, Depends(get_settings_service)],
     preserve_session_id: Annotated[
         str | None,
         Header(alias="X-Preserve-Inference-Session"),
     ] = None,
 ) -> InferenceStartResponse:
     try:
+        roulette_settings = _roulette_settings(settings_service)
         if preserve_session_id is None:
-            result = service.start_session(payload)
+            result = service.start_session(
+                payload,
+                roulette_settings=roulette_settings,
+            )
         else:
             result = service.start_session(
                 payload,
                 preserve_session_id=preserve_session_id,
+                roulette_settings=roulette_settings,
             )
         return InferenceStartResponse.model_validate(
             result
