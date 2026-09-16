@@ -69,7 +69,7 @@ class ServerSettings:
     database: DatabaseSettings
     jobs: JobsSettings
     device: DeviceSettings
-    roulette: RouletteSettings
+    roulette: RouletteSettings = RouletteSettings()
 
 ###############################################################################
 class EnvDatabaseSettings(BaseModel):
