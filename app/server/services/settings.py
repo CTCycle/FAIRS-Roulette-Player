@@ -66,7 +66,7 @@ class SettingsService:
             exclude_unset=True,
             exclude_none=False,
         )
-        for block_name in ("jobs", "device"):
+        for block_name in ("jobs", "device", "roulette"):
             block_patch = patch_payload.get(block_name)
             if isinstance(block_patch, dict):
                 payload[block_name].update(block_patch)
