@@ -8,6 +8,8 @@ from server.common.constants import (
     ROULETTE_POSITION_MAP,
 )
 
+ROULETTE_RUNTIME_ATTR = "fairs_roulette_runtime_settings"
+
 ###############################################################################
 def build_roulette_number_pool(
     minimum_number: int = 0,
@@ -85,6 +87,7 @@ def encode_roulette_series(dataframe: pd.DataFrame) -> pd.DataFrame:
 
 
 __all__ = [
+    "ROULETTE_RUNTIME_ATTR",
     "build_roulette_number_pool",
     "encode_roulette_series",
     "filter_roulette_series",
