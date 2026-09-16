@@ -2,9 +2,31 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import os
+import re
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+JIT_BACKEND_MAX_LENGTH = 64
+JIT_BACKEND_PATTERN = r"^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+_JIT_BACKEND_PATTERN = re.compile(JIT_BACKEND_PATTERN)
+
+###############################################################################
+def normalize_jit_backend(value: Any) -> str:
+    if not isinstance(value, str):
+        raise ValueError("jit_backend must be a string.")
+    text = value.strip()
+    if not text:
+        raise ValueError("jit_backend must not be blank.")
+    if len(text) > JIT_BACKEND_MAX_LENGTH:
+        raise ValueError(
+            f"jit_backend must be {JIT_BACKEND_MAX_LENGTH} characters or fewer."
+        )
+    if _JIT_BACKEND_PATTERN.fullmatch(text) is None:
+        raise ValueError(
+            "jit_backend may contain only letters, numbers, '.', '_', ':', and '-'."
+        )
+    return text
 
 ###############################################################################
 @dataclass(frozen=True)
@@ -129,24 +151,33 @@ class EnvDatabaseSettings(BaseModel):
 
 ###############################################################################
 class JsonJobsSettings(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     polling_interval: float = Field(default=1.0, ge=0.1, le=10.0)
 
 ###############################################################################
 class JsonDeviceSettings(BaseModel):
     """Process-wide compiler settings, not per-training device preferences."""
 
+    model_config = ConfigDict(extra="forbid")
+
     jit_compile: bool = False
-    jit_backend: str = "inductor"
+    jit_backend: str = Field(
+        default="inductor",
+        max_length=JIT_BACKEND_MAX_LENGTH,
+        pattern=JIT_BACKEND_PATTERN,
+    )
 
     # -------------------------------------------------------------------------
     @field_validator("jit_backend", mode="before")
     @classmethod
     def normalize_backend(cls, value: Any) -> str:
-        text = str(value).strip() if value is not None else ""
-        return text or "inductor"
+        return normalize_jit_backend(value)
 
 ###############################################################################
 class JsonServerSettings(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     jobs: JsonJobsSettings = Field(default_factory=JsonJobsSettings)
     device: JsonDeviceSettings = Field(default_factory=JsonDeviceSettings)
 

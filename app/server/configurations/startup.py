@@ -1,22 +1,53 @@
 from __future__ import annotations
 
-from functools import lru_cache
-
 from server.common import path as shared_paths
 from server.configurations.environment import load_environment
 from server.configurations.management import ConfigurationManager
 from server.contracts.configuration import ServerSettings
 
+_configuration_manager: ConfigurationManager | None = None
+
 ###############################################################################
-@lru_cache(maxsize=1)
 def get_configuration_manager() -> ConfigurationManager:
-    return ConfigurationManager(config_path=shared_paths.CONFIGURATIONS_FILE)
+    global _configuration_manager
+    if _configuration_manager is None:
+        _configuration_manager = ConfigurationManager(
+            runtime_path=shared_paths.RUNTIME_SETTINGS_FILE,
+            legacy_config_path=shared_paths.CONFIGURATIONS_FILE,
+        )
+    return _configuration_manager
+
+
+###############################################################################
+def _clear_configuration_manager_cache() -> None:
+    global _configuration_manager
+    _configuration_manager = None
+
+
+# Preserve the existing test seam used throughout the repository.
+get_configuration_manager.cache_clear = _clear_configuration_manager_cache  # type: ignore[attr-defined]
 
 ###############################################################################
 def get_server_settings() -> ServerSettings:
     return get_configuration_manager().get_all()
 
 ###############################################################################
-def reload_settings_for_tests(config_path: str | None = None) -> ServerSettings:
+def reload_settings_for_tests(
+    config_path: str | None = None,
+    *,
+    runtime_path: str | None = None,
+    legacy_config_path: str | None = None,
+) -> ServerSettings:
+    global _configuration_manager
     load_environment(force=True)
-    return get_configuration_manager().reload(config_path=config_path)
+    get_configuration_manager.cache_clear()  # type: ignore[attr-defined]
+    if config_path is not None:
+        _configuration_manager = ConfigurationManager(config_path=config_path)
+    elif runtime_path is not None or legacy_config_path is not None:
+        _configuration_manager = ConfigurationManager(
+            runtime_path=runtime_path,
+            legacy_config_path=legacy_config_path,
+        )
+    else:
+        _configuration_manager = get_configuration_manager()
+    return _configuration_manager.get_all()

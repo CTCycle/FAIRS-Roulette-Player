@@ -2,6 +2,7 @@
 runtimes/**
 app/resources/logs/**
 app/resources/checkpoints/**
+app/resources/runtime-settings.json
 app/client/node_modules/
 app/client/dist/
 app/client/dist-ssr/

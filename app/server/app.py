@@ -29,6 +29,7 @@ from server.common.utils.logger import close_application_logging, logger
 from server.common.version import get_application_version
 from server.api.datasets import router as datasets_router
 from server.api.inference import router as inference_router
+from server.api.settings import router as settings_router
 from server.api.training import router as training_router
 from server.api.upload import router as upload_router
 from server.api.system import router as system_router
@@ -37,6 +38,7 @@ from server.contracts.system import RootStatusResponse
 from server.repositories.database.backend import FAIRSDatabase
 from server.repositories.database.initializer import initialize_database
 from server.services.startup_validation import run_startup_validations
+from server.services.settings import SettingsService
 
 # These names are deliberately unresolved until the lifespan has bootstrapped
 # the runtime.  Keeping injectable placeholders preserves the test seam
@@ -117,6 +119,7 @@ async def app_lifespan(application: FastAPI) -> AsyncIterator[None]:
     database = None
     training_run_manager = None
     training_service = None
+    settings_service = None
     inference_service = None
     try:
         bootstrap_runtime()
@@ -189,6 +192,8 @@ async def app_lifespan(application: FastAPI) -> AsyncIterator[None]:
             jit_backend=settings.device.jit_backend,
         )
         application.state.training_service = training_service
+        settings_service = SettingsService(training_service=training_service)
+        application.state.settings_service = settings_service
         inference_service = InferenceService(
             dataset_repository=dataset_repository,
             inference_repository=inference_repository,
@@ -246,6 +251,7 @@ def include_api_routers(application: FastAPI) -> None:
         training_router,
         datasets_router,
         inference_router,
+        settings_router,
         system_router,
     ):
         application.include_router(router, prefix=FASTAPI_API_PREFIX)
