@@ -1,6 +1,6 @@
 ## Execution And Data Flow
 
-Last updated: 2026-09-10
+Last updated: 2026-09-16
 
 ## Current Layering
 
@@ -52,7 +52,7 @@ FastAPI construction is import-safe. Lifespan startup performs the mutable runti
 2. Enforce the single-process runtime invariant and validate/create current data directories.
 3. Run the shared Alembic initializer. Empty databases upgrade to `head`; known older revisions upgrade in order; unversioned non-empty, unknown, ahead, multi-head, or drifted schemas fail unchanged.
 4. Construct the application database and resource repositories.
-5. Construct one `CheckpointService`, one `TrainingRunManager`, `DatasetService`, `TrainingService`, and `InferenceService` with explicit collaborators.
+5. Construct one `CheckpointService`, one `TrainingRunManager`, `DatasetService`, `TrainingService`, `InferenceService`, and `SettingsService` with explicit collaborators.
 6. Publish runtime objects on application state only after initialization succeeds.
 
 Shutdown releases owned resources in reverse order and isolates cleanup failures.
@@ -93,6 +93,29 @@ The training worker revalidates the serialized `TrainingConfig` once at the proc
 Global JIT/compiler configuration is injected from `ServerSettings.device`. Per-training GPU selection and mixed precision remain in `TrainingConfig`. JIT fields are not accepted as ignored per-training request settings.
 
 Checkpoint configuration is saved through the explicit versioned `CheckpointConfiguration` contract. Runtime checkpoint loading accepts only the current supported version.
+
+## Settings Flow
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API
+    participant Settings as SettingsService
+    participant File as runtime-settings.json
+    participant Training as TrainingService
+
+    Client->>API: GET /api/settings
+    API->>Settings: read current validated settings
+    Settings->>File: load canonical runtime document
+    API-->>Client: SettingsResponse
+    Client->>API: PATCH /api/settings
+    API->>Settings: validate and merge strict patch
+    Settings->>File: atomic replace
+    Settings->>Training: apply runtime settings
+    API-->>Client: SettingsResponse
+```
+
+`SettingsService` is the only application service that writes the runtime settings file. Polling changes affect future parent status polling immediately. A new training worker receives a launch snapshot of polling and JIT values; an active worker keeps its captured snapshot. A resumed checkpoint uses the current polling interval while preserving the checkpoint's model configuration.
 
 ## Inference Flow
 

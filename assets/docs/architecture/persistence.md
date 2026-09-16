@@ -1,6 +1,6 @@
 ## Persistence
 
-Last updated: 2026-09-10
+Last updated: 2026-09-16
 
 ## Canonical Persistence Model
 
@@ -90,6 +90,9 @@ erDiagram
 - External relational data: PostgreSQL through the same repository/schema model when explicitly selected in `settings/.env`.
 - Checkpoints: `<data-root>/checkpoints/<checkpoint_id>/`.
 - Logs: `<data-root>/logs/*.log`.
+- Runtime settings: `<data-root>/runtime-settings.json`, where `<data-root>` is `FAIRS_DATA_DIR` or `app/resources`.
+
+Runtime settings are local JSON state, not relational persistence. They contain only the validated application-wide polling and JIT/compiler fields exposed by the Settings API. They are written atomically and are never stored in the database or merged into checkpoint configuration.
 
 SQLite and PostgreSQL are both current supported persistence modes. They are not parallel application architectures: the same SQLAlchemy schema, repositories, Alembic chain, and service contracts are used for both.
 

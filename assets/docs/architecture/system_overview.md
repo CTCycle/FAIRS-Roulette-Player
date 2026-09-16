@@ -1,6 +1,6 @@
 ## System Overview
 
-Last updated: 2026-09-10
+Last updated: 2026-09-16
 
 ## Current State
 
@@ -39,7 +39,8 @@ flowchart LR
 | Frontend transport types | generated `app/client/src/generated/api.ts` |
 | Training defaults and semantic validation | `TrainingConfig` |
 | Per-training GPU/device/mixed precision | `TrainingConfig` |
-| Global JIT/compiler behavior | `ServerSettings.device` from `settings/configurations.json` |
+| Global runtime settings | `SettingsService` and `runtime-settings.json` |
+| Global JIT/compiler behavior | `ServerSettings.device` loaded from `runtime-settings.json` |
 | Deployment/database environment | typed `.env` settings |
 | Relational schema | SQLAlchemy models plus current Alembic head |
 | Database migration | Alembic only |
@@ -74,7 +75,8 @@ Generated TypeScript is a derived artifact, not a parallel authority. CI regener
 │  ├─ resources/
 │  │  ├─ checkpoints/
 │  │  ├─ logs/
-│  │  └─ database.db
+│  │  ├─ database.db
+│  │  └─ runtime-settings.json (generated local state)
 │  ├─ scripts/
 │  │  ├─ export_openapi.py
 │  │  ├─ generate_frontend_contracts.py
@@ -111,6 +113,7 @@ Generated TypeScript is a derived artifact, not a parallel authority. CI regener
 - `app/server/repositories` owns relational persistence and checkpoint filesystem persistence.
 - `app/server/common` contains narrow shared primitives only.
 - `app/server/configurations` resolves global technical settings and typed environment configuration.
+- `app/server/services/settings.py` owns strict runtime-settings reads, updates, reset-to-defaults, and propagation to `TrainingService`.
 
 Learning code receives explicit validated configuration and prepared data. It does not construct persistence adapters or invent fallback defaults for missing required configuration.
 
@@ -120,6 +123,7 @@ Learning code receives explicit validated configuration and prepared data. It do
 - `src/types` contains browser/view-state models rather than independent HTTP contracts.
 - `src/utils/*Api.ts` performs typed transport calls and maps transport fields to UI representations where needed.
 - `src/pages`, `src/components`, and `src/hooks` own feature-local workflow and presentation state.
+- `/settings` is a utility route beside Help. It edits only the backend-owned runtime settings contract and obtains defaults from `GET /api/settings`.
 - Browser inference storage is advisory replay/setup metadata only. Backend `InferenceState` remains authoritative for a live session.
 
 ## Runtime Boundary
