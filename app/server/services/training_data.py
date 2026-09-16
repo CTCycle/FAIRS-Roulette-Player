@@ -6,8 +6,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from server.common.roulette import encode_roulette_series
-from server.configurations import DatabaseSettings
+from server.common.roulette import encode_roulette_series, filter_roulette_series
+from server.configurations import DatabaseSettings, RouletteSettings
 from server.learning.training.generator import RouletteSyntheticGenerator
 from server.repositories.database.backend import FAIRSDatabase
 from server.repositories.datasets import DatasetRepository
@@ -27,8 +27,11 @@ class TrainingDataService:
 
     # -------------------------------------------------------------------------
     @staticmethod
-    def generate_synthetic_dataset(configuration: dict[str, Any]) -> pd.DataFrame:
-        return RouletteSyntheticGenerator(configuration).generate()
+    def generate_synthetic_dataset(
+        configuration: dict[str, Any],
+        roulette_settings: RouletteSettings | None = None,
+    ) -> pd.DataFrame:
+        return RouletteSyntheticGenerator(configuration, roulette_settings).generate()
 
     # -------------------------------------------------------------------------
     @staticmethod
@@ -56,6 +59,7 @@ class TrainingDataService:
         sample_size: float,
         seed: int,
         dataset_id: int | None,
+        roulette_settings: RouletteSettings,
     ) -> pd.DataFrame:
         if self.database_settings is None:
             raise RuntimeError(
@@ -73,6 +77,16 @@ class TrainingDataService:
 
         if dataset.empty:
             return dataset
+        dataset = filter_roulette_series(
+            dataset,
+            minimum_number=roulette_settings.minimum_number,
+            maximum_number=roulette_settings.maximum_number,
+            exclude_zero=roulette_settings.exclude_zero,
+        )
+        if dataset.empty:
+            raise ValueError(
+                "No roulette outcomes remain after applying the configured number pool."
+            )
         dataset = encode_roulette_series(dataset)
         return self._sample_contiguous_window(dataset, sample_size, seed)
 
@@ -80,10 +94,12 @@ class TrainingDataService:
     def get_training_series(
         self,
         configuration: dict[str, Any],
+        roulette_settings: RouletteSettings | None = None,
     ) -> tuple[pd.DataFrame, bool]:
+        resolved_roulette = roulette_settings or RouletteSettings()
         if configuration["use_data_generator"]:
             dataset = encode_roulette_series(
-                self.generate_synthetic_dataset(configuration)
+                self.generate_synthetic_dataset(configuration, resolved_roulette)
             )
             dataset = dataset.rename(columns={"outcome": "extraction"})
             return dataset, True
@@ -95,7 +111,12 @@ class TrainingDataService:
             isinstance(dataset_id, bool) or not isinstance(dataset_id, int)
         ):
             raise ValueError("dataset_id must be an integer or null.")
-        dataset = self._load_training_series(sample_size, seed, dataset_id)
+        dataset = self._load_training_series(
+            sample_size,
+            seed,
+            dataset_id,
+            resolved_roulette,
+        )
         if "outcome" in dataset.columns and "extraction" not in dataset.columns:
             dataset = dataset.rename(columns={"outcome": "extraction"})
         if dataset.empty or "extraction" not in dataset.columns:
@@ -111,10 +132,12 @@ def load_training_series(
     configuration: dict[str, Any],
     database_settings: DatabaseSettings | None,
     database_path: str | Path | None,
+    roulette_settings: RouletteSettings | None = None,
 ) -> tuple[pd.DataFrame, bool]:
     """Pickle-safe application callback used by the training process."""
     return TrainingDataService(database_settings, database_path).get_training_series(
-        configuration
+        configuration,
+        roulette_settings,
     )
 
 
