@@ -16,6 +16,7 @@ from server.common.constants import (
     ROULETTE_COLOR_MAP,
     STATES,
 )
+from server.contracts.configuration import RouletteSettings
 from server.learning.betting.hold import StrategyHold
 from server.learning.betting.sizer import BetSizer
 from server.learning.betting.types import (
@@ -179,7 +180,12 @@ class BetsAndRewards:
 class RouletteWheelRenderer:
 
     # -------------------------------------------------------------------------
-    def __init__(self, red_numbers: list[int], black_numbers: list[int]) -> None:
+    def __init__(
+        self,
+        red_numbers: list[int],
+        black_numbers: list[int],
+        roulette_settings: RouletteSettings | None = None,
+    ) -> None:
         self.red_numbers = set(red_numbers)
         self.black_numbers = set(black_numbers)
         self.odd_numbers = set(range(1, NUMBERS, 2))
@@ -189,6 +195,9 @@ class RouletteWheelRenderer:
         self.first_dozen_numbers = set(range(1, 13))
         self.second_dozen_numbers = set(range(13, 25))
         self.third_dozen_numbers = set(range(25, NUMBERS))
+        resolved_settings = roulette_settings or RouletteSettings()
+        self.invert_colors = resolved_settings.invert_colors
+        self.show_number_labels = resolved_settings.show_number_labels
 
         self.size = 720
         self.background_color = (15, 23, 42, 255)
@@ -254,20 +263,23 @@ class RouletteWheelRenderer:
                     bbox, start=start, end=end, fill=self.extraction_highlight
                 )
 
-            mid_angle = (start + end) / 2.0
-            angle_rad = math.radians(mid_angle)
-            label_x = center_x + label_radius * math.cos(angle_rad)
-            label_y = center_y + label_radius * math.sin(angle_rad)
-            label = str(number)
-            left, top, right, bottom = draw.textbbox((0, 0), label, font=self.font)
-            text_width = right - left
-            text_height = bottom - top
-            draw.text(
-                (label_x - text_width / 2, label_y - text_height / 2),
-                label,
-                font=self.font,
-                fill=self.label_color,
-            )
+            if self.show_number_labels:
+                mid_angle = (start + end) / 2.0
+                angle_rad = math.radians(mid_angle)
+                label_x = center_x + label_radius * math.cos(angle_rad)
+                label_y = center_y + label_radius * math.sin(angle_rad)
+                label = str(number)
+                left, top, right, bottom = draw.textbbox(
+                    (0, 0), label, font=self.font
+                )
+                text_width = right - left
+                text_height = bottom - top
+                draw.text(
+                    (label_x - text_width / 2, label_y - text_height / 2),
+                    label,
+                    font=self.font,
+                    fill=self.label_color,
+                )
 
         inner_bbox = (
             int(center_x - inner_radius),
@@ -295,8 +307,8 @@ class RouletteWheelRenderer:
         if number == 0:
             return self.base_green
         if number in self.red_numbers:
-            return self.base_red
-        return self.base_black
+            return self.base_black if self.invert_colors else self.base_red
+        return self.base_red if self.invert_colors else self.base_black
 
     # -------------------------------------------------------------------------
     def get_action_highlights(self, action: int) -> set[int]:
@@ -329,7 +341,11 @@ class RouletteEnvironment(gym.Env):
 
     # -------------------------------------------------------------------------
     def __init__(
-        self, data: pd.DataFrame, configuration: dict[str, Any], checkpoint_path: str
+        self,
+        data: pd.DataFrame,
+        configuration: dict[str, Any],
+        checkpoint_path: str,
+        roulette_settings: RouletteSettings | None = None,
     ) -> None:
         super(RouletteEnvironment, self).__init__()
         self.extractions = data["extraction"].values
@@ -368,7 +384,11 @@ class RouletteEnvironment(gym.Env):
 
         self.black_numbers = self.player.black_numbers
         self.red_numbers = self.player.red_numbers
-        self.renderer = RouletteWheelRenderer(self.red_numbers, self.black_numbers)
+        self.renderer = RouletteWheelRenderer(
+            self.red_numbers,
+            self.black_numbers,
+            roulette_settings,
+        )
 
         self.numbers = list(range(NUMBERS))
         self.action_space = spaces.Discrete(STATES)
