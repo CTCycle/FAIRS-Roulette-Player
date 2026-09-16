@@ -7,10 +7,16 @@ import numpy as np
 import pandas as pd
 
 from server.common.roulette import encode_roulette_series, filter_roulette_series
-from server.configurations import DatabaseSettings, RouletteSettings
+from server.configurations import (
+    DatabaseSettings,
+    RouletteSettings,
+    get_configuration_manager,
+)
 from server.learning.training.generator import RouletteSyntheticGenerator
 from server.repositories.database.backend import FAIRSDatabase
 from server.repositories.datasets import DatasetRepository
+
+ROULETTE_RUNTIME_ATTR = "fairs_roulette_runtime_settings"
 
 ###############################################################################
 class TrainingDataService:
@@ -32,6 +38,21 @@ class TrainingDataService:
         roulette_settings: RouletteSettings | None = None,
     ) -> pd.DataFrame:
         return RouletteSyntheticGenerator(configuration, roulette_settings).generate()
+
+    # -------------------------------------------------------------------------
+    @staticmethod
+    def _attach_runtime_metadata(
+        dataset: pd.DataFrame,
+        roulette_settings: RouletteSettings,
+    ) -> pd.DataFrame:
+        dataset.attrs[ROULETTE_RUNTIME_ATTR] = {
+            "minimum_number": roulette_settings.minimum_number,
+            "maximum_number": roulette_settings.maximum_number,
+            "exclude_zero": roulette_settings.exclude_zero,
+            "invert_colors": roulette_settings.invert_colors,
+            "show_number_labels": roulette_settings.show_number_labels,
+        }
+        return dataset
 
     # -------------------------------------------------------------------------
     @staticmethod
@@ -102,7 +123,7 @@ class TrainingDataService:
                 self.generate_synthetic_dataset(configuration, resolved_roulette)
             )
             dataset = dataset.rename(columns={"outcome": "extraction"})
-            return dataset, True
+            return self._attach_runtime_metadata(dataset, resolved_roulette), True
 
         seed = configuration["seed"]
         sample_size = configuration["sample_size"]
@@ -125,7 +146,7 @@ class TrainingDataService:
                     f"No roulette dataset available for dataset_id '{dataset_id}'."
                 )
             raise ValueError("No roulette dataset available for training.")
-        return dataset, False
+        return self._attach_runtime_metadata(dataset, resolved_roulette), False
 
 ###############################################################################
 def load_training_series(
@@ -135,10 +156,17 @@ def load_training_series(
     roulette_settings: RouletteSettings | None = None,
 ) -> tuple[pd.DataFrame, bool]:
     """Pickle-safe application callback used by the training process."""
+    resolved_roulette = roulette_settings
+    if resolved_roulette is None:
+        resolved_roulette = (
+            get_configuration_manager()
+            .get_json_settings()
+            .roulette.to_runtime_settings()
+        )
     return TrainingDataService(database_settings, database_path).get_training_series(
         configuration,
-        roulette_settings,
+        resolved_roulette,
     )
 
 
-__all__ = ["TrainingDataService", "load_training_series"]
+__all__ = ["ROULETTE_RUNTIME_ATTR", "TrainingDataService", "load_training_series"]
