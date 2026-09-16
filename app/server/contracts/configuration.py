@@ -56,10 +56,20 @@ class DeviceSettings:
 
 ###############################################################################
 @dataclass(frozen=True)
+class RouletteSettings:
+    minimum_number: int = 0
+    maximum_number: int = 36
+    exclude_zero: bool = False
+    invert_colors: bool = False
+    show_number_labels: bool = True
+
+###############################################################################
+@dataclass(frozen=True)
 class ServerSettings:
     database: DatabaseSettings
     jobs: JobsSettings
     device: DeviceSettings
+    roulette: RouletteSettings
 
 ###############################################################################
 class EnvDatabaseSettings(BaseModel):
@@ -175,11 +185,43 @@ class JsonDeviceSettings(BaseModel):
         return normalize_jit_backend(value)
 
 ###############################################################################
+class JsonRouletteSettings(BaseModel):
+    """Application-wide roulette outcome and visualization settings."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    minimum_number: int = Field(default=0, ge=0, le=36)
+    maximum_number: int = Field(default=36, ge=0, le=36)
+    exclude_zero: bool = False
+    invert_colors: bool = False
+    show_number_labels: bool = True
+
+    # -------------------------------------------------------------------------
+    @model_validator(mode="after")
+    def validate_number_pool(self) -> "JsonRouletteSettings":
+        if self.minimum_number > self.maximum_number:
+            raise ValueError("minimum_number must be less than or equal to maximum_number.")
+        if self.exclude_zero and self.minimum_number == 0 and self.maximum_number == 0:
+            raise ValueError("Roulette number pool must contain at least one number.")
+        return self
+
+    # -------------------------------------------------------------------------
+    def to_runtime_settings(self) -> RouletteSettings:
+        return RouletteSettings(
+            minimum_number=self.minimum_number,
+            maximum_number=self.maximum_number,
+            exclude_zero=self.exclude_zero,
+            invert_colors=self.invert_colors,
+            show_number_labels=self.show_number_labels,
+        )
+
+###############################################################################
 class JsonServerSettings(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     jobs: JsonJobsSettings = Field(default_factory=JsonJobsSettings)
     device: JsonDeviceSettings = Field(default_factory=JsonDeviceSettings)
+    roulette: JsonRouletteSettings = Field(default_factory=JsonRouletteSettings)
 
     # -------------------------------------------------------------------------
     @model_validator(mode="before")
@@ -230,6 +272,7 @@ class JsonServerSettings(BaseModel):
                 jit_compile=self.device.jit_compile,
                 jit_backend=self.device.jit_backend,
             ),
+            roulette=self.roulette.to_runtime_settings(),
         )
 
     # -------------------------------------------------------------------------
@@ -239,4 +282,5 @@ class JsonServerSettings(BaseModel):
             "database": database.model_dump(),
             "jobs": self.jobs.model_dump(),
             "device": self.device.model_dump(),
+            "roulette": self.roulette.model_dump(),
         }
