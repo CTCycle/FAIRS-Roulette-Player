@@ -6,7 +6,11 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from server.common.roulette import encode_roulette_series, filter_roulette_series
+from server.common.roulette import (
+    ROULETTE_RUNTIME_ATTR,
+    encode_roulette_series,
+    filter_roulette_series,
+)
 from server.configurations import (
     DatabaseSettings,
     RouletteSettings,
@@ -15,8 +19,6 @@ from server.configurations import (
 from server.learning.training.generator import RouletteSyntheticGenerator
 from server.repositories.database.backend import FAIRSDatabase
 from server.repositories.datasets import DatasetRepository
-
-ROULETTE_RUNTIME_ATTR = "fairs_roulette_runtime_settings"
 
 ###############################################################################
 class TrainingDataService:
@@ -169,4 +171,4 @@ def load_training_series(
     )
 
 
-__all__ = ["ROULETTE_RUNTIME_ATTR", "TrainingDataService", "load_training_series"]
+__all__ = ["TrainingDataService", "load_training_series"]
