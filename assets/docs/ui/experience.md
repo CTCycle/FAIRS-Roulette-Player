@@ -1,6 +1,6 @@
 ## Experience
 
-Last updated: 2026-09-11
+Last updated: 2026-09-16
 
 ## Page Composition
 
@@ -15,6 +15,10 @@ Last updated: 2026-09-11
   - initial-capital and bet controls
   - agent suggestion panel
   - large session history table on the right with editable observed values and row actions
+- `/settings`
+  - application-wide training polling interval
+  - fresh-model JIT compilation toggle and backend
+  - backend-owned Save and Reset-to-defaults actions with local feedback
 - Walkthroughs do not open automatically. From Help, users can choose a three-step walkthrough for Training or Inference, covering data/setup, configuration/play, and monitoring/observation.
 
 Composition rules:
@@ -36,6 +40,8 @@ Composition rules:
 - Training configuration validates relationships between exploration settings, replay memory, batch size, and dynamic-betting options before submission; the backend remains authoritative for the same constraints.
 - Keep error feedback local to the action that failed.
 - Preserve explicit loading states for long-running or multi-step actions.
+- Settings loads from the backend before showing editable controls, saves only changed fields, and leaves environment and per-training configuration in their existing workflows.
+- Settings copy makes runtime scope explicit: polling changes affect future parent polling, while JIT changes apply to newly constructed models and do not rewrite active workers or checkpoint configuration.
 - Keep outcome and profit feedback immediate and visually distinct.
 - The training monitor calls the pre-learning replay-memory phase `Replay warm-up`; epsilon remains visible separately because epsilon-greedy exploration continues after learning begins.
 - Validation metrics are shown only when a fresh validation measurement exists rather than being visually carried forward across unsampled steps.
@@ -59,6 +65,7 @@ Desktop layouts should favor information density, horizontal space, and efficien
 - Keep navigation regions explicitly labeled.
 - Inputs and icon-only actions need explicit labels or `aria-label` values.
 - Error alerts should preserve live-region behavior where implemented.
+- Settings inputs retain explicit labels, described-by help/error text, disabled-state semantics, and status feedback for save/reset outcomes.
 - Respect reduced motion preferences.
 - Dialogs should retain `role="dialog"`, `aria-modal`, and an accessible title; wizard steps expose current-step state.
 - Guidance dialogs and tours move focus to their first action, keep Tab navigation within the open surface, close with Escape, and restore focus to the invoking control. Tour targets are highlighted without replacing the underlying controls, and the animated demonstration becomes static when reduced motion is requested.

@@ -1,14 +1,15 @@
 ## Configuration
 
-Last updated: 2026-09-10
+Last updated: 2026-09-16
 
 ## Configuration Ownership
 
-FAIRS uses three distinct configuration surfaces with non-overlapping responsibilities:
+FAIRS uses four distinct configuration surfaces with non-overlapping responsibilities:
 
 1. `settings/.env` for deployment/runtime environment values such as hosts, ports, storage location, database connection, backend visibility, API docs, reload behavior, and ML backend selection.
-2. `settings/configurations.json` for application-wide technical settings that are not environment secrets or per-training choices. It currently owns job polling and global JIT/compiler behavior.
-3. `TrainingConfig` in `app/server/contracts/training.py` for all per-training defaults, semantic constraints, dataset choices, model parameters, device selection, and mixed precision.
+2. `<data-root>/runtime-settings.json` for the application-wide technical settings exposed by the Settings UI/API. It owns job polling and global JIT/compiler behavior.
+3. `settings/configurations.json` is a legacy migration input for the structured settings file. It is validated and left unchanged when runtime settings are first created; it is not written by the Settings UI/API.
+4. `TrainingConfig` in `app/server/contracts/training.py` for all per-training defaults, semantic constraints, dataset choices, model parameters, device selection, and mixed precision.
 
 No setting should be independently defaulted in more than one of these surfaces.
 
@@ -55,6 +56,18 @@ The launcher sets only execution-scoped tool variables:
 
 These cache roots are canonical. The launcher does not scan the repository for historical `.uv-cache`, `.pytest_cache`, `.ruff_cache`, `.mypy_cache`, Vite cache, or other legacy locations.
 
+## Runtime Settings File
+
+The runtime settings file is `<FAIRS_DATA_DIR>/runtime-settings.json` when `FAIRS_DATA_DIR` is configured; otherwise it is `app/resources/runtime-settings.json`. It is created on startup when absent and is ignored by source control because it is local user state.
+
+Startup resolution is strict and deterministic:
+
+- An existing runtime file is parsed and validated. Malformed or invalid content fails startup; the legacy file and defaults are not used as a fallback.
+- When the runtime file is absent and `settings/configurations.json` exists, the legacy file is validated, the current runtime file is created, and the legacy file is left unchanged.
+- When neither file exists, the validated defaults are written to the runtime path.
+
+Writes use a same-directory temporary file, flush and `fsync`, then `os.replace` so readers see either the previous complete document or the new complete document. The Settings API merges strict partial updates, persists the runtime file, and applies the accepted snapshot to the live `TrainingService`; it does not read or write `.env`, the database, or `TrainingConfig`.
+
 ## Database Configuration
 
 `settings/configurations.json` must not contain a database block. Database configuration is accepted only from the environment model so connection ownership is unambiguous.
@@ -68,7 +81,7 @@ Both modes use the same SQLAlchemy repositories and Alembic schema.
 
 ## Structured Settings
 
-`settings/configurations.json` currently owns:
+The runtime settings document currently owns:
 
 - `jobs.polling_interval`
 - `device.jit_compile`
@@ -89,9 +102,11 @@ The training wizard may provide presentation-level input constraints, but it doe
 - `RELOAD=true` is development-only and expires process-local training/inference state when the process reloads.
 - `BACKEND_LOGS_VISIBLE` is an explicit launcher configuration value, not an implicit launcher default.
 - The backend creates timestamped `FAIRS_*.log` files under the active data root.
+- Settings changes update future parent polling immediately. A newly started worker receives a launch snapshot of polling and JIT values; an active worker keeps its existing snapshot. Resuming a checkpoint uses the current polling interval while preserving the checkpoint's model configuration.
 
 ## Related Files
 
 - Read `startup.md` for launcher behavior.
+- Read `../architecture/backend_api.md` for the Settings endpoints.
 - Read `../architecture/persistence.md` for database and checkpoint consequences.
 - Read `../architecture/backend_api.md` for generated transport contracts.

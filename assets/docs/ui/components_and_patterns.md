@@ -1,13 +1,14 @@
 ## Components And Patterns
 
-Last updated: 2026-09-11
+Last updated: 2026-09-16
 
 ## Navigation And Structure
 
 - Top-level navigation exposes two tabs:
   - `Training`
   - `Inference`
-- The sticky header includes the FAIRS logo, the `Training and inference workspace` subtitle, and icon-backed active navigation links.
+- The sticky header includes the FAIRS logo, the `Training and inference workspace` subtitle, icon-backed active navigation links, and labeled utility actions for `Settings` and `Help`.
+- `/settings` is a utility route beside Help rather than a third primary workflow tab.
 - Navigation remains a desktop header; no mobile menu or collapsed navigation is provided.
 
 ## Desktop support
@@ -31,6 +32,13 @@ Last updated: 2026-09-11
 - Guidance uses a small shared set of patterns: contextual `FeatureTip` callouts, click-to-open `HelpPopover` explanations, the optional `GuidedTour`, and the `Tips & Tricks` dialog available from the header Help button.
 - Guidance is progressive and dismissible. Walkthroughs start only when the user chooses them from Help, while contextual tips appear in empty or application-specific states where a next action is useful.
 - The shared guidance layer renders dialogs and tours through portals so they are not clipped by cards or scroll containers. It restores focus on close, traps keyboard focus while open, supports Escape dismissal, and respects `prefers-reduced-motion` for the demonstration animation.
+
+## Runtime Settings Pattern
+
+- The Settings page uses two focused sections: training polling and fresh-model JIT construction.
+- Defaults and saved values come from `GET /api/settings`; the client does not hardcode a second runtime-settings authority.
+- Save sends only changed fields through `PATCH /api/settings`. Reset uses the backend default contract through `POST /api/settings/reset`.
+- The JIT backend field remains disabled while JIT is disabled but preserves its saved value. Loading, saving, reset, success, and error feedback remain visible near the form actions.
 
 ## Interaction States
 
