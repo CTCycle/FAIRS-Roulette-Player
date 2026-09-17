@@ -35,7 +35,7 @@ macOS and Linux are not supported launch targets for this checkout. There is no 
 
 ## Download the source
 
-The current source release is v3.4.0. Download the version you want from the [GitHub Releases page](https://github.com/CTCycle/FAIRS-Roulette-Player/releases), extract it completely, and keep the extracted folder in a writable location.
+The current source release is v3.4.1. Download the version you want from the [GitHub Releases page](https://github.com/CTCycle/FAIRS-Roulette-Player/releases), extract it completely, and keep the extracted folder in a writable location.
 
 ## Install and launch on Windows
 
