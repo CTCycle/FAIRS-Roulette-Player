@@ -18,7 +18,7 @@ class FAIRSnet:
         configuration: dict[str, Any],
         *,
         jit_compile: bool = False,
-        jit_backend: str = "inductor",
+        jit_backend: str = "eager",
     ) -> None:
         self.perceptive_size = int(configuration["perceptive_field_size"])
         self.embedding_dims = int(configuration["embedding_dimensions"])

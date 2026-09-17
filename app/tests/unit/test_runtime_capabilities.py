@@ -11,10 +11,17 @@ def test_disabled_jit_has_no_runtime_requirement() -> None:
     assert runtime_capabilities.get_jit_runtime_error(False) is None
 
 ###############################################################################
-@pytest.mark.skipif(
-    sys.version_info < (3, 14),
-    reason="The bundled Python 3.14 runtime is required to exercise this guard.",
-)
-def test_bundled_python_rejects_jit_before_model_construction() -> None:
+def test_unsupported_python_rejects_jit_before_model_construction(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(runtime_capabilities.sys, "version_info", (3, 14, 0))
     with pytest.raises(ValueError, match="Python 3.14"):
         runtime_capabilities.validate_jit_runtime(True)
+
+###############################################################################
+@pytest.mark.skipif(
+    sys.version_info >= (3, 14),
+    reason="The supported runtime contract excludes Python 3.14 and newer.",
+)
+def test_supported_runtime_accepts_jit() -> None:
+    assert runtime_capabilities.validate_jit_runtime(True) is None

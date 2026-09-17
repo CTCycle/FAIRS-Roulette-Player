@@ -30,7 +30,7 @@ jobs:
           cache-dependency-glob: app/server/uv.lock
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.14"
+          python-version: "3.13"
       - name: Install dependencies
         working-directory: app/server
         run: uv sync --locked --extra test
@@ -70,7 +70,7 @@ jobs:
           cache-dependency-glob: app/server/uv.lock
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.14"
+          python-version: "3.13"
       - name: Install locked dependencies
         working-directory: app/server
         run: uv sync --locked --extra test

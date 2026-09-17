@@ -284,11 +284,11 @@ async def run_training_async(
     database_settings: Any = None,
     database_path: str | Path | None = None,
     jit_compile: bool = False,
-    jit_backend: str = "inductor",
+    jit_backend: str = "eager",
     polling_interval_seconds: float = 1.0,
 ) -> tuple[Any, Any | None, dict[str, Any], dict[str, Any], str, str]:
     configuration = TrainingConfig.model_validate(configuration).model_dump()
-    validate_jit_runtime(jit_compile)
+    validate_jit_runtime(jit_compile, jit_backend)
     checkpoint_repository = CheckpointRepository()
     checkpoint_path, staging_path = checkpoint_repository.create_checkpoint_workspace(
         configuration["checkpoint_name"]

@@ -94,7 +94,7 @@ def test_settings_api_supports_partial_update_and_reload(tmp_path: Path) -> None
 ###############################################################################
 @pytest.mark.skipif(
     sys.version_info < (3, 14),
-    reason="The bundled Python 3.14 runtime is required to exercise this guard.",
+    reason="The Python 3.14 compatibility guard is only exercised on Python 3.14+.",
 )
 def test_settings_api_rejects_jit_when_runtime_is_unsupported(tmp_path: Path) -> None:
     client, manager = _build_client(tmp_path)
@@ -112,6 +112,27 @@ def test_settings_api_rejects_jit_when_runtime_is_unsupported(tmp_path: Path) ->
         "jit_backend": "inductor",
     }
     assert manager.get_json_settings().device.jit_compile is False
+
+###############################################################################
+@pytest.mark.skipif(
+    sys.version_info >= (3, 14),
+    reason="The supported runtime contract excludes Python 3.14 and newer.",
+)
+def test_settings_api_accepts_jit_on_supported_runtime(tmp_path: Path) -> None:
+    client, manager = _build_client(tmp_path)
+    with client:
+        response = client.patch(
+            "/api/settings",
+            json={"device": {"jit_compile": True, "jit_backend": "eager"}},
+        )
+        current = client.get("/api/settings")
+
+    assert response.status_code == 200
+    assert current.json()["device"] == {
+        "jit_compile": True,
+        "jit_backend": "eager",
+    }
+    assert manager.get_json_settings().device.jit_compile is True
 
 ###############################################################################
 def test_settings_api_rejects_unknown_and_invalid_values(tmp_path: Path) -> None:

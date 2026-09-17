@@ -515,7 +515,7 @@ def _run_sqlite_migrations(
     with engine.connect() as connection:
         dbapi_connection = connection.connection.driver_connection
         try:
-            # Python 3.14's autocommit=False mode intentionally opens a
+            # Runtimes that expose sqlite3's autocommit attribute can open a
             # deferred transaction when the connection is created. End that
             # empty driver transaction just before taking the exclusive
             # migration lock, then restore the requested mode inside the
