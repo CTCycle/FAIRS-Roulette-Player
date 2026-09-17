@@ -188,24 +188,13 @@
     gap: var(--spacing-sm);
     min-height: var(--control-height);
     width: fit-content;
-    padding: 0.4rem 0.65rem;
     color: var(--text-primary);
-    background: var(--surface-soft);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-sm);
     font-size: var(--font-size-sm);
-    transition: color 0.16s ease, background-color 0.16s ease, border-color 0.16s ease;
+    transition: color 0.16s ease;
 }
 
 .settings-checkbox-label:hover:has(input:not(:disabled)) {
-    background: var(--bg-tertiary);
-    border-color: var(--text-secondary);
-}
-
-.settings-checkbox-label:has(input:checked) {
-    color: var(--text-primary);
-    background: rgba(36, 166, 232, 0.1);
-    border-color: rgba(36, 166, 232, 0.55);
+    color: var(--primary-accent);
 }
 
 .settings-checkbox-label input {
