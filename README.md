@@ -55,7 +55,7 @@ If the environment is missing, option 1 can prepare the Standard environment aut
 
 With the default settings, the [main interface](http://127.0.0.1:8051) is available at port 8051. If the browser does not open automatically, use the interface address printed by the launcher. The [backend health check](http://127.0.0.1:8890/api/health) is available for troubleshooting; the [API documentation](http://127.0.0.1:8890/docs) is intended for advanced users.
 
-Later launches normally reuse the prepared environment. If a required runtime, dependency, or frontend build is missing, option 1 attempts to recover it before starting the application.
+Later launches normally reuse the prepared environment when the installed backend package metadata and frontend build are current. If a required runtime, dependency, backend package, or frontend build is missing or stale, option 1 attempts to recover it before starting the application.
 
 Close the application terminal to stop the local application session.
 

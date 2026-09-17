@@ -31,7 +31,7 @@ The launcher prepares or validates:
 
 `UV_PROJECT_ENVIRONMENT` targets the single server virtual environment. A failed `uv sync` is reported as a failure; the launcher no longer assumes that failure means a legacy environment path and does not delete/recreate the environment as an automatic compatibility retry.
 
-Normal launch skips dependency installation when the runtime is already usable. It also compares the built frontend with its source and build inputs; a stale `app/client/dist` is rebuilt before preview starts. Missing current runtimes or build output can still be installed/rebuilt through the normal current setup path.
+Normal launch skips dependency installation when the runtime and installed backend package metadata are current. It also compares the built frontend with its source and build inputs; a stale `app/client/dist` is rebuilt before preview starts. A changed backend project version or missing package metadata causes the normal dependency sync to run before startup. Missing current runtimes or build output can still be installed/rebuilt through the normal current setup path.
 
 ## Cache Ownership
 
