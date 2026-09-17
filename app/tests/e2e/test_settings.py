@@ -16,7 +16,6 @@ class TestSettingsPage:
         page.goto(f"{base_url}/settings")
         page.wait_for_load_state("networkidle")
 
-        expect(page.get_by_role("heading", name="Settings", exact=True)).to_be_visible()
         expect(page.get_by_role("button", name="Roulette", exact=True)).to_have_attribute(
             "aria-current", "page"
         )
@@ -80,6 +79,7 @@ class TestSettingsPage:
             expect(page.get_by_text("Settings saved.", exact=True)).to_be_visible()
             page.reload()
             page.wait_for_load_state("networkidle")
+            page.get_by_role("button", name="Advanced", exact=True).click()
             expect(jit_compile).to_be_checked()
             expect(jit_backend).to_have_value("eager")
 

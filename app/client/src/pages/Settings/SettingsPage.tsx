@@ -270,14 +270,6 @@ const SettingsPage: React.FC = () => {
 
     return (
         <div className="settings-page page-shell">
-            <header className="page-header">
-                <p className="page-eyebrow">Workspace settings</p>
-                <h1>Settings</h1>
-                <p className="page-subtitle">
-                    Configure application-wide roulette behavior, appearance, and technical runtime settings without editing JSON files.
-                </p>
-            </header>
-
             {loading && <div className="settings-feedback" role="status">Loading settings…</div>}
             {error && (
                 <div className="settings-feedback settings-feedback-error" role="alert">
