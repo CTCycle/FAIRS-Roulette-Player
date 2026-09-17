@@ -1,6 +1,6 @@
 ## Execution And Data Flow
 
-Last updated: 2026-09-16
+Last updated: 2026-09-17
 
 ## Current Layering
 
@@ -115,7 +115,7 @@ sequenceDiagram
     API-->>Client: SettingsResponse
 ```
 
-`SettingsService` is the only application service that writes the runtime settings file. Polling changes affect future parent status polling immediately. A new training worker receives a launch snapshot of polling and JIT values; an active worker keeps its captured snapshot. A resumed checkpoint uses the current polling interval while preserving the checkpoint's model configuration.
+`SettingsService` is the only application service that writes the runtime settings file. Polling changes affect future parent status polling immediately. A new training worker receives a launch snapshot of polling and JIT values; an active worker keeps its captured snapshot. Enabling JIT passes a runtime capability preflight before persistence or training start, with the worker boundary retaining a defensive guard. A resumed checkpoint uses the current polling interval while preserving the checkpoint's model configuration.
 
 ## Inference Flow
 

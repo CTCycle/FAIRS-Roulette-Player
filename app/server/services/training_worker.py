@@ -14,6 +14,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from server.common.runtime_capabilities import validate_jit_runtime
 from server.common.utils.logger import logger
 from server.contracts.training import TrainingConfig
 from server.learning.models.qnet import FAIRSnet
@@ -287,6 +288,7 @@ async def run_training_async(
     polling_interval_seconds: float = 1.0,
 ) -> tuple[Any, Any | None, dict[str, Any], dict[str, Any], str, str]:
     configuration = TrainingConfig.model_validate(configuration).model_dump()
+    validate_jit_runtime(jit_compile)
     checkpoint_repository = CheckpointRepository()
     checkpoint_path, staging_path = checkpoint_repository.create_checkpoint_workspace(
         configuration["checkpoint_name"]

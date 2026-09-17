@@ -57,7 +57,7 @@
 .settings-panel {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-xl);
+    gap: var(--spacing-lg);
     min-height: 300px;
     padding: 1.4rem 0.25rem 1.5rem;
 }
@@ -183,11 +183,16 @@
 }
 
 .settings-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
     display: flex;
     justify-content: flex-end;
     gap: var(--spacing-sm);
-    padding-top: var(--spacing-md);
+    margin-inline: -0.25rem;
+    padding: var(--spacing-md) 0.25rem 0.35rem;
     border-top: 1px solid rgba(168, 184, 206, 0.18);
+    background: linear-gradient(to bottom, rgba(17, 27, 46, 0), var(--bg-secondary) 35%);
 }
 
 .settings-button,

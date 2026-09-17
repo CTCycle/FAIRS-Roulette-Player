@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from pathlib import Path
+import sys
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+import pytest
 
 from server.api.settings import router as settings_router
 from server.configurations.management import ConfigurationManager
@@ -48,6 +50,13 @@ def test_settings_api_returns_only_structured_settings(tmp_path: Path) -> None:
     assert response.json() == {
         "jobs": {"polling_interval": 1.0},
         "device": {"jit_compile": False, "jit_backend": "inductor"},
+        "roulette": {
+            "minimum_number": 0,
+            "maximum_number": 36,
+            "exclude_zero": False,
+            "invert_colors": False,
+            "show_number_labels": True,
+        },
     }
 
 ###############################################################################
@@ -60,7 +69,7 @@ def test_settings_api_supports_partial_update_and_reload(tmp_path: Path) -> None
         )
         device_response = client.patch(
             "/api/settings",
-            json={"device": {"jit_compile": True, "jit_backend": "eager"}},
+            json={"device": {"jit_compile": False, "jit_backend": "eager"}},
         )
         current_response = client.get("/api/settings")
 
@@ -68,12 +77,41 @@ def test_settings_api_supports_partial_update_and_reload(tmp_path: Path) -> None
     assert device_response.status_code == 200
     assert current_response.json() == {
         "jobs": {"polling_interval": 2.5},
-        "device": {"jit_compile": True, "jit_backend": "eager"},
+        "device": {"jit_compile": False, "jit_backend": "eager"},
+        "roulette": {
+            "minimum_number": 0,
+            "maximum_number": 36,
+            "exclude_zero": False,
+            "invert_colors": False,
+            "show_number_labels": True,
+        },
     }
     assert manager.get_json_settings().device.jit_backend == "eager"
 
     reloaded = ConfigurationManager(runtime_path=manager.runtime_path)
     assert reloaded.get_json_settings().jobs.polling_interval == 2.5
+
+###############################################################################
+@pytest.mark.skipif(
+    sys.version_info < (3, 14),
+    reason="The bundled Python 3.14 runtime is required to exercise this guard.",
+)
+def test_settings_api_rejects_jit_when_runtime_is_unsupported(tmp_path: Path) -> None:
+    client, manager = _build_client(tmp_path)
+    with client:
+        response = client.patch(
+            "/api/settings",
+            json={"device": {"jit_compile": True, "jit_backend": "eager"}},
+        )
+        current = client.get("/api/settings")
+
+    assert response.status_code == 422
+    assert "Python 3.14" in response.json()["detail"]
+    assert current.json()["device"] == {
+        "jit_compile": False,
+        "jit_backend": "inductor",
+    }
+    assert manager.get_json_settings().device.jit_compile is False
 
 ###############################################################################
 def test_settings_api_rejects_unknown_and_invalid_values(tmp_path: Path) -> None:
@@ -100,4 +138,11 @@ def test_settings_api_reset_restores_defaults(tmp_path: Path) -> None:
     assert response.json() == {
         "jobs": {"polling_interval": 1.0},
         "device": {"jit_compile": False, "jit_backend": "inductor"},
+        "roulette": {
+            "minimum_number": 0,
+            "maximum_number": 36,
+            "exclude_zero": False,
+            "invert_colors": False,
+            "show_number_labels": True,
+        },
     }

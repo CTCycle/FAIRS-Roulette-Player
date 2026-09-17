@@ -6,6 +6,7 @@ from pathlib import Path
 from threading import RLock
 from typing import Any
 
+from server.common.runtime_capabilities import validate_jit_runtime
 from server.common.utils.logger import logger
 from server.common.utils.trainingstats import coerce_optional_finite_float
 from server.common.utils.types import coerce_finite_float, coerce_finite_int
@@ -156,6 +157,12 @@ class TrainingService:
                 self.jit_compile,
                 self.jit_backend,
             )
+
+    # -------------------------------------------------------------------------
+    def validate_runtime_settings(self) -> None:
+        """Validate optional runtime features before a training operation starts."""
+        _, jit_compile, _ = self._runtime_snapshot()
+        validate_jit_runtime(jit_compile)
 
     # -------------------------------------------------------------------------
     def _polling_interval(self) -> float:
@@ -359,6 +366,7 @@ class TrainingService:
     def start_training(self, config: TrainingConfig) -> dict[str, Any]:
         if self.training_run_manager.is_job_running(self.JOB_TYPE):
             raise RuntimeError("Training is already in progress.")
+        self.validate_runtime_settings()
 
         configuration = config.model_dump()
         checkpoint_name = config.checkpoint_name
