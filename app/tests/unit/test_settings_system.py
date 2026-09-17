@@ -49,7 +49,7 @@ def _default_runtime_settings() -> dict[str, object]:
         "jobs": {"polling_interval": 1.0},
         "device": {
             "jit_compile": False,
-            "jit_backend": "inductor",
+            "jit_backend": "eager",
         },
         "roulette": {
             "minimum_number": 0,
@@ -208,7 +208,7 @@ def test_server_settings_use_runtime_settings_file(
     assert settings.database.username == "env_user"
     assert settings.jobs.polling_interval == 1.0
     assert settings.device.jit_compile is False
-    assert settings.device.jit_backend == "inductor"
+    assert settings.device.jit_backend == "eager"
     assert settings.roulette.minimum_number == 0
     assert settings.roulette.maximum_number == 36
 

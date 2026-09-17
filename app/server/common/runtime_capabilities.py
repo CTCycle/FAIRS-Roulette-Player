@@ -32,14 +32,14 @@ def get_jit_runtime_error(
     if sys.version_info >= (3, 14):
         return JIT_UNSUPPORTED_PYTHON_MESSAGE
 
+    if sys.platform == "win32" and jit_backend.strip().lower() == "inductor":
+        return JIT_INDUCTOR_WINDOWS_MESSAGE
     try:
         import torch
     except Exception:  # noqa: BLE001
         return JIT_UNAVAILABLE_MESSAGE
     if not callable(getattr(torch, "compile", None)):
         return JIT_UNAVAILABLE_MESSAGE
-    if sys.platform == "win32" and jit_backend.strip().lower() == "inductor":
-        return JIT_INDUCTOR_WINDOWS_MESSAGE
     return None
 
 ###############################################################################

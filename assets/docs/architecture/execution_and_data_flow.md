@@ -90,7 +90,7 @@ sequenceDiagram
 
 The training worker revalidates the serialized `TrainingConfig` once at the process boundary. Downstream learning code consumes that complete validated configuration directly instead of using repeated `.get(..., default)` fallback paths.
 
-Global JIT/compiler configuration is injected from `ServerSettings.device`. Per-training GPU selection and mixed precision remain in `TrainingConfig`. JIT fields are not accepted as ignored per-training request settings.
+Global JIT/compiler configuration is injected from `ServerSettings.device`. The bundled Windows runtime uses the `eager` JIT backend; `inductor` requires Triton and is rejected by runtime preflight. Per-training GPU selection and mixed precision remain in `TrainingConfig`. JIT fields are not accepted as ignored per-training request settings.
 
 Checkpoint configuration is saved through the explicit versioned `CheckpointConfiguration` contract. Runtime checkpoint loading accepts only the current supported version.
 
@@ -115,7 +115,7 @@ sequenceDiagram
     API-->>Client: SettingsResponse
 ```
 
-`SettingsService` is the only application service that writes the runtime settings file. Polling changes affect future parent status polling immediately. A new training worker receives a launch snapshot of polling and JIT values; an active worker keeps its captured snapshot. Enabling JIT passes a runtime capability preflight before persistence or training start, with the worker boundary retaining a defensive guard. A resumed checkpoint uses the current polling interval while preserving the checkpoint's model configuration.
+`SettingsService` is the only application service that writes the runtime settings file. Polling changes affect future parent status polling immediately. A new training worker receives a launch snapshot of polling and JIT values; an active worker keeps its captured snapshot. Enabling JIT, or changing its backend while enabled, passes a runtime capability preflight before persistence or training start, with the worker boundary retaining a defensive guard. A resumed checkpoint uses the current polling interval while preserving the checkpoint's model configuration.
 
 ## Inference Flow
 

@@ -35,16 +35,16 @@ Last updated: 2026-09-17
 
 ## Runtime Settings Pattern
 
-- The Settings page groups runtime controls into four tabs: `Roulette`, `Appearance`, `Runtime`, and `Advanced`.
+- The Settings page groups runtime controls into four left-side navigation sections: `Roulette`, `Appearance`, `Runtime`, and `Advanced`.
 - `Roulette` owns the selectable inclusive number range and zero exclusion.
 - `Appearance` owns red/black visual inversion and roulette wheel number-label visibility.
 - `Runtime` owns training polling cadence.
 - `Advanced` owns fresh-model JIT construction settings.
-- The tabbed layout uses one flat settings panel at a time. Do not add nested settings cards, duplicated section titles, or repeated action rows.
+- The left navigation shows one flat settings panel at a time. Do not add nested settings cards, duplicated section titles, or repeated action rows.
 - Defaults and saved values come from `GET /api/settings`; the client does not hardcode a second runtime-settings authority.
 - Save sends only changed fields through `PATCH /api/settings`. Reset uses the backend default contract through `POST /api/settings/reset`.
 - Range validation occurs in the UI for immediate feedback and is repeated by the backend on the merged settings document.
-- The JIT backend field remains disabled while JIT is disabled but preserves its saved value. Loading, saving, reset, success, and error feedback remain visible near the form actions.
+- The JIT backend field remains disabled while JIT is disabled but preserves its saved value. The supported Windows choice is `eager`; `inductor` requires Triton on another supported platform. Loading, saving, reset, success, and error feedback remain visible near the form actions.
 
 ## Interaction States
 
@@ -69,7 +69,7 @@ Additional rules:
   - dataset preview
   - checkpoint preview and management
   - multi-step training configuration wizard with summary confirmation
-  - training dashboard with a connection status, metric cards, episode progress wheel, Stop action, and loss/reward charts
+  - training dashboard with a connection status, grouped metric panels, episode progress wheel, Stop action, and loss/reward charts
 - Inference page patterns:
   - checkpoint/dataset setup and upload controls
   - capital and bet controls

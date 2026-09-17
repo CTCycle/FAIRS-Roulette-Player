@@ -12,10 +12,10 @@ interface ValidationErrors {
     rouletteRange?: string;
 }
 
-type SettingsTab = 'roulette' | 'appearance' | 'runtime' | 'advanced';
+type SettingsSection = 'roulette' | 'appearance' | 'runtime' | 'advanced';
 
 const SETTINGS_ERROR = 'Unable to load settings.';
-const SETTINGS_TABS: Array<{ id: SettingsTab; label: string }> = [
+const SETTINGS_SECTIONS: Array<{ id: SettingsSection; label: string }> = [
     { id: 'roulette', label: 'Roulette' },
     { id: 'appearance', label: 'Appearance' },
     { id: 'runtime', label: 'Runtime' },
@@ -24,7 +24,7 @@ const SETTINGS_TABS: Array<{ id: SettingsTab; label: string }> = [
 
 const SettingsPage: React.FC = () => {
     const [savedSettings, setSavedSettings] = useState<SettingsResponse | null>(null);
-    const [activeTab, setActiveTab] = useState<SettingsTab>('roulette');
+    const [activeSection, setActiveSection] = useState<SettingsSection>('roulette');
     const [minimumNumber, setMinimumNumber] = useState('');
     const [maximumNumber, setMaximumNumber] = useState('');
     const [excludeZero, setExcludeZero] = useState(false);
@@ -179,11 +179,11 @@ const SettingsPage: React.FC = () => {
         }
         setValidationErrors(nextErrors);
         if (nextErrors.minimumNumber || nextErrors.maximumNumber || nextErrors.rouletteRange) {
-            setActiveTab('roulette');
+            setActiveSection('roulette');
         } else if (nextErrors.pollingInterval) {
-            setActiveTab('runtime');
+            setActiveSection('runtime');
         } else if (nextErrors.jitBackend) {
-            setActiveTab('advanced');
+            setActiveSection('advanced');
         }
         return nextErrors;
     };
@@ -299,31 +299,32 @@ const SettingsPage: React.FC = () => {
                         void handleSave();
                     }}
                 >
-                    <div className="settings-tabs" role="tablist" aria-label="Settings categories">
-                        {SETTINGS_TABS.map((tab) => (
+                    <div className="settings-layout">
+                        <nav className="settings-navigation" aria-label="Settings categories">
+                            <span className="settings-navigation-label">Configuration groups</span>
+                            {SETTINGS_SECTIONS.map((section) => (
                             <button
-                                key={tab.id}
-                                id={`settings-tab-${tab.id}`}
+                                key={section.id}
+                                id={`settings-nav-${section.id}`}
                                 type="button"
-                                className={`settings-tab${activeTab === tab.id ? ' settings-tab-active' : ''}`}
-                                role="tab"
-                                aria-selected={activeTab === tab.id}
-                                aria-controls={`settings-panel-${tab.id}`}
-                                tabIndex={activeTab === tab.id ? 0 : -1}
-                                onClick={() => setActiveTab(tab.id)}
+                                className={`settings-navigation-item${activeSection === section.id ? ' settings-navigation-item-active' : ''}`}
+                                aria-current={activeSection === section.id ? 'page' : undefined}
+                                aria-controls={`settings-panel-${section.id}`}
+                                onClick={() => setActiveSection(section.id)}
                                 disabled={isBusy}
                             >
-                                {tab.label}
+                                {section.label}
                             </button>
                         ))}
-                    </div>
+                        </nav>
 
-                    {activeTab === 'roulette' && (
+                        <div className="settings-content">
+
+                    {activeSection === 'roulette' && (
                         <section
                             id="settings-panel-roulette"
                             className="settings-panel"
-                            role="tabpanel"
-                            aria-labelledby="settings-tab-roulette"
+                            aria-labelledby="settings-nav-roulette"
                         >
                             <div className="settings-section-header">
                                 <div>
@@ -416,12 +417,11 @@ const SettingsPage: React.FC = () => {
                         </section>
                     )}
 
-                    {activeTab === 'appearance' && (
+                    {activeSection === 'appearance' && (
                         <section
                             id="settings-panel-appearance"
                             className="settings-panel"
-                            role="tabpanel"
-                            aria-labelledby="settings-tab-appearance"
+                            aria-labelledby="settings-nav-appearance"
                         >
                             <div className="settings-section-header">
                                 <div>
@@ -473,12 +473,11 @@ const SettingsPage: React.FC = () => {
                         </section>
                     )}
 
-                    {activeTab === 'runtime' && (
+                    {activeSection === 'runtime' && (
                         <section
                             id="settings-panel-runtime"
                             className="settings-panel"
-                            role="tabpanel"
-                            aria-labelledby="settings-tab-runtime"
+                            aria-labelledby="settings-nav-runtime"
                         >
                             <div className="settings-section-header">
                                 <div>
@@ -518,19 +517,18 @@ const SettingsPage: React.FC = () => {
                         </section>
                     )}
 
-                    {activeTab === 'advanced' && (
+                    {activeSection === 'advanced' && (
                         <section
                             id="settings-panel-advanced"
                             className="settings-panel"
-                            role="tabpanel"
-                            aria-labelledby="settings-tab-advanced"
+                            aria-labelledby="settings-nav-advanced"
                         >
                             <div className="settings-section-header">
                                 <div>
                                     <p className="page-eyebrow">Training compilation</p>
                                     <h2>JIT model construction</h2>
                                 </div>
-                                <p>These controls apply when a fresh training model is constructed, not to active or loaded checkpoint models. Saving checks runtime support and never silently falls back.</p>
+                                <p>These controls apply when a fresh training model is constructed, not to active or loaded checkpoint models. Use <code>eager</code> on Windows; <code>inductor</code> requires Triton. Saving checks runtime support and never silently falls back.</p>
                             </div>
                             <div className="settings-field-row settings-checkbox-row">
                                 <div className="settings-field-copy">
@@ -554,7 +552,7 @@ const SettingsPage: React.FC = () => {
                             <div className="settings-field-row">
                                 <div className="settings-field-copy">
                                     <label htmlFor="settings-jit-backend">JIT backend</label>
-                                    <p id="settings-jit-backend-help">Keep the backend value saved when JIT is disabled; it will be ready if JIT is enabled later.</p>
+                                    <p id="settings-jit-backend-help">Keep the backend value saved when JIT is disabled. Windows supports <code>eager</code>; <code>inductor</code> requires Triton on a supported platform.</p>
                                 </div>
                                 <div className="settings-field-control">
                                     <input
@@ -577,6 +575,9 @@ const SettingsPage: React.FC = () => {
                             </div>
                         </section>
                     )}
+
+                        </div>
+                    </div>
 
                     <div className="settings-actions">
                         <button type="button" className="settings-button settings-button-secondary" onClick={() => void handleReset()} disabled={isBusy}>

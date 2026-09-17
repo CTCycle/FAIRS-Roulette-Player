@@ -75,6 +75,9 @@ class TestTrainingPage:
                 "heading", name=re.compile("Training Monitor", re.IGNORECASE)
             )
         ).to_be_visible()
+        expect(page.locator(".metric-group")).to_have_count(3)
+        expect(page.locator(".metric-item")).to_have_count(13)
+        expect(page.locator(".metric-card")).to_have_count(0)
         expect(page.get_by_text("Checkpoints", exact=False).first).to_be_visible()
 
 ###############################################################################
@@ -92,6 +95,12 @@ class TestInferencePage:
                 "heading", name=re.compile("Session History", re.IGNORECASE)
             )
         ).to_be_visible()
+        expect(
+            page.get_by_text(
+                "Pair a trained checkpoint with a dataset, step through predictions, and inspect session history in real time.",
+                exact=True,
+            )
+        ).to_have_count(0)
         expect(page.get_by_text("AI Suggestion", exact=False)).to_be_visible()
 
     # -------------------------------------------------------------------------

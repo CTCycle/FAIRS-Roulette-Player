@@ -16,7 +16,7 @@ def test_unsupported_python_rejects_jit_before_model_construction(
 ) -> None:
     monkeypatch.setattr(runtime_capabilities.sys, "version_info", (3, 14, 0))
     with pytest.raises(ValueError, match="Python 3.14"):
-        runtime_capabilities.validate_jit_runtime(True)
+        runtime_capabilities.validate_jit_runtime(True, "eager")
 
 ###############################################################################
 @pytest.mark.skipif(
@@ -24,4 +24,14 @@ def test_unsupported_python_rejects_jit_before_model_construction(
     reason="The supported runtime contract excludes Python 3.14 and newer.",
 )
 def test_supported_runtime_accepts_jit() -> None:
-    assert runtime_capabilities.validate_jit_runtime(True) is None
+    assert runtime_capabilities.validate_jit_runtime(True, "eager") is None
+
+###############################################################################
+def test_windows_inductor_is_rejected_before_torch_probe(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(runtime_capabilities.sys, "version_info", (3, 13, 15))
+    monkeypatch.setattr(runtime_capabilities.sys, "platform", "win32")
+
+    with pytest.raises(ValueError, match="Triton"):
+        runtime_capabilities.validate_jit_runtime(True, "inductor")
