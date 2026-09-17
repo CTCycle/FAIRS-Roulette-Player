@@ -1,6 +1,6 @@
 ## Backend API
 
-Last updated: 2026-09-16
+Last updated: 2026-09-17
 
 ## Mounting Model
 
@@ -56,6 +56,8 @@ Router prefix: `/inference`
 
 `GET /api/inference/sessions/{session_id}` returns the authoritative live-session snapshot plus persisted step history. A `404` after a backend restart means the in-memory player is gone. Persisted history is not treated as a rehydratable live model session.
 
+`POST /api/inference/sessions/{session_id}/step` validates the submitted extraction against the current roulette runtime number pool before it reaches the live player. Changes to the configured minimum, maximum, or zero exclusion therefore apply to subsequent observations in an existing application session.
+
 Prediction preference is exposed as `relative_preference`. This is the softmax-normalized relative preference of the DQN action scores, not a calibrated probability of success. The superseded `confidence` name is not accepted or returned.
 
 ## Settings Endpoints
@@ -63,10 +65,12 @@ Prediction preference is exposed as `relative_preference`. This is the softmax-n
 Router prefix: `/settings`
 
 - `GET /api/settings` returns the current validated runtime settings.
-- `PATCH /api/settings` accepts a strict partial update for `jobs.polling_interval`, `device.jit_compile`, and `device.jit_backend`.
+- `PATCH /api/settings` accepts a strict partial update for `jobs`, `device`, and `roulette` settings.
 - `POST /api/settings/reset` restores the validated backend defaults.
 
-The Settings endpoints persist to `runtime-settings.json` through `SettingsService`. Nested unknown fields, out-of-range polling values, empty JIT backend values, database configuration, environment values, and per-training `TrainingConfig` fields are rejected. A successful update is propagated to the live `TrainingService`; it does not mutate active workers or checkpoint configuration.
+The roulette settings contract exposes `minimum_number`, `maximum_number`, `exclude_zero`, `invert_colors`, and `show_number_labels`. Number limits are inclusive, bounded to `0..36`, and validated after partial patches are merged with the existing document. The combination `minimum_number=0`, `maximum_number=0`, and `exclude_zero=true` is rejected because it would create an empty outcome pool.
+
+The Settings endpoints persist to `runtime-settings.json` through `SettingsService`. Nested unknown fields, invalid roulette ranges, out-of-range polling values, empty JIT backend values, database configuration, environment values, and per-training `TrainingConfig` fields are rejected. Existing runtime files without the roulette block remain valid and receive backend defaults. Job and device changes are propagated to the live `TrainingService`; roulette rules are read from the same persisted runtime authority when new training data is prepared and when live inference steps are validated.
 
 ## System Endpoints
 

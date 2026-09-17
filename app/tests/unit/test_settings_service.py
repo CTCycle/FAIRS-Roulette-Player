@@ -53,6 +53,13 @@ def test_get_and_partial_update_are_structured_only(tmp_path: Path) -> None:
     assert response.model_dump() == {
         "jobs": {"polling_interval": 1.0},
         "device": {"jit_compile": False, "jit_backend": "inductor"},
+        "roulette": {
+            "minimum_number": 0,
+            "maximum_number": 36,
+            "exclude_zero": False,
+            "invert_colors": False,
+            "show_number_labels": True,
+        },
     }
 
     updated = service.update_settings(
@@ -61,11 +68,66 @@ def test_get_and_partial_update_are_structured_only(tmp_path: Path) -> None:
 
     assert updated.jobs.polling_interval == 2.5
     assert updated.device.jit_compile is False
+    assert updated.roulette.maximum_number == 36
     assert training_service.jobs.polling_interval == 2.5
     assert training_service.device.jit_backend == "inductor"
     assert json.loads(runtime_path.read_text(encoding="utf-8"))["jobs"] == {
         "polling_interval": 2.5
     }
+
+###############################################################################
+def test_roulette_update_persists_and_round_trips(tmp_path: Path) -> None:
+    service, _, runtime_path = _build_service(tmp_path)
+
+    updated = service.update_settings(
+        SettingsPatchRequest(
+            roulette={
+                "minimum_number": 5,
+                "maximum_number": 30,
+                "exclude_zero": True,
+                "invert_colors": True,
+                "show_number_labels": False,
+            }
+        )
+    )
+
+    assert updated.roulette.minimum_number == 5
+    assert updated.roulette.maximum_number == 30
+    assert updated.roulette.exclude_zero is True
+    assert updated.roulette.invert_colors is True
+    assert updated.roulette.show_number_labels is False
+    persisted = json.loads(runtime_path.read_text(encoding="utf-8"))
+    assert persisted["roulette"] == {
+        "minimum_number": 5,
+        "maximum_number": 30,
+        "exclude_zero": True,
+        "invert_colors": True,
+        "show_number_labels": False,
+    }
+
+    reloaded = SettingsService(
+        ConfigurationManager(runtime_path=runtime_path),
+        FakeTrainingService(),
+    ).get_settings()
+    assert reloaded.roulette == updated.roulette
+
+###############################################################################
+def test_partial_roulette_patch_is_validated_against_saved_range(tmp_path: Path) -> None:
+    service, _, _ = _build_service(tmp_path)
+    service.update_settings(
+        SettingsPatchRequest(
+            roulette={"minimum_number": 10, "maximum_number": 20},
+        )
+    )
+
+    with pytest.raises(ValidationError, match="minimum_number"):
+        service.update_settings(
+            SettingsPatchRequest(roulette={"maximum_number": 5})
+        )
+
+    current = service.get_settings().roulette
+    assert current.minimum_number == 10
+    assert current.maximum_number == 20
 
 ###############################################################################
 def test_device_update_preserves_backend_when_jit_is_disabled(tmp_path: Path) -> None:
@@ -89,6 +151,13 @@ def test_reset_uses_backend_defaults(tmp_path: Path) -> None:
         SettingsPatchRequest(
             jobs={"polling_interval": 4.0},
             device={"jit_compile": True, "jit_backend": "eager"},
+            roulette={
+                "minimum_number": 3,
+                "maximum_number": 21,
+                "exclude_zero": True,
+                "invert_colors": True,
+                "show_number_labels": False,
+            },
         )
     )
 
@@ -97,6 +166,11 @@ def test_reset_uses_backend_defaults(tmp_path: Path) -> None:
     assert response.jobs.polling_interval == 1.0
     assert response.device.jit_compile is False
     assert response.device.jit_backend == "inductor"
+    assert response.roulette.minimum_number == 0
+    assert response.roulette.maximum_number == 36
+    assert response.roulette.exclude_zero is False
+    assert response.roulette.invert_colors is False
+    assert response.roulette.show_number_labels is True
     assert training_service.jobs.polling_interval == 1.0
 
 ###############################################################################
@@ -122,6 +196,10 @@ def test_invalid_patch_is_rejected_before_service_update() -> None:
         SettingsPatchRequest(jobs={"polling_interval": 0.01})
     with pytest.raises(ValidationError):
         SettingsPatchRequest(device={"jit_backend": "   "})
+    with pytest.raises(ValidationError):
+        SettingsPatchRequest(
+            roulette={"minimum_number": 20, "maximum_number": 10}
+        )
     with pytest.raises(ValidationError):
         SettingsPatchRequest.model_validate({"database": {"host": "secret"}})
 
