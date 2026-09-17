@@ -1,5 +1,5 @@
 # FAIRS: Fabulous Automated Intelligent Roulette System
-Last updated: 2026-09-11
+Last updated: 2026-09-17
 
 [![Release](https://img.shields.io/github/v/release/CTCycle/FAIRS-Roulette-Player?display_name=tag)](https://github.com/CTCycle/FAIRS-Roulette-Player/releases) [![Python](https://img.shields.io/badge/python-3.13.15-3776AB?logo=python&logoColor=white)](https://www.python.org/) [![Node.js](https://img.shields.io/badge/node.js-22.13.0-339933?logo=node.js&logoColor=white)](https://nodejs.org/) [![React](https://img.shields.io/badge/react-19.2.8-61DAFB?logo=react&logoColor=black)](https://react.dev/) [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE) [![CI](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml?query=branch%3Adevelop)
 [![CTCycle Portfolio](https://img.shields.io/badge/CTCycle-Portfolio-58a6ff?style=flat-square)](https://ctcycle.github.io/CTCycle/)
@@ -35,7 +35,7 @@ macOS and Linux are not supported launch targets for this checkout. There is no 
 
 ## Download the source
 
-The current source release is v3.3.0. Download the version you want from the [GitHub Releases page](https://github.com/CTCycle/FAIRS-Roulette-Player/releases), extract it completely, and keep the extracted folder in a writable location.
+The current source release is v3.4.0. Download the version you want from the [GitHub Releases page](https://github.com/CTCycle/FAIRS-Roulette-Player/releases), extract it completely, and keep the extracted folder in a writable location.
 
 ## Install and launch on Windows
 
@@ -96,10 +96,10 @@ FAIRS separates an experiment into two related phases:
 3. Inspect the dataset preview before using it. Synthetic data is useful for a quick baseline and does not represent proof of a real-world advantage.
 4. Open the training wizard and work through its six sections: **Agent Configuration**, **Environment & Memory**, **Bet Strategy Policy**, **Dataset Configuration**, **Session & Compute**, and **Summary**. Use the breadcrumbs to revisit a section and review the summary before starting.
 5. Start training and monitor status, progress, loss/RMSE, reward, simulated capital, current bet, strategy, timestep, and history charts. Loss/RMSE is an error measure; reward and simulated capital show how the configuration performed in the experiment.
-6. Open the checkpoint panel when the run completes, or use it to resume an interrupted run.
+6. Open the checkpoint panel when the run completes. Inspect checkpoint metadata, compare stored runs, resume an interrupted run, or delete an obsolete checkpoint from that panel. When at least two checkpoints are available, choose **Compare** to open the side-by-side comparison in a modal so the Training page stays compact. If a run is cancelled, the monitor reports the stopped/cancelled state and does not create a completed checkpoint.
 
 ![Training workspace](assets/figures/training-page.png)
-_The Training workspace combines dataset upload, checkpoint management, and a balanced monitor with grouped metrics and history charts._
+_The Training workspace combines dataset upload, checkpoint management, and a balanced monitor with grouped metrics and history charts. The comparison view opens in a modal so the main page stays compact._
 
 Training data uses the same canonical 0..36 roulette range whether it comes from an uploaded file or the synthetic generator. The application also applies the same preparation rules to both sources so that comparisons are meaningful.
 
@@ -136,7 +136,9 @@ Change only one or two controls at a time, and keep the dataset, validation spli
 3. Set the initial capital and bet amount, then start the session with **Play**.
 4. Review the AI suggestion and decide whether to apply it for the experiment.
 5. Enter the observed wheel value, confirm it, and then request the next prediction. Repeat this loop for each round.
-6. Review the session history, including predictions, observed values, outcomes, bets, capital, and step results. Use **Stop**, **Clear**, and session shutdown controls as needed.
+6. Review the session history, including predictions, observed values, outcomes, bets, capital, and step results. Use **Stop** to shut down the active session and **Clear** to remove its persisted step history after the session has stopped.
+
+Dynamic betting strategies expose the strategy name, current bet, and suggested next bet alongside the prediction. Applying the suggestion changes the current bet for the experiment; it does not advance the round. Session history is restored when you navigate away and back while the local backend session still exists. A backend restart ends process-local live sessions, as described in the startup guide.
 
 **Play** starts a session and fetches a prediction; it does not submit a wheel result for you. Applying a suggested bet changes the current bet amount only; it does not advance the session. The observed value must be recorded before the next prediction can use it as context.
 
@@ -147,15 +149,13 @@ _The Inference workspace keeps setup, live metrics, and the AI suggestion stacke
 
 Open **Help** from the Training or Inference workspace for practical shortcuts and optional walkthroughs. Tips & Tricks covers the round-by-round inference loop, checkpoint reuse, synthetic-data setup, and fixed-bet baseline comparisons. The walkthroughs are optional and can be reopened whenever you need a refresher.
 
-![Tips & Tricks dialog](assets/figures/tips-and-tricks.png)
-_Tips & Tricks brings workflow shortcuts and an optional Inference walkthrough into the active workspace._
-
 ## Data, checkpoints, and storage
 
 - FAIRS uses SQLite as the default local database. The launcher prepares or updates it automatically during setup and startup.
 - PostgreSQL is supported for an advanced external setup. The database must be reachable and the account must have permission to create or update the selected database; use launcher option 4 when it needs to be prepared.
 - Datasets, checkpoints, and logs are local application data in the normal setup. Keep a backup of any experiment you cannot recreate.
 - Checkpoints and datasets form a training lineage. If a checkpoint still depends on a dataset, FAIRS may block dataset deletion to prevent an incomplete experiment.
+- Checkpoint metadata and stored summaries can be inspected and compared, but trained weights are not edited in place; resume training when a new configuration is needed.
 - The application checks database compatibility before services start and does not silently reset or repair an incompatible database. If it reports a schema or database-state problem, follow the troubleshooting guidance before removing any data.
 
 ## Troubleshooting

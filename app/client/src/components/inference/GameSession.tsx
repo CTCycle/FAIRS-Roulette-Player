@@ -56,6 +56,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
     const {
         checkpoints,
         datasets,
+        isLoading: isLoadingSetupOptions,
         selectedCheckpointMetadata,
         selectedDatasetIsCompatible,
     } = useInferenceSetupOptions({
@@ -141,6 +142,27 @@ export const GameSession: React.FC<GameSessionProps> = ({
         capitalAfter: step.capital_after,
         isEditing: false,
     }));
+
+    const hydratePredictionMetadata = async (
+        sessionId: string,
+        prediction: PredictionResult,
+        signal?: AbortSignal,
+    ): Promise<PredictionResult> => {
+        if (prediction.betStrategyName !== undefined
+            || prediction.suggestedBetAmount !== undefined) {
+            return prediction;
+        }
+
+        try {
+            const serverSnapshot = await getInferenceSession(sessionId, signal);
+            return serverSnapshot.last_prediction ?? prediction;
+        } catch (err) {
+            if (isAbortError(err)) {
+                throw err;
+            }
+            return prediction;
+        }
+    };
 
     const applyServerSnapshot = (
         serverSnapshot: Awaited<ReturnType<typeof getInferenceSession>>,
@@ -442,7 +464,11 @@ export const GameSession: React.FC<GameSessionProps> = ({
             }
             try {
                 const session = await startSession(undefined, signal);
-                const prediction: PredictionResult = normalizePrediction(session.prediction);
+                const prediction = await hydratePredictionMetadata(
+                    String(session.session_id),
+                    normalizePrediction(session.prediction),
+                    signal,
+                );
                 const currentCapital = Number(session.current_capital);
                 const currentBet = prediction.currentBetAmount ?? Number(session.game_bet);
 
@@ -589,7 +615,11 @@ export const GameSession: React.FC<GameSessionProps> = ({
                 betAmount: rows.length > 0 ? rows[0].betAmount : previousConfig.betAmount,
             }, signal, previousConfig.sessionId);
             replacementSessionId = String(session.session_id);
-            const prediction: PredictionResult = normalizePrediction(session.prediction);
+            const prediction = await hydratePredictionMetadata(
+                String(session.session_id),
+                normalizePrediction(session.prediction),
+                signal,
+            );
             let lastReplayedPrediction = prediction;
             let currentCapital = Number(session.current_capital);
             let currentBet = prediction.currentBetAmount ?? Number(session.game_bet);
@@ -646,7 +676,11 @@ export const GameSession: React.FC<GameSessionProps> = ({
                         replacementSessionId,
                         signal,
                     );
-                    const nextPrediction: PredictionResult = normalizePrediction(nextPayload.prediction);
+                    const nextPrediction = await hydratePredictionMetadata(
+                        replacementSessionId,
+                        normalizePrediction(nextPayload.prediction),
+                        signal,
+                    );
                     lastReplayedPrediction = nextPrediction;
                     currentBet = nextPrediction.currentBetAmount ?? currentBet;
                     updatedHistory.push({
@@ -844,7 +878,11 @@ export const GameSession: React.FC<GameSessionProps> = ({
             setLocalError(null);
             try {
                 const nextPayload = await requestNextInferencePrediction(config.sessionId, signal);
-                const prediction: PredictionResult = normalizePrediction(nextPayload.prediction);
+                const prediction = await hydratePredictionMetadata(
+                    config.sessionId,
+                    normalizePrediction(nextPayload.prediction),
+                    signal,
+                );
                 const nextStep = totalSteps + 1;
                 const activeBet = prediction.currentBetAmount ?? currentBet;
 
@@ -911,7 +949,11 @@ export const GameSession: React.FC<GameSessionProps> = ({
         }
     };
 
-    const canPlay = !sessionActive && !isStarting && !isMutating && !isRecovering;
+    const canPlay = !sessionActive
+        && !isStarting
+        && !isMutating
+        && !isRecovering
+        && !isLoadingSetupOptions;
     const canStop = sessionActive && !isStopping && !isMutating && !isRecovering;
     const canClear = !sessionActive && history.length > 0 && !isMutating && !isRecovering;
 
@@ -925,10 +967,12 @@ export const GameSession: React.FC<GameSessionProps> = ({
                         className={styles.select}
                         value={setup.checkpoint}
                         onChange={(e) => onSetupChange({ checkpoint: e.target.value })}
-                        disabled={checkpoints.length === 0 || setupLocked || isMutating || isRecovering}
+                        disabled={isLoadingSetupOptions || checkpoints.length === 0 || setupLocked || isMutating || isRecovering}
                         aria-label="Model checkpoint"
                     >
-                        {checkpoints.length === 0 ? (
+                        {isLoadingSetupOptions ? (
+                            <option value="">Loading checkpoints...</option>
+                        ) : checkpoints.length === 0 ? (
                             <option value="">No checkpoints found</option>
                         ) : (
                             checkpoints.map((cp) => (
@@ -937,7 +981,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
                         )}
                     </select>
 
-                    {checkpoints.length === 0 && (
+                    {!isLoadingSetupOptions && checkpoints.length === 0 && (
                         <FeatureTip
                             id="inference-no-checkpoint"
                             title="Train a checkpoint first"
@@ -954,7 +998,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
                             className={styles.select}
                             value={setup.uploadedDatasetId ?? setup.selectedDataset ?? ''}
                             onChange={(e) => onSetupChange({ selectedDataset: Number(e.target.value) })}
-                            disabled={datasets.length === 0 || datasetLocked || isMutating || isRecovering}
+                            disabled={isLoadingSetupOptions || datasets.length === 0 || datasetLocked || isMutating || isRecovering}
                             aria-label="Inference dataset"
                         >
                             {setup.uploadedDatasetId !== null ? (
@@ -963,7 +1007,9 @@ export const GameSession: React.FC<GameSessionProps> = ({
                                 </option>
                             ) : (
                                 <>
-                                    {datasets.length === 0 ? (
+                                    {isLoadingSetupOptions ? (
+                                        <option value="">Loading datasets...</option>
+                                    ) : datasets.length === 0 ? (
                                         <option value="">No datasets found</option>
                                     ) : (
                                         datasets.map((dataset) => (

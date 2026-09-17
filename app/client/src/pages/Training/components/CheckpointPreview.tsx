@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity, Info, RefreshCw, Save, X } from 'lucide-react';
+import { Activity, GitCompareArrows, Info, RefreshCw, Save, X } from 'lucide-react';
 import { useWizardStep } from '../../../hooks/useWizardStep';
 import { WizardActions } from './WizardActions';
 import { parseDatasetId } from '../../../utils/apiParsers';
@@ -21,6 +21,8 @@ import { FeatureTip } from '../../../components/guidance/FeatureTip';
 interface CheckpointPreviewProps {
     refreshKey?: number;
     isTraining: boolean;
+    onChange?: () => void;
+    onCompare?: () => void;
 }
 
 interface DatasetInfo {
@@ -41,6 +43,8 @@ const RESUME_STEPS = ['Resume Configuration', 'Summary'] as const;
 export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
     refreshKey = 0,
     isTraining,
+    onChange,
+    onCompare,
 }) => {
     const navigate = useNavigate();
     const [resumeConfig, setResumeConfig] = useState<TrainingResumeConfig>(initialTrainingResumeConfig);
@@ -181,6 +185,12 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
 
             if (mountedRef.current) {
                 setCheckpoints((prev) => prev.filter((name) => name !== checkpointName));
+                setMetadataCache((prev) => {
+                    const next = { ...prev };
+                    delete next[checkpointName];
+                    return next;
+                });
+                onChange?.();
             }
         } catch (err) {
             if (!isAbortError(err) && mountedRef.current) {
@@ -467,7 +477,19 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
                 <Save size={18} />
                 <span>Available Checkpoints</span>
                 <div className="preview-header-actions">
+                    {!loading && !error && checkpoints.length >= 2 && onCompare && (
+                        <button
+                            type="button"
+                            className="preview-compare-button"
+                            onClick={onCompare}
+                            title="Compare checkpoint configurations and training summaries"
+                        >
+                            <GitCompareArrows size={15} aria-hidden="true" />
+                            Compare
+                        </button>
+                    )}
                     <button
+                        type="button"
                         className="preview-row-icon preview-header-refresh"
                         onClick={handleRefreshOverview}
                         title="Refresh checkpoints overview"

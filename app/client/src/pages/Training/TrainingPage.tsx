@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useDatasetUploadState } from '../../hooks/useDatasetUploadState';
 import { useTrainingStatus } from '../../hooks/useTrainingStatus';
+import { GuidanceDialog } from '../../components/guidance/GuidanceDialog';
 import './Training.css';
 import { TrainingDashboard } from './components/TrainingDashboard';
 import { DatasetUpload } from './components/DatasetUpload';
@@ -18,6 +19,8 @@ const TrainingPage: React.FC = () => {
         resetDatasetUploadState,
     } = useDatasetUploadState();
     const [datasetRefreshKey, setDatasetRefreshKey] = useState(0);
+    const [checkpointRefreshKey, setCheckpointRefreshKey] = useState(0);
+    const [comparisonOpen, setComparisonOpen] = useState(false);
 
     const handleUploadSuccess = () => {
         setDatasetRefreshKey((prev) => prev + 1);
@@ -25,6 +28,10 @@ const TrainingPage: React.FC = () => {
 
     const handleDatasetDelete = () => {
         setDatasetRefreshKey((prev) => prev + 1);
+    };
+
+    const handleCheckpointChange = () => {
+        setCheckpointRefreshKey((prev) => prev + 1);
     };
 
     return (
@@ -67,11 +74,31 @@ const TrainingPage: React.FC = () => {
                         </div>
                     </div>
                     <div className="checkpoints-column">
-                        <CheckpointPreview refreshKey={datasetRefreshKey} isTraining={isTraining} />
-                        <CheckpointComparison />
+                        <CheckpointPreview
+                            refreshKey={datasetRefreshKey}
+                            isTraining={isTraining}
+                            onChange={handleCheckpointChange}
+                            onCompare={() => setComparisonOpen(true)}
+                        />
                     </div>
                 </div>
             </div>
+
+            {comparisonOpen && (
+                <GuidanceDialog
+                    title="Compare Checkpoints"
+                    description="Compare configuration and stored training summaries. These values are not a standardized benchmark."
+                    labelledBy="checkpoint-comparison-dialog-title"
+                    onClose={() => setComparisonOpen(false)}
+                    className="guidance-checkpoint-comparison-dialog"
+                >
+                    <CheckpointComparison
+                        refreshKey={checkpointRefreshKey}
+                        labelledBy="checkpoint-comparison-dialog-title"
+                        showHeader={false}
+                    />
+                </GuidanceDialog>
+            )}
 
             <div className="section-separator training-dashboard-separator" />
 

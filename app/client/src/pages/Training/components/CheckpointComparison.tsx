@@ -9,6 +9,12 @@ import {
 } from '../../../utils/trainingApi';
 import './CheckpointComparison.css';
 
+interface CheckpointComparisonProps {
+    refreshKey?: number;
+    labelledBy?: string;
+    showHeader?: boolean;
+}
+
 const COMPARISON_FIELDS = [
     ['Dataset ID', 'dataset_id'],
     ['Episodes', 'episodes'],
@@ -36,7 +42,11 @@ const formatValue = (value: unknown): string => {
     return String(value);
 };
 
-export const CheckpointComparison: React.FC = () => {
+export const CheckpointComparison: React.FC<CheckpointComparisonProps> = ({
+    refreshKey = 0,
+    labelledBy = 'checkpoint-comparison-title',
+    showHeader = true,
+}) => {
     const [checkpoints, setCheckpoints] = useState<string[]>([]);
     const [leftCheckpoint, setLeftCheckpoint] = useState('');
     const [rightCheckpoint, setRightCheckpoint] = useState('');
@@ -49,6 +59,7 @@ export const CheckpointComparison: React.FC = () => {
         const controller = new AbortController();
         const load = async () => {
             try {
+                setError(null);
                 const values = await fetchTrainingCheckpoints(controller.signal);
                 if (!mountedRef.current) {
                     return;
@@ -67,7 +78,7 @@ export const CheckpointComparison: React.FC = () => {
             mountedRef.current = false;
             controller.abort();
         };
-    }, []);
+    }, [refreshKey]);
 
     useEffect(() => {
         const selected = Array.from(new Set([leftCheckpoint, rightCheckpoint].filter(Boolean)));
@@ -113,13 +124,15 @@ export const CheckpointComparison: React.FC = () => {
     }
 
     return (
-        <section className="checkpoint-comparison" aria-labelledby="checkpoint-comparison-title">
-            <div className="checkpoint-comparison-header">
-                <div>
-                    <h3 id="checkpoint-comparison-title"><GitCompareArrows size={18} /> Compare Checkpoints</h3>
-                    <p>Compare configuration and stored training summaries. These values are not a standardized benchmark.</p>
+        <section className="checkpoint-comparison" aria-labelledby={labelledBy}>
+            {showHeader && (
+                <div className="checkpoint-comparison-header">
+                    <div>
+                        <h3 id={labelledBy}><GitCompareArrows size={18} /> Compare Checkpoints</h3>
+                        <p>Compare configuration and stored training summaries. These values are not a standardized benchmark.</p>
+                    </div>
                 </div>
-            </div>
+            )}
 
             <div className="checkpoint-comparison-selectors">
                 <label>
