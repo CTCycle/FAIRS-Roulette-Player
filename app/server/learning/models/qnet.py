@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from typing import Any
 
 from keras import Model, layers, losses, metrics, optimizers
@@ -50,7 +51,16 @@ class FAIRSnet:
         model.compile(loss=loss, optimizer=opt, metrics=metric, jit_compile=False)  # type: ignore
         model.summary(expand_nested=True) if model_summary else None
         if self.jit_compile:
-            model = torch_compile(model, backend=self.jit_backend, mode="default")
+            compile_options: dict[str, Any] = {
+                "backend": self.jit_backend,
+                "mode": "default",
+            }
+            # The model's input feature dimensions are fixed by TrainingConfig.
+            # Static-shape compilation avoids PyTorch's Windows C++ shape-guard
+            # probe, which requires a separately installed cl.exe toolchain.
+            if sys.platform == "win32":
+                compile_options["dynamic"] = False
+            model = torch_compile(model, **compile_options)
 
         return model
 

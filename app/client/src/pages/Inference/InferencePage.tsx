@@ -50,12 +50,6 @@ const InferencePage: React.FC = () => {
 
     return (
         <div className="inference-page page-shell">
-            <div className="page-header">
-                <p className="page-subtitle">
-                    Pair a trained checkpoint with a dataset, step through predictions, and inspect session history in real time.
-                </p>
-            </div>
-
             <div className="inference-workspace">
                 <GameSession
                     setup={setup}

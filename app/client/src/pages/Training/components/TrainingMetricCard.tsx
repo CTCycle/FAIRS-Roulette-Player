@@ -16,12 +16,12 @@ export const TrainingMetricCard: React.FC<TrainingMetricCardProps> = ({
     Icon,
     compact = false,
 }) => {
-    const cardClassName = compact
-        ? `metric-card ${tone} metric-meta-card`
-        : `metric-card ${tone}`;
+    const metricClassName = compact
+        ? `metric-item ${tone} metric-meta-item`
+        : `metric-item ${tone}`;
 
     return (
-        <div className={cardClassName}>
+        <div className={metricClassName}>
             <div className="metric-icon">
                 <Icon size={20} />
             </div>

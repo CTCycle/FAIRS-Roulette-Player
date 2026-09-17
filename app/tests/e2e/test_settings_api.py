@@ -17,7 +17,7 @@ class TrainingSpy:
 
     def __init__(self) -> None:
         self.jobs = JobsSettings(polling_interval=1.0)
-        self.device = DeviceSettings(jit_compile=False, jit_backend="inductor")
+        self.device = DeviceSettings(jit_compile=False, jit_backend="eager")
 
     # -------------------------------------------------------------------------
     def get_runtime_settings(self) -> tuple[JobsSettings, DeviceSettings]:
@@ -49,7 +49,7 @@ def test_settings_api_returns_only_structured_settings(tmp_path: Path) -> None:
     assert response.status_code == 200
     assert response.json() == {
         "jobs": {"polling_interval": 1.0},
-        "device": {"jit_compile": False, "jit_backend": "inductor"},
+        "device": {"jit_compile": False, "jit_backend": "eager"},
         "roulette": {
             "minimum_number": 0,
             "maximum_number": 36,
@@ -109,7 +109,7 @@ def test_settings_api_rejects_jit_when_runtime_is_unsupported(tmp_path: Path) ->
     assert "Python 3.14" in response.json()["detail"]
     assert current.json()["device"] == {
         "jit_compile": False,
-        "jit_backend": "inductor",
+        "jit_backend": "eager",
     }
     assert manager.get_json_settings().device.jit_compile is False
 
@@ -135,6 +135,32 @@ def test_settings_api_accepts_jit_on_supported_runtime(tmp_path: Path) -> None:
     assert manager.get_json_settings().device.jit_compile is True
 
 ###############################################################################
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows backend capability")
+def test_settings_api_rejects_windows_inductor_while_jit_is_enabled(
+    tmp_path: Path,
+) -> None:
+    client, manager = _build_client(tmp_path)
+    with client:
+        enabled = client.patch(
+            "/api/settings",
+            json={"device": {"jit_compile": True, "jit_backend": "eager"}},
+        )
+        rejected = client.patch(
+            "/api/settings",
+            json={"device": {"jit_compile": True, "jit_backend": "inductor"}},
+        )
+        current = client.get("/api/settings")
+
+    assert enabled.status_code == 200
+    assert rejected.status_code == 422
+    assert "Triton" in rejected.json()["detail"]
+    assert current.json()["device"] == {
+        "jit_compile": True,
+        "jit_backend": "eager",
+    }
+    assert manager.get_json_settings().device.jit_backend == "eager"
+
+###############################################################################
 def test_settings_api_rejects_unknown_and_invalid_values(tmp_path: Path) -> None:
     with _build_client(tmp_path)[0] as client:
         unknown = client.patch("/api/settings", json={"database": {"host": "x"}})
@@ -158,7 +184,7 @@ def test_settings_api_reset_restores_defaults(tmp_path: Path) -> None:
     assert response.status_code == 200
     assert response.json() == {
         "jobs": {"polling_interval": 1.0},
-        "device": {"jit_compile": False, "jit_backend": "inductor"},
+        "device": {"jit_compile": False, "jit_backend": "eager"},
         "roulette": {
             "minimum_number": 0,
             "maximum_number": 36,

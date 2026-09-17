@@ -78,7 +78,7 @@ def test_start_training_preflights_runtime_jit(monkeypatch) -> None:
     with pytest.raises(ValueError, match="JIT runtime unavailable"):
         service.start_training(TrainingConfig(use_data_generator=True))
 
-    validator.assert_called_once_with(True)
+    validator.assert_called_once_with(True, "eager")
     training_run_manager.start_job.assert_not_called()
 
 ###############################################################################

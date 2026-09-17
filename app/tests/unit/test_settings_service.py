@@ -18,7 +18,7 @@ class FakeTrainingService:
 
     def __init__(self) -> None:
         self.jobs = JobsSettings(polling_interval=1.0)
-        self.device = DeviceSettings(jit_compile=False, jit_backend="inductor")
+        self.device = DeviceSettings(jit_compile=False, jit_backend="eager")
         self.calls: list[tuple[JobsSettings, DeviceSettings]] = []
         self.fail_next_apply = False
 
@@ -53,7 +53,7 @@ def test_get_and_partial_update_are_structured_only(tmp_path: Path) -> None:
     response = service.get_settings()
     assert response.model_dump() == {
         "jobs": {"polling_interval": 1.0},
-        "device": {"jit_compile": False, "jit_backend": "inductor"},
+        "device": {"jit_compile": False, "jit_backend": "eager"},
         "roulette": {
             "minimum_number": 0,
             "maximum_number": 36,
@@ -71,7 +71,7 @@ def test_get_and_partial_update_are_structured_only(tmp_path: Path) -> None:
     assert updated.device.jit_compile is False
     assert updated.roulette.maximum_number == 36
     assert training_service.jobs.polling_interval == 2.5
-    assert training_service.device.jit_backend == "inductor"
+    assert training_service.device.jit_backend == "eager"
     assert json.loads(runtime_path.read_text(encoding="utf-8"))["jobs"] == {
         "polling_interval": 2.5
     }
@@ -166,7 +166,7 @@ def test_reset_uses_backend_defaults(tmp_path: Path) -> None:
 
     assert response.jobs.polling_interval == 1.0
     assert response.device.jit_compile is False
-    assert response.device.jit_backend == "inductor"
+    assert response.device.jit_backend == "eager"
     assert response.roulette.minimum_number == 0
     assert response.roulette.maximum_number == 36
     assert response.roulette.exclude_zero is False
@@ -190,12 +190,12 @@ def test_enabling_jit_runs_runtime_preflight_before_persistence(
             )
         )
 
-    validator.assert_called_once_with(True)
+    validator.assert_called_once_with(True, "eager")
     assert service.get_settings().device.jit_compile is False
     assert training_service.device.jit_compile is False
     assert json.loads(runtime_path.read_text(encoding="utf-8"))["device"] == {
         "jit_compile": False,
-        "jit_backend": "inductor",
+        "jit_backend": "eager",
     }
 
 ###############################################################################

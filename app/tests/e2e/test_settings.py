@@ -17,8 +17,8 @@ class TestSettingsPage:
         page.wait_for_load_state("networkidle")
 
         expect(page.get_by_role("heading", name="Settings", exact=True)).to_be_visible()
-        expect(page.get_by_role("tab", name="Roulette", exact=True)).to_have_attribute(
-            "aria-selected", "true"
+        expect(page.get_by_role("button", name="Roulette", exact=True)).to_have_attribute(
+            "aria-current", "page"
         )
         expect(page.get_by_role("heading", name="Roulette numbers", exact=True)).to_be_visible()
         expect(page.get_by_role("link", name="Settings", exact=True)).to_have_attribute(
@@ -40,12 +40,12 @@ class TestSettingsPage:
         expect(maximum).to_have_value("12")
         expect(exclude_zero).to_be_checked()
 
-        page.get_by_role("tab", name="Appearance", exact=True).click()
+        page.get_by_role("button", name="Appearance", exact=True).click()
         expect(page.get_by_role("heading", name="Roulette appearance", exact=True)).to_be_visible()
         expect(page.get_by_label("Invert roulette colors", exact=True)).to_be_visible()
         expect(page.get_by_label("Show wheel number labels", exact=True)).to_be_visible()
 
-        page.get_by_role("tab", name="Runtime", exact=True).click()
+        page.get_by_role("button", name="Runtime", exact=True).click()
         expect(page.get_by_role("heading", name="Training polling", exact=True)).to_be_visible()
         polling = page.get_by_label("Training polling interval", exact=True)
         expect(polling).to_be_visible()
@@ -55,10 +55,10 @@ class TestSettingsPage:
 
         page.reload()
         page.wait_for_load_state("networkidle")
-        page.get_by_role("tab", name="Runtime", exact=True).click()
+        page.get_by_role("button", name="Runtime", exact=True).click()
         expect(polling).to_have_value("2.5")
 
-        page.get_by_role("tab", name="Advanced", exact=True).click()
+        page.get_by_role("button", name="Advanced", exact=True).click()
         expect(page.get_by_role("heading", name="JIT model construction", exact=True)).to_be_visible()
         jit_compile = page.get_by_label("Enable JIT compilation", exact=True)
         jit_backend = page.get_by_label("JIT backend", exact=True)
@@ -73,9 +73,9 @@ class TestSettingsPage:
             expect(page.get_by_role("alert")).to_contain_text("Python 3.14")
             page.reload()
             page.wait_for_load_state("networkidle")
-            page.get_by_role("tab", name="Advanced", exact=True).click()
+            page.get_by_role("button", name="Advanced", exact=True).click()
             expect(jit_compile).not_to_be_checked()
-            expect(jit_backend).to_have_value("inductor")
+            expect(jit_backend).to_have_value("eager")
         else:
             expect(page.get_by_text("Settings saved.", exact=True)).to_be_visible()
             page.reload()
@@ -85,15 +85,15 @@ class TestSettingsPage:
 
         page.get_by_role("button", name="Reset to defaults", exact=True).click()
         expect(page.get_by_text("Settings reset to defaults.", exact=True)).to_be_visible()
-        page.get_by_role("tab", name="Runtime", exact=True).click()
+        page.get_by_role("button", name="Runtime", exact=True).click()
         expect(polling).to_have_value("1")
-        page.get_by_role("tab", name="Roulette", exact=True).click()
+        page.get_by_role("button", name="Roulette", exact=True).click()
         expect(minimum).to_have_value("0")
         expect(maximum).to_have_value("36")
         expect(exclude_zero).not_to_be_checked()
-        page.get_by_role("tab", name="Advanced", exact=True).click()
+        page.get_by_role("button", name="Advanced", exact=True).click()
         expect(jit_compile).not_to_be_checked()
-        expect(jit_backend).to_have_value("inductor")
+        expect(jit_backend).to_have_value("eager")
         expect(jit_backend).to_be_disabled()
 
         page.get_by_role("button", name="Help", exact=True).click()
