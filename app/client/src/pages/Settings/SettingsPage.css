@@ -1,45 +1,30 @@
 .settings-page {
-    padding: 1.5rem;
+    padding: var(--spacing-xl) var(--spacing-lg) var(--spacing-2xl);
     overflow-y: auto;
     color: var(--text-primary);
-}
-
-.settings-page h1 {
-    margin-top: 0.35rem;
-    font-size: var(--font-size-2xl);
-    letter-spacing: -0.02em;
 }
 
 .settings-form {
     display: flex;
     flex-direction: column;
-    width: min(1100px, 100%);
+    width: min(1280px, 100%);
 }
 
 .settings-layout {
     display: grid;
-    grid-template-columns: minmax(165px, 190px) minmax(0, 1fr);
+    grid-template-columns: minmax(160px, 180px) minmax(0, 1fr);
     align-items: start;
     gap: var(--spacing-xl);
 }
 
 .settings-navigation {
     position: sticky;
-    top: 1rem;
+    top: var(--spacing-md);
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
-    padding: 0.25rem 0.75rem 0.25rem 0;
+    gap: var(--spacing-xs);
+    padding: 0.25rem var(--spacing-md) 0.25rem 0;
     border-right: 1px solid rgba(168, 184, 206, 0.22);
-}
-
-.settings-navigation-label {
-    padding: 0 0.75rem 0.5rem;
-    color: var(--primary-accent);
-    font-size: var(--font-size-xs);
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
 }
 
 .settings-navigation-item {
@@ -47,7 +32,7 @@
     align-items: center;
     width: 100%;
     min-height: var(--control-height);
-    padding: 0.55rem 0.75rem;
+    padding: 0.5rem 0.75rem;
     color: var(--text-secondary);
     background: transparent;
     border: 0;
@@ -86,27 +71,28 @@
 .settings-panel {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-lg);
+    gap: 0;
     min-height: 300px;
-    padding: 0.25rem 0 1.5rem;
+    padding: 0 0 var(--spacing-xl);
 }
 
 .settings-section-header {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
     align-items: flex-start;
-    justify-content: space-between;
     gap: var(--spacing-lg);
-    padding-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-lg);
     border-bottom: 1px solid rgba(168, 184, 206, 0.18);
 }
 
 .settings-section-header h2 {
-    margin-top: 0.3rem;
+    margin: 0;
     font-size: var(--font-size-xl);
+    line-height: 1.3;
 }
 
 .settings-section-header > p {
-    max-width: 44ch;
+    max-width: 42ch;
     color: var(--text-secondary);
     font-size: var(--font-size-sm);
     line-height: 1.5;
@@ -114,16 +100,22 @@
 
 .settings-field-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
     align-items: start;
-    gap: var(--spacing-xl);
+    gap: var(--spacing-lg);
+    padding: var(--spacing-lg) 0;
+}
+
+.settings-field-row + .settings-field-row {
+    border-top: 1px solid rgba(168, 184, 206, 0.14);
 }
 
 .settings-field-copy,
 .settings-field-control {
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    gap: var(--spacing-xs);
+    min-width: 0;
 }
 
 .settings-field-copy label,
@@ -131,10 +123,11 @@
     color: var(--text-primary);
     font-size: var(--font-size-md);
     font-weight: 600;
+    line-height: 1.35;
 }
 
 .settings-field-copy p {
-    max-width: 62ch;
+    max-width: 68ch;
     color: var(--text-secondary);
     font-size: var(--font-size-sm);
     line-height: 1.5;
@@ -176,12 +169,11 @@
     border: 1px solid var(--border-color);
     border-radius: var(--radius-sm);
     font: inherit;
+    transition: border-color 0.16s ease, background-color 0.16s ease;
 }
 
 .settings-input:focus {
     border-color: var(--primary-accent);
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.22);
 }
 
 .settings-input:disabled {
@@ -195,14 +187,32 @@
     align-items: center;
     gap: var(--spacing-sm);
     min-height: var(--control-height);
+    width: fit-content;
+    padding: 0.4rem 0.65rem;
     color: var(--text-primary);
+    background: var(--surface-soft);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
     font-size: var(--font-size-sm);
+    transition: color 0.16s ease, background-color 0.16s ease, border-color 0.16s ease;
+}
+
+.settings-checkbox-label:hover:has(input:not(:disabled)) {
+    background: var(--bg-tertiary);
+    border-color: var(--text-secondary);
+}
+
+.settings-checkbox-label:has(input:checked) {
+    color: var(--text-primary);
+    background: rgba(36, 166, 232, 0.1);
+    border-color: rgba(36, 166, 232, 0.55);
 }
 
 .settings-checkbox-label input {
     width: 1.1rem;
     height: 1.1rem;
     accent-color: var(--primary-accent);
+    flex: 0 0 auto;
 }
 
 .settings-field-error {
@@ -218,42 +228,51 @@
     display: flex;
     justify-content: flex-end;
     gap: var(--spacing-sm);
-    margin-inline: -0.25rem;
-    padding: var(--spacing-md) 0.25rem 0.35rem;
+    margin-top: var(--spacing-sm);
+    padding: var(--spacing-md) 0 0;
     border-top: 1px solid rgba(168, 184, 206, 0.18);
-    background: linear-gradient(to bottom, rgba(17, 27, 46, 0), var(--bg-secondary) 35%);
+    background: transparent;
 }
 
 .settings-button,
 .settings-link-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     min-height: var(--control-height);
     border-radius: var(--radius-sm);
     font-size: var(--font-size-sm);
     font-weight: 600;
+    transition: color 0.16s ease, background-color 0.16s ease, border-color 0.16s ease;
 }
 
 .settings-button {
     padding: 0.45rem 0.85rem;
+    border: 1px solid transparent;
 }
 
 .settings-button-primary {
-    color: #06111d;
+    color: var(--bg-primary);
     background: var(--primary-accent);
+    border-color: var(--primary-accent);
 }
 
 .settings-button-primary:hover:not(:disabled) {
     background: var(--primary-accent-hover);
+    border-color: var(--primary-accent-hover);
 }
 
 .settings-button-secondary {
-    padding-inline: 0.75rem;
+    padding-inline: 0.8rem;
     color: var(--text-secondary);
-    border: 1px solid var(--border-color);
+    background: transparent;
+    border-color: var(--border-color);
 }
 
 .settings-button-secondary:hover:not(:disabled) {
     color: var(--text-primary);
     background: var(--bg-tertiary);
+    border-color: var(--text-secondary);
 }
 
 .settings-button:disabled {
@@ -261,11 +280,16 @@
     cursor: not-allowed;
 }
 
+.settings-button:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+}
+
 .settings-feedback {
     display: flex;
     align-items: center;
     gap: var(--spacing-md);
-    width: min(900px, 100%);
+    width: min(1280px, 100%);
     margin-bottom: var(--spacing-md);
     padding: 0.75rem 1rem;
     border: 1px solid var(--border-color);
@@ -305,11 +329,6 @@
         border-bottom: 1px solid rgba(168, 184, 206, 0.22);
     }
 
-    .settings-navigation-label {
-        grid-column: 1 / -1;
-        padding-inline: 0.25rem;
-    }
-
     .settings-navigation-item {
         justify-content: center;
         border-left: 0;
@@ -323,13 +342,16 @@
         border-bottom-color: var(--primary-accent);
     }
 
-    .settings-section-header,
     .settings-field-row {
         grid-template-columns: 1fr;
     }
 
     .settings-section-header {
-        display: grid;
+        display: block;
+    }
+
+    .settings-section-header > p {
+        margin-top: var(--spacing-sm);
     }
 
     .settings-field-control {
