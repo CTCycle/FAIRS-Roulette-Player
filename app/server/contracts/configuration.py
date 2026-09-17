@@ -173,7 +173,7 @@ class JsonDeviceSettings(BaseModel):
 
     jit_compile: bool = False
     jit_backend: str = Field(
-        default="inductor",
+        default="eager",
         max_length=JIT_BACKEND_MAX_LENGTH,
         pattern=JIT_BACKEND_PATTERN,
     )

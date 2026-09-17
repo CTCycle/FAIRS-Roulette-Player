@@ -115,7 +115,10 @@ class SettingsService:
             ),
         )
         if candidate.device.jit_compile and not previous_json.device.jit_compile:
-            validate_jit_runtime(candidate.device.jit_compile)
+            validate_jit_runtime(
+                candidate.device.jit_compile,
+                candidate.device.jit_backend,
+            )
         self._manager().replace_json_settings(candidate)
         try:
             self.training_service.apply_runtime_settings(

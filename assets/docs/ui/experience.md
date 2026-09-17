@@ -44,7 +44,7 @@ Composition rules:
 - Preserve explicit loading states for long-running or multi-step actions.
 - Settings loads from the backend before showing editable controls, saves only changed fields, and leaves environment and per-training configuration in their existing workflows.
 - Settings copy makes runtime scope explicit: polling changes affect future parent polling, while JIT changes apply to newly constructed models and do not rewrite active workers or checkpoint configuration.
-- Settings keeps the primary actions visible while the page scrolls. Enabling JIT is checked against runtime capability before the setting is persisted; unsupported runtimes receive an actionable error instead of a silent fallback.
+- Settings keeps the primary actions visible while the page scrolls. Enabling JIT is checked against runtime capability before the setting is persisted; the supported Python 3.13 runtime can use it when PyTorch exposes `torch.compile`, while unsupported runtimes receive an actionable error instead of a silent fallback.
 - Keep outcome and profit feedback immediate and visually distinct.
 - The training monitor calls the pre-learning replay-memory phase `Replay warm-up`; epsilon remains visible separately because epsilon-greedy exploration continues after learning begins.
 - Validation metrics are shown only when a fresh validation measurement exists rather than being visually carried forward across unsampled steps.

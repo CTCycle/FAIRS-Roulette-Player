@@ -116,7 +116,7 @@ class TrainingService:
         database_path: str | Path | None = None,
         polling_interval_seconds: float = 1.0,
         jit_compile: bool = False,
-        jit_backend: str = "inductor",
+        jit_backend: str = "eager",
     ) -> None:
         self.training_run_manager = training_run_manager
         self.checkpoint_service = checkpoint_service
@@ -161,8 +161,8 @@ class TrainingService:
     # -------------------------------------------------------------------------
     def validate_runtime_settings(self) -> None:
         """Validate optional runtime features before a training operation starts."""
-        _, jit_compile, _ = self._runtime_snapshot()
-        validate_jit_runtime(jit_compile)
+        _, jit_compile, jit_backend = self._runtime_snapshot()
+        validate_jit_runtime(jit_compile, jit_backend)
 
     # -------------------------------------------------------------------------
     def _polling_interval(self) -> float:

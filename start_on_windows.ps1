@@ -9,7 +9,7 @@ $repoRoot = $PSScriptRoot
 $runtimeRoot = Join-Path $repoRoot 'runtimes'
 $pythonDir = Join-Path $runtimeRoot 'python'
 $pythonExe = Join-Path $pythonDir 'python.exe'
-$pythonPth = Join-Path $pythonDir 'python314._pth'
+$pythonPth = Join-Path $pythonDir 'python313._pth'
 $uvDir = Join-Path $runtimeRoot 'uv'
 $uvExe = Join-Path $uvDir 'uv.exe'
 $nodeDir = Join-Path $runtimeRoot 'nodejs'
@@ -33,7 +33,7 @@ $script:LauncherInteractive = -not [Console]::IsInputRedirected -and -not [Conso
 # -----------------------------------------------------------------------------
 # Portable runtime versions and download sources
 # -----------------------------------------------------------------------------
-$pythonVersion = '3.14.2'
+$pythonVersion = '3.13.15'
 $pythonUrl = "https://www.python.org/ftp/python/$pythonVersion/python-$pythonVersion-embed-amd64.zip"
 $nodeVersion = '22.13.0'
 $nodeArchiveName = "node-v$nodeVersion-win-x64"
@@ -374,11 +374,32 @@ function Ensure-PortableRuntimes {
     New-Item -ItemType Directory -Path $runtimeRoot, $pythonDir, $uvDir, $nodeDir -Force | Out-Null
 
     Write-Step 'Setting up Python (embeddable) locally.'
-    if (-not (Test-Path -LiteralPath $pythonExe)) {
+    $pythonNeedsInstall = -not (Test-Path -LiteralPath $pythonExe)
+    if (-not $pythonNeedsInstall) {
+        try {
+            $installedPythonVersion = (Invoke-CheckPyver $pythonExe).Trim()
+            $pythonNeedsInstall = $installedPythonVersion -ne $pythonVersion -or
+                -not (Test-Path -LiteralPath $pythonPth)
+            if (-not $pythonNeedsInstall) {
+                Write-Info "Portable Python $installedPythonVersion already matches the launcher baseline."
+            }
+        } catch {
+            $pythonNeedsInstall = $true
+            Write-Info "Portable Python validation failed; replacing the runtime."
+        }
+    }
+    if ($pythonNeedsInstall) {
+        if (Test-Path -LiteralPath $pythonDir) {
+            [void](Remove-LauncherPath -Path $pythonDir -Activity 'FAIRS: replace portable Python runtime' -Strict)
+        }
+        New-Item -ItemType Directory -Path $pythonDir -Force | Out-Null
         Invoke-DownloadAndExtract $pythonUrl (Join-Path $pythonDir 'python.zip') $pythonDir
     }
     if (Test-Path -LiteralPath $pythonPth) { Invoke-PatchPth $pythonPth }
-    $pythonFound = Invoke-CheckPyver $pythonExe
+    $pythonFound = (Invoke-CheckPyver $pythonExe).Trim()
+    if ($pythonFound -ne $pythonVersion) {
+        throw "Portable Python $pythonFound does not match the launcher baseline $pythonVersion."
+    }
     Write-Ok "Python ready: $pythonFound"
 
     Write-Step 'Installing uv (portable).'

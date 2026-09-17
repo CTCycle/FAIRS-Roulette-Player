@@ -67,7 +67,7 @@ Startup resolution is strict and deterministic:
 
 Writes use a same-directory temporary file, flush and `fsync`, then `os.replace` so readers see either the previous complete document or the new complete document. The Settings API merges strict partial updates, validates the complete merged document, persists the runtime file, and applies live technical settings to the running application. It does not read or write `.env`, the database, or `TrainingConfig`.
 
-Enabling `device.jit_compile` also runs a runtime capability preflight. On the bundled Python 3.14 runtime, `torch.compile` is unsupported, so the Settings API rejects an enable request with an actionable `422` response and does not persist or propagate the change. Training start and the worker boundary repeat the guard for older or manually edited runtime files; no silent compiler fallback is used.
+Enabling `device.jit_compile` also runs a runtime capability preflight. The bundled Python 3.13 runtime supports the setting when the installed PyTorch exposes `torch.compile`; manually selected Python 3.14+ runtimes are rejected with an actionable `422` response before persistence or propagation. Training start and the worker boundary repeat the guard for older or manually edited runtime files; no silent compiler fallback is used.
 
 ## Database Configuration
 

@@ -25,7 +25,7 @@ Last updated: 2026-09-17
 
 ## Configuration Problems
 
-- If saving JIT settings reports that `torch.compile` is unsupported on Python 3.14 or newer, disable JIT or run FAIRS with Python 3.13 or earlier. The application intentionally fails closed instead of silently using a different execution mode.
+- If saving JIT settings reports that `torch.compile` is unsupported on Python 3.14 or newer, use the launcher-managed Python 3.13 runtime or disable JIT. The application intentionally fails closed instead of silently using a different execution mode.
 - If database startup fails, confirm the embedded-vs-external database settings are internally consistent.
 - If PostgreSQL mode is enabled, select option 4 in `start_on_windows.ps1` to create or upgrade the configured database. FastAPI startup runs the same idempotent runner. A missing target is created only for SQLSTATE `3D000`, and the configured role needs `CREATEDB`.
 - If startup reports an unsupported database engine, set external PostgreSQL configuration to `DATABASE_ENGINE=postgresql+psycopg`; legacy aliases are not accepted.
