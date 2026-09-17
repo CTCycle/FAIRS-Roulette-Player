@@ -43,7 +43,7 @@ Tool-specific cache environment variables point below these roots. Cache clearin
 - Maintenance, database, testing, update, uninstall, and data-removal actions require the application terminal to be closed.
 - There is no separate stop daemon. Closing the application terminal is the local stop action; closing the browser is not.
 - Startup is complete only after backend and frontend readiness checks succeed.
-- A launch checks frontend source/build-input timestamps against `app/client/dist/index.html` and rebuilds stale output without reinstalling dependencies.
+- A launch checks the installed backend package metadata against `app/server/pyproject.toml` and checks frontend source/build-input timestamps against `app/client/dist/index.html`; stale backend metadata triggers dependency synchronization and stale frontend output triggers a rebuild.
 - Browser URL handoff is best-effort after service readiness; a handoff failure must leave the healthy services running and print the configured URL.
 - Uvicorn runs with one worker because training jobs and live inference models are process-local.
 - `RELOAD=true` is development-only and replaces process-local state.

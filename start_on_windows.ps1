@@ -547,6 +547,19 @@ function Test-FrontendBuildCurrent {
     return $newestInput.LastWriteTimeUtc -le $buildTime
 }
 
+function Test-BackendPackageCurrent {
+    $projectFile = Join-Path $serverDir 'pyproject.toml'
+    if (-not (Test-Path -LiteralPath $projectFile -PathType Leaf)) { return $false }
+
+    $expectedVersion = (& $venvPython -c "import sys, tomllib; print(tomllib.load(open(sys.argv[1], 'rb'))['project']['version'])" $projectFile).Trim()
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($expectedVersion)) { return $false }
+
+    $installedVersion = (& $venvPython -c "from importlib.metadata import version; print(version('fairs-server'))").Trim()
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($installedVersion)) { return $false }
+
+    return $installedVersion -eq $expectedVersion
+}
+
 function Test-DependenciesReady {
     $frontendPackage = Join-Path $clientDir 'package.json'
     $frontendLock = Join-Path $clientDir 'package-lock.json'
@@ -576,6 +589,7 @@ function Test-DependenciesReady {
     if ($LASTEXITCODE -ne 0) { return $false }
     & $venvPython -c 'import fastapi, uvicorn' *> $null
     if ($LASTEXITCODE -ne 0) { return $false }
+    if (-not (Test-BackendPackageCurrent)) { return $false }
 
     if (-not (Test-FrontendBuildReady)) { return $false }
 
