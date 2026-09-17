@@ -293,7 +293,6 @@ const SettingsPage: React.FC = () => {
                 >
                     <div className="settings-layout">
                         <nav className="settings-navigation" aria-label="Settings categories">
-                            <span className="settings-navigation-label">Configuration groups</span>
                             {SETTINGS_SECTIONS.map((section) => (
                             <button
                                 key={section.id}
@@ -320,16 +319,15 @@ const SettingsPage: React.FC = () => {
                         >
                             <div className="settings-section-header">
                                 <div>
-                                    <p className="page-eyebrow">Outcome pool</p>
                                     <h2>Roulette numbers</h2>
                                 </div>
-                                <p>Limit the outcomes available to generated roulette data and accepted live observations.</p>
+                                <p>Configure the number range used for generated data and live observations.</p>
                             </div>
 
                             <div className="settings-field-row">
                                 <div className="settings-field-copy">
-                                    <span className="settings-field-title">Selectable number range</span>
-                                    <p id="settings-range-help">Choose an inclusive range from 0 to 36. Stored training data outside the range is ignored when a new run starts.</p>
+                                    <span className="settings-field-title">Number range</span>
+                                    <p id="settings-range-help">Set the inclusive range for new runs. Values outside it are ignored.</p>
                                 </div>
                                 <div className="settings-field-control">
                                     <div className="settings-range-grid">
@@ -386,23 +384,23 @@ const SettingsPage: React.FC = () => {
 
                             <div className="settings-field-row settings-checkbox-row">
                                 <div className="settings-field-copy">
-                                    <label htmlFor="settings-exclude-zero">Exclude number 0</label>
-                                    <p id="settings-exclude-zero-help">Remove zero from generated roulette outcomes and reject zero as a live observation.</p>
+                                    <label htmlFor="settings-exclude-zero">Include zero</label>
+                                    <p id="settings-exclude-zero-help">Allow zero in generated outcomes and live observations.</p>
                                 </div>
                                 <div className="settings-field-control">
                                     <label className="settings-checkbox-label" htmlFor="settings-exclude-zero">
                                         <input
                                             id="settings-exclude-zero"
                                             type="checkbox"
-                                            checked={excludeZero}
+                                            checked={!excludeZero}
                                             onChange={(event) => {
-                                                setExcludeZero(event.target.checked);
+                                                setExcludeZero(!event.target.checked);
                                                 setValidationErrors((current) => ({ ...current, rouletteRange: undefined }));
                                             }}
                                             aria-describedby="settings-exclude-zero-help"
                                             disabled={isBusy}
                                         />
-                                        <span>{excludeZero ? 'Excluded' : 'Included'}</span>
+                                        <span>{excludeZero ? 'Zero excluded' : 'Zero included'}</span>
                                     </label>
                                 </div>
                             </div>
@@ -417,16 +415,15 @@ const SettingsPage: React.FC = () => {
                         >
                             <div className="settings-section-header">
                                 <div>
-                                    <p className="page-eyebrow">Wheel rendering</p>
                                     <h2>Roulette appearance</h2>
                                 </div>
-                                <p>Change how newly rendered roulette wheel frames are displayed without changing model color features or reward rules.</p>
+                                <p>Choose how newly rendered roulette wheel frames are displayed.</p>
                             </div>
 
                             <div className="settings-field-row settings-checkbox-row">
                                 <div className="settings-field-copy">
-                                    <label htmlFor="settings-invert-colors">Invert roulette colors</label>
-                                    <p id="settings-invert-colors-help">Swap red and black wheel slice colors. Zero remains green.</p>
+                                    <label htmlFor="settings-invert-colors">Invert colors</label>
+                                    <p id="settings-invert-colors-help">Swap red and black wheel slices; zero stays green.</p>
                                 </div>
                                 <div className="settings-field-control">
                                     <label className="settings-checkbox-label" htmlFor="settings-invert-colors">
@@ -445,8 +442,8 @@ const SettingsPage: React.FC = () => {
 
                             <div className="settings-field-row settings-checkbox-row">
                                 <div className="settings-field-copy">
-                                    <label htmlFor="settings-show-number-labels">Show wheel number labels</label>
-                                    <p id="settings-show-number-labels-help">Show or hide number labels on rendered roulette wheel frames.</p>
+                                    <label htmlFor="settings-show-number-labels">Show number labels</label>
+                                    <p id="settings-show-number-labels-help">Show number labels on rendered roulette wheels.</p>
                                 </div>
                                 <div className="settings-field-control">
                                     <label className="settings-checkbox-label" htmlFor="settings-show-number-labels">
@@ -473,15 +470,14 @@ const SettingsPage: React.FC = () => {
                         >
                             <div className="settings-section-header">
                                 <div>
-                                    <p className="page-eyebrow">Runtime</p>
                                     <h2>Training polling</h2>
                                 </div>
-                                <p>Control how often the parent application polls training progress and status.</p>
+                                <p>Set the polling cadence for future training runs.</p>
                             </div>
                             <div className="settings-field-row">
                                 <div className="settings-field-copy">
-                                    <label htmlFor="settings-polling-interval">Training polling interval</label>
-                                    <p id="settings-polling-help">Future training runs use the saved cadence. A running worker keeps the value captured when it started.</p>
+                                    <label htmlFor="settings-polling-interval">Polling interval</label>
+                                    <p id="settings-polling-help">Running workers keep their existing interval.</p>
                                 </div>
                                 <div className="settings-field-control settings-number-control">
                                     <input
@@ -517,15 +513,14 @@ const SettingsPage: React.FC = () => {
                         >
                             <div className="settings-section-header">
                                 <div>
-                                    <p className="page-eyebrow">Training compilation</p>
                                     <h2>JIT model construction</h2>
                                 </div>
-                                <p>These controls apply when a fresh training model is constructed, not to active or loaded checkpoint models. Use <code>eager</code> on Windows; <code>inductor</code> requires Triton. Saving checks runtime support and never silently falls back.</p>
+                                <p>Apply these settings to newly constructed training models.</p>
                             </div>
                             <div className="settings-field-row settings-checkbox-row">
                                 <div className="settings-field-copy">
                                     <label htmlFor="settings-jit-compile">Enable JIT compilation</label>
-                                    <p id="settings-jit-compile-help">Use the selected compiler backend for newly constructed training models.</p>
+                                    <p id="settings-jit-compile-help">Use the selected backend for new training models.</p>
                                 </div>
                                 <div className="settings-field-control">
                                     <label className="settings-checkbox-label" htmlFor="settings-jit-compile">
@@ -544,7 +539,7 @@ const SettingsPage: React.FC = () => {
                             <div className="settings-field-row">
                                 <div className="settings-field-copy">
                                     <label htmlFor="settings-jit-backend">JIT backend</label>
-                                    <p id="settings-jit-backend-help">Keep the backend value saved when JIT is disabled. Windows supports <code>eager</code>; <code>inductor</code> requires Triton on a supported platform.</p>
+                                    <p id="settings-jit-backend-help">Saved while JIT is off. Windows supports <code>eager</code>; <code>inductor</code> requires Triton on supported platforms.</p>
                                 </div>
                                 <div className="settings-field-control">
                                     <input
