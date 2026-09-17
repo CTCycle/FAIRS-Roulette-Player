@@ -1,6 +1,6 @@
 ## Workflows
 
-Last updated: 2026-09-11
+Last updated: 2026-09-17
 
 ## Training Workflow
 
@@ -9,7 +9,7 @@ Last updated: 2026-09-11
 3. Open training configuration and work through the six sections: Agent Configuration, Environment & Memory, Bet Strategy Policy, Dataset Configuration, Session & Compute, and Summary.
 4. Use the wizard breadcrumbs to revisit a section, confirm the summary, and start training.
 5. Monitor status, episode/step progress, loss/RMSE, validation metrics, reward, capital, current bet, strategy, epsilon, replay-buffer warm-up, and history charts.
-6. Review generated checkpoints from the checkpoint preview. When at least two checkpoints exist, use the comparison surface for a side-by-side view of their stored configuration and final training summaries.
+6. Review generated checkpoints from the checkpoint preview. Inspect metadata, open a checkpoint in Inference, resume training, or delete an obsolete checkpoint. When at least two checkpoints exist, choose **Compare** to open a modal with a side-by-side view of their stored configuration and final training summaries. A cancelled run is shown as stopped/cancelled and does not become a completed checkpoint.
 
 If the workflow is unfamiliar, open Help and choose the Training walkthrough for a short guided tour. It can be dismissed at any time with the X button and can later be reopened from Tips & Tricks.
 
@@ -41,7 +41,9 @@ Resume uses the same train/validation environment construction as initial traini
 3. Set initial capital and bet amount, then start an inference session.
 4. Review the agent suggestion and apply its suggested bet when appropriate.
 5. Step through rounds in the session history, entering or modifying observed values as needed.
-6. Use Play, Stop, Clear, and session shutdown controls as the experiment requires.
+6. Review the session history and use **Stop** to shut down the active session. After it stops, use **Clear** to delete the persisted step rows and return to a fresh setup. Navigation away from Inference and back restores an active session while the local backend session still exists; a backend restart ends process-local live sessions.
+
+Dynamic betting strategies show the strategy name, current bet, and suggested next bet with each prediction. **Apply Suggested Bet** updates the current bet only; it does not submit an observation or advance the round.
 
 For a new session, open Help and choose the Inference walkthrough if the setup-to-observation loop needs a quick refresher. The walkthrough is optional and does not open automatically on every Inference visit.
 
@@ -55,6 +57,7 @@ For a new session, open Help and choose the Inference walkthrough if the setup-t
 - Use the dataset browsing UI to inspect uploaded or generated datasets.
 - Remove obsolete datasets when they no longer serve the experiment lifecycle.
 - Keep checkpoints and datasets aligned so inference runs use the intended training lineage.
+- Delete dependent checkpoints before removing a dataset that is still referenced by a training lineage.
 - Treat checkpoint comparison values as stored training summaries, not as a standardized benchmark. A controlled benchmark requires identical evaluation data and protocol.
 
 ## Day-To-Day Usage Patterns

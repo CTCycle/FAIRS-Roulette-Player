@@ -7,11 +7,17 @@ interface UseCheckpointOptionsParams {
     onSelectCheckpoint: (checkpoint: string) => void;
 }
 
+interface UseCheckpointOptionsResult {
+    checkpoints: string[];
+    isLoading: boolean;
+}
+
 export const useCheckpointOptions = ({
     selectedCheckpoint,
     onSelectCheckpoint,
-}: UseCheckpointOptionsParams): string[] => {
+}: UseCheckpointOptionsParams): UseCheckpointOptionsResult => {
     const [checkpoints, setCheckpoints] = useState<string[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const latestCheckpointRef = useRef(selectedCheckpoint);
     const onSelectCheckpointRef = useRef(onSelectCheckpoint);
 
@@ -43,6 +49,10 @@ export const useCheckpointOptions = ({
                 if (!isAbortError(error)) {
                     console.error('Failed to load checkpoints:', error);
                 }
+            } finally {
+                if (mounted) {
+                    setIsLoading(false);
+                }
             }
         };
 
@@ -54,6 +64,6 @@ export const useCheckpointOptions = ({
         };
     }, []);
 
-    return checkpoints;
+    return { checkpoints, isLoading };
 };
 

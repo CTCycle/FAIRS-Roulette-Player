@@ -25,6 +25,7 @@ interface UseInferenceSetupOptionsParams {
 interface UseInferenceSetupOptionsResult {
     checkpoints: string[];
     datasets: InferenceDatasetOption[];
+    isLoading: boolean;
     checkpointMetadataMap: Record<string, CheckpointOptionMetadata>;
     selectedCheckpointMetadata: CheckpointOptionMetadata | undefined;
     selectedDatasetIsCompatible: boolean;
@@ -36,11 +37,15 @@ export const useInferenceSetupOptions = ({
 }: UseInferenceSetupOptionsParams): UseInferenceSetupOptionsResult => {
     const onSetupChangeRef = useRef(onSetupChange);
     const latestSetupRef = useRef(setup);
-    const checkpoints = useCheckpointOptions({
+    const {
+        checkpoints,
+        isLoading: isLoadingCheckpoints,
+    } = useCheckpointOptions({
         selectedCheckpoint: setup.checkpoint,
         onSelectCheckpoint: (nextCheckpoint) => onSetupChange({ checkpoint: nextCheckpoint }),
     });
     const [datasets, setDatasets] = useState<InferenceDatasetOption[]>([]);
+    const [isLoadingDatasets, setIsLoadingDatasets] = useState(true);
     const [checkpointMetadataMap, setCheckpointMetadataMap] = useState<Record<string, CheckpointOptionMetadata>>({});
 
     useEffect(() => {
@@ -74,6 +79,10 @@ export const useInferenceSetupOptions = ({
             } catch (err) {
                 if (!isAbortError(err)) {
                     console.error('Failed to load datasets:', err);
+                }
+            } finally {
+                if (mounted) {
+                    setIsLoadingDatasets(false);
                 }
             }
         };
@@ -204,6 +213,7 @@ export const useInferenceSetupOptions = ({
     return {
         checkpoints,
         datasets,
+        isLoading: isLoadingCheckpoints || isLoadingDatasets,
         checkpointMetadataMap,
         selectedCheckpointMetadata,
         selectedDatasetIsCompatible,
