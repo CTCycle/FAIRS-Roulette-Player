@@ -185,11 +185,29 @@ export type SettingsJobsResponse = {
 export type SettingsPatchRequest = {
     "device"?: SettingsDevicePatch | null;
     "jobs"?: SettingsJobsPatch | null;
+    "roulette"?: SettingsRoulettePatch | null;
 };
 
 export type SettingsResponse = {
     "device": SettingsDeviceResponse;
     "jobs": SettingsJobsResponse;
+    "roulette": SettingsRouletteResponse;
+};
+
+export type SettingsRoulettePatch = {
+    "exclude_zero"?: boolean | null;
+    "invert_colors"?: boolean | null;
+    "maximum_number"?: number | null;
+    "minimum_number"?: number | null;
+    "show_number_labels"?: boolean | null;
+};
+
+export type SettingsRouletteResponse = {
+    "exclude_zero": boolean;
+    "invert_colors": boolean;
+    "maximum_number": number;
+    "minimum_number": number;
+    "show_number_labels": boolean;
 };
 
 export type TrainingCheckpointDeleteResponse = {

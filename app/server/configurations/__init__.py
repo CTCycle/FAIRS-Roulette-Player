@@ -13,8 +13,10 @@ from server.contracts.configuration import (
     EnvDatabaseSettings,
     JsonDeviceSettings,
     JsonJobsSettings,
+    JsonRouletteSettings,
     JsonServerSettings,
     JobsSettings,
+    RouletteSettings,
     ServerSettings,
 )
 
@@ -27,9 +29,11 @@ __all__ = [
     "DatabaseSettings",
     "JobsSettings",
     "DeviceSettings",
+    "RouletteSettings",
     "ServerSettings",
     "EnvDatabaseSettings",
     "JsonJobsSettings",
     "JsonDeviceSettings",
+    "JsonRouletteSettings",
     "JsonServerSettings",
 ]

@@ -6,7 +6,9 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
+from server.common.roulette import filter_roulette_series
 from server.common.utils.logger import logger
+from server.contracts.configuration import RouletteSettings
 from server.contracts.inference import (
     InferenceBetUpdateRequest,
     InferenceStartRequest,
@@ -319,6 +321,7 @@ class InferenceService:
         payload: InferenceStartRequest,
         *,
         preserve_session_id: str | None = None,
+        roulette_settings: RouletteSettings | None = None,
     ) -> dict[str, Any]:
         with self._operation_lock:
             self._ensure_active()
@@ -339,6 +342,18 @@ class InferenceService:
                 if dataset is None:
                     raise FileNotFoundError(f"Dataset '{dataset_id}' was not found.")
                 dataset_context = self.dataset_repository.outcomes(dataset_id)
+                if roulette_settings is not None:
+                    dataset_context = filter_roulette_series(
+                        dataset_context,
+                        minimum_number=roulette_settings.minimum_number,
+                        maximum_number=roulette_settings.maximum_number,
+                        exclude_zero=roulette_settings.exclude_zero,
+                        column="outcome",
+                    )
+                    if dataset_context.empty:
+                        raise ValueError(
+                            "No inference outcomes remain after applying the configured roulette number pool."
+                        )
 
                 model, train_config, _, _ = self.checkpoint_service.load_checkpoint(
                     checkpoint
