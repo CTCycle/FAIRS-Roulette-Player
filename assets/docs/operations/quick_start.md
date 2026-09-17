@@ -1,6 +1,6 @@
 ## Quick Start
 
-Last updated: 2026-09-03
+Last updated: 2026-09-17
 
 ## Fastest Path
 
@@ -10,13 +10,13 @@ Last updated: 2026-09-03
 .\start_on_windows.ps1
 ```
 
-2. On first use, allow the launcher to prepare its portable runtimes, install Standard dependencies, and run the idempotent database create/upgrade step. Later starts reuse the environment when its readiness checks pass and still validate the database through Alembic during FastAPI lifespan.
+2. On first use, allow the launcher to prepare its portable runtimes, install Standard dependencies, and run the idempotent database create/upgrade step. Later starts reuse the environment when its readiness checks pass, rebuild stale frontend output when source inputs are newer, and still validate the database through Alembic during FastAPI lifespan.
 3. Open the UI at the configured frontend URL from `UI_HOST:UI_PORT`.
 4. Use the top navigation to switch between:
    - `Training`
    - `Inference`
 
-The launcher reports the backend and frontend URLs after both services pass their readiness checks.
+The launcher reports the backend and frontend URLs after both services pass their readiness checks. If Windows cannot open the browser automatically, open the printed frontend URL manually; the healthy services remain running.
 
 ## Primary Commands
 

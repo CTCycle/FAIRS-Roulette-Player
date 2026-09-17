@@ -530,7 +530,7 @@ const SettingsPage: React.FC = () => {
                                     <p className="page-eyebrow">Training compilation</p>
                                     <h2>JIT model construction</h2>
                                 </div>
-                                <p>These controls apply when a fresh training model is constructed, not to active or loaded checkpoint models.</p>
+                                <p>These controls apply when a fresh training model is constructed, not to active or loaded checkpoint models. Saving checks runtime support and never silently falls back.</p>
                             </div>
                             <div className="settings-field-row settings-checkbox-row">
                                 <div className="settings-field-copy">

@@ -40,8 +40,15 @@ def _map_training_exception(exc: Exception) -> HTTPException:
     response_model=TrainingConfig,
     status_code=status.HTTP_200_OK,
 )
-def validate_training(config: TrainingConfig) -> TrainingConfig:
+def validate_training(
+    config: TrainingConfig,
+    service: Any = Depends(get_training_service),
+) -> TrainingConfig:
     """Validate and normalize a training payload without starting work."""
+    try:
+        service.validate_runtime_settings()
+    except Exception as exc:
+        raise _map_training_exception(exc) from exc
     return config
 
 ###############################################################################

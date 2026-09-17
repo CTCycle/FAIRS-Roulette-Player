@@ -1,6 +1,6 @@
 ## Startup
 
-Last updated: 2026-09-10
+Last updated: 2026-09-17
 
 ## Local Application Startup
 
@@ -31,7 +31,7 @@ The launcher prepares or validates:
 
 `UV_PROJECT_ENVIRONMENT` targets the single server virtual environment. A failed `uv sync` is reported as a failure; the launcher no longer assumes that failure means a legacy environment path and does not delete/recreate the environment as an automatic compatibility retry.
 
-Normal launch skips dependency installation and frontend rebuilding when the runtime is already usable. Missing current runtimes or build output can still be installed/rebuilt through the normal current setup path.
+Normal launch skips dependency installation when the runtime is already usable. It also compares the built frontend with its source and build inputs; a stale `app/client/dist` is rebuilt before preview starts. Missing current runtimes or build output can still be installed/rebuilt through the normal current setup path.
 
 ## Cache Ownership
 
@@ -47,6 +47,7 @@ The cache action removes only these owned roots and recreates them as needed. Th
 - Uvicorn is launched with exactly one worker.
 - The built frontend is served through Vite preview in the local launcher flow.
 - Startup succeeds only after backend health, backend listener, frontend HTTP, and frontend listener checks succeed.
+- Opening the frontend in a browser is best-effort after those readiness checks. If Windows cannot hand the URL to a browser automatically, the launcher still reports a successful startup and prints the URL for manual opening.
 - Closing the browser does not stop the backend or live inference session.
 - Closing the application terminal is the local application stop boundary.
 - `RELOAD=true` is development-only because a reload discards process-local training and inference state.

@@ -5,6 +5,7 @@ from threading import RLock
 from typing import TYPE_CHECKING
 
 from server.common.utils.logger import logger
+from server.common.runtime_capabilities import validate_jit_runtime
 from server.configurations.management import ConfigurationManager
 from server.configurations.startup import get_configuration_manager
 from server.contracts.configuration import DeviceSettings, JobsSettings, JsonServerSettings
@@ -113,6 +114,8 @@ class SettingsService:
                 jit_backend=previous_json.device.jit_backend,
             ),
         )
+        if candidate.device.jit_compile and not previous_json.device.jit_compile:
+            validate_jit_runtime(candidate.device.jit_compile)
         self._manager().replace_json_settings(candidate)
         try:
             self.training_service.apply_runtime_settings(

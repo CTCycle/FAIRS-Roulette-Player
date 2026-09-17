@@ -486,6 +486,46 @@ function Test-FrontendBuildReady {
     return $true
 }
 
+function Get-FrontendBuildInputs {
+    $rootInputs = @(
+        'index.html',
+        'package.json',
+        'package-lock.json',
+        'tsconfig.json',
+        'tsconfig.app.json',
+        'tsconfig.node.json',
+        'vite.config.ts',
+        'vite.config.js'
+    )
+    $inputs = @(
+        $rootInputs | ForEach-Object {
+            $path = Join-Path $clientDir $_
+            if (Test-Path -LiteralPath $path -PathType Leaf) {
+                Get-Item -LiteralPath $path
+            }
+        }
+    )
+    foreach ($sourceDirectory in @('src', 'public')) {
+        $path = Join-Path $clientDir $sourceDirectory
+        if (Test-Path -LiteralPath $path -PathType Container) {
+            $inputs += @(Get-ChildItem -LiteralPath $path -Recurse -File -ErrorAction SilentlyContinue)
+        }
+    }
+    return @($inputs)
+}
+
+function Test-FrontendBuildCurrent {
+    if (-not (Test-FrontendBuildReady)) { return $false }
+
+    $frontendEntry = Join-Path $clientDir 'dist\index.html'
+    $buildTime = (Get-Item -LiteralPath $frontendEntry).LastWriteTimeUtc
+    $newestInput = Get-FrontendBuildInputs |
+        Sort-Object -Property LastWriteTimeUtc -Descending |
+        Select-Object -First 1
+    if ($null -eq $newestInput) { return $false }
+    return $newestInput.LastWriteTimeUtc -le $buildTime
+}
+
 function Test-DependenciesReady {
     $frontendPackage = Join-Path $clientDir 'package.json'
     $frontendLock = Join-Path $clientDir 'package-lock.json'
@@ -565,6 +605,10 @@ function Start-Application {
         Install-Dependencies -InstallationType 'Standard'
         Build-Frontend
     }
+    elseif (-not (Test-FrontendBuildCurrent)) {
+        Write-Step 'Frontend source or build inputs changed; rebuilding frontend.'
+        Build-Frontend
+    }
     else {
         Write-Ok 'Application environments are ready; skipped dependency installation.'
     }
@@ -622,7 +666,11 @@ function Start-Application {
         throw "Frontend preview did not become ready at $uiUrl. Close the application terminal if it is still open."
     }
 
-    Start-Process $uiUrl | Out-Null
+    try {
+        Start-Process -FilePath $uiUrl -ErrorAction Stop | Out-Null
+    } catch {
+        Write-Info "The browser could not be opened automatically ($($_.Exception.Message)). Open $uiUrl manually."
+    }
     Write-Host ''
     Write-Ok 'FAIRS started successfully.'
     Write-Host "Backend: $backendUrl (PID $backendPid)"

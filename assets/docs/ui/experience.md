@@ -1,6 +1,6 @@
 ## Experience
 
-Last updated: 2026-09-16
+Last updated: 2026-09-17
 
 ## Page Composition
 
@@ -16,8 +16,10 @@ Last updated: 2026-09-16
   - agent suggestion panel
   - large session history table on the right with editable observed values and row actions
 - `/settings`
-  - application-wide training polling interval
-  - fresh-model JIT compilation toggle and backend
+  - `Roulette`: inclusive outcome range and zero exclusion
+  - `Appearance`: red/black inversion and wheel number labels
+  - `Runtime`: application-wide training polling interval
+  - `Advanced`: fresh-model JIT compilation toggle and backend
   - backend-owned Save and Reset-to-defaults actions with local feedback
 - Walkthroughs do not open automatically. From Help, users can choose a three-step walkthrough for Training or Inference, covering data/setup, configuration/play, and monitoring/observation.
 
@@ -42,6 +44,7 @@ Composition rules:
 - Preserve explicit loading states for long-running or multi-step actions.
 - Settings loads from the backend before showing editable controls, saves only changed fields, and leaves environment and per-training configuration in their existing workflows.
 - Settings copy makes runtime scope explicit: polling changes affect future parent polling, while JIT changes apply to newly constructed models and do not rewrite active workers or checkpoint configuration.
+- Settings keeps the primary actions visible while the page scrolls. Enabling JIT is checked against runtime capability before the setting is persisted; unsupported runtimes receive an actionable error instead of a silent fallback.
 - Keep outcome and profit feedback immediate and visually distinct.
 - The training monitor calls the pre-learning replay-memory phase `Replay warm-up`; epsilon remains visible separately because epsilon-greedy exploration continues after learning begins.
 - Validation metrics are shown only when a fresh validation measurement exists rather than being visually carried forward across unsampled steps.

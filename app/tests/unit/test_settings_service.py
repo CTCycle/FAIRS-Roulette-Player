@@ -10,6 +10,7 @@ from pydantic import ValidationError
 from server.configurations.management import ConfigurationManager
 from server.contracts.configuration import DeviceSettings, JobsSettings
 from server.contracts.settings import SettingsPatchRequest
+from server.services import settings as settings_module
 from server.services.settings import SettingsPersistenceError, SettingsService
 
 ###############################################################################
@@ -135,7 +136,7 @@ def test_device_update_preserves_backend_when_jit_is_disabled(tmp_path: Path) ->
 
     service.update_settings(
         SettingsPatchRequest(
-            device={"jit_compile": True, "jit_backend": " eager "},
+            device={"jit_compile": False, "jit_backend": " eager "},
         )
     )
     updated = service.update_settings(SettingsPatchRequest(device={"jit_compile": False}))
@@ -150,7 +151,7 @@ def test_reset_uses_backend_defaults(tmp_path: Path) -> None:
     service.update_settings(
         SettingsPatchRequest(
             jobs={"polling_interval": 4.0},
-            device={"jit_compile": True, "jit_backend": "eager"},
+            device={"jit_compile": False, "jit_backend": "eager"},
             roulette={
                 "minimum_number": 3,
                 "maximum_number": 21,
@@ -172,6 +173,30 @@ def test_reset_uses_backend_defaults(tmp_path: Path) -> None:
     assert response.roulette.invert_colors is False
     assert response.roulette.show_number_labels is True
     assert training_service.jobs.polling_interval == 1.0
+
+###############################################################################
+def test_enabling_jit_runs_runtime_preflight_before_persistence(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    service, training_service, runtime_path = _build_service(tmp_path)
+    validator = Mock(side_effect=ValueError("JIT runtime unavailable"))
+    monkeypatch.setattr(settings_module, "validate_jit_runtime", validator)
+
+    with pytest.raises(ValueError, match="JIT runtime unavailable"):
+        service.update_settings(
+            SettingsPatchRequest(
+                device={"jit_compile": True, "jit_backend": "eager"},
+            )
+        )
+
+    validator.assert_called_once_with(True)
+    assert service.get_settings().device.jit_compile is False
+    assert training_service.device.jit_compile is False
+    assert json.loads(runtime_path.read_text(encoding="utf-8"))["device"] == {
+        "jit_compile": False,
+        "jit_backend": "inductor",
+    }
 
 ###############################################################################
 def test_propagation_failure_restores_persisted_and_training_state(

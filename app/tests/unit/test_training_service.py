@@ -5,6 +5,7 @@ from unittest.mock import Mock
 
 import pytest
 
+from server.contracts.configuration import DeviceSettings, JobsSettings
 from server.contracts.training import ResumeConfig, TrainingConfig
 from server.services.training_worker import run_training_process
 from server.services import training as training_module
@@ -63,6 +64,22 @@ def test_training_responses_use_injected_polling_interval() -> None:
 
     assert started["poll_interval"] == 2.5
     assert service.get_status()["poll_interval"] == 2.5
+
+###############################################################################
+def test_start_training_preflights_runtime_jit(monkeypatch) -> None:
+    service, training_run_manager, _ = build_service()
+    service.apply_runtime_settings(
+        JobsSettings(polling_interval=1.0),
+        DeviceSettings(jit_compile=True, jit_backend="eager"),
+    )
+    validator = Mock(side_effect=ValueError("JIT runtime unavailable"))
+    monkeypatch.setattr(training_module, "validate_jit_runtime", validator)
+
+    with pytest.raises(ValueError, match="JIT runtime unavailable"):
+        service.start_training(TrainingConfig(use_data_generator=True))
+
+    validator.assert_called_once_with(True)
+    training_run_manager.start_job.assert_not_called()
 
 ###############################################################################
 def test_resume_training_starts_resume_job() -> None:
