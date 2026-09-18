@@ -30,7 +30,7 @@ The remediation intentionally removes compatibility aliases, hybrid old/new path
 | Active inference state | `InferenceState` |
 | Frontend workflow/view state | feature-local React state/hooks |
 | Runtime lifecycle | FastAPI lifespan plus `bootstrap_runtime()` |
-| Launcher cache roots | `runtimes/cache`, `app/tests/cache` |
+| Cache ownership | `runtimes/cache` with fixed tool-specific child directories |
 
 ## Removed Compatibility And Duplication
 
@@ -89,7 +89,7 @@ The Windows launcher no longer:
 - retries failed dependency sync by assuming an old-location virtual environment;
 - includes obsolete root `.venv` or `.angular` paths in uninstall behavior.
 
-Only current application-owned runtime, dependency, build, and cache locations are managed.
+Only current application-owned runtime, dependency, build, and cache locations are managed. Every disposable cache is created below `runtimes/cache`; the cleanup action removes that root and recreates it on demand.
 
 ## Current Designs Intentionally Retained
 

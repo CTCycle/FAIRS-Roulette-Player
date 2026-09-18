@@ -8,31 +8,50 @@ set "SERVER_DIR=%APP_DIR%\server"
 set "CLIENT_DIR=%APP_DIR%\client"
 set "TESTS_DIR=%APP_DIR%\tests"
 set "RUNTIME_CACHE_DIR=%PROJECT_ROOT%\runtimes\cache"
-set "TEST_CACHE_DIR=%TESTS_DIR%\cache"
-set "PYTEST_CACHE_DIR=%TEST_CACHE_DIR%\pytest"
-set "RUFF_CACHE_DIR=%TEST_CACHE_DIR%\ruff"
+set "FAIRS_CACHE_DIR=%RUNTIME_CACHE_DIR%"
+set "UV_CACHE_DIR=%RUNTIME_CACHE_DIR%\uv"
+set "NPM_CONFIG_CACHE=%RUNTIME_CACHE_DIR%\npm"
+set "PIP_CACHE_DIR=%RUNTIME_CACHE_DIR%\pip"
+set "PYTHONPYCACHEPREFIX=%RUNTIME_CACHE_DIR%\python"
+set "PYTEST_CACHE_DIR=%RUNTIME_CACHE_DIR%\pytest"
+set "PYTEST_BASETEMP_DIR=%RUNTIME_CACHE_DIR%\pytest-tmp"
+set "RUFF_CACHE_DIR=%RUNTIME_CACHE_DIR%\ruff"
+set "MYPY_CACHE_DIR=%RUNTIME_CACHE_DIR%\mypy"
+set "COVERAGE_FILE=%RUNTIME_CACHE_DIR%\coverage\.coverage"
+set "PLAYWRIGHT_BROWSERS_PATH=%RUNTIME_CACHE_DIR%\playwright-browsers"
+set "KERAS_HOME=%RUNTIME_CACHE_DIR%\keras"
+set "TORCH_HOME=%RUNTIME_CACHE_DIR%\torch"
+set "TORCHINDUCTOR_CACHE_DIR=%RUNTIME_CACHE_DIR%\torch-inductor"
+set "TRITON_CACHE_DIR=%RUNTIME_CACHE_DIR%\triton"
+set "MPLCONFIGDIR=%RUNTIME_CACHE_DIR%\matplotlib"
+set "XDG_CACHE_HOME=%RUNTIME_CACHE_DIR%\xdg"
+set "CUDA_CACHE_PATH=%RUNTIME_CACHE_DIR%\cuda"
 set "SETTINGS_ENV=%PROJECT_ROOT%\settings\.env"
 set "VENV_PYTHON=%SERVER_DIR%\.venv\Scripts\python.exe"
 set "RUNTIME_NPM=%PROJECT_ROOT%\runtimes\nodejs\npm.cmd"
 set "RUNTIME_UV=%PROJECT_ROOT%\runtimes\uv\uv.exe"
-set "UV_CACHE_DIR=%RUNTIME_CACHE_DIR%"
-set "NPM_CONFIG_CACHE=%RUNTIME_CACHE_DIR%\npm"
-set "PIP_CACHE_DIR=%RUNTIME_CACHE_DIR%\pip"
-set "PYTHONPYCACHEPREFIX=%RUNTIME_CACHE_DIR%\python"
-set "MYPY_CACHE_DIR=%TEST_CACHE_DIR%\mypy"
-set "COVERAGE_FILE=%TEST_CACHE_DIR%\.coverage"
-set "PLAYWRIGHT_BROWSERS_PATH=%TEST_CACHE_DIR%\playwright-browsers"
 set "UV_LINK_MODE=copy"
 
 if not exist "%RUNTIME_CACHE_DIR%" mkdir "%RUNTIME_CACHE_DIR%"
+if not exist "%UV_CACHE_DIR%" mkdir "%UV_CACHE_DIR%"
 if not exist "%NPM_CONFIG_CACHE%" mkdir "%NPM_CONFIG_CACHE%"
 if not exist "%PIP_CACHE_DIR%" mkdir "%PIP_CACHE_DIR%"
 if not exist "%PYTHONPYCACHEPREFIX%" mkdir "%PYTHONPYCACHEPREFIX%"
-if not exist "%TEST_CACHE_DIR%" mkdir "%TEST_CACHE_DIR%"
 if not exist "%PYTEST_CACHE_DIR%" mkdir "%PYTEST_CACHE_DIR%"
+if not exist "%PYTEST_BASETEMP_DIR%" mkdir "%PYTEST_BASETEMP_DIR%"
 if not exist "%RUFF_CACHE_DIR%" mkdir "%RUFF_CACHE_DIR%"
 if not exist "%MYPY_CACHE_DIR%" mkdir "%MYPY_CACHE_DIR%"
+if not exist "%RUNTIME_CACHE_DIR%\coverage" mkdir "%RUNTIME_CACHE_DIR%\coverage"
 if not exist "%PLAYWRIGHT_BROWSERS_PATH%" mkdir "%PLAYWRIGHT_BROWSERS_PATH%"
+if not exist "%RUNTIME_CACHE_DIR%\vite" mkdir "%RUNTIME_CACHE_DIR%\vite"
+if not exist "%RUNTIME_CACHE_DIR%\typescript" mkdir "%RUNTIME_CACHE_DIR%\typescript"
+if not exist "%KERAS_HOME%" mkdir "%KERAS_HOME%"
+if not exist "%TORCH_HOME%" mkdir "%TORCH_HOME%"
+if not exist "%TORCHINDUCTOR_CACHE_DIR%" mkdir "%TORCHINDUCTOR_CACHE_DIR%"
+if not exist "%TRITON_CACHE_DIR%" mkdir "%TRITON_CACHE_DIR%"
+if not exist "%MPLCONFIGDIR%" mkdir "%MPLCONFIGDIR%"
+if not exist "%XDG_CACHE_HOME%" mkdir "%XDG_CACHE_HOME%"
+if not exist "%CUDA_CACHE_PATH%" mkdir "%CUDA_CACHE_PATH%"
 
 set "FASTAPI_HOST=127.0.0.1"
 set "FASTAPI_PORT=8890"
@@ -134,6 +153,14 @@ if not "%UV_SYNC_RC%"=="0" (
   exit /b %UV_SYNC_RC%
 )
 
+echo [STEP] Ensuring Playwright Chromium browser...
+"%PYTHON_CMD%" -m playwright install chromium
+set "PLAYWRIGHT_INSTALL_RC=%ERRORLEVEL%"
+if not "%PLAYWRIGHT_INSTALL_RC%"=="0" (
+  echo [ERROR] Playwright browser installation failed with code %PLAYWRIGHT_INSTALL_RC%.
+  exit /b %PLAYWRIGHT_INSTALL_RC%
+)
+
 set "PYTEST_TARGET=%TESTS_DIR%"
 if not "%STANDARD_TEST_PYTEST_TARGET%"=="" set "PYTEST_TARGET=%STANDARD_TEST_PYTEST_TARGET%"
 set "HAS_E2E=0"
@@ -217,7 +244,7 @@ if /i "%STANDARD_TEST_SKIP_LIVE_SERVERS%"=="false" if "%HAS_E2E%"=="1" (
 )
 
 echo [STEP] Running Python tests...
-"%PYTHON_CMD%" -m pytest "%PYTEST_TARGET%" -v --tb=short -o "cache_dir=%PYTEST_CACHE_DIR%" %*
+"%PYTHON_CMD%" -m pytest "%PYTEST_TARGET%" -v --tb=short -o "cache_dir=%PYTEST_CACHE_DIR%" --basetemp "%PYTEST_BASETEMP_DIR%" %*
 set "PYTEST_RC=%ERRORLEVEL%"
 if "%PYTEST_RC%"=="0" (
   set "PYTEST_PHASE=PASS"

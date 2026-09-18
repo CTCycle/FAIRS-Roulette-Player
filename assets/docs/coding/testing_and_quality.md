@@ -32,11 +32,11 @@ Primary automated test surfaces live under `app/tests`:
 - `app/tests/e2e`
   - API and workflow coverage
 - `app/tests/run_tests.bat`
-  - repository-standard Windows test entry point
-- `app/tests/pytest.ini`
-  - keeps pytest's cache under `app/tests/cache/pytest`, limits collection to `unit` and `e2e`, and excludes generated/cache directories; Ruff and other test tooling use sibling paths below `app/tests/cache`
+  - repository-standard Windows test entry point; synchronizes the test extra and ensures Playwright Chromium is installed below `runtimes/cache/playwright-browsers` before collection
+- `pytest.ini`
+  - keeps pytest's cache and basetemp under `runtimes/cache/pytest` and `runtimes/cache/pytest-tmp`, limits collection to `app/tests/unit` and `app/tests/e2e`, and excludes generated/cache directories; Ruff and other test tooling use sibling paths below `runtimes/cache`
 - `.github/workflows/ci.yml`
-  - Linux CI runs the backend Ruff/unit/Alembic/OpenAPI/PostgreSQL checks and a separate frontend lint/build job. Python dependencies resolve from `app/server/pyproject.toml` when `uv.lock` is absent, and Ruff reads that same project file directly; neither a committed lockfile nor a standalone `ruff.toml` is required by the workflow.
+  - Linux CI runs the backend Ruff/unit/Alembic/OpenAPI/PostgreSQL checks and a separate frontend lint/build job. Python dependencies resolve from `app/server/pyproject.toml` when `uv.lock` is absent, while the repository-root `ruff.toml` owns Ruff’s canonical cache path; generated QA assets are excluded from lint traversal.
 
 ## Migration Validation
 
