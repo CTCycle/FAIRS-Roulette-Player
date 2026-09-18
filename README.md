@@ -57,6 +57,8 @@ With the default settings, the [main interface](http://127.0.0.1:8051) is availa
 
 Later launches normally reuse the prepared environment when the installed backend package metadata and frontend build are current. If a required runtime, dependency, backend package, or frontend build is missing or stale, option 1 attempts to recover it before starting the application.
 
+The launcher keeps the backend terminal visible while the application is running.
+
 Close the application terminal to stop the local application session.
 
 ### Launcher menu

@@ -1,6 +1,6 @@
 ## Configuration
 
-Last updated: 2026-09-17
+Last updated: 2026-09-18
 
 ## Configuration Ownership
 
@@ -20,7 +20,6 @@ The runtime consumes these environment keys:
 - `FASTAPI_PORT`
 - `UI_HOST`
 - `UI_PORT`
-- `BACKEND_LOGS_VISIBLE`
 - `ENABLE_API_DOCS`
 - `RELOAD`
 - `FAIRS_DATA_DIR`
@@ -41,7 +40,7 @@ The runtime consumes these environment keys:
 
 `settings/.env.example` is the canonical environment template. The Windows launcher copies it to `settings/.env` only when `.env` does not yet exist. It never overlays a hardcoded default map on an existing `.env`.
 
-For launcher operations, the following values must be explicitly present and non-empty in `.env`: `FASTAPI_HOST`, `FASTAPI_PORT`, `UI_HOST`, `UI_PORT`, `RELOAD`, `BACKEND_LOGS_VISIBLE`, and `EMBEDDED_DATABASE`. An existing stale `.env` that omits them fails with an actionable message instead of silently inheriting compatibility defaults.
+For launcher operations, the following values must be explicitly present and non-empty in `.env`: `FASTAPI_HOST`, `FASTAPI_PORT`, `UI_HOST`, `UI_PORT`, `RELOAD`, and `EMBEDDED_DATABASE`. An existing stale `.env` that omits them fails with an actionable message instead of silently inheriting compatibility defaults.
 
 `FAIRS_DATA_DIR` may be empty. An empty value means the normal `app/resources` data root.
 
@@ -112,7 +111,6 @@ The training wizard may provide presentation-level input constraints, but it doe
 - FastAPI construction remains import-safe. Runtime bootstrap and mutable environment loading occur in lifespan startup.
 - `WEB_CONCURRENCY`, `UVICORN_WORKERS`, and `FAIRS_WORKERS` must be unset or exactly `1` because live jobs and inference models are process-local.
 - `RELOAD=true` is development-only and expires process-local training/inference state when the process reloads.
-- `BACKEND_LOGS_VISIBLE` is an explicit launcher configuration value, not an implicit launcher default.
 - The backend creates timestamped `FAIRS_*.log` files under the active data root.
 - Settings changes update future parent polling immediately. A newly started worker reads the current roulette settings and receives the current polling and JIT launch snapshot; an active worker keeps the values captured when it started. Resuming a checkpoint uses the current runtime settings while preserving the checkpoint's model configuration.
 - Live inference step validation reads the current roulette number-pool settings, so changing the range or zero exclusion affects subsequent observations in the same application session without a restart.
