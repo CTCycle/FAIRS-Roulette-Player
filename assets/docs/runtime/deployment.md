@@ -1,6 +1,6 @@
 ## Deployment
 
-Last updated: 2026-09-17
+Last updated: 2026-09-18
 
 ## Supported Distribution
 
@@ -21,7 +21,7 @@ FAIRS is distributed as source and run locally from its repository through `star
 - No container deployment path is documented or supported in this repository.
 - Training workloads remain compute-heavy and depend on the existing worker-process model.
 - The launcher is the supported operational boundary for preparing runtimes, starting services, testing, and removing generated dependencies/build output while preserving source and user data.
-- The launcher starts the backend in a dedicated visible PowerShell application terminal by default; closing that terminal is the local stop action. Keep the configured backend and UI ports dedicated to FAIRS.
+- The launcher always starts the backend in a dedicated visible PowerShell application terminal; closing that terminal is the local stop action. Keep the configured backend and UI ports dedicated to FAIRS.
 - `RELOAD=true` is development-only because reload replaces the process-local training and inference state. Multiple Uvicorn workers are unsupported and rejected.
 - Closing the browser does not stop the backend or active inference sessions. Sessions end on capacity eviction or backend shutdown; closing the application terminal is the local shutdown boundary, and a backend restart intentionally expires live model state.
 
