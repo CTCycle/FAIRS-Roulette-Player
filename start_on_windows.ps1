@@ -625,6 +625,47 @@ function Get-PortProcessIds([int]$Port) {
     } | Sort-Object -Unique)
 }
 
+function Get-ApplicationProcessRecords {
+    $processes = @(Get-CimInstance -ClassName Win32_Process -ErrorAction Stop)
+    $repoRootPrefix = ([IO.Path]::GetFullPath($repoRoot)).TrimEnd('\') + '\'
+    $repoRootPattern = [regex]::Escape($repoRootPrefix.TrimEnd('\'))
+    $applicationCommandPattern = '(?i)(\buvicorn\b|server\.app:app|\bnpm(?:\.cmd)?\b[^\r\n]*\brun\s+preview\b|\bvite(?:\.cmd)?\b[^\r\n]*\bpreview\b)'
+    $applicationProcessIds = [Collections.Generic.HashSet[int]]::new()
+
+    foreach ($process in $processes) {
+        $processId = [int]$process.ProcessId
+        if ($processId -eq $PID) { continue }
+
+        $executablePath = [string]$process.ExecutablePath
+        $commandLine = [string]$process.CommandLine
+        $repositoryRuntime = -not [string]::IsNullOrWhiteSpace($executablePath) -and
+            $executablePath.StartsWith($repoRootPrefix, [StringComparison]::OrdinalIgnoreCase)
+        $applicationCommand = $commandLine -match $repoRootPattern -and
+            $commandLine -match $applicationCommandPattern
+
+        if ($repositoryRuntime -or $applicationCommand) {
+            [void]$applicationProcessIds.Add($processId)
+        }
+    }
+
+    do {
+        $addedProcess = $false
+        foreach ($process in $processes) {
+            $processId = [int]$process.ProcessId
+            $parentProcessId = [int]$process.ParentProcessId
+            if (-not $applicationProcessIds.Contains($processId) -and
+                $applicationProcessIds.Contains($parentProcessId)) {
+                [void]$applicationProcessIds.Add($processId)
+                $addedProcess = $true
+            }
+        }
+    } while ($addedProcess)
+
+    return @($processes | Where-Object {
+        $applicationProcessIds.Contains([int]$_.ProcessId)
+    } | Sort-Object ProcessId)
+}
+
 function Assert-ApplicationStopped {
     $fastApiPort = [int]$env:FASTAPI_PORT
     $uiPort = [int]$env:UI_PORT
@@ -782,6 +823,80 @@ function Confirm-DestructiveAction([string]$Description) {
         return $false
     }
     return $true
+}
+
+function Stop-ApplicationProcesses {
+    $processes = @(Get-ApplicationProcessRecords)
+    if ($processes.Count -eq 0) {
+        Write-Info 'No FAIRS application processes were found.'
+        return
+    }
+
+    if (-not (Confirm-DestructiveAction "stop all FAIRS application processes ($($processes.Count) found)")) {
+        return
+    }
+
+    Write-Info 'Stopping FAIRS application processes and their child processes.'
+    foreach ($process in $processes) {
+        Write-Host "  $($process.Name) (PID $($process.ProcessId))"
+    }
+
+    $processesById = @{}
+    foreach ($process in $processes) {
+        $processesById[[int]$process.ProcessId] = $process
+    }
+    $orderedProcesses = @($processes | Sort-Object @{
+            Expression = {
+                $depth = 0
+                $parentProcessId = [int]$_.ParentProcessId
+                while ($processesById.ContainsKey($parentProcessId) -and $depth -lt 100) {
+                    $depth++
+                    $parentProcessId = [int]$processesById[$parentProcessId].ParentProcessId
+                }
+                $depth
+            }
+            Descending = $true
+        })
+    $stopErrors = [Collections.Generic.List[string]]::new()
+
+    foreach ($process in $orderedProcesses) {
+        $processId = [int]$process.ProcessId
+        if (-not (Get-Process -Id $processId -ErrorAction SilentlyContinue)) { continue }
+        try {
+            Stop-Process -Id $processId -Force -ErrorAction Stop
+        } catch {
+            if (Get-Process -Id $processId -ErrorAction SilentlyContinue) {
+                [void]$stopErrors.Add("$($process.Name) (PID $processId): $($_.Exception.Message)")
+            }
+        }
+    }
+
+    $remainingProcesses = @()
+    for ($attempt = 0; $attempt -lt 3; $attempt++) {
+        Start-Sleep -Milliseconds 300
+        $remainingProcesses = @(Get-ApplicationProcessRecords)
+        if ($remainingProcesses.Count -eq 0) { break }
+        foreach ($process in $remainingProcesses) {
+            try {
+                Stop-Process -Id ([int]$process.ProcessId) -Force -ErrorAction Stop
+            } catch {
+                if (Get-Process -Id ([int]$process.ProcessId) -ErrorAction SilentlyContinue) {
+                    [void]$stopErrors.Add("$($process.Name) (PID $($process.ProcessId)): $($_.Exception.Message)")
+                }
+            }
+        }
+    }
+
+    if ($remainingProcesses.Count -gt 0 -or $stopErrors.Count -gt 0) {
+        $remainingSummary = @($remainingProcesses | ForEach-Object {
+                "$($_.Name) (PID $($_.ProcessId))"
+            }) -join ', '
+        $errorSummary = @($stopErrors) -join '; '
+        $details = @($remainingSummary, $errorSummary | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }) -join ' '
+        throw "Could not stop all FAIRS application processes. $details"
+    }
+
+    Write-Ok "Stopped $($processes.Count) FAIRS application process(es)."
 }
 
 function Remove-Logs {
@@ -1042,6 +1157,7 @@ function Get-LauncherMenuEntries {
         [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'Checkpoints'; Label = 'Remove checkpoints'; Description = 'Delete saved checkpoints only'; Color = [ConsoleColor]::Red }
         [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'AllData'; Label = 'Remove all data'; Description = 'Delete local database and logs, preserving checkpoints'; Color = [ConsoleColor]::Red }
         [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'Uninstall'; Label = 'Uninstall application'; Description = 'Remove local runtimes, caches, dependencies, and build outputs'; Color = [ConsoleColor]::Red }
+        [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'StopProcesses'; Label = 'Stop all app processes'; Description = 'Terminate the backend, frontend, and child processes'; Color = [ConsoleColor]::Red }
         [pscustomobject]@{ Section = 'EXIT'; Key = 'Exit'; Label = 'Exit'; Description = 'Close this launcher'; Color = [ConsoleColor]::DarkGray }
     )
 }
@@ -1125,6 +1241,7 @@ function Show-Menu {
                     'Checkpoints' { Remove-Checkpoints }
                     'AllData' { Remove-AllData }
                     'Uninstall' { Uninstall-Application }
+                    'StopProcesses' { Stop-ApplicationProcesses }
                 }
             }
             if (-not $script:LauncherInteractive) { break }
