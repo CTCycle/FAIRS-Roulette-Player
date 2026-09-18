@@ -1,6 +1,6 @@
 ## Startup
 
-Last updated: 2026-09-17
+Last updated: 2026-09-18
 
 ## Local Application Startup
 
@@ -45,6 +45,7 @@ Normal launch skips dependency installation when the runtime and installed backe
 - Opening the frontend in a browser is best-effort after those readiness checks. If Windows cannot hand the URL to a browser automatically, the launcher still reports a successful startup and prints the URL for manual opening.
 - Closing the browser does not stop the backend or live inference session.
 - Closing the application terminal is the local application stop boundary.
+- If the application terminal is unavailable, use launcher option 13, `Stop all app processes`, and confirm the `[y/N]` prompt to terminate the repository-owned backend/frontend process tree.
 - `RELOAD=true` is development-only because a reload discards process-local training and inference state.
 
 ## Database Behavior

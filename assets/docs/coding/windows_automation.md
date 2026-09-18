@@ -1,6 +1,6 @@
 ## Windows Automation
 
-Last updated: 2026-09-17
+Last updated: 2026-09-18
 
 ## Scope
 
@@ -37,6 +37,7 @@ A failed dependency sync is surfaced directly. Do not interpret it as evidence o
 
 - Maintenance, database, testing, update, uninstall, and data-removal actions require the application terminal to be closed.
 - There is no separate stop daemon. Closing the application terminal is the local stop action; closing the browser is not.
+- The maintenance menu's `Stop all app processes` action requires confirmation and stops repository-owned backend/frontend processes together with their child process tree; it does not target browser processes.
 - Startup is complete only after backend and frontend readiness checks succeed.
 - A launch checks the installed backend package metadata against `app/server/pyproject.toml` and checks frontend source/build-input timestamps against `app/client/dist/index.html`; stale backend metadata triggers dependency synchronization and stale frontend output triggers a rebuild.
 - Browser URL handoff is best-effort after service readiness; a handoff failure must leave the healthy services running and print the configured URL.

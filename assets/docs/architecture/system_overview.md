@@ -1,6 +1,6 @@
 ## System Overview
 
-Last updated: 2026-09-17
+Last updated: 2026-09-18
 
 ## Current State
 
@@ -128,6 +128,8 @@ Learning code receives explicit validated configuration and prepared data. It do
 ## Runtime Boundary
 
 The repository supports one local backend process. It does not implement a distributed job store, distributed inference-session store, or multi-worker coordination. One Uvicorn worker is therefore an explicit runtime invariant.
+
+The Windows launcher includes a confirmed maintenance action that stops repository-owned backend/frontend processes and their child process tree without targeting the browser.
 
 ## Related Files
 

@@ -1,12 +1,12 @@
 ## Troubleshooting
 
-Last updated: 2026-09-17
+Last updated: 2026-09-18
 
 ## Startup Problems
 
 - If local startup fails, run option 2 in `start_on_windows.ps1` and choose `Standard` to resync runtimes and application dependencies.
 - If test or browser tooling is missing, run option 2 and choose `Development` so the server's `test` extra is installed.
-- If the configured ports are already occupied by a previous session, close that session's application terminal. Keep the ports dedicated to FAIRS; otherwise stop the unrelated service through its own owner or choose different configured ports.
+- If the configured ports are already occupied by a previous session, close that session's application terminal or use launcher option 13, `Stop all app processes`. Keep the ports dedicated to FAIRS; otherwise stop the unrelated service through its own owner or choose different configured ports.
 - If the backend starts without the frontend, verify that `app/client/node_modules` contains Vite and that `app/client/dist/index.html` and its generated assets exist; close the application terminal before retrying option 1, run option 3 for a frontend-only rebuild, or run option 2 when frontend dependencies also need updating.
 - Maintenance actions require the application terminal to be closed first. If npm reports `EPERM` for `esbuild.exe`, stop any external Vite or Node process using `app/client/node_modules` through its own owner and retry.
 - If the launcher reports a backend readiness failure, open `http://<FASTAPI_HOST>:<FASTAPI_PORT>/api/health` and inspect the generated `FAIRS_*.log` file.
