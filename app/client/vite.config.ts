@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
 const envDir = path.resolve(__dirname, '../../settings')
+const cacheRoot = path.resolve(__dirname, '../../runtimes/cache')
 const INTERNAL_API_BASE = '/api'
 
 export default defineConfig(({ mode }) => {
@@ -21,6 +22,7 @@ export default defineConfig(({ mode }) => {
     const uiPort = Number(env.UI_PORT || '5173')
 
     return {
+        cacheDir: path.join(cacheRoot, 'vite'),
         plugins: [react()],
         server: {
             host: uiHost,

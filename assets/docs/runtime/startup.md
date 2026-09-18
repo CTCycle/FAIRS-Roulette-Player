@@ -35,12 +35,7 @@ Normal launch skips dependency installation when the runtime and installed backe
 
 ## Cache Ownership
 
-There are two canonical cache roots:
-
-- runtime caches: `runtimes/cache`
-- test/tool caches: `app/tests/cache`
-
-The cache action removes only these owned roots and recreates them as needed. The launcher does not discover or clean historical project-local cache names. Obsolete cache directories, if manually left in an old checkout, are not part of current application ownership.
+`runtimes/cache` is the only canonical cache root. Fixed child directories contain runtime, dependency, application, frontend, and test/tool caches. The cache action removes this root and recreates it as needed. The launcher does not discover or clean historical project-local cache names. Obsolete cache directories, if manually left in an old checkout, are outside current ownership and should be removed during repository cleanup.
 
 ## Application Lifecycle
 
@@ -74,7 +69,6 @@ Log removal, cache clearing, checkpoint deletion, local data removal, and uninst
 Uninstall removes only current application-owned runtime/dependency/build locations:
 
 - `runtimes`
-- `app/tests/cache`
 - `app/server/.venv`
 - `app/client/node_modules`
 - `app/client/dist`

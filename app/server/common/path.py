@@ -7,6 +7,7 @@ APP_DIR = ROOT_DIR / "app"
 SERVER_DIR = APP_DIR / "server"
 CLIENT_DIR = APP_DIR / "client"
 SETTINGS_DIR = ROOT_DIR / "settings"
+CACHE_PATH = ROOT_DIR / "runtimes" / "cache"
 DATA_DIR: Path | None = None
 RESOURCES_PATH = APP_DIR / "resources"
 LOGS_PATH = RESOURCES_PATH / "logs"
@@ -28,13 +29,24 @@ CHECKPOINT_STRATEGY_MODEL_FILE_NAME = "strategy.keras"
 CHECKPOINT_COMPLETE_FILE_NAME = ".complete"
 
 ###############################################################################
+def _paths_overlap(left: Path, right: Path) -> bool:
+    return left == right or left.is_relative_to(right) or right.is_relative_to(left)
+
+###############################################################################
 def configure_runtime_paths(data_dir: str | Path | None = None) -> None:
     """Resolve mutable runtime paths after environment loading."""
     global CHECKPOINT_PATH, DATABASE_PATH, DATA_DIR, LOGS_PATH, RESOURCES_PATH
     global RUNTIME_SETTINGS_FILE
 
     configured = str(data_dir).strip() if data_dir is not None else ""
-    DATA_DIR = Path(configured).expanduser().resolve() if configured else None
+    configured_data_dir = Path(configured).expanduser().resolve() if configured else None
+    if configured_data_dir is not None and _paths_overlap(configured_data_dir, CACHE_PATH):
+        raise ValueError(
+            "FAIRS_DATA_DIR must not overlap the canonical disposable cache root "
+            f"'{CACHE_PATH}'. Choose a persistent data directory outside runtimes/cache."
+        )
+
+    DATA_DIR = configured_data_dir
     RESOURCES_PATH = DATA_DIR if DATA_DIR is not None else APP_DIR / "resources"
     LOGS_PATH = RESOURCES_PATH / "logs"
     CHECKPOINT_PATH = RESOURCES_PATH / "checkpoints"

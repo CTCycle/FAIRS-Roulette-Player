@@ -23,9 +23,27 @@ $venvPython = Join-Path $venvDir 'Scripts\python.exe'
 $envFile = Join-Path $repoRoot 'settings\.env'
 $envExample = Join-Path $repoRoot 'settings\.env.example'
 $runtimeCacheDir = Join-Path $runtimeRoot 'cache'
-$testCacheDir = Join-Path $testsDir 'cache'
-$pytestCacheDir = Join-Path $testCacheDir 'pytest'
-$ruffCacheDir = Join-Path $testCacheDir 'ruff'
+$cacheDirectories = [ordered]@{
+    uv = Join-Path $runtimeCacheDir 'uv'
+    npm = Join-Path $runtimeCacheDir 'npm'
+    pip = Join-Path $runtimeCacheDir 'pip'
+    python = Join-Path $runtimeCacheDir 'python'
+    pytest = Join-Path $runtimeCacheDir 'pytest'
+    'pytest-tmp' = Join-Path $runtimeCacheDir 'pytest-tmp'
+    ruff = Join-Path $runtimeCacheDir 'ruff'
+    mypy = Join-Path $runtimeCacheDir 'mypy'
+    coverage = Join-Path $runtimeCacheDir 'coverage'
+    'playwright-browsers' = Join-Path $runtimeCacheDir 'playwright-browsers'
+    vite = Join-Path $runtimeCacheDir 'vite'
+    typescript = Join-Path $runtimeCacheDir 'typescript'
+    keras = Join-Path $runtimeCacheDir 'keras'
+    torch = Join-Path $runtimeCacheDir 'torch'
+    'torch-inductor' = Join-Path $runtimeCacheDir 'torch-inductor'
+    triton = Join-Path $runtimeCacheDir 'triton'
+    matplotlib = Join-Path $runtimeCacheDir 'matplotlib'
+    xdg = Join-Path $runtimeCacheDir 'xdg'
+    cuda = Join-Path $runtimeCacheDir 'cuda'
+}
 $script:NextProgressId = 1
 $script:ActiveProgressActivities = [Collections.Generic.Dictionary[int, string]]::new()
 $script:LauncherInteractive = -not [Console]::IsInputRedirected -and -not [Console]::IsOutputRedirected
@@ -124,29 +142,26 @@ function Invoke-TrackedLauncherAction {
 # Filesystem and cache helpers
 # -----------------------------------------------------------------------------
 function Set-CacheEnvironment {
-    $runtimeCachePaths = @(
-        $runtimeCacheDir,
-        (Join-Path $runtimeCacheDir 'npm'),
-        (Join-Path $runtimeCacheDir 'pip'),
-        (Join-Path $runtimeCacheDir 'python')
-    )
-    $testCachePaths = @(
-        $testCacheDir,
-        $pytestCacheDir,
-        $ruffCacheDir,
-        (Join-Path $testCacheDir 'mypy'),
-        (Join-Path $testCacheDir 'playwright-browsers')
-    )
-    New-Item -ItemType Directory -Path ($runtimeCachePaths + $testCachePaths) -Force | Out-Null
+    New-Item -ItemType Directory -Path (@($runtimeCacheDir) + @($cacheDirectories.Values)) -Force | Out-Null
 
-    $env:UV_CACHE_DIR = $runtimeCacheDir
-    $env:NPM_CONFIG_CACHE = Join-Path $runtimeCacheDir 'npm'
-    $env:PIP_CACHE_DIR = Join-Path $runtimeCacheDir 'pip'
-    $env:PYTHONPYCACHEPREFIX = Join-Path $runtimeCacheDir 'python'
-    $env:RUFF_CACHE_DIR = $ruffCacheDir
-    $env:MYPY_CACHE_DIR = Join-Path $testCacheDir 'mypy'
-    $env:COVERAGE_FILE = Join-Path $testCacheDir '.coverage'
-    $env:PLAYWRIGHT_BROWSERS_PATH = Join-Path $testCacheDir 'playwright-browsers'
+    $env:FAIRS_CACHE_DIR = $runtimeCacheDir
+    $env:UV_CACHE_DIR = $cacheDirectories['uv']
+    $env:NPM_CONFIG_CACHE = $cacheDirectories['npm']
+    $env:PIP_CACHE_DIR = $cacheDirectories['pip']
+    $env:PYTHONPYCACHEPREFIX = $cacheDirectories['python']
+    $env:PYTEST_CACHE_DIR = $cacheDirectories['pytest']
+    $env:PYTEST_BASETEMP_DIR = $cacheDirectories['pytest-tmp']
+    $env:RUFF_CACHE_DIR = $cacheDirectories['ruff']
+    $env:MYPY_CACHE_DIR = $cacheDirectories['mypy']
+    $env:COVERAGE_FILE = Join-Path $cacheDirectories['coverage'] '.coverage'
+    $env:PLAYWRIGHT_BROWSERS_PATH = $cacheDirectories['playwright-browsers']
+    $env:KERAS_HOME = $cacheDirectories['keras']
+    $env:TORCH_HOME = $cacheDirectories['torch']
+    $env:TORCHINDUCTOR_CACHE_DIR = $cacheDirectories['torch-inductor']
+    $env:TRITON_CACHE_DIR = $cacheDirectories['triton']
+    $env:MPLCONFIGDIR = $cacheDirectories['matplotlib']
+    $env:XDG_CACHE_HOME = $cacheDirectories['xdg']
+    $env:CUDA_CACHE_PATH = $cacheDirectories['cuda']
 }
 
 function Remove-LauncherPath {
@@ -258,7 +273,7 @@ function Remove-PathBestEffort([string]$Path) {
 }
 
 function Get-CacheCleanupPaths {
-    return @($runtimeCacheDir, $testCacheDir)
+    return @($runtimeCacheDir)
 }
 
 # -----------------------------------------------------------------------------
@@ -368,6 +383,7 @@ function Import-DotEnv {
     if ($missingVariables.Count -gt 0) {
         throw "settings\.env is missing required launcher variable(s): $($missingVariables -join ', '). Update it from settings\.env.example."
     }
+    Assert-DataCacheIsolation
 }
 
 function Ensure-PortableRuntimes {
@@ -479,12 +495,18 @@ function Install-Dependencies {
         Remove-PathBestEffort $runtimeCacheDir | Out-Null
         Set-CacheEnvironment
     }
+    if ($InstallationType -eq 'Development') {
+        Write-Step 'Installing Playwright Chromium browser.'
+        & $venvPython -m playwright install chromium
+        if ($LASTEXITCODE -ne 0) { throw "Playwright browser installation failed with exit code $LASTEXITCODE." }
+    }
     Write-Ok 'Dependencies are installed.'
 }
 
 function Build-Frontend {
     Import-DotEnv
     Assert-ApplicationStopped
+    Set-CacheEnvironment
     Write-Step 'Building frontend.'
     Push-Location $clientDir
     try {
@@ -792,7 +814,7 @@ function Remove-UserLogFiles([string]$Path) {
 function Clear-Cache {
     Import-DotEnv
     Assert-ApplicationStopped
-    if (-not (Confirm-DestructiveAction 'clear canonical runtime and test caches')) { return }
+    if (-not (Confirm-DestructiveAction 'clear all disposable caches under runtimes/cache')) { return }
 
     $cachePaths = @(Get-CacheCleanupPaths)
     $progressId = Start-LauncherProgress -Activity 'FAIRS: clear caches' -Status "0 of $($cachePaths.Count) roots"
@@ -807,7 +829,7 @@ function Clear-Cache {
         Complete-LauncherProgress $progressId
     }
     Set-CacheEnvironment
-    Write-Ok 'Canonical runtime and test caches cleared. Locked or protected entries were skipped.'
+    Write-Ok 'All disposable caches under runtimes/cache were cleared. Locked or protected entries were skipped.'
 }
 
 function Resolve-LauncherPath([string]$Path) {
@@ -815,6 +837,21 @@ function Resolve-LauncherPath([string]$Path) {
         return [IO.Path]::GetFullPath($Path)
     }
     return [IO.Path]::GetFullPath((Join-Path $repoRoot $Path))
+}
+
+function Assert-DataCacheIsolation {
+    $configuredDataDir = [Environment]::GetEnvironmentVariable('FAIRS_DATA_DIR', 'Process')
+    if ([string]::IsNullOrWhiteSpace($configuredDataDir)) { return }
+
+    $dataPath = [IO.Path]::GetFullPath((Resolve-LauncherPath $configuredDataDir.Trim()))
+    $cachePath = [IO.Path]::GetFullPath($runtimeCacheDir)
+    $dataPrefix = $dataPath.TrimEnd('\') + '\'
+    $cachePrefix = $cachePath.TrimEnd('\') + '\'
+    if ($dataPath.Equals($cachePath, [StringComparison]::OrdinalIgnoreCase) -or
+        $dataPath.StartsWith($cachePrefix, [StringComparison]::OrdinalIgnoreCase) -or
+        $cachePath.StartsWith($dataPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "FAIRS_DATA_DIR '$dataPath' overlaps the canonical disposable cache root '$cachePath'. Choose a persistent data directory outside runtimes/cache."
+    }
 }
 
 function Get-UserDataTargets {
@@ -895,7 +932,6 @@ function Uninstall-Application {
 
     $paths = @(
         $runtimeRoot,
-        $testCacheDir,
         $venvDir,
         (Join-Path $clientDir 'node_modules'),
         (Join-Path $clientDir 'dist')
@@ -1002,7 +1038,7 @@ function Get-LauncherMenuEntries {
         [pscustomobject]@{ Section = 'SOURCE CONTROL'; Key = 'Check'; Label = 'Check for updates'; Description = 'Report local main-branch update status only'; Color = [ConsoleColor]::Yellow }
         [pscustomobject]@{ Section = 'SOURCE CONTROL'; Key = 'Update'; Label = 'Update application'; Description = 'Pull application changes from the main branch'; Color = [ConsoleColor]::Yellow }
         [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'Logs'; Label = 'Remove logs'; Description = 'Delete application log files'; Color = [ConsoleColor]::DarkYellow }
-        [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'Cache'; Label = 'Clear cache'; Description = 'Remove canonical runtime and test caches'; Color = [ConsoleColor]::DarkYellow }
+        [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'Cache'; Label = 'Clear cache'; Description = 'Remove all disposable caches under runtimes/cache'; Color = [ConsoleColor]::DarkYellow }
         [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'Checkpoints'; Label = 'Remove checkpoints'; Description = 'Delete saved checkpoints only'; Color = [ConsoleColor]::Red }
         [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'AllData'; Label = 'Remove all data'; Description = 'Delete local database and logs, preserving checkpoints'; Color = [ConsoleColor]::Red }
         [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'Uninstall'; Label = 'Uninstall application'; Description = 'Remove local runtimes, caches, dependencies, and build outputs'; Color = [ConsoleColor]::Red }

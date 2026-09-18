@@ -15,6 +15,26 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  FAIRS_CACHE_DIR: ${{ github.workspace }}/runtimes/cache
+  UV_CACHE_DIR: ${{ github.workspace }}/runtimes/cache/uv
+  NPM_CONFIG_CACHE: ${{ github.workspace }}/runtimes/cache/npm
+  PIP_CACHE_DIR: ${{ github.workspace }}/runtimes/cache/pip
+  PYTHONPYCACHEPREFIX: ${{ github.workspace }}/runtimes/cache/python
+  PYTEST_CACHE_DIR: ${{ github.workspace }}/runtimes/cache/pytest
+  PYTEST_BASETEMP_DIR: ${{ github.workspace }}/runtimes/cache/pytest-tmp
+  RUFF_CACHE_DIR: ${{ github.workspace }}/runtimes/cache/ruff
+  MYPY_CACHE_DIR: ${{ github.workspace }}/runtimes/cache/mypy
+  COVERAGE_FILE: ${{ github.workspace }}/runtimes/cache/coverage/.coverage
+  PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/runtimes/cache/playwright-browsers
+  KERAS_HOME: ${{ github.workspace }}/runtimes/cache/keras
+  TORCH_HOME: ${{ github.workspace }}/runtimes/cache/torch
+  TORCHINDUCTOR_CACHE_DIR: ${{ github.workspace }}/runtimes/cache/torch-inductor
+  TRITON_CACHE_DIR: ${{ github.workspace }}/runtimes/cache/triton
+  MPLCONFIGDIR: ${{ github.workspace }}/runtimes/cache/matplotlib
+  XDG_CACHE_HOME: ${{ github.workspace }}/runtimes/cache/xdg
+  CUDA_CACHE_PATH: ${{ github.workspace }}/runtimes/cache/cuda
+
 jobs:
   backend-validation:
     runs-on: ubuntu-latest
@@ -26,18 +46,18 @@ jobs:
       - uses: astral-sh/setup-uv@v6
         with:
           version: "0.11.30"
-          enable-cache: true
-          cache-dependency-glob: app/server/uv.lock
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
+      - name: Prepare canonical cache directories
+        run: mkdir -p "$FAIRS_CACHE_DIR"/{uv,npm,pip,python,pytest,pytest-tmp,ruff,mypy,coverage,playwright-browsers,vite,typescript,keras,torch,torch-inductor,triton,matplotlib,xdg,cuda}
       - name: Install dependencies
         working-directory: app/server
         run: uv sync --locked --extra test
       - name: Ruff
-        run: uv --project app/server run ruff check --config app/server/pyproject.toml app/server app/tests
+        run: uv --project app/server run ruff check --cache-dir "$RUFF_CACHE_DIR" --exclude app/tests/assets/QA app/server app/tests
       - name: Unit tests
-        run: uv --project app/server run pytest -q app/tests/unit
+        run: uv --project app/server run pytest -q app/tests/unit -o cache_dir="$PYTEST_CACHE_DIR" --basetemp="$PYTEST_BASETEMP_DIR"
       - name: Alembic history and model consistency
         working-directory: app/server
         run: uv run alembic -c alembic.ini heads
@@ -66,18 +86,19 @@ jobs:
       - uses: astral-sh/setup-uv@v6
         with:
           version: "0.11.30"
-          enable-cache: true
-          cache-dependency-glob: app/server/uv.lock
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
+      - name: Prepare canonical cache directories
+        run: mkdir -p "$FAIRS_CACHE_DIR"/{uv,npm,pip,python,pytest,pytest-tmp,ruff,mypy,coverage,playwright-browsers,vite,typescript,keras,torch,torch-inductor,triton,matplotlib,xdg,cuda}
       - name: Install locked dependencies
         working-directory: app/server
         run: uv sync --locked --extra test
       - name: Persistence contract
         env:
+          PYTHONPATH: app
           TEST_POSTGRES_URL: postgresql+psycopg://fairs:fairs@localhost:5432/fairs
-        run: uv run --project app/server pytest -q app/tests/e2e/test_persistence_contract.py
+        run: uv run --project app/server pytest -q app/tests/e2e/test_persistence_contract.py -o cache_dir="$PYTEST_CACHE_DIR" --basetemp="$PYTEST_BASETEMP_DIR"
 
   frontend-validation:
     runs-on: ubuntu-latest
@@ -87,8 +108,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22.13.0"
-          cache: npm
-          cache-dependency-path: app/client/package-lock.json
+      - name: Prepare canonical cache directories
+        run: mkdir -p "$FAIRS_CACHE_DIR"/{uv,npm,pip,python,pytest,pytest-tmp,ruff,mypy,coverage,playwright-browsers,vite,typescript,keras,torch,torch-inductor,triton,matplotlib,xdg,cuda}
       - name: Install dependencies
         working-directory: app/client
         run: npm ci --no-audit --no-fund

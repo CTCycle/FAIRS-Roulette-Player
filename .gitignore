@@ -1,4 +1,6 @@
-# Project-specific generated/runtime artifacts
+# Project-specific generated/runtime artifacts. All disposable cache data is
+# owned by runtimes/cache; the generic cache rules below are defensive ignores
+# for accidental tool output and do not define alternate cache locations.
 runtimes/**
 app/resources/logs/**
 app/resources/checkpoints/**
@@ -8,8 +10,7 @@ app/client/dist/
 app/client/dist-ssr/
 app/client/logs/
 app/client/*.local
-app/tests/cache/
-assets/QA/**
+**/assets/QA/**
 
 # Python
 __pycache__/
@@ -24,6 +25,7 @@ venv/
 .ruff_cache/
 dist/
 build/
+*.coverage
 .coverage
 htmlcov/
 

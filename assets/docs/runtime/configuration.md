@@ -50,10 +50,10 @@ For launcher operations, the following values must be explicitly present and non
 The launcher sets only execution-scoped tool variables:
 
 - `UV_PROJECT_ENVIRONMENT` targets `app/server/.venv`.
-- `UV_CACHE_DIR`, `NPM_CONFIG_CACHE`, `PIP_CACHE_DIR`, and `PYTHONPYCACHEPREFIX` are rooted below `runtimes/cache`.
-- `RUFF_CACHE_DIR`, `MYPY_CACHE_DIR`, `COVERAGE_FILE`, and `PLAYWRIGHT_BROWSERS_PATH` are rooted below `app/tests/cache`.
+- `FAIRS_CACHE_DIR`, `UV_CACHE_DIR`, `NPM_CONFIG_CACHE`, `PIP_CACHE_DIR`, `PYTHONPYCACHEPREFIX`, `PYTEST_CACHE_DIR`, `PYTEST_BASETEMP_DIR`, `RUFF_CACHE_DIR`, `MYPY_CACHE_DIR`, `COVERAGE_FILE`, and `PLAYWRIGHT_BROWSERS_PATH` are rooted below `runtimes/cache`.
+- `KERAS_HOME`, `TORCH_HOME`, `TORCHINDUCTOR_CACHE_DIR`, `TRITON_CACHE_DIR`, `MPLCONFIGDIR`, `XDG_CACHE_HOME`, and `CUDA_CACHE_PATH` are also rooted below `runtimes/cache` so normal application execution does not fall back to user-profile or system temporary cache locations.
 
-These cache roots are canonical. The launcher does not scan the repository for historical `.uv-cache`, `.pytest_cache`, `.ruff_cache`, `.mypy_cache`, Vite cache, or other legacy locations.
+This cache root is canonical. The launcher does not scan the repository for historical or alternate cache locations. `FAIRS_DATA_DIR` is rejected when it overlaps `runtimes/cache`.
 
 ## Runtime Settings File
 

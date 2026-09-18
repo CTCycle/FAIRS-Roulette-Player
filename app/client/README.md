@@ -33,6 +33,8 @@ Run these commands from the repository root with the managed Node runtime when a
 
 The package currently defines lint, build, dev, and preview scripts but no standalone frontend unit or E2E script. The repository test runner detects that state and skips absent frontend test phases.
 
+Vite's dependency cache and TypeScript build-info files are written below `../../runtimes/cache` through `vite.config.ts` and the TypeScript project configurations. Do not add frontend cache paths under `node_modules` or the client source tree.
+
 ## Implementation guidance
 
 - Keep route composition in `App.tsx`, page workflow state close to its page, and reusable request/status state in feature hooks.

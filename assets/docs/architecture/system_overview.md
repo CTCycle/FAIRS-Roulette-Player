@@ -52,7 +52,7 @@ flowchart LR
 | Active training state | `TrainingRunManager` |
 | Active inference state | `InferenceState` |
 | Frontend workflow/view state | feature-local React state/hooks |
-| Launcher cache ownership | `runtimes/cache` and `app/tests/cache` |
+| Cache ownership | `runtimes/cache` with fixed tool-specific child directories |
 | Application lifecycle | FastAPI lifespan and `bootstrap_runtime()` |
 | Application version | backend package metadata |
 

@@ -10,7 +10,7 @@ This file defines repository-specific rules for the PowerShell launcher and Wind
 
 - Keep startup and maintenance flows consolidated in `start_on_windows.ps1`.
 - Do not introduce parallel bootstrap or compatibility paths unless a current requirement is demonstrated.
-- `Standard` installation syncs runtime dependencies. `Development` additionally installs the server test extra.
+- `Standard` installation syncs runtime dependencies. `Development` additionally installs the server test extra and Playwright Chromium below `runtimes/cache/playwright-browsers`.
 - `settings/.env.example` is the canonical launcher environment template. The launcher may create a missing `.env` from it once, but must not supply a separate hardcoded defaults map for stale existing files.
 - Existing `.env` files missing launcher-critical keys must fail clearly rather than inherit obsolete behavior.
 
@@ -31,12 +31,7 @@ A failed dependency sync is surfaced directly. Do not interpret it as evidence o
 
 ## Cache Ownership
 
-Only two cache roots are owned by current automation:
-
-- `runtimes/cache`
-- `app/tests/cache`
-
-Tool-specific cache environment variables point below these roots. Cache clearing and uninstall operate on these canonical locations. Do not recursively discover historical `.uv-cache`, `.pytest_cache`, `.ruff_cache`, `.mypy_cache`, Vite cache, or similar paths elsewhere in the repository.
+`runtimes/cache` is the only cache root owned by current automation. Fixed child directories hold uv, npm, pip, Python bytecode, pytest, pytest basetemp, Ruff, mypy, coverage, Playwright, Vite, TypeScript, Keras, Torch, Triton, Matplotlib, XDG, and CUDA cache data. Cache clearing and uninstall operate on this root only. Do not recursively discover or create cache directories elsewhere in the repository.
 
 ## Lifecycle Rules
 
