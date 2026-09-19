@@ -98,10 +98,9 @@ FAIRS separates an experiment into two related phases:
 3. Inspect the dataset preview before using it. Synthetic data is useful for a quick baseline and does not represent proof of a real-world advantage.
 4. Open the training wizard and work through its six sections: **Agent Configuration**, **Environment & Memory**, **Bet Strategy Policy**, **Dataset Configuration**, **Session & Compute**, and **Summary**. Use the breadcrumbs to revisit a section and review the summary before starting.
 5. Start training and monitor status, progress, loss/RMSE, reward, simulated capital, current bet, strategy, timestep, and history charts. Loss/RMSE is an error measure; reward and simulated capital show how the configuration performed in the experiment.
-6. Open the checkpoint panel when the run completes. Inspect checkpoint metadata, compare stored runs, resume an interrupted run, or delete an obsolete checkpoint from that panel. When at least two checkpoints are available, choose **Compare** to open the side-by-side comparison in a modal so the Training page stays compact. If a run is cancelled, the monitor reports the stopped/cancelled state and does not create a completed checkpoint.
+6. Open the checkpoint panel when the run completes. Inspect checkpoint metadata, resume an interrupted run, or delete an obsolete checkpoint from that panel. If a run is cancelled, the monitor reports the stopped/cancelled state and does not create a completed checkpoint.
 
-![Training workspace](assets/figures/training-page.png)
-_The Training workspace combines dataset upload, checkpoint management, and a balanced monitor with grouped metrics and history charts. The comparison view opens in a modal so the main page stays compact._
+_The Training workspace combines dataset upload, checkpoint management, and a balanced monitor with grouped metrics and history charts._
 
 Training data uses the same canonical 0..36 roulette range whether it comes from an uploaded file or the synthetic generator. The application also applies the same preparation rules to both sources so that comparisons are meaningful.
 
@@ -157,7 +156,7 @@ Open **Help** from the Training or Inference workspace for practical shortcuts a
 - PostgreSQL is supported for an advanced external setup. The database must be reachable and the account must have permission to create or update the selected database; use launcher option 4 when it needs to be prepared.
 - Datasets, checkpoints, and logs are local application data in the normal setup. Keep a backup of any experiment you cannot recreate.
 - Checkpoints and datasets form a training lineage. If a checkpoint still depends on a dataset, FAIRS may block dataset deletion to prevent an incomplete experiment.
-- Checkpoint metadata and stored summaries can be inspected and compared, but trained weights are not edited in place; resume training when a new configuration is needed.
+- Checkpoint metadata and stored summaries can be inspected, but trained weights are not edited in place; resume training when a new configuration is needed.
 - The application checks database compatibility before services start and does not silently reset or repair an incompatible database. If it reports a schema or database-state problem, follow the troubleshooting guidance before removing any data.
 
 ## Troubleshooting
