@@ -4,7 +4,6 @@ import sys
 
 from playwright.sync_api import Page, expect
 
-
 ###############################################################################
 class TestSettingsPage:
     """The Settings screen should persist only its supported runtime fields."""
