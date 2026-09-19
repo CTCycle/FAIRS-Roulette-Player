@@ -29,7 +29,6 @@ class SettingsJobsPatch(BaseModel):
             raise ValueError("polling_interval must be a number.")
         return self
 
-
 ###############################################################################
 class SettingsDevicePatch(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -61,7 +60,6 @@ class SettingsDevicePatch(BaseModel):
         if "jit_backend" in self.model_fields_set and self.jit_backend is None:
             raise ValueError("jit_backend must be a string.")
         return self
-
 
 ###############################################################################
 class SettingsRoulettePatch(BaseModel):
@@ -112,7 +110,6 @@ class SettingsRoulettePatch(BaseModel):
             raise ValueError("minimum_number must be less than or equal to maximum_number.")
         return self
 
-
 ###############################################################################
 class SettingsPatchRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -132,7 +129,6 @@ class SettingsPatchRequest(BaseModel):
             raise ValueError("roulette must be an object.")
         return self
 
-
 ###############################################################################
 class SettingsJobsResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -142,7 +138,6 @@ class SettingsJobsResponse(BaseModel):
         le=10.0,
         description="Training and status polling cadence in seconds.",
     )
-
 
 ###############################################################################
 class SettingsDeviceResponse(BaseModel):
@@ -154,7 +149,6 @@ class SettingsDeviceResponse(BaseModel):
         pattern=JIT_BACKEND_PATTERN,
     )
 
-
 ###############################################################################
 class SettingsRouletteResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -164,7 +158,6 @@ class SettingsRouletteResponse(BaseModel):
     exclude_zero: bool
     invert_colors: bool
     show_number_labels: bool
-
 
 ###############################################################################
 class SettingsResponse(BaseModel):
