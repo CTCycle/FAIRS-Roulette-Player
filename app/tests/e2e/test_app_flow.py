@@ -3,8 +3,234 @@ E2E tests for UI navigation and page rendering.
 Tests basic UI functionality using Playwright browser automation.
 """
 
+import json
 import re
+from pathlib import Path
+
 from playwright.sync_api import Page, expect
+
+###############################################################################
+class TestStartupFlow:
+    """Tests the frontend-owned backend startup experience."""
+
+    # -------------------------------------------------------------------------
+    def test_loading_screen_recovers_after_transient_health_failures(
+        self, page: Page, base_url: str
+    ):
+        """The frontend remains visible while the backend becomes healthy."""
+        health_calls = 0
+        document_requests = []
+        console_messages = []
+
+        def health_route(route):
+            nonlocal health_calls
+            health_calls += 1
+            if health_calls <= 3:
+                route.fulfill(
+                    status=200,
+                    content_type="application/json",
+                    body=json.dumps(
+                        {"status": "starting", "application": "FAIRS"}
+                    ),
+                )
+                return
+            route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps(
+                    {"status": "ok", "application": "FAIRS", "version": "test"}
+                ),
+            )
+
+        page.route("**/api/health", health_route)
+        page.on(
+            "request",
+            lambda request: document_requests.append(request)
+            if request.resource_type == "document"
+            else None,
+        )
+
+        def capture_console(message):
+            console_messages.append(message)
+
+        page.on("console", capture_console)
+
+        page.goto(f"{base_url}/training")
+
+        expect(page.get_by_test_id("startup-screen")).to_be_visible()
+        expect(page.get_by_text("Preparing the table…", exact=True)).to_be_visible()
+        expect(page.get_by_test_id("startup-roulette-wheel")).to_be_visible()
+        animation_name = page.locator(".startup-wheel__rotor").evaluate(
+            "element => getComputedStyle(element).animationName"
+        )
+        assert animation_name == "startup-wheel-spin"
+        page.screenshot(
+            path=str(
+                Path(__file__).resolve().parents[3]
+                / "assets"
+                / "QA"
+                / "fairs_startup_loading.png"
+            ),
+            full_page=True,
+        )
+
+        expect(
+            page.get_by_role("heading", name=re.compile("Training Monitor", re.IGNORECASE))
+        ).to_be_visible(timeout=10_000)
+        assert health_calls >= 4
+        assert len(document_requests) == 1
+        assert not [message for message in console_messages if message.type == "error"]
+
+    # -------------------------------------------------------------------------
+    def test_already_healthy_backend_skips_visible_startup_delay(
+        self, page: Page, base_url: str
+    ):
+        """A healthy backend transitions directly into the normal application."""
+
+        def health_route(route):
+            route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps(
+                    {"status": "ok", "application": "FAIRS", "version": "test"}
+                ),
+            )
+
+        page.route("**/api/health", health_route)
+        page.goto(base_url)
+
+        expect(page.get_by_role("link", name=re.compile("Training", re.IGNORECASE))).to_be_visible()
+        expect(page.get_by_test_id("startup-screen")).to_have_count(0)
+
+    # -------------------------------------------------------------------------
+    def test_startup_failure_can_retry_without_reloading_the_document(
+        self, page: Page, base_url: str
+    ):
+        """A timed-out startup shows a safe retry state and recovers in place."""
+        backend_available = False
+        document_requests = []
+
+        def health_route(route):
+            if not backend_available:
+                route.abort()
+                return
+            route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps(
+                    {"status": "ok", "application": "FAIRS", "version": "test"}
+                ),
+            )
+
+        page.route("**/api/health", health_route)
+        page.on(
+            "request",
+            lambda request: document_requests.append(request)
+            if request.resource_type == "document"
+            else None,
+        )
+        page.clock.install()
+        page.goto(base_url)
+        expect(page.get_by_test_id("startup-screen")).to_be_visible()
+
+        page.clock.run_for(61_000)
+
+        expect(page.get_by_text("The table is taking a break.", exact=True)).to_be_visible()
+        expect(page.get_by_test_id("startup-retry")).to_be_visible()
+        expect(page.get_by_text("ERR_CONNECTION_REFUSED", exact=False)).to_have_count(0)
+
+        backend_available = True
+        page.get_by_test_id("startup-retry").click()
+        page.clock.run_for(3_000)
+
+        expect(page.get_by_role("link", name=re.compile("Training", re.IGNORECASE))).to_be_visible()
+        assert len(document_requests) == 1
+
+    # -------------------------------------------------------------------------
+    def test_reload_during_startup_restarts_only_health_polling(
+        self, page: Page, base_url: str
+    ):
+        """Reloading during startup keeps the loading experience deterministic."""
+        allow_health = False
+
+        def health_route(route):
+            if not allow_health:
+                route.abort()
+                return
+            route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps(
+                    {"status": "ok", "application": "FAIRS", "version": "test"}
+                ),
+            )
+
+        page.route("**/api/health", health_route)
+        page.goto(base_url)
+        expect(page.get_by_test_id("startup-screen")).to_be_visible()
+
+        page.reload()
+        expect(page.get_by_test_id("startup-screen")).to_be_visible()
+
+        allow_health = True
+        expect(page.get_by_role("link", name=re.compile("Training", re.IGNORECASE))).to_be_visible(
+            timeout=10_000
+        )
+
+    # -------------------------------------------------------------------------
+    def test_loading_screen_fits_supported_viewports(self, page: Page, base_url: str):
+        """The startup composition stays contained at supported desktop sizes."""
+
+        def health_route(route):
+            route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps({"status": "starting", "application": "FAIRS"}),
+            )
+
+        page.route("**/api/health", health_route)
+        qa_root = Path(__file__).resolve().parents[3] / "assets" / "QA"
+
+        for width, height in ((1440, 900), (1100, 800)):
+            page.set_viewport_size({"width": width, "height": height})
+            page.goto(base_url)
+            expect(page.get_by_test_id("startup-screen")).to_be_visible()
+
+            overflow = page.evaluate(
+                """() => ({
+                    horizontal: document.documentElement.scrollWidth > window.innerWidth,
+                    vertical: document.documentElement.scrollHeight > window.innerHeight,
+                })"""
+            )
+            assert overflow == {"horizontal": False, "vertical": False}
+            page.screenshot(
+                path=str(qa_root / f"fairs_startup_loading_{width}x{height}.png"),
+                full_page=True,
+            )
+
+    # -------------------------------------------------------------------------
+    def test_loading_screen_respects_reduced_motion(self, page: Page, base_url: str):
+        """Reduced-motion users see a stable wheel without continuous animation."""
+
+        page.emulate_media(reduced_motion="reduce")
+        page.route(
+            "**/api/health",
+            lambda route: route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps({"status": "starting", "application": "FAIRS"}),
+            ),
+        )
+        page.goto(base_url)
+
+        expect(page.get_by_test_id("startup-screen")).to_be_visible()
+        assert page.locator(".startup-wheel__rotor").evaluate(
+            "element => getComputedStyle(element).animationName"
+        ) == "none"
+        assert page.locator(".startup-wheel__ball-orbit").evaluate(
+            "element => getComputedStyle(element).animationName"
+        ) == "none"
+
 
 ###############################################################################
 class TestHomePage:

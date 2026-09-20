@@ -1,6 +1,6 @@
 ## Quick Start
 
-Last updated: 2026-09-18
+Last updated: 2026-09-20
 
 ## Fastest Path
 
@@ -16,7 +16,7 @@ Last updated: 2026-09-18
    - `Training`
    - `Inference`
 
-The launcher always keeps the backend in a visible PowerShell terminal and reports the backend and frontend URLs after both services pass their readiness checks. If Windows cannot open the browser automatically, open the printed frontend URL manually; the healthy services remain running.
+The launcher always keeps the backend in a visible PowerShell terminal, starts the frontend preview without waiting for backend health, and reports the configured URLs once the frontend is available. The browser shows FAIRS startup progress until the backend is healthy. If Windows cannot open the browser automatically, open the printed frontend URL manually.
 
 ## Primary Commands
 

@@ -1,6 +1,6 @@
 ## Troubleshooting
 
-Last updated: 2026-09-18
+Last updated: 2026-09-20
 
 ## Startup Problems
 
@@ -9,9 +9,9 @@ Last updated: 2026-09-18
 - If the configured ports are already occupied by a previous session, close that session's application terminal or use launcher option 13, `Stop all app processes`. Keep the ports dedicated to FAIRS; otherwise stop the unrelated service through its own owner or choose different configured ports.
 - If the backend starts without the frontend, verify that `app/client/node_modules` contains Vite and that `app/client/dist/index.html` and its generated assets exist; close the application terminal before retrying option 1, run option 3 for a frontend-only rebuild, or run option 2 when frontend dependencies also need updating.
 - Maintenance actions require the application terminal to be closed first. If npm reports `EPERM` for `esbuild.exe`, stop any external Vite or Node process using `app/client/node_modules` through its own owner and retry.
-- If the launcher reports a backend readiness failure, open `http://<FASTAPI_HOST>:<FASTAPI_PORT>/api/health` and inspect the generated `FAIRS_*.log` file.
+- If the browser remains on the FAIRS startup screen, keep the visible backend terminal open and inspect its startup output. The screen retries transient connection failures and changes to a compact retry state after its bounded startup window; use `Retry connection` after correcting the backend issue.
 - If startup reports an unsupported worker count, unset `WEB_CONCURRENCY`, `UVICORN_WORKERS`, and `FAIRS_WORKERS`, or set each to `1`. Do not use multiple workers for this process-local runtime.
-- If the frontend reports a readiness failure after the backend became healthy, close the application terminal before retrying. Check whether the configured UI port is owned by an unrelated process and verify that `app/client/dist` is complete. If startup succeeds but no browser opens, use the frontend URL printed by the launcher.
+- If the frontend preview itself does not become ready, close the application terminal before retrying. Check whether the configured UI port is owned by an unrelated process and verify that `app/client/dist` is complete. If the preview starts but no browser opens, use the frontend URL printed by the launcher.
 
 ## API Docs Problems
 

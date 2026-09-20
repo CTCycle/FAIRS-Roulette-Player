@@ -1,8 +1,15 @@
 ## Experience
 
-Last updated: 2026-09-19
+Last updated: 2026-09-20
 
 ## Page Composition
+
+## Application Startup
+
+- The launcher exposes the frontend while the backend is still starting.
+- Before workflow routes mount, the client displays a centered FAIRS startup screen with a restrained CSS roulette wheel, `Preparing the table…` messaging, and a subtle backend status.
+- The client polls `GET /api/health` with bounded read-only retries. A healthy response transitions in place to the requested route; a prolonged failure shows a compact, user-facing retry action without exposing diagnostics.
+- The startup surface uses the existing dark design tokens, remains centered at the supported desktop widths, preserves focus-visible behavior, and disables motion under `prefers-reduced-motion`.
 
 - `/training`
   - dataset upload and preview

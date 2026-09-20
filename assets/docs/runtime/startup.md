@@ -1,6 +1,6 @@
 ## Startup
 
-Last updated: 2026-09-18
+Last updated: 2026-09-20
 
 ## Local Application Startup
 
@@ -41,8 +41,9 @@ Normal launch skips dependency installation when the runtime and installed backe
 
 - Uvicorn is launched with exactly one worker.
 - The built frontend is served through Vite preview in the local launcher flow.
-- Startup succeeds only after backend health, backend listener, frontend HTTP, and frontend listener checks succeed.
-- Opening the frontend in a browser is best-effort after those readiness checks. If Windows cannot hand the URL to a browser automatically, the launcher still reports a successful startup and prints the URL for manual opening.
+- The launcher starts the backend and frontend preview independently. Startup succeeds for the launcher once the frontend HTTP response and listener are available; the browser then polls `/api/health` while the backend finishes its lifespan startup.
+- The frontend shows a dedicated FAIRS loading screen during backend startup, transitions into the normal application after a healthy response, and offers a bounded retry state if the backend does not become ready.
+- Opening the frontend in a browser is best-effort after the frontend readiness check. If Windows cannot hand the URL to a browser automatically, the launcher still reports the frontend URL for manual opening.
 - Closing the browser does not stop the backend or live inference session.
 - Closing the application terminal is the local application stop boundary.
 - If the application terminal is unavailable, use launcher option 13, `Stop all app processes`, and confirm the `[y/N]` prompt to terminate the repository-owned backend/frontend process tree.

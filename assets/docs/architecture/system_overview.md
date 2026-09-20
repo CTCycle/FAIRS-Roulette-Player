@@ -1,6 +1,6 @@
 ## System Overview
 
-Last updated: 2026-09-18
+Last updated: 2026-09-20
 
 ## Current State
 
@@ -121,6 +121,7 @@ Learning code receives explicit validated configuration and prepared data. It do
 - `src/generated/api.ts` contains backend-derived transport types and request defaults.
 - `src/types` contains browser/view-state models rather than independent HTTP contracts.
 - `src/utils/*Api.ts` performs typed transport calls and maps transport fields to UI representations where needed.
+- `src/hooks/useBackendStartup.ts` owns the top-level bounded `/api/health` readiness poll; `src/components/startup` owns the loading, roulette animation, and retry presentation before workflow routes mount.
 - `src/pages`, `src/components`, and `src/hooks` own feature-local workflow and presentation state.
 - `/settings` is a utility route beside Help. It edits only the backend-owned runtime settings contract and obtains defaults from `GET /api/settings`; enabling JIT is accepted on the supported Python 3.13 runtime when `torch.compile` is available and rejected early otherwise.
 - Browser inference storage is advisory replay/setup metadata only. Backend `InferenceState` remains authoritative for a live session.
