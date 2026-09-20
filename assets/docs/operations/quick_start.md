@@ -16,7 +16,7 @@ Last updated: 2026-09-18
    - `Training`
    - `Inference`
 
-The launcher reports the backend and frontend URLs after both services pass their readiness checks. If Windows cannot open the browser automatically, open the printed frontend URL manually; the healthy services remain running.
+The launcher always keeps the backend in a visible PowerShell terminal and reports the backend and frontend URLs after both services pass their readiness checks. If Windows cannot open the browser automatically, open the printed frontend URL manually; the healthy services remain running.
 
 ## Primary Commands
 

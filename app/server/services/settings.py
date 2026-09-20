@@ -18,7 +18,6 @@ if TYPE_CHECKING:
 class SettingsPersistenceError(RuntimeError):
     """Raised when runtime settings cannot be safely published or restored."""
 
-
 ###############################################################################
 class SettingsService:
 

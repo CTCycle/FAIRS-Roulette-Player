@@ -16,7 +16,7 @@ From repository root in PowerShell:
 
 - If `settings/.env` does not exist, the launcher copies `settings/.env.example` once.
 - An existing `.env` is never supplemented with a hidden compatibility/default map.
-- Launcher-critical values must be explicitly present in `.env`: `FASTAPI_HOST`, `FASTAPI_PORT`, `UI_HOST`, `UI_PORT`, `RELOAD`, `BACKEND_LOGS_VISIBLE`, and `EMBEDDED_DATABASE`.
+- Launcher-critical values must be explicitly present in `.env`: `FASTAPI_HOST`, `FASTAPI_PORT`, `UI_HOST`, `UI_PORT`, `RELOAD`, and `EMBEDDED_DATABASE`.
 - If one of those values is absent or blank, the launcher fails with an instruction to update `.env` from the current template.
 
 ## Runtime Preparation

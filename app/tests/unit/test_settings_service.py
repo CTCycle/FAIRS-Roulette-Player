@@ -16,6 +16,7 @@ from server.services.settings import SettingsPersistenceError, SettingsService
 ###############################################################################
 class FakeTrainingService:
 
+    # -------------------------------------------------------------------------
     def __init__(self) -> None:
         self.jobs = JobsSettings(polling_interval=1.0)
         self.device = DeviceSettings(jit_compile=False, jit_backend="eager")

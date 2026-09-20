@@ -1,13 +1,12 @@
 ## Experience
 
-Last updated: 2026-09-17
+Last updated: 2026-09-19
 
 ## Page Composition
 
 - `/training`
   - dataset upload and preview
   - checkpoint preview and management
-  - side-by-side comparison of stored checkpoint configuration and training summaries
   - six-step training configuration with clickable breadcrumbs and summary confirmation
   - training monitor with live DQN metrics, replay-buffer warm-up state, circular episode/step progress, Stop action, and loss/reward charts
 - `/inference`

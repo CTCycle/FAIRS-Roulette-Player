@@ -373,7 +373,6 @@ function Import-DotEnv {
         'UI_HOST',
         'UI_PORT',
         'RELOAD',
-        'BACKEND_LOGS_VISIBLE',
         'EMBEDDED_DATABASE'
     )
     $missingVariables = @($requiredLauncherVariables | Where-Object {
@@ -713,24 +712,18 @@ function Start-Application {
     $fastApiPort = [int]$env:FASTAPI_PORT
     $uiPort = [int]$env:UI_PORT
 
-    $reloadArgument = if ($env:RELOAD -eq 'true') { ' --reload' } else { '' }
     if ($env:RELOAD -eq 'true') {
         Write-Info 'RELOAD=true is development-only; reloads discard in-memory training jobs and inference sessions.'
     }
-    $backendArgs = "-m uvicorn server.app:app --app-dir `"$($repoRoot)\app`" --host $($env:FASTAPI_HOST) --port $fastApiPort --workers 1$reloadArgument --log-level info"
-    Write-Step 'Launching backend.'
-    if ($env:BACKEND_LOGS_VISIBLE -eq 'true') {
-        $escapedPython = $venvPython.Replace("'", "''")
-        $escapedApp = (Join-Path $repoRoot 'app').Replace("'", "''")
-        $backendCommand = "& '$escapedPython' -m uvicorn server.app:app --app-dir '$escapedApp' --host $($env:FASTAPI_HOST) --port $fastApiPort --workers 1"
-        if ($env:RELOAD -eq 'true') { $backendCommand += ' --reload' }
-        $backendCommand += ' --log-level info'
-        $backendProcess = Start-Process -FilePath 'powershell.exe' `
-            -ArgumentList @('-NoProfile', '-NoExit', '-Command', $backendCommand) `
-            -WorkingDirectory $repoRoot -WindowStyle Normal -PassThru
-    } else {
-        $backendProcess = Start-Process -FilePath $venvPython -ArgumentList $backendArgs -WorkingDirectory $repoRoot -WindowStyle Hidden -PassThru
-    }
+    Write-Step 'Launching backend in a visible terminal.'
+    $escapedPython = $venvPython.Replace("'", "''")
+    $escapedApp = (Join-Path $repoRoot 'app').Replace("'", "''")
+    $backendCommand = "& '$escapedPython' -m uvicorn server.app:app --app-dir '$escapedApp' --host $($env:FASTAPI_HOST) --port $fastApiPort --workers 1"
+    if ($env:RELOAD -eq 'true') { $backendCommand += ' --reload' }
+    $backendCommand += ' --log-level info'
+    $backendProcess = Start-Process -FilePath 'powershell.exe' `
+        -ArgumentList @('-NoProfile', '-NoExit', '-Command', $backendCommand) `
+        -WorkingDirectory $repoRoot -WindowStyle Normal -PassThru
 
     $backendUrl = "http://$($env:FASTAPI_HOST):$fastApiPort"
     Write-Step "Waiting for backend readiness at $backendUrl/api/health."
