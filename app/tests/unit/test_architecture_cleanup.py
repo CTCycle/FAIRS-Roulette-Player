@@ -81,8 +81,19 @@ def test_legacy_state_and_persistence_paths_are_removed() -> None:
         ".angular",
         "Recreating a virtual environment that may reference an older repository location",
         "$defaults = [ordered]@{",
+        "BACKEND_LOGS_VISIBLE",
     ):
         assert forbidden not in launcher_source
+    assert "Launching backend in a visible terminal." in launcher_source
+    assert (
+        "-ArgumentList @('-NoProfile', '-NoExit', '-Command', $backendCommand)"
+        in launcher_source
+    )
+    assert "-WorkingDirectory $repoRoot -WindowStyle Normal -PassThru" in launcher_source
+    launcher_template = (REPOSITORY_ROOT / "settings" / ".env.example").read_text(
+        encoding="utf-8"
+    )
+    assert "BACKEND_LOGS_VISIBLE" not in launcher_template
 
     app_source = (SERVER_ROOT / "app.py").read_text(encoding="utf-8")
     assert "DataStore" not in app_source

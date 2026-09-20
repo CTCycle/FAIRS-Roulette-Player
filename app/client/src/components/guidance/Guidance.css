@@ -79,28 +79,6 @@
     max-height: min(820px, calc(100vh - 2rem));
 }
 
-.guidance-checkpoint-comparison-dialog {
-    width: min(940px, calc(100vw - 2rem));
-    max-height: min(820px, calc(100vh - 2rem));
-}
-
-.guidance-checkpoint-comparison-dialog .checkpoint-comparison {
-    display: flex;
-    flex: 1 1 auto;
-    flex-direction: column;
-    min-height: 0;
-    margin-top: 0.75rem;
-    padding: 0;
-    background: transparent;
-    border: 0;
-}
-
-.guidance-checkpoint-comparison-dialog .checkpoint-comparison-table-wrap {
-    min-height: 0;
-    max-height: min(500px, calc(100vh - 300px));
-    overflow: auto;
-}
-
 .guidance-tips-scroll {
     display: flex;
     flex: 1 1 auto;

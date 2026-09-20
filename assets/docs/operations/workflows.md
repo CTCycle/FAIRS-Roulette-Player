@@ -1,6 +1,6 @@
 ## Workflows
 
-Last updated: 2026-09-17
+Last updated: 2026-09-19
 
 ## Training Workflow
 
@@ -9,7 +9,7 @@ Last updated: 2026-09-17
 3. Open training configuration and work through the six sections: Agent Configuration, Environment & Memory, Bet Strategy Policy, Dataset Configuration, Session & Compute, and Summary.
 4. Use the wizard breadcrumbs to revisit a section, confirm the summary, and start training.
 5. Monitor status, episode/step progress, loss/RMSE, validation metrics, reward, capital, current bet, strategy, epsilon, replay-buffer warm-up, and history charts.
-6. Review generated checkpoints from the checkpoint preview. Inspect metadata, open a checkpoint in Inference, resume training, or delete an obsolete checkpoint. When at least two checkpoints exist, choose **Compare** to open a modal with a side-by-side view of their stored configuration and final training summaries. A cancelled run is shown as stopped/cancelled and does not become a completed checkpoint.
+6. Review generated checkpoints from the checkpoint preview. Inspect metadata, open a checkpoint in Inference, resume training, or delete an obsolete checkpoint. A cancelled run is shown as stopped/cancelled and does not become a completed checkpoint.
 
 If the workflow is unfamiliar, open Help and choose the Training walkthrough for a short guided tour. It can be dismissed at any time with the X button and can later be reopened from Tips & Tricks.
 
@@ -58,7 +58,6 @@ For a new session, open Help and choose the Inference walkthrough if the setup-t
 - Remove obsolete datasets when they no longer serve the experiment lifecycle.
 - Keep checkpoints and datasets aligned so inference runs use the intended training lineage.
 - Delete dependent checkpoints before removing a dataset that is still referenced by a training lineage.
-- Treat checkpoint comparison values as stored training summaries, not as a standardized benchmark. A controlled benchmark requires identical evaluation data and protocol.
 
 ## Day-To-Day Usage Patterns
 
@@ -72,7 +71,7 @@ For a new session, open Help and choose the Inference walkthrough if the setup-t
 - Training start, resume, stop, and status workflows
 - DQN epsilon and replay-buffer warm-up telemetry
 - Fresh validation during initial and resumed training
-- Checkpoint listing, metadata inspection, comparison, and deletion
+- Checkpoint listing, metadata inspection, and deletion
 - Dataset-provenance-safe checkpoint handoff to Inference
 - Inference sessions with stepwise progression and context controls
 - Synthetic dataset generation with the same canonical roulette outcome range as uploaded data

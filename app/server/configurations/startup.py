@@ -16,7 +16,6 @@ def get_configuration_manager() -> ConfigurationManager:
         )
     return _configuration_manager
 
-
 ###############################################################################
 def _clear_configuration_manager_cache() -> None:
     global _configuration_manager
