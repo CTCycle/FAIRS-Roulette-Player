@@ -1,6 +1,6 @@
 ## Project Overview
 
-Last updated: 2026-08-30
+Last updated: 2026-09-20
 
 ## Purpose
 
@@ -30,6 +30,9 @@ The documentation set is synchronized with the current codebase: local Windows w
 
 - `project_index.md`
   - Master index, navigation rules, and documentation handling policy.
+- `project_status_ledger.md`
+  - Canonical current operational status catalog for implemented, working, partial, broken, blocked, unvalidated, absent, and deprecated project capabilities.
+  - Update after implementation changes, meaningful validation, regressions, blocker changes, and issue remediation; keep detailed evidence in architecture, coding, runtime, UI, operations, test, or QA documents.
 
 ### Architecture
 
@@ -105,6 +108,12 @@ The documentation set is synchronized with the current codebase: local Windows w
 - When launcher, schema, API, or UI behavior changes, update the corresponding architecture, runtime, operations, and UI leaf documents together.
 - Use folder structure, file names, routes, tests, and imports to pre-select docs before opening them.
 - Do not read the entire documentation tree unless the task explicitly requires broad context.
+
+## Status and Evidence Rules
+
+- Read `project_status_ledger.md` after this index and before substantial implementation or validation work.
+- The ledger is the canonical source for the current operational project state; architecture documents describe intended and implemented design, validation reports and tests provide evidence, and plans describe future work.
+- Update the ledger when a component's implementation, evidence, status, blocker, open issue, or required revalidation changes. Do not copy detailed reports into the ledger or leave resolved findings in the active issue catalog.
 
 ## Environment Rules
 
