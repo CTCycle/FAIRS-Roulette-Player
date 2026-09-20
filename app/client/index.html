@@ -5,9 +5,78 @@
     <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FAIRS Roulette Player</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        background: #0b1220;
+      }
+
+      body {
+        margin: 0;
+        min-width: 0;
+        min-height: 100vh;
+        color: #eaf1fb;
+        background:
+          radial-gradient(900px 500px at 50% 42%, rgba(36, 166, 232, 0.12), transparent 70%),
+          #0b1220;
+        font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      .boot-fallback {
+        display: grid;
+        min-height: 100vh;
+        place-items: center;
+        text-align: center;
+      }
+
+      .boot-fallback__content {
+        display: grid;
+        justify-items: center;
+        gap: 1rem;
+      }
+
+      .boot-fallback__title {
+        font-size: 1.5rem;
+        font-weight: 800;
+        letter-spacing: 0.22em;
+        text-indent: 0.22em;
+      }
+
+      .boot-fallback__wheel {
+        width: 5.5rem;
+        aspect-ratio: 1;
+        border: 0.65rem solid #26354c;
+        border-radius: 50%;
+        background: repeating-conic-gradient(#080a0f 0deg 10deg, #ef4444 10deg 20deg);
+        box-shadow: 0 0 0 0.15rem rgba(66, 184, 245, 0.18);
+        animation: boot-fallback-spin 10s linear infinite;
+      }
+
+      .boot-fallback__message {
+        margin: 0;
+        color: #a8b8ce;
+        font-size: 0.875rem;
+      }
+
+      @keyframes boot-fallback-spin {
+        to { transform: rotate(360deg); }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .boot-fallback__wheel { animation: none; }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="boot-fallback" aria-live="polite">
+        <div class="boot-fallback__content">
+          <div class="boot-fallback__title">FAIRS</div>
+          <div class="boot-fallback__wheel" aria-hidden="true"></div>
+          <p class="boot-fallback__message">Preparing the table…</p>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

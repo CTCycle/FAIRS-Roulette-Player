@@ -313,30 +313,6 @@ function Invoke-FindUv([string]$SearchRoot) {
     return $uv.FullName
 }
 
-function Invoke-HealthCheck([string]$Url, [int]$TimeoutSeconds = 60) {
-    $prevEap = $ErrorActionPreference
-    $ErrorActionPreference = 'SilentlyContinue'
-    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
-    $activity = "FAIRS: wait for health $Url"
-    $progressId = Start-LauncherProgress -Activity $activity -Status "Waiting up to $TimeoutSeconds seconds"
-    try {
-        do {
-            $elapsed = [int](([DateTime]::Now - $deadline.AddSeconds(-$TimeoutSeconds)).TotalSeconds)
-            Update-LauncherProgress -Id $progressId -Activity $activity -Status "Waiting for healthy response; ${elapsed}s elapsed"
-            try {
-                $response = Invoke-WebRequest -UseBasicParsing -Uri $Url -TimeoutSec 2
-                if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 300) { return }
-            } catch { }
-            Start-Sleep -Seconds 1
-        } while ((Get-Date) -lt $deadline)
-        throw "Backend did not become healthy within $TimeoutSeconds seconds."
-    }
-    finally {
-        $ErrorActionPreference = $prevEap
-        Complete-LauncherProgress $progressId
-    }
-}
-
 function Initialize-EnvironmentFile {
     if (-not (Test-Path -LiteralPath $envFile -PathType Leaf)) {
         if (-not (Test-Path -LiteralPath $envExample -PathType Leaf)) { throw "Missing environment template: $envExample" }
@@ -726,17 +702,6 @@ function Start-Application {
         -WorkingDirectory $repoRoot -WindowStyle Normal -PassThru
 
     $backendUrl = "http://$($env:FASTAPI_HOST):$fastApiPort"
-    Write-Step "Waiting for backend readiness at $backendUrl/api/health."
-    try {
-        Invoke-HealthCheck "$backendUrl/api/health" 60
-    } catch {
-        throw "Backend did not become healthy within 60 seconds. Close the application terminal if it is still open."
-    }
-    $backendPid = (Get-PortProcessIds $fastApiPort | Select-Object -First 1)
-    if (-not $backendPid) {
-        throw "Backend reported readiness but no listener was found on port $fastApiPort. Close the application terminal if it is still open."
-    }
-
     Write-Step 'Launching frontend preview.'
     $frontendArgs = "/c `"`"$npmCmd`" run preview -- --host $($env:UI_HOST) --port $uiPort --strictPort`""
     $frontendProcess = Start-Process -FilePath 'cmd.exe' -ArgumentList $frontendArgs -WorkingDirectory $clientDir -WindowStyle Hidden -PassThru
@@ -763,8 +728,9 @@ function Start-Application {
         Write-Info "The browser could not be opened automatically ($($_.Exception.Message)). Open $uiUrl manually."
     }
     Write-Host ''
-    Write-Ok 'FAIRS started successfully.'
-    Write-Host "Backend: $backendUrl (PID $backendPid)"
+    Write-Ok 'FAIRS frontend is ready.'
+    Write-Info 'Backend readiness is monitored in the browser while the backend finishes starting.'
+    Write-Host "Backend: $backendUrl (launcher PID $($backendProcess.Id))"
     Write-Host "Frontend: $uiUrl (PID $frontendPid)"
 }
 
