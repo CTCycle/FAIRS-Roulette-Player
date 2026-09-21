@@ -2,6 +2,14 @@
 # owned by runtimes/cache; the generic cache rules below are defensive ignores
 # for accidental tool output and do not define alternate cache locations.
 runtimes/**
+# Keep the cache roots available on a fresh checkout; generated cache contents remain ignored.
+!runtimes/
+!runtimes/cache/
+!runtimes/cache/.gitkeep
+!runtimes/cache/uv/
+!runtimes/cache/uv/.gitkeep
+!runtimes/cache/pytest-tmp/
+!runtimes/cache/pytest-tmp/.gitkeep
 app/resources/logs/**
 app/resources/checkpoints/**
 app/resources/runtime-settings.json
