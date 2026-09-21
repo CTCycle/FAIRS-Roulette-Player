@@ -5,8 +5,8 @@ Last updated: 2026-09-16
 ## Runtime Baseline
 
 - Target Python version:
-  - `>=3.13,<3.14`
-- The launcher currently stages portable CPython `3.13.15`.
+  - `>=3.14,<3.15`
+- The launcher currently stages portable CPython `3.14.7`.
 - Preferred environment:
   - `app/server/.venv` when present
   - otherwise follow the repository environment policy

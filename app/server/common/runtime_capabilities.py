@@ -5,10 +5,6 @@ from __future__ import annotations
 import sys
 
 ###############################################################################
-JIT_UNSUPPORTED_PYTHON_MESSAGE = (
-    "JIT compilation is not supported by torch.compile on Python 3.14 or newer. "
-    "Disable JIT or run FAIRS with Python 3.13 or earlier."
-)
 JIT_UNAVAILABLE_MESSAGE = (
     "JIT compilation requires a PyTorch runtime that exposes torch.compile."
 )
@@ -26,11 +22,6 @@ def get_jit_runtime_error(
     """Return an actionable error when the selected runtime cannot compile models."""
     if not jit_compile:
         return None
-
-    # The supported launcher runtime is Python 3.13. Keep this guard for
-    # manually selected or future runtimes that are known to be incompatible.
-    if sys.version_info >= (3, 14):
-        return JIT_UNSUPPORTED_PYTHON_MESSAGE
 
     if sys.platform == "win32" and jit_backend.strip().lower() == "inductor":
         return JIT_INDUCTOR_WINDOWS_MESSAGE

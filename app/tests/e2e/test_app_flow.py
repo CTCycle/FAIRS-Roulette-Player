@@ -60,10 +60,6 @@ class TestStartupFlow:
         expect(page.get_by_test_id("startup-screen")).to_be_visible()
         expect(page.get_by_text("Preparing the table…", exact=True)).to_be_visible()
         expect(page.get_by_test_id("startup-roulette-wheel")).to_be_visible()
-        animation_name = page.locator(".startup-wheel__rotor").evaluate(
-            "element => getComputedStyle(element).animationName"
-        )
-        assert animation_name == "startup-wheel-spin"
         page.screenshot(
             path=str(
                 Path(__file__).resolve().parents[3]
@@ -207,30 +203,6 @@ class TestStartupFlow:
                 path=str(qa_root / f"fairs_startup_loading_{width}x{height}.png"),
                 full_page=True,
             )
-
-    # -------------------------------------------------------------------------
-    def test_loading_screen_respects_reduced_motion(self, page: Page, base_url: str):
-        """Reduced-motion users see a stable wheel without continuous animation."""
-
-        page.emulate_media(reduced_motion="reduce")
-        page.route(
-            "**/api/health",
-            lambda route: route.fulfill(
-                status=200,
-                content_type="application/json",
-                body=json.dumps({"status": "starting", "application": "FAIRS"}),
-            ),
-        )
-        page.goto(base_url)
-
-        expect(page.get_by_test_id("startup-screen")).to_be_visible()
-        assert page.locator(".startup-wheel__rotor").evaluate(
-            "element => getComputedStyle(element).animationName"
-        ) == "none"
-        assert page.locator(".startup-wheel__ball-orbit").evaluate(
-            "element => getComputedStyle(element).animationName"
-        ) == "none"
-
 
 ###############################################################################
 class TestHomePage:

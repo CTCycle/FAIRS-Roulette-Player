@@ -7,7 +7,7 @@ Last updated: 2026-09-20
 This file is the root index for `assets/docs`.
 Read it first, then open the smallest leaf document that matches the task.
 
-The documentation set is synchronized with the current codebase: local Windows web runtime, portable Python `3.13.15`, Node.js `22.13.0`, FastAPI backend, and React/Vite frontend. The authoritative backend application version is `app/server/pyproject.toml`.
+The documentation set is synchronized with the current codebase: local Windows web runtime, portable Python `3.14.7`, Node.js `22.13.0`, FastAPI backend, and React/Vite frontend. The authoritative backend application version is `app/server/pyproject.toml`.
 
 ## Navigation Rules
 
