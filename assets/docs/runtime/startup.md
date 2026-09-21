@@ -23,7 +23,7 @@ From repository root in PowerShell:
 
 The launcher prepares or validates:
 
-- portable Python `3.13.15`
+- portable Python `3.14.7`
 - portable `uv`
 - Node.js `22.13.0`
 - `app/server/.venv`

@@ -1,7 +1,5 @@
 """Browser coverage for the runtime Settings screen."""
 
-import sys
-
 from playwright.sync_api import Page, expect
 
 ###############################################################################
@@ -67,20 +65,12 @@ class TestSettingsPage:
         expect(jit_backend).to_be_enabled()
         jit_backend.fill("eager")
         page.get_by_role("button", name="Save settings", exact=True).click()
-        if sys.version_info >= (3, 14):
-            expect(page.get_by_role("alert")).to_contain_text("Python 3.14")
-            page.reload()
-            page.wait_for_load_state("networkidle")
-            page.get_by_role("button", name="Advanced", exact=True).click()
-            expect(jit_compile).not_to_be_checked()
-            expect(jit_backend).to_have_value("eager")
-        else:
-            expect(page.get_by_text("Settings saved.", exact=True)).to_be_visible()
-            page.reload()
-            page.wait_for_load_state("networkidle")
-            page.get_by_role("button", name="Advanced", exact=True).click()
-            expect(jit_compile).to_be_checked()
-            expect(jit_backend).to_have_value("eager")
+        expect(page.get_by_text("Settings saved.", exact=True)).to_be_visible()
+        page.reload()
+        page.wait_for_load_state("networkidle")
+        page.get_by_role("button", name="Advanced", exact=True).click()
+        expect(jit_compile).to_be_checked()
+        expect(jit_backend).to_have_value("eager")
 
         page.get_by_role("button", name="Reset to defaults", exact=True).click()
         expect(page.get_by_text("Settings reset to defaults.", exact=True)).to_be_visible()
