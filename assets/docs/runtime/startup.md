@@ -1,6 +1,6 @@
 ## Startup
 
-Last updated: 2026-09-20
+Last updated: 2026-09-21
 
 ## Local Application Startup
 
@@ -96,6 +96,15 @@ From PowerShell:
 ```powershell
 cmd /c app\tests\run_tests.bat
 ```
+
+## Validation Campaign Baseline
+
+The first campaign tier is recorded in the project status ledger as `VAL-00` and `VAL-01`.
+
+- `VAL-00` records the exact revision, managed runtime, SQLite mode, health response, clean training/inference state, disposable dataset, short real CPU training job, and completed checkpoint identifiers. The checkpoint must be produced through the supported API/launcher path so later inference slices exercise real serialization and dataset lineage.
+- `VAL-01` uses the official launcher to verify that the frontend is reachable while backend lifespan startup is still pending, that the browser transitions only after `/api/health` is healthy, and that explicit launcher stop removes only repository-owned backend/frontend processes and leaves ports `8890` and `8051` clear.
+
+When capturing evidence, record browser-visible state, console/network failures, backend logs, process identity, and screenshots for failures. Do not treat a source inspection, a test definition, or a successful response from an unrelated revision as current startup evidence.
 
 ## Related Files
 

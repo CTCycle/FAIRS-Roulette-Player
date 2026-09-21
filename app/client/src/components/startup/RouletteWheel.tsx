@@ -11,8 +11,7 @@ const RouletteWheel: React.FC<RouletteWheelProps> = ({ paused = false }) => (
         aria-hidden="true"
     >
         <div className="startup-wheel__rim">
-            <div className="startup-wheel__rotor">
-                <span className="startup-wheel__zero-pocket">0</span>
+            <div className="startup-wheel__rotor" data-testid="startup-wheel-rotor">
                 <div className="startup-wheel__inner-ring" />
                 <div className="startup-wheel__hub">
                     <span className="startup-wheel__hub-mark" />

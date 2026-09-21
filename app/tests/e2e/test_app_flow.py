@@ -60,6 +60,12 @@ class TestStartupFlow:
         expect(page.get_by_test_id("startup-screen")).to_be_visible()
         expect(page.get_by_text("Preparing the table…", exact=True)).to_be_visible()
         expect(page.get_by_test_id("startup-roulette-wheel")).to_be_visible()
+        zero_slice_background = page.get_by_test_id("startup-wheel-rotor").evaluate(
+            "element => getComputedStyle(element).backgroundImage"
+        )
+        assert "conic-gradient" in zero_slice_background
+        assert "rgb(34, 197, 94)" in zero_slice_background
+        assert page.locator(".startup-wheel__zero-pocket").count() == 0
         page.screenshot(
             path=str(
                 Path(__file__).resolve().parents[3]
