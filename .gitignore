@@ -2,6 +2,7 @@
 # owned by runtimes/cache; the generic cache rules below are defensive ignores
 # for accidental tool output and do not define alternate cache locations.
 runtimes/**
+**/assets/QA/**
 # Keep the cache roots available on a fresh checkout; generated cache contents remain ignored.
 !runtimes/
 !runtimes/cache/
