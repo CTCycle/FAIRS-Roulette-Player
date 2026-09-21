@@ -18,7 +18,7 @@ app/client/dist/
 app/client/dist-ssr/
 app/client/logs/
 app/client/*.local
-**/assets/QA/**
+
 
 # Python
 __pycache__/
