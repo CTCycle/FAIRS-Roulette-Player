@@ -1,6 +1,6 @@
 ## Windows Automation
 
-Last updated: 2026-09-20
+Last updated: 2026-09-21
 
 ## Scope
 
@@ -39,7 +39,9 @@ A failed dependency sync is surfaced directly. Do not interpret it as evidence o
 - There is no separate stop daemon. Closing the application terminal is the local stop action; closing the browser is not.
 - The maintenance menu's `Stop all app processes` action requires confirmation and stops repository-owned backend/frontend processes together with their child process tree; it does not target browser processes.
 - Startup launches the backend and frontend preview independently. The launcher waits for the frontend listener; the browser owns the bounded `/api/health` readiness poll and displays the loading or failure state.
-- A launch checks the installed backend package metadata against `app/server/pyproject.toml` and checks frontend source/build-input timestamps against `app/client/dist/index.html`; stale backend metadata triggers dependency synchronization and stale frontend output triggers a rebuild.
+- A launch resolves configured-port conflicts before runtime, dependency, or build work. Conflict records are grouped by PID, show only process name and executable path metadata (never command lines), and are terminated only after one interactive confirmation. Each confirmed PID is targeted once; the resolver re-queries the configured ports without killing replacement listeners and fails closed if a port remains occupied or termination is denied.
+- A launch checks backend and frontend dependency fingerprints independently. Successful `uv sync` and `npm ci` operations publish their own generated `.fairs-install-state.json` files; automatic backend recovery does not imply a frontend rebuild.
+- Frontend freshness is determined by the SHA-256 content fingerprint of the exact build inputs plus the Node.js baseline. A successful `npm run build` publishes `app/client/dist/.fairs-build-state.json`; state is written only after the build succeeds. Do not use file timestamps, README changes, lint-only configuration, or Vite cache contents as build invalidation signals.
 - Browser URL handoff is best-effort after service readiness; a handoff failure must leave the healthy services running and print the configured URL.
 - Uvicorn runs with one worker because training jobs and live inference models are process-local.
 - `RELOAD=true` is development-only and replaces process-local state.

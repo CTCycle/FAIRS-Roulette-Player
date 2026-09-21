@@ -1,5 +1,5 @@
 # FAIRS: Fabulous Automated Intelligent Roulette System
-Last updated: 2026-09-20
+Last updated: 2026-09-21
 
 [![Release](https://img.shields.io/github/v/release/CTCycle/FAIRS-Roulette-Player?display_name=tag)](https://github.com/CTCycle/FAIRS-Roulette-Player/releases) [![Python](https://img.shields.io/badge/python-3.14.7-3776AB?logo=python&logoColor=white)](https://www.python.org/) [![Node.js](https://img.shields.io/badge/node.js-22.13.0-339933?logo=node.js&logoColor=white)](https://nodejs.org/) [![React](https://img.shields.io/badge/react-19.2.8-61DAFB?logo=react&logoColor=black)](https://react.dev/) [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE) [![CI](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml?query=branch%3Adevelop)
 
@@ -54,7 +54,9 @@ If the environment is missing, option 1 can prepare the Standard environment aut
 
 With the default settings, the [main interface](http://127.0.0.1:8051) is available at port 8051. If the browser does not open automatically, use the interface address printed by the launcher. The [backend health check](http://127.0.0.1:8890/api/health) is available for troubleshooting; the [API documentation](http://127.0.0.1:8890/docs) is intended for advanced users.
 
-Later launches normally reuse the prepared environment when the installed backend package metadata and frontend build are current. If a required runtime, dependency, backend package, or frontend build is missing or stale, option 1 attempts to recover it before starting the application.
+Later launches check the configured backend and frontend ports before doing runtime, dependency, or build work. If a listener is present, option 1 displays the PID, process name, occupied configured port, and executable path when available, then asks whether to terminate those exact processes. Answering **No** terminates nothing and returns to the menu; noninteractive launches fail closed. Each confirmed PID is targeted once, and a remaining or replacement listener aborts startup rather than being killed automatically.
+
+Prepared launches reuse independent backend and frontend dependency state. A changed `app/server/pyproject.toml` or `uv.lock` can resync backend dependencies without rebuilding the web interface. Frontend rebuild decisions use a SHA-256 content fingerprint and `app/client/dist/.fairs-build-state.json`, so they respond to real build-input changes, missing/corrupt state, incomplete output, or a changed Node.js baseline—not to timestamps, README edits, or lint-only configuration changes.
 
 The launcher keeps the backend terminal visible while the application is running.
 
@@ -173,7 +175,7 @@ Open **Help** from the Training or Inference workspace for practical shortcuts a
 - Wait for the launcher to report that both services are ready, then open the printed interface address manually.
 - Run option 2 with **Standard** selected to resync the application environment and rebuild the web interface.
 - If the backend starts but the page still does not load, run option 3 to rebuild only the web interface.
-- If a different application is using the configured ports, close that application and retry. The default interface port is 8051 and the default backend port is 8890.
+- If option 1 reports a configured-port conflict, review the displayed process details and answer **Yes** only if terminating every listed PID is intended. Answer **No** to leave those processes untouched and return to the menu. The default interface port is 8051 and the default backend port is 8890. Use option 13 only for the separate FAIRS-owned process cleanup flow.
 
 ### Database startup fails
 

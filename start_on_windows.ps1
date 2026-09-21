@@ -20,6 +20,9 @@ $clientDir = Join-Path $repoRoot 'app\client'
 $testsDir = Join-Path $repoRoot 'app\tests'
 $venvDir = Join-Path $serverDir '.venv'
 $venvPython = Join-Path $venvDir 'Scripts\python.exe'
+$backendInstallStatePath = Join-Path $venvDir '.fairs-install-state.json'
+$frontendDependencyStatePath = Join-Path $clientDir 'node_modules\.fairs-install-state.json'
+$frontendBuildStatePath = Join-Path $clientDir 'dist\.fairs-build-state.json'
 $envFile = Join-Path $repoRoot 'settings\.env'
 $envExample = Join-Path $repoRoot 'settings\.env.example'
 $runtimeCacheDir = Join-Path $runtimeRoot 'cache'
@@ -52,6 +55,8 @@ $script:LauncherInteractive = -not [Console]::IsInputRedirected -and -not [Conso
 # Portable runtime versions and download sources
 # -----------------------------------------------------------------------------
 $pythonVersion = '3.14.7'
+$dependencyStateSchemaVersion = 1
+$frontendBuildStateSchemaVersion = 1
 $pythonUrl = "https://www.python.org/ftp/python/$pythonVersion/python-$pythonVersion-embed-amd64.zip"
 $nodeVersion = '22.13.0'
 $nodeArchiveName = "node-v$nodeVersion-win-x64"
@@ -365,21 +370,24 @@ function Ensure-PortableRuntimes {
     New-Item -ItemType Directory -Path $runtimeRoot, $pythonDir, $uvDir, $nodeDir -Force | Out-Null
 
     Write-Step 'Setting up Python (embeddable) locally.'
+    $pythonFound = $null
     $pythonNeedsInstall = -not (Test-Path -LiteralPath $pythonExe)
     if (-not $pythonNeedsInstall) {
         try {
-            $installedPythonVersion = (Invoke-CheckPyver $pythonExe).Trim()
-            $pythonNeedsInstall = $installedPythonVersion -ne $pythonVersion -or
+            $pythonFound = (Invoke-CheckPyver $pythonExe).Trim()
+            $pythonNeedsInstall = $pythonFound -ne $pythonVersion -or
                 -not (Test-Path -LiteralPath $pythonPth)
             if (-not $pythonNeedsInstall) {
-                Write-Info "Portable Python $installedPythonVersion already matches the launcher baseline."
+                Write-Info "Portable Python $pythonFound already matches the launcher baseline."
             }
         } catch {
             $pythonNeedsInstall = $true
+            $pythonFound = $null
             Write-Info "Portable Python validation failed; replacing the runtime."
         }
     }
     if ($pythonNeedsInstall) {
+        $pythonFound = $null
         if (Test-Path -LiteralPath $pythonDir) {
             [void](Remove-LauncherPath -Path $pythonDir -Activity 'FAIRS: replace portable Python runtime' -Strict)
         }
@@ -387,7 +395,7 @@ function Ensure-PortableRuntimes {
         Invoke-DownloadAndExtract $pythonUrl (Join-Path $pythonDir 'python.zip') $pythonDir
     }
     if (Test-Path -LiteralPath $pythonPth) { Invoke-PatchPth $pythonPth }
-    $pythonFound = (Invoke-CheckPyver $pythonExe).Trim()
+    if ($null -eq $pythonFound) { $pythonFound = (Invoke-CheckPyver $pythonExe).Trim() }
     if ($pythonFound -ne $pythonVersion) {
         throw "Portable Python $pythonFound does not match the launcher baseline $pythonVersion."
     }
@@ -404,13 +412,15 @@ function Ensure-PortableRuntimes {
     Write-Ok (& $uvExe --version)
 
     Write-Step 'Installing Node.js (portable).'
+    $nodeFound = $null
     $nodeNeedsInstall = $true
     if (Test-Path -LiteralPath $nodeExe) {
-        $installedNodeVersion = (& $nodeExe --version).Trim()
-        $nodeNeedsInstall = $installedNodeVersion -ne "v$nodeVersion" -or -not (Test-Path -LiteralPath $npmCmd)
-        if (-not $nodeNeedsInstall) { Write-Info "Node.js $installedNodeVersion already matches the launcher baseline." }
+        $nodeFound = (& $nodeExe --version).Trim()
+        $nodeNeedsInstall = $nodeFound -ne "v$nodeVersion" -or -not (Test-Path -LiteralPath $npmCmd)
+        if (-not $nodeNeedsInstall) { Write-Info "Node.js $nodeFound already matches the launcher baseline." }
     }
     if ($nodeNeedsInstall) {
+        $nodeFound = $null
         if (Test-Path -LiteralPath $nodeDir) { [void](Remove-LauncherPath -Path $nodeDir -Activity 'FAIRS: replace portable Node.js runtime' -Strict) }
         New-Item -ItemType Directory -Path $nodeDir -Force | Out-Null
         Invoke-DownloadAndExtract $nodeUrl (Join-Path $nodeDir 'node.zip') $nodeDir
@@ -423,13 +433,270 @@ function Ensure-PortableRuntimes {
     if (-not (Test-Path -LiteralPath $nodeExe) -or -not (Test-Path -LiteralPath $npmCmd)) {
         throw "Portable Node.js or npm is missing from $nodeDir."
     }
+    if ($null -eq $nodeFound) { $nodeFound = (& $nodeExe --version).Trim() }
     $env:PATH = "$nodeDir;$env:PATH"
-    Write-Ok "Node.js ready: $(& $nodeExe --version)"
+    Write-Ok "Node.js ready: $nodeFound"
 }
 
 # -----------------------------------------------------------------------------
 # Dependency installation and frontend build
 # -----------------------------------------------------------------------------
+function Write-JsonStateFile {
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)][System.Collections.IDictionary]$State
+    )
+    $parentDirectory = Split-Path -Parent $Path
+    New-Item -ItemType Directory -Path $parentDirectory -Force | Out-Null
+    $json = $State | ConvertTo-Json -Depth 4
+    [IO.File]::WriteAllText($Path, $json, [Text.UTF8Encoding]::new($false))
+}
+
+function Read-JsonStateFile([string]$Path) {
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $null }
+    try {
+        return Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json -ErrorAction Stop
+    } catch {
+        return $null
+    }
+}
+
+function Get-ContentFingerprint {
+    param(
+        [Parameter(Mandatory)][object[]]$Files,
+        [string[]]$Context = @()
+    )
+    $repositoryPrefix = ([IO.Path]::GetFullPath($repoRoot)).TrimEnd('\') + '\'
+    $records = [Collections.Generic.List[string]]::new()
+    foreach ($file in @($Files)) {
+        $filePath = if ($file -is [IO.FileInfo]) { $file.FullName } else { [string]$file }
+        if (-not (Test-Path -LiteralPath $filePath -PathType Leaf)) {
+            throw "Fingerprint input is missing: $filePath"
+        }
+        $fullPath = [IO.Path]::GetFullPath($filePath)
+        if (-not $fullPath.StartsWith($repositoryPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Fingerprint input is outside the repository: $fullPath"
+        }
+        $relativePath = $fullPath.Substring($repositoryPrefix.Length).Replace('\', '/')
+        $contentHash = (Get-FileHash -LiteralPath $fullPath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLowerInvariant()
+        [void]$records.Add("$relativePath=$contentHash")
+    }
+
+    $orderedRecords = [string[]]$records.ToArray()
+    [Array]::Sort($orderedRecords, [StringComparer]::Ordinal)
+    $canonicalLines = [Collections.Generic.List[string]]::new()
+    [void]$canonicalLines.Add('content-fingerprint-schema=1')
+    foreach ($contextEntry in @($Context)) { [void]$canonicalLines.Add([string]$contextEntry) }
+    foreach ($record in $orderedRecords) { [void]$canonicalLines.Add($record) }
+    $canonicalText = $canonicalLines -join "`n"
+
+    $sha256 = [Security.Cryptography.SHA256]::Create()
+    try {
+        return ([Convert]::ToHexString($sha256.ComputeHash([Text.Encoding]::UTF8.GetBytes($canonicalText)))).ToLowerInvariant()
+    } finally {
+        $sha256.Dispose()
+    }
+}
+
+function Get-BackendDependencyInputFiles {
+    return @(
+        (Join-Path $serverDir 'pyproject.toml'),
+        (Join-Path $serverDir 'uv.lock')
+    )
+}
+
+function Get-BackendDependencyFingerprint {
+    Get-ContentFingerprint -Files (Get-BackendDependencyInputFiles) -Context @(
+        "python_version=$pythonVersion"
+    )
+}
+
+function Get-FrontendDependencyFingerprint {
+    Get-ContentFingerprint -Files @(
+        (Join-Path $clientDir 'package.json'),
+        (Join-Path $clientDir 'package-lock.json')
+    ) -Context @(
+        "node_version=$nodeVersion"
+    )
+}
+
+function Get-FrontendBuildInputFiles {
+    $rootInputs = @(
+        'index.html',
+        'package.json',
+        'package-lock.json',
+        'tsconfig.json',
+        'tsconfig.app.json',
+        'tsconfig.node.json',
+        'vite.config.ts'
+    )
+    $inputs = @(
+        $rootInputs | ForEach-Object {
+            $path = Join-Path $clientDir $_
+            if (Test-Path -LiteralPath $path -PathType Leaf) { Get-Item -LiteralPath $path }
+        }
+    )
+    foreach ($sourceDirectory in @('src', 'public')) {
+        $path = Join-Path $clientDir $sourceDirectory
+        if (Test-Path -LiteralPath $path -PathType Container) {
+            $inputs += @(Get-ChildItem -LiteralPath $path -Recurse -File -ErrorAction SilentlyContinue)
+        }
+    }
+    return @($inputs)
+}
+
+function Get-FrontendBuildFingerprint {
+    Get-ContentFingerprint -Files (Get-FrontendBuildInputFiles) -Context @(
+        "schema_version=$frontendBuildStateSchemaVersion",
+        "node_version=$nodeVersion"
+    )
+}
+
+function Read-FrontendBuildState {
+    $state = Read-JsonStateFile -Path $frontendBuildStatePath
+    if ($null -eq $state -or
+        $state.schema_version -ne $frontendBuildStateSchemaVersion -or
+        [string]::IsNullOrWhiteSpace([string]$state.fingerprint) -or
+        [string]$state.node_version -ne $nodeVersion) {
+        return $null
+    }
+    return $state
+}
+
+function Write-FrontendBuildState([string]$Fingerprint) {
+    Write-JsonStateFile -Path $frontendBuildStatePath -State ([ordered]@{
+            schema_version = $frontendBuildStateSchemaVersion
+            fingerprint = $Fingerprint
+            node_version = $nodeVersion
+        })
+}
+
+function Test-FrontendBuildReady {
+    $frontendEntry = Join-Path $clientDir 'dist\index.html'
+    $frontendAssets = Join-Path $clientDir 'dist\assets'
+    if (-not (Test-Path -LiteralPath $frontendEntry -PathType Leaf) -or
+        -not (Test-Path -LiteralPath $frontendAssets -PathType Container)) {
+        return $false
+    }
+    if ((Get-Item -LiteralPath $frontendEntry).Length -eq 0) { return $false }
+    if (-not (Get-ChildItem -LiteralPath $frontendAssets -File -ErrorAction SilentlyContinue | Select-Object -First 1)) {
+        return $false
+    }
+    return $true
+}
+
+function Test-FrontendBuildCurrent {
+    if (-not (Test-FrontendBuildReady)) { return $false }
+    try {
+        $state = Read-FrontendBuildState
+        if ($null -eq $state) { return $false }
+        return [string]$state.fingerprint -eq (Get-FrontendBuildFingerprint)
+    } catch {
+        return $false
+    }
+}
+
+function Test-BackendDependenciesCurrent {
+    if (-not (Test-Path -LiteralPath $venvPython -PathType Leaf) -or
+        -not (Test-Path -LiteralPath $backendInstallStatePath -PathType Leaf)) {
+        return $false
+    }
+    try {
+        $state = Read-JsonStateFile -Path $backendInstallStatePath
+        if ($null -eq $state -or
+            $state.schema_version -ne $dependencyStateSchemaVersion -or
+            [string]$state.python_version -ne $pythonVersion -or
+            [string]::IsNullOrWhiteSpace([string]$state.fingerprint) -or
+            [string]$state.fingerprint -ne (Get-BackendDependencyFingerprint)) {
+            return $false
+        }
+    } catch {
+        return $false
+    }
+    & $venvPython -c 'import fastapi, uvicorn' *> $null
+    return $LASTEXITCODE -eq 0
+}
+
+function Test-FrontendDependenciesCurrent {
+    $frontendPackage = Join-Path $clientDir 'package.json'
+    $frontendLock = Join-Path $clientDir 'package-lock.json'
+    $frontendInstallLock = Join-Path $clientDir 'node_modules\.package-lock.json'
+    $frontendRunner = Join-Path $clientDir 'node_modules\.bin\vite.cmd'
+    if (-not (Test-Path -LiteralPath $frontendPackage -PathType Leaf) -or
+        -not (Test-Path -LiteralPath $frontendLock -PathType Leaf) -or
+        -not (Test-Path -LiteralPath $frontendDependencyStatePath -PathType Leaf) -or
+        -not (Test-Path -LiteralPath $frontendInstallLock -PathType Leaf) -or
+        -not (Test-Path -LiteralPath $frontendRunner -PathType Leaf)) {
+        return $false
+    }
+    try {
+        $state = Read-JsonStateFile -Path $frontendDependencyStatePath
+        if ($null -eq $state -or
+            $state.schema_version -ne $dependencyStateSchemaVersion -or
+            [string]$state.node_version -ne $nodeVersion -or
+            [string]::IsNullOrWhiteSpace([string]$state.fingerprint) -or
+            [string]$state.fingerprint -ne (Get-FrontendDependencyFingerprint)) {
+            return $false
+        }
+    } catch {
+        return $false
+    }
+    return $true
+}
+
+function Sync-BackendDependencies {
+    param(
+        [ValidateSet('Standard', 'Development')]
+        [string]$InstallationType = 'Standard'
+    )
+    Remove-Item -LiteralPath $backendInstallStatePath -Force -ErrorAction SilentlyContinue
+    Write-Step 'Installing Python dependencies with uv.'
+    $syncArguments = @('sync', '--python', $pythonExe)
+    if ($InstallationType -eq 'Development') { $syncArguments += '--all-extras' }
+    Push-Location $serverDir
+    try {
+        & $uvExe @syncArguments
+        if ($LASTEXITCODE -ne 0) { throw "uv sync failed with exit code $LASTEXITCODE." }
+    } finally { Pop-Location }
+    Write-JsonStateFile -Path $backendInstallStatePath -State ([ordered]@{
+            schema_version = $dependencyStateSchemaVersion
+            fingerprint = Get-BackendDependencyFingerprint
+            python_version = $pythonVersion
+            installation_type = $InstallationType
+        })
+}
+
+function Sync-FrontendDependencies {
+    $frontendLock = Join-Path $clientDir 'package-lock.json'
+    if (-not (Test-Path -LiteralPath $frontendLock -PathType Leaf)) {
+        throw 'Frontend package-lock.json is required.'
+    }
+    Remove-Item -LiteralPath $frontendDependencyStatePath -Force -ErrorAction SilentlyContinue
+    Write-Step 'Installing frontend dependencies.'
+    Push-Location $clientDir
+    try {
+        & $npmCmd ci
+        if ($LASTEXITCODE -ne 0) { throw "npm dependency installation failed with exit code $LASTEXITCODE." }
+    } finally { Pop-Location }
+    Write-JsonStateFile -Path $frontendDependencyStatePath -State ([ordered]@{
+            schema_version = $dependencyStateSchemaVersion
+            fingerprint = Get-FrontendDependencyFingerprint
+            node_version = $nodeVersion
+        })
+}
+
+function Invoke-FrontendBuild {
+    Set-CacheEnvironment
+    Remove-Item -LiteralPath $frontendBuildStatePath -Force -ErrorAction SilentlyContinue
+    Write-Step 'Building frontend.'
+    Push-Location $clientDir
+    try {
+        & $npmCmd run build
+        if ($LASTEXITCODE -ne 0) { throw "Frontend build failed with exit code $LASTEXITCODE." }
+    } finally { Pop-Location }
+    Write-FrontendBuildState -Fingerprint (Get-FrontendBuildFingerprint)
+}
+
 function Install-Dependencies {
     param(
         [switch]$PruneCache,
@@ -444,26 +711,8 @@ function Install-Dependencies {
     $env:UV_PROJECT_ENVIRONMENT = $venvDir
     $env:UV_LINK_MODE = 'copy'
     Remove-Item Env:PYTHONHOME, Env:PYTHONPATH, Env:PYTHONNOUSERSITE -ErrorAction SilentlyContinue
-
-    Write-Step 'Installing Python dependencies with uv.'
-    $syncArguments = @('sync', '--python', $pythonExe)
-    if ($InstallationType -eq 'Development') { $syncArguments += '--all-extras' }
-    Push-Location $serverDir
-    try {
-        & $uvExe @syncArguments
-        if ($LASTEXITCODE -ne 0) { throw "uv sync failed with exit code $LASTEXITCODE." }
-    } finally { Pop-Location }
-
-    Write-Step 'Installing frontend dependencies.'
-    Push-Location $clientDir
-    try {
-        $frontendLock = Join-Path $clientDir 'package-lock.json'
-        if (-not (Test-Path -LiteralPath $frontendLock)) {
-            throw 'Frontend package-lock.json is required.'
-        }
-        & $npmCmd ci
-        if ($LASTEXITCODE -ne 0) { throw "npm dependency installation failed with exit code $LASTEXITCODE." }
-    } finally { Pop-Location }
+    Sync-BackendDependencies -InstallationType $InstallationType
+    Sync-FrontendDependencies
 
     if ($PruneCache -and (Test-Path -LiteralPath $runtimeCacheDir)) {
         Write-Step 'Pruning runtime cache.'
@@ -482,115 +731,7 @@ function Build-Frontend {
     Import-DotEnv
     Assert-ApplicationStopped
     Set-CacheEnvironment
-    Write-Step 'Building frontend.'
-    Push-Location $clientDir
-    try {
-        & $npmCmd run build
-        if ($LASTEXITCODE -ne 0) { throw "Frontend build failed with exit code $LASTEXITCODE." }
-    } finally { Pop-Location }
-}
-
-function Test-FrontendBuildReady {
-    $frontendEntry = Join-Path $clientDir 'dist\index.html'
-    $frontendAssets = Join-Path $clientDir 'dist\assets'
-    if (-not (Test-Path -LiteralPath $frontendEntry -PathType Leaf) -or
-        -not (Test-Path -LiteralPath $frontendAssets -PathType Container)) {
-        return $false
-    }
-    if ((Get-Item -LiteralPath $frontendEntry).Length -eq 0) { return $false }
-    if (-not (Get-ChildItem -LiteralPath $frontendAssets -File -ErrorAction SilentlyContinue | Select-Object -First 1)) {
-        return $false
-    }
-    return $true
-}
-
-function Get-FrontendBuildInputs {
-    $rootInputs = @(
-        'index.html',
-        'package.json',
-        'package-lock.json',
-        'tsconfig.json',
-        'tsconfig.app.json',
-        'tsconfig.node.json',
-        'vite.config.ts',
-        'vite.config.js'
-    )
-    $inputs = @(
-        $rootInputs | ForEach-Object {
-            $path = Join-Path $clientDir $_
-            if (Test-Path -LiteralPath $path -PathType Leaf) {
-                Get-Item -LiteralPath $path
-            }
-        }
-    )
-    foreach ($sourceDirectory in @('src', 'public')) {
-        $path = Join-Path $clientDir $sourceDirectory
-        if (Test-Path -LiteralPath $path -PathType Container) {
-            $inputs += @(Get-ChildItem -LiteralPath $path -Recurse -File -ErrorAction SilentlyContinue)
-        }
-    }
-    return @($inputs)
-}
-
-function Test-FrontendBuildCurrent {
-    if (-not (Test-FrontendBuildReady)) { return $false }
-
-    $frontendEntry = Join-Path $clientDir 'dist\index.html'
-    $buildTime = (Get-Item -LiteralPath $frontendEntry).LastWriteTimeUtc
-    $newestInput = Get-FrontendBuildInputs |
-        Sort-Object -Property LastWriteTimeUtc -Descending |
-        Select-Object -First 1
-    if ($null -eq $newestInput) { return $false }
-    return $newestInput.LastWriteTimeUtc -le $buildTime
-}
-
-function Test-BackendPackageCurrent {
-    $projectFile = Join-Path $serverDir 'pyproject.toml'
-    if (-not (Test-Path -LiteralPath $projectFile -PathType Leaf)) { return $false }
-
-    $expectedVersion = (& $venvPython -c "import sys, tomllib; print(tomllib.load(open(sys.argv[1], 'rb'))['project']['version'])" $projectFile).Trim()
-    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($expectedVersion)) { return $false }
-
-    $installedVersion = (& $venvPython -c "from importlib.metadata import version; print(version('fairs-server'))").Trim()
-    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($installedVersion)) { return $false }
-
-    return $installedVersion -eq $expectedVersion
-}
-
-function Test-DependenciesReady {
-    $frontendPackage = Join-Path $clientDir 'package.json'
-    $frontendLock = Join-Path $clientDir 'package-lock.json'
-    $frontendModules = Join-Path $clientDir 'node_modules'
-    $frontendInstallState = Join-Path $frontendModules '.package-lock.json'
-    $frontendRunner = Join-Path $frontendModules '.bin\vite.cmd'
-    $backendEntrypoint = Join-Path $serverDir 'app.py'
-
-    if (-not (Test-Path -LiteralPath $pythonExe) -or
-        -not (Test-Path -LiteralPath $uvExe) -or
-        -not (Test-Path -LiteralPath $nodeExe) -or
-        -not (Test-Path -LiteralPath $npmCmd) -or
-        -not (Test-Path -LiteralPath $venvPython) -or
-        -not (Test-Path -LiteralPath $backendEntrypoint) -or
-        -not (Test-Path -LiteralPath $frontendPackage) -or
-        -not (Test-Path -LiteralPath $frontendLock) -or
-        -not (Test-Path -LiteralPath $frontendInstallState) -or
-        -not (Test-Path -LiteralPath $frontendRunner)) {
-        return $false
-    }
-
-    & $pythonExe --version *> $null
-    if ($LASTEXITCODE -ne 0) { return $false }
-    & $uvExe --version *> $null
-    if ($LASTEXITCODE -ne 0) { return $false }
-    & $nodeExe --version *> $null
-    if ($LASTEXITCODE -ne 0) { return $false }
-    & $venvPython -c 'import fastapi, uvicorn' *> $null
-    if ($LASTEXITCODE -ne 0) { return $false }
-    if (-not (Test-BackendPackageCurrent)) { return $false }
-
-    if (-not (Test-FrontendBuildReady)) { return $false }
-
-    return $true
+    Invoke-FrontendBuild
 }
 
 function Get-PortProcessIds([int]$Port) {
@@ -598,6 +739,148 @@ function Get-PortProcessIds([int]$Port) {
     return @($listeners | ForEach-Object {
         if ($_.Matches.Count) { [int]$_.Matches[0].Groups[1].Value }
     } | Sort-Object -Unique)
+}
+
+function Get-ConfiguredPortConflicts {
+    param(
+        [Parameter(Mandatory)][int]$BackendPort,
+        [Parameter(Mandatory)][int]$FrontendPort
+    )
+    $portEntries = @(
+        [pscustomobject]@{ Port = $BackendPort; Label = 'FASTAPI_PORT' },
+        [pscustomobject]@{ Port = $FrontendPort; Label = 'UI_PORT' }
+    )
+    $recordsByPid = @{}
+    foreach ($portEntry in $portEntries) {
+        foreach ($processId in @(Get-PortProcessIds -Port ([int]$portEntry.Port))) {
+            if (-not $recordsByPid.ContainsKey([int]$processId)) {
+                $recordsByPid[[int]$processId] = [ordered]@{
+                    ProcessId = [int]$processId
+                    Ports = [Collections.Generic.List[int]]::new()
+                    PortLabels = [Collections.Generic.List[string]]::new()
+                }
+            }
+            $record = $recordsByPid[[int]$processId]
+            if (-not $record.Ports.Contains([int]$portEntry.Port)) { [void]$record.Ports.Add([int]$portEntry.Port) }
+            if (-not $record.PortLabels.Contains([string]$portEntry.Label)) { [void]$record.PortLabels.Add([string]$portEntry.Label) }
+        }
+    }
+    if ($recordsByPid.Count -eq 0) { return @() }
+
+    $metadataByPid = @{}
+    try {
+        foreach ($process in @(Get-CimInstance -ClassName Win32_Process -ErrorAction Stop)) {
+            $processId = [int]$process.ProcessId
+            if ($recordsByPid.ContainsKey($processId)) {
+                $metadataByPid[$processId] = [pscustomobject]@{
+                    ProcessName = [string]$process.Name
+                    ExecutablePath = [string]$process.ExecutablePath
+                }
+            }
+        }
+    } catch {
+        Write-Info "Could not read Win32 process metadata; process names and executable paths may be unavailable."
+    }
+    foreach ($processId in @($recordsByPid.Keys)) {
+        if ($metadataByPid.ContainsKey([int]$processId)) { continue }
+        try {
+            $process = Get-Process -Id ([int]$processId) -ErrorAction Stop
+            $executablePath = ''
+            try { $executablePath = [string]$process.Path } catch { }
+            $metadataByPid[[int]$processId] = [pscustomobject]@{
+                ProcessName = [string]$process.ProcessName
+                ExecutablePath = $executablePath
+            }
+        } catch { }
+    }
+
+    return @($recordsByPid.Values | ForEach-Object {
+            $record = $_
+            $metadata = $metadataByPid[[int]$record.ProcessId]
+            $processName = if ($null -ne $metadata -and -not [string]::IsNullOrWhiteSpace($metadata.ProcessName)) {
+                $metadata.ProcessName
+            } else { 'Unknown' }
+            $executablePath = if ($null -ne $metadata) { [string]$metadata.ExecutablePath } else { '' }
+            [pscustomobject]@{
+                ProcessId = [int]$record.ProcessId
+                ProcessName = $processName
+                ExecutablePath = $executablePath
+                Ports = @($record.Ports | Sort-Object -Unique)
+                PortLabels = @($record.PortLabels | Sort-Object -Unique)
+            }
+        } | Sort-Object ProcessId)
+}
+
+function Get-PortConflictDescription([object[]]$Conflicts) {
+    return @($Conflicts | ForEach-Object {
+            $portNames = @($_.PortLabels) -join ', '
+            $ports = @($_.Ports) -join ', '
+            $name = if ([string]::IsNullOrWhiteSpace([string]$_.ProcessName)) { 'Unknown' } else { $_.ProcessName }
+            $executable = if ([string]::IsNullOrWhiteSpace([string]$_.ExecutablePath)) { 'path unavailable' } else { $_.ExecutablePath }
+            "PID $($_.ProcessId) | $name | $portNames ($ports) | $executable"
+        }) -join '; '
+}
+
+function Stop-PortConflictProcesses {
+    param([Parameter(Mandatory)][object[]]$Conflicts)
+    $seenProcessIds = [Collections.Generic.HashSet[int]]::new()
+    $targetedProcessIds = [Collections.Generic.List[int]]::new()
+    $stopErrors = [Collections.Generic.List[string]]::new()
+    foreach ($conflict in @($Conflicts)) {
+        $processId = [int]$conflict.ProcessId
+        if (-not $seenProcessIds.Add($processId)) { continue }
+        [void]$targetedProcessIds.Add($processId)
+        if (-not (Get-Process -Id $processId -ErrorAction SilentlyContinue)) { continue }
+        try {
+            Stop-Process -Id $processId -Force -ErrorAction Stop
+        } catch {
+            if (Get-Process -Id $processId -ErrorAction SilentlyContinue) {
+                [void]$stopErrors.Add("PID $processId ($($conflict.ProcessName)): $($_.Exception.Message)")
+            }
+        }
+    }
+    return [pscustomobject]@{
+        TargetedProcessIds = @($targetedProcessIds)
+        Errors = @($stopErrors)
+    }
+}
+
+function Resolve-LaunchPortConflicts {
+    param(
+        [Parameter(Mandatory)][int]$BackendPort,
+        [Parameter(Mandatory)][int]$FrontendPort
+    )
+    $conflicts = @(Get-ConfiguredPortConflicts -BackendPort $BackendPort -FrontendPort $FrontendPort)
+    if ($conflicts.Count -eq 0) { return $true }
+
+    Write-Host ''
+    Write-Host 'Configured launch port conflicts were found:' -ForegroundColor Yellow
+    foreach ($conflict in $conflicts) {
+        $portNames = @($conflict.PortLabels) -join ', '
+        $ports = @($conflict.Ports) -join ', '
+        $executable = if ([string]::IsNullOrWhiteSpace([string]$conflict.ExecutablePath)) { 'path unavailable' } else { $conflict.ExecutablePath }
+        Write-Host "  PID $($conflict.ProcessId) | $($conflict.ProcessName) | $portNames ($ports) | $executable" -ForegroundColor Yellow
+    }
+
+    if (-not (Test-InteractiveConsole)) {
+        throw "Configured launch port(s) are occupied. Noninteractive launch will not terminate unconfirmed processes. $((Get-PortConflictDescription $conflicts))"
+    }
+    if (-not (Confirm-DestructiveAction 'terminate the listed configured-port processes')) { return $false }
+
+    $stopResult = Stop-PortConflictProcesses -Conflicts $conflicts
+    $remainingConflicts = @()
+    for ($attempt = 0; $attempt -lt 20; $attempt++) {
+        $remainingConflicts = @(Get-ConfiguredPortConflicts -BackendPort $BackendPort -FrontendPort $FrontendPort)
+        if ($remainingConflicts.Count -eq 0) { break }
+        if ($attempt -lt 19) { Start-Sleep -Milliseconds 250 }
+    }
+    if ($stopResult.Errors.Count -gt 0 -or $remainingConflicts.Count -gt 0) {
+        $details = @()
+        if ($stopResult.Errors.Count -gt 0) { $details += @($stopResult.Errors) }
+        if ($remainingConflicts.Count -gt 0) { $details += "Remaining: $(Get-PortConflictDescription $remainingConflicts)" }
+        throw "Could not clear the configured launch port(s). $($details -join '; ')"
+    }
+    return $true
 }
 
 function Get-ApplicationProcessRecords {
@@ -666,27 +949,36 @@ function Assert-SingleWorkerConfiguration {
 # -----------------------------------------------------------------------------
 function Start-Application {
     Import-DotEnv
-    Assert-ApplicationStopped
+    $fastApiPort = [int]$env:FASTAPI_PORT
+    $uiPort = [int]$env:UI_PORT
+    if (-not (Resolve-LaunchPortConflicts -BackendPort $fastApiPort -FrontendPort $uiPort)) {
+        return $false
+    }
     Assert-SingleWorkerConfiguration
     Ensure-PortableRuntimes
     Set-CacheEnvironment
     $env:UV_PROJECT_ENVIRONMENT = $venvDir
     $env:UV_LINK_MODE = 'copy'
     Remove-Item Env:PYTHONHOME, Env:PYTHONPATH, Env:PYTHONNOUSERSITE -ErrorAction SilentlyContinue
-    if (-not (Test-DependenciesReady)) {
-        Write-Step 'Required application environments or the frontend build are missing or unusable; recovering.'
-        Install-Dependencies -InstallationType 'Standard'
-        Build-Frontend
+    if (-not (Test-BackendDependenciesCurrent)) {
+        Write-Step 'Backend dependency state is missing or stale; synchronizing backend dependencies.'
+        Sync-BackendDependencies -InstallationType 'Standard'
+    } else {
+        Write-Ok 'Backend dependencies are current; skipped backend synchronization.'
     }
-    elseif (-not (Test-FrontendBuildCurrent)) {
+    if (-not (Test-FrontendDependenciesCurrent)) {
+        Write-Step 'Frontend dependency state is missing or stale; synchronizing frontend dependencies.'
+        Sync-FrontendDependencies
+    } else {
+        Write-Ok 'Frontend dependencies are current; skipped frontend synchronization.'
+    }
+    if (-not (Test-FrontendBuildCurrent)) {
         Write-Step 'Frontend source or build inputs changed; rebuilding frontend.'
-        Build-Frontend
+        Invoke-FrontendBuild
     }
     else {
-        Write-Ok 'Application environments are ready; skipped dependency installation.'
+        Write-Ok 'Frontend build is current; skipped frontend build.'
     }
-    $fastApiPort = [int]$env:FASTAPI_PORT
-    $uiPort = [int]$env:UI_PORT
 
     if ($env:RELOAD -eq 'true') {
         Write-Info 'RELOAD=true is development-only; reloads discard in-memory training jobs and inference sessions.'
@@ -732,6 +1024,7 @@ function Start-Application {
     Write-Info 'Backend readiness is monitored in the browser while the backend finishes starting.'
     Write-Host "Backend: $backendUrl (launcher PID $($backendProcess.Id))"
     Write-Host "Frontend: $uiUrl (PID $frontendPid)"
+    return $true
 }
 
 # -----------------------------------------------------------------------------
@@ -1183,7 +1476,7 @@ function Show-Menu {
         try {
             Invoke-TrackedLauncherAction -Name "menu option $($selectedEntry.Number)" -Action {
                 switch ($selectedEntry.Key) {
-                    'Launch' { Start-Application; exit 0 }
+                    'Launch' { if (Start-Application) { exit 0 } }
                     'Update' { Update-Application }
                     'Check' { Check-ForUpdates }
                     'Install' {

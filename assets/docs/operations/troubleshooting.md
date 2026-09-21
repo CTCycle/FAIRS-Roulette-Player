@@ -1,13 +1,15 @@
 ## Troubleshooting
 
-Last updated: 2026-09-20
+Last updated: 2026-09-21
 
 ## Startup Problems
 
 - If local startup fails, run option 2 in `start_on_windows.ps1` and choose `Standard` to resync runtimes and application dependencies.
 - If test or browser tooling is missing, run option 2 and choose `Development` so the server's `test` extra is installed.
-- If the configured ports are already occupied by a previous session, close that session's application terminal or use launcher option 13, `Stop all app processes`. Keep the ports dedicated to FAIRS; otherwise stop the unrelated service through its own owner or choose different configured ports.
+- If option 1 reports a listener on a configured port, review the displayed PID, process name, port, and executable path. Answer `Yes` only when you intend to terminate every listed PID; the launcher deduplicates a PID that owns both ports, waits for both ports to clear, and never kills a replacement listener automatically. Answer `No` to leave all processes untouched and return to the menu. Noninteractive launches fail closed when a conflict exists. Option 13 remains the separate FAIRS-owned process cleanup action.
 - If the backend starts without the frontend, verify that `app/client/node_modules` contains Vite and that `app/client/dist/index.html` and its generated assets exist; close the application terminal before retrying option 1, run option 3 for a frontend-only rebuild, or run option 2 when frontend dependencies also need updating.
+- If option 1 resynchronizes only backend dependencies after a `pyproject.toml` or `uv.lock` change, that is expected; backend recovery does not rebuild the frontend. A missing or corrupt `app/server/.venv/.fairs-install-state.json`, `app/client/node_modules/.fairs-install-state.json`, or `app/client/dist/.fairs-build-state.json` causes the relevant layer to recover on the next launch.
+- Frontend rebuild decisions use content fingerprints, not file timestamps. Changes to React/TypeScript/CSS source, public assets, package manifests, TypeScript configuration, or `vite.config.ts` rebuild the frontend; README and lint-only configuration changes do not.
 - Maintenance actions require the application terminal to be closed first. If npm reports `EPERM` for `esbuild.exe`, stop any external Vite or Node process using `app/client/node_modules` through its own owner and retry.
 - If the browser remains on the FAIRS startup screen, keep the visible backend terminal open and inspect its startup output. The screen retries transient connection failures and changes to a compact retry state after its bounded startup window; use `Retry connection` after correcting the backend issue.
 - If startup reports an unsupported worker count, unset `WEB_CONCURRENCY`, `UVICORN_WORKERS`, and `FAIRS_WORKERS`, or set each to `1`. Do not use multiple workers for this process-local runtime.
