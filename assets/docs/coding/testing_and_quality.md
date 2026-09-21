@@ -1,6 +1,6 @@
 ## Testing And Quality
 
-Last updated: 2026-09-11
+Last updated: 2026-09-21
 
 ## Quality Baseline
 
@@ -50,6 +50,27 @@ Primary automated test surfaces live under `app/tests`:
 - Use broader checks when shared infrastructure or startup flow changes.
 - Keep QA artifacts in `assets/QA/` when persistent evidence is needed.
 - Do not leave temporary logs, screenshots, or validation scraps scattered through the repository.
+
+## Comprehensive Validation Campaign
+
+The canonical campaign tracker is [`../project_status_ledger.md`](../project_status_ledger.md). The campaign targets the core Windows + SQLite + CPU profile first, then treats PostgreSQL, CUDA, mixed precision, JIT, maintenance, and resilience as explicit conditional gates. Its dependency order is:
+
+`startup → persistence/settings → datasets → training → checkpoint → inference`
+
+Use the roadmap slice IDs `VAL-00` through `VAL-22` in the ledger. The normal execution order is `VAL-00 → VAL-01 → VAL-02 → VAL-04 → VAL-06 → VAL-07 → VAL-08 → VAL-10 → VAL-11 → VAL-12 → VAL-13 → VAL-14 → VAL-15 → VAL-16 → VAL-17 → VAL-19 → VAL-21 → VAL-22`; run `VAL-03`, `VAL-05`, `VAL-09`, `VAL-18`, and `VAL-20` when their dependencies or evidence change.
+
+For every slice use:
+
+`Inspect → Execute → Observe → Diagnose → Fix → Retest → Regress → Record`
+
+Record only scenarios actually executed, the exact source revision, environment, stable issue IDs, classification, root cause, remediation, adjacent regression, evidence paths, and remaining gaps. Browser evidence includes the visible state, console errors, failed network requests, backend errors, and screenshots for failures. Persistence/model evidence also includes database state and dataset, checkpoint, session, or job identifiers. Store detailed QA artifacts under `assets/QA/`; keep the conclusion and limitation in the tracked ledger.
+
+The first active tier is Tier 0:
+
+- `VAL-00` creates or identifies one disposable training dataset and produces a real short CPU checkpoint through the supported application path. This lineage is the prerequisite for live inference validation; mocked checkpoints do not satisfy the campaign.
+- `VAL-01` smoke-tests the official Windows launcher, frontend-before-backend loading, `/api/health` transition, route entry, explicit owned-process shutdown, and port cleanup. It does not certify Training or Inference behavior after route mount.
+
+Use repository-local cache/temp paths and preserve unrelated data or processes. Do not infer a pass from source presence, a test definition, an HTTP 200 alone, or a hosted result from a different revision.
 
 ## Related Files
 

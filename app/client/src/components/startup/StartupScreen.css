@@ -167,11 +167,17 @@
     overflow: hidden;
     border: 0.25rem solid #05070b;
     border-radius: 50%;
-    background: repeating-conic-gradient(
-        from -5deg,
-        #080a0f 0deg 9.73deg,
-        var(--roulette-red) 9.73deg 19.46deg
-    );
+    background:
+        conic-gradient(
+            from -5deg,
+            var(--roulette-green) 0deg 9.73deg,
+            transparent 9.73deg 360deg
+        ),
+        repeating-conic-gradient(
+            from -5deg,
+            #080a0f 0deg 9.73deg,
+            var(--roulette-red) 9.73deg 19.46deg
+        );
     box-shadow: inset 0 0 0 0.25rem rgba(255, 255, 255, 0.06);
     animation: startup-wheel-spin 10s linear infinite;
 }
@@ -188,23 +194,6 @@
 .startup-wheel__rotor::after {
     inset: 29%;
     border-color: rgba(5, 7, 11, 0.75);
-}
-
-.startup-wheel__zero-pocket {
-    position: absolute;
-    top: 5%;
-    left: 50%;
-    z-index: 1;
-    display: grid;
-    width: 1.5rem;
-    height: 2.6rem;
-    place-items: center;
-    color: #f1fff6;
-    background: var(--roulette-green);
-    border-radius: 0.2rem;
-    font-size: var(--font-size-xs);
-    font-weight: 800;
-    transform: translateX(-50%);
 }
 
 .startup-wheel__inner-ring {

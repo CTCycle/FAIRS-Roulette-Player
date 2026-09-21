@@ -1,6 +1,6 @@
 ## Workflows
 
-Last updated: 2026-09-19
+Last updated: 2026-09-21
 
 ## Training Workflow
 
@@ -33,6 +33,8 @@ Resume uses the same train/validation environment construction as initial traini
 3. FAIRS verifies that the dataset recorded by the checkpoint is still available and supports the checkpoint perceptive field.
 4. If the original dataset is valid, FAIRS opens Inference with the checkpoint, dataset, initial capital, and bet context preselected.
 5. If the dataset is missing or incompatible, FAIRS does not silently substitute another dataset. Open Inference and choose the alternative dataset explicitly so the changed experimental context is visible.
+
+For the validation campaign, create this lineage with one disposable named training dataset and a short real CPU training run before testing live inference. Record the dataset ID, training job ID, checkpoint name, database state, and source revision; a mocked or manually copied checkpoint does not establish the required training-to-inference evidence.
 
 ## Inference Workflow
 
