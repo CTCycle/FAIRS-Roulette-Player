@@ -1,7 +1,7 @@
 # Tier 2 validation campaign: VAL-07 + VAL-08
 
 Date: 2026-09-22  
-Latest status: `VAL-07 VALIDATED`; `VAL-08 OPEN / PARTIAL`  
+Latest status: `VAL-07 VALIDATED`; `VAL-08 VALIDATED`
 Branch: `develop`  
 Original campaign HEAD recorded before testing: `fbd2f7adb818f8476c2bfbb22eb60aa21340df48`
 
@@ -104,7 +104,7 @@ The deterministic API regression uses a unique checkpoint name, waits for its ex
 
 ## Regression results
 
-The results below are from the original campaign at the HEAD recorded above; current VAL-07 follow-up results are recorded at the end of this report.
+The results below are from the original campaign at the HEAD recorded above; the dated current-revision follow-ups are recorded at the end of this report.
 
 | Gate | Result |
 | --- | --- |
@@ -185,4 +185,72 @@ The first API rerun exposed a test-harness cleanup race: the prior start-while-r
 
 `VAL07-002` — Product defect fixed in this follow-up. Canonical validation and direct start did not preflight stored dataset existence/type or checkpoint output-name reuse. The shared service preflight now checks these resources before start creates a job, and `/training/validate` uses the same check. Regression evidence is the deleted-after-validation API case, stale-ID deterministic/no-side-effect case, and service-level missing/wrong-kind/checkpoint-collision tests.
 
-**Current gate status:** `VAL-07` is `VALIDATED` for the supported Windows/SQLite/CPU profile on the source/test patch identified above. `VAL-08` remains `OPEN / PARTIAL` for the latest campaign state: the earlier browser telemetry evidence remains historical, and this follow-up did not repeat the complete browser-observed telemetry/checkpoint workflow. The standalone frontend test-script gap (`ISSUE-003`) and later campaign slices remain open.
+**Historical gate status (as of the VAL-07 follow-up):** `VAL-07` was `VALIDATED` for the supported Windows/SQLite/CPU profile on the source/test patch identified above. `VAL-08` was still `OPEN / PARTIAL` at that point because the earlier browser telemetry evidence was historical and that follow-up did not repeat the complete browser-observed telemetry/checkpoint workflow. The current-revision VAL-08 follow-up below supersedes the VAL-08 portion of this status; the standalone frontend test-script gap (`ISSUE-003`) and later campaign slices remain open.
+
+## VAL-08 current-revision follow-up — 2026-09-22
+
+This follow-up is the current promotion evidence for `VAL-08`. It ran on `develop` at exact HEAD `a2ecce4a3cbb2caa5774113a1c874f74e33ecc2d`, with no application source or test-source changes made during the run. The pre-run working tree already contained the unrelated cache state `D runtimes/cache/pytest-tmp/.gitkeep` and `?? app/tests/.pytest-tmp/`; those entries were preserved.
+
+### Baseline and launch
+
+- The supported Windows launcher option 1 launched the application with managed Python `3.14.7`, Node `22.13.0`, SQLite, CPU execution, one Uvicorn worker, backend port `8890`, and frontend port `8051`.
+- `GET /api/health` returned `{"status":"ok","application":"FAIRS","version":"3.4.2"}`.
+- Alembic reported `0002_rename_relative_preference (head)`.
+- Dataset `5` was still `val00_training_lineage` with `120` rows, and the only pre-run checkpoint was the protected baseline `val00_lineage_20260921`.
+- The browser rendered the connected Training page and dataset/checkpoint preview. The browser console had no warning or error entries during the current run. The launcher’s automatic browser handoff and the first non-elevated option 13 attempt returned Windows access denied; the supported option 13 action succeeded with the required host permission after exact process-identity verification.
+
+### Canonical browser workflow
+
+The actual six-step wizard was used with stored dataset 5 and the established short CPU configuration: perceptive field `8`, max memory/replay/batch `100`, `episodes=1`, `max_steps_episode=100`, GPU disabled, and mixed precision disabled. The unique disposable checkpoint was `val08_lineage_a2ecce4a_idcapture`.
+
+The wizard’s Summary showed the complete configuration before submission. The focused browser regression also continued to prove `POST /api/training/validate` precedes `POST /api/training/start`; the valid stored-data payload was accepted. A preliminary one-episode run completed too quickly to retain its job ID and was not used as the exact-ID canonical record. The same wizard configuration was repeated with the status poller armed before Confirm:
+
+- Exact job ID: `b5bee220`.
+- Initial browser state showed the run entering the monitor with episode/step counters at zero and loss/RMSE `N/A` while replay was empty.
+- Terminal browser state showed `Completed`, episode `1 / 1`, progress `100%`, loss `1.992`, RMSE `1.411`, total reward `910`, capital `1910`, epsilon `0.7463`, strategy `Keep`, and replay warm-up `100 / 100`; the charts were populated.
+- `GET /api/training/status` then returned `is_training=false`, `job_id=null`, and completed latest stats with finite `loss=1.9915841817855835` and `rmse=1.411234974861145`.
+- `GET /api/training/jobs/b5bee220` retained top-level `status=completed`, `progress=100.0`, and `error=null`, with the same finite final metrics and the published checkpoint path.
+
+Because the one-episode run is intentionally fast, the same configuration was rerun with only `episodes=5` for observational coverage. This was not a changed canonical setup; it was the documented telemetry rerun, with checkpoint `val08_lineage_a2ecce4a_obs` and exact job ID `3d0a363c`:
+
+- Browser Replay warm-up was observed at episode `1 / 5`, step `52 / 100`, replay `53 / 100`, progress `11%`, epsilon `0.75`, and loss/RMSE `N/A`.
+- An API active sample observed episode `2 / 5`, step `40 / 100`, `status=training`, replay `100`, epsilon `0.6076`, loss `1.5824`, RMSE `1.25794`, reward `-360`, and capital `640`; the job endpoint agreed with `status=running`, progress `40`, and no error.
+- The browser then showed active Training at episode `2 / 5`, step `54 / 100`, progress `31%`, replay `100 / 100`, epsilon `0.5664`, loss `1.454`, RMSE `1.206`, reward `-470`, capital `530`, strategy `Keep`, and advancing charts. A later API sample reached episode `4 / 5`, step `84 / 100`, progress `80%`, epsilon `0.1788`, loss `0.6371`, and RMSE `0.7982`; the browser subsequently showed episode `4 / 5`, step `93 / 100` with matching active telemetry progression.
+- Terminal browser state showed `Completed`, episode `5 / 5`, progress `100%`, loss `0.5344`, RMSE `0.7311`, total reward `170`, capital `1170`, replay `100 / 100`, epsilon `0.1025`, and strategy `Keep`. The terminal API status cleared the active job, and the retained job record reported top-level `status=completed`, progress `100`, and no error. Final finite metrics were `loss=0.5344365239` and `rmse=0.7310516834`.
+
+### Checkpoint publication and cleanup
+
+- The Training page checkpoint overview was refreshed and then reloaded. The current disposable checkpoint appeared alongside the baseline, and the metadata dialog showed dataset ID `5`, episodes `1`, batch size `100`, perceptive field `8`, final loss `1.9915841817855835`, and final RMSE `1.411234974861145`.
+- The API checkpoint list and filesystem agreed. For `val08_lineage_a2ecce4a_idcapture`, `.complete`, `saved_model.keras`, and `configuration/configuration.json` were present. The persisted configuration recorded dataset ID `5`, stored-data mode, perceptive field `8`, max memory/replay/batch `100`, one episode, 100 max steps, CPU, mixed precision off, and the unique checkpoint name. The same complete-file and configuration checks were performed for the observational checkpoint.
+- Only the VAL-08 disposable checkpoints `val08_lineage_a2ecce4a`, `val08_lineage_a2ecce4a_obs`, and `val08_lineage_a2ecce4a_idcapture` were deleted after evidence capture. The final checkpoint list contained only `val00_lineage_20260921`; dataset 5 remained `val00_training_lineage` with 120 rows.
+- Final live checks before shutdown showed health `ok`, training idle with `job_id=null`, and the Alembic head unchanged. The supported elevated option 13 action stopped exactly the nine verified FAIRS processes (PIDs `132`, `18676`, `19988`, `20452`, `22352`, `23968`, `28824`, `33532`, and `33828`). After shutdown, ports `8890` and `8051` were clear and all nine PIDs were gone.
+
+### Current-revision regression
+
+The focused preflight and post-workflow regression slices were run with isolated `%TEMP%` cache and basetemp paths:
+
+```powershell
+$pytestRoot = Join-Path $env:TEMP ('fairs-val08-' + [guid]::NewGuid().ToString('N'))
+& .\app\server\.venv\Scripts\python.exe -m pytest app/tests/e2e/test_training_api.py -q -o "cache_dir=$pytestRoot\api-cache" --basetemp "$pytestRoot\api-tmp"
+& .\app\server\.venv\Scripts\python.exe -m pytest app/tests/unit/test_training_service.py -q -o "cache_dir=$pytestRoot\service-cache" --basetemp "$pytestRoot\service-tmp"
+& .\app\server\.venv\Scripts\python.exe -m pytest app/tests/e2e/test_app_flow.py -k TrainingWizard -q -o "cache_dir=$pytestRoot\browser-cache" --basetemp "$pytestRoot\browser-tmp"
+$env:RUFF_CACHE_DIR = Join-Path $env:TEMP 'fairs-val08-ruff-cache'
+& .\app\server\.venv\Scripts\python.exe -m ruff check app/server/api/training.py app/server/app.py app/server/services/training.py app/tests/e2e/test_app_flow.py app/tests/e2e/test_training_api.py app/tests/unit/test_training_service.py
+Push-Location app/client
+npm run lint
+npm run build
+Pop-Location
+```
+
+| Check | Preflight | Post-workflow |
+| --- | --- | --- |
+| `test_training_api.py` | `28 passed in 51.19s` | `28 passed in 49.72s` |
+| `test_training_service.py` | `11 passed in 7.00s` | `11 passed in 5.05s` |
+| `test_app_flow.py -k TrainingWizard` | `5 passed, 13 deselected in 8.78s` | `5 passed, 13 deselected in 8.64s` |
+| Ruff on the six affected Python files | passed | passed |
+| Frontend `npm run lint` | passed | passed |
+| Frontend `npm run build` | passed through launcher | passed (`tsc -b && vite build`, 1,771 modules) |
+
+An earlier sandboxed frontend build attempt returned `EPERM` only when TypeScript tried to write the configured `runtimes/cache/typescript` build-info files; the same standard build passed with the required host permission and the launcher build also passed. This was an environment/cache permission condition, not a product failure. No implementation defect was found in this current-revision VAL-08 execution, and no source fix was required.
+
+**Current gate status:** `VAL-08` is `VALIDATED` for the supported Windows/SQLite/CPU profile at `a2ecce4a3cbb2caa5774113a1c874f74e33ecc2d`. The campaign and `backend.training` remain `PARTIAL`: cancellation/concurrency and resume/provenance handoff (`VAL-10`) plus inference and later cross-cutting/resilience slices remain open.
