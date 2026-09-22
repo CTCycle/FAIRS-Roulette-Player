@@ -26,10 +26,15 @@ async def upload(
     sheet_name: str | int = Query(0),
     service: Any = Depends(get_dataset_service),
 ) -> UploadResponse:
+    normalized_sheet_name = (
+        int(sheet_name)
+        if isinstance(sheet_name, str) and sheet_name.isascii() and sheet_name.isdecimal()
+        else sheet_name
+    )
     request = UploadRequest(
         dataset_kind=dataset_kind,
         csv_separator=csv_separator,
-        sheet_name=sheet_name,
+        sheet_name=normalized_sheet_name,
     )
     try:
         try:
