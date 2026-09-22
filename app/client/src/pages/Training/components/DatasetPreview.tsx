@@ -366,7 +366,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                         </FeatureTip>
                     </>
                 )}
-                {!loading && !error && datasets.length > 0 && (
+                {!loading && datasets.length > 0 && (
                     <div className="preview-list">
                         {datasets.slice(0, 6).map((dataset) => (
                             <div key={dataset.datasetId} className="preview-row">

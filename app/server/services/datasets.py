@@ -35,7 +35,9 @@ def normalize_filename(filename: str | None) -> str:
 
 ###############################################################################
 def normalize_csv_separator(separator: str) -> str:
-    cleaned = separator.strip()
+    # A tab is a supported delimiter and is also whitespace, so stripping it
+    # would turn the valid separator into an empty string.
+    cleaned = separator if separator == "\t" else separator.strip()
     if cleaned not in ALLOWED_CSV_SEPARATORS:
         supported = ", ".join(sorted(repr(value) for value in ALLOWED_CSV_SEPARATORS))
         raise ValueError(f"Unsupported csv_separator. Allowed values: {supported}.")
