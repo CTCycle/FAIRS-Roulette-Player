@@ -7,26 +7,34 @@ Tests: /inference/sessions/start, /inference/sessions/{id}/next,
 import pytest
 from playwright.sync_api import APIRequestContext
 
+VAL11_CHECKPOINT = "val00_lineage_20260921"
+VAL11_DATASET_ID = 5
+
 ###############################################################################
 def require_checkpoint(api_context: APIRequestContext) -> str:
     response = api_context.get("/api/training/checkpoints")
     assert response.ok, f"Expected 200, got {response.status}: {response.text()}"
     checkpoints = response.json()
-    if not checkpoints:
-        pytest.skip("No checkpoints available for inference tests.")
-    return str(checkpoints[0])
+    if VAL11_CHECKPOINT not in checkpoints:
+        pytest.skip(f"VAL-11 checkpoint {VAL11_CHECKPOINT!r} is not available.")
+    return VAL11_CHECKPOINT
 
 ###############################################################################
 def require_dataset_id(api_context: APIRequestContext) -> int:
     response = api_context.get("/api/datasets/training")
     assert response.ok, f"Expected 200, got {response.status}: {response.text()}"
     datasets = response.json().get("datasets", [])
-    if not datasets:
-        pytest.skip("No datasets available for inference tests.")
-    dataset_id = datasets[0].get("dataset_id")
-    if not isinstance(dataset_id, int) or dataset_id <= 0:
-        pytest.skip("Dataset list did not provide a valid dataset_id.")
-    return dataset_id
+    dataset = next(
+        (
+            item
+            for item in datasets
+            if item.get("dataset_id") == VAL11_DATASET_ID
+        ),
+        None,
+    )
+    if dataset is None:
+        pytest.skip(f"VAL-11 training dataset {VAL11_DATASET_ID} is not available.")
+    return VAL11_DATASET_ID
 
 ###############################################################################
 def start_inference_session(
@@ -55,7 +63,18 @@ def start_inference_session(
             if isinstance(payload, dict)
             else response.text()
         )
-        pytest.skip(f"Unable to start inference session in test environment: {detail}")
+        pytest.fail(
+            f"Unable to start inference session with the VAL-11 lineage: {detail}",
+            pytrace=False,
+        )
+    return response.json()
+
+###############################################################################
+def get_session_snapshot(
+    api_context: APIRequestContext, session_id: str
+) -> dict:
+    response = api_context.get(f"/api/inference/sessions/{session_id}")
+    assert response.ok, f"Expected 200, got {response.status}: {response.text()}"
     return response.json()
 
 ###############################################################################
@@ -155,7 +174,7 @@ class TestInferenceSessionFlow:
     def test_full_inference_session_flow(self, api_context: APIRequestContext):
         """
         Tests the complete lifecycle: start -> step -> next -> shutdown.
-        Skipped if no checkpoints are available.
+        Uses the fixed VAL-00 training lineage when it is available.
         """
         checkpoint_name = require_checkpoint(api_context)
         dataset_id = require_dataset_id(api_context)
@@ -176,6 +195,28 @@ class TestInferenceSessionFlow:
         assert "confidence" not in prediction
 
         try:
+            initial_snapshot = get_session_snapshot(api_context, session_id)
+            assert initial_snapshot.get("checkpoint") == checkpoint_name
+            assert initial_snapshot.get("dataset_id") == dataset_id
+            assert initial_snapshot.get("initial_capital") == 1000
+            assert initial_snapshot.get("step_count") == 0
+            assert initial_snapshot.get("prediction_pending") is True
+            assert initial_snapshot.get("last_prediction") == prediction
+            assert len(initial_snapshot.get("steps", [])) == 1
+
+            bet_response = api_context.post(
+                f"/api/inference/sessions/{session_id}/bet",
+                data={"bet_amount": 25},
+            )
+            assert bet_response.ok, (
+                f"Expected 200, got {bet_response.status}: {bet_response.text()}"
+            )
+            assert bet_response.json().get("bet_amount") == 25
+            bet_snapshot = get_session_snapshot(api_context, session_id)
+            assert bet_snapshot.get("current_bet") == 25
+            assert bet_snapshot.get("step_count") == 0
+            assert bet_snapshot["steps"][0].get("bet_amount") == 25
+
             # Submit the observed result for the initial prediction.
             step_response = api_context.post(
                 f"/api/inference/sessions/{session_id}/step",
@@ -189,11 +230,25 @@ class TestInferenceSessionFlow:
             assert "reward" in step_data
             assert "capital_after" in step_data
             assert step_data.get("session_id") == session_id
+            assert step_data.get("step") == 1
             assert step_data.get("real_extraction") == 17
             assert isinstance(step_data.get("predicted_action"), int)
             assert isinstance(step_data.get("predicted_action_desc"), str)
             assert isinstance(step_data.get("reward"), int)
             assert isinstance(step_data.get("capital_after"), int)
+
+            observed_snapshot = get_session_snapshot(api_context, session_id)
+            assert observed_snapshot.get("step_count") == 1
+            assert observed_snapshot.get("prediction_pending") is False
+            assert observed_snapshot.get("current_capital") == step_data["capital_after"]
+            assert len(observed_snapshot.get("steps", [])) == 1
+            assert observed_snapshot["steps"][0].get("bet_amount") == 25
+            assert observed_snapshot["steps"][0].get("observed_outcome_id") == 17
+            assert observed_snapshot["steps"][0].get("reward") == step_data["reward"]
+            assert (
+                observed_snapshot["steps"][0].get("capital_after")
+                == step_data["capital_after"]
+            )
 
             # Request the next prediction only after the observed result.
             next_response = api_context.post(
@@ -206,13 +261,27 @@ class TestInferenceSessionFlow:
             assert next_data.get("session_id") == session_id
             assert isinstance(next_data["prediction"].get("action"), int)
             assert isinstance(next_data["prediction"].get("description"), str)
+            next_preference = next_data["prediction"].get("relative_preference")
+            assert isinstance(next_preference, (int, float))
+            assert 0.0 <= float(next_preference) <= 1.0
+            assert "confidence" not in next_data["prediction"]
+
+            next_snapshot = get_session_snapshot(api_context, session_id)
+            assert next_snapshot.get("step_count") == 1
+            assert next_snapshot.get("prediction_pending") is True
+            assert next_snapshot.get("last_prediction") == next_data["prediction"]
+            assert len(next_snapshot.get("steps", [])) == 2
+            assert next_snapshot["steps"][0].get("observed_outcome_id") == 17
+            assert next_snapshot["steps"][1].get("observed_outcome_id") is None
 
         finally:
             # Always shutdown the session
             shutdown_response = api_context.post(
                 f"/api/inference/sessions/{session_id}/shutdown"
             )
-            assert shutdown_response.ok
+            assert shutdown_response.ok, (
+                f"Expected 200, got {shutdown_response.status}: {shutdown_response.text()}"
+            )
 
     # -------------------------------------------------------------------------
     def test_inference_session_supports_bet_update_and_rows_clear(
@@ -234,6 +303,10 @@ class TestInferenceSessionFlow:
             bet_payload = bet_response.json()
             assert bet_payload.get("session_id") == session_id
             assert bet_payload.get("bet_amount") == 25
+            bet_snapshot = get_session_snapshot(api_context, session_id)
+            assert bet_snapshot.get("current_bet") == 25
+            assert bet_snapshot.get("step_count") == 0
+            assert len(bet_snapshot.get("steps", [])) == 1
 
             shutdown_response = api_context.post(
                 f"/api/inference/sessions/{session_id}/shutdown"
@@ -256,13 +329,14 @@ class TestInferenceSessionFlow:
     def test_clear_inference_context_removes_uploaded_inference_dataset(
         self, api_context: APIRequestContext
     ):
+        """Run against isolated app data because context clear removes all uploads."""
         checkpoint_name = require_checkpoint(api_context)
         csv_content = b"outcome\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10"
         upload_response = api_context.post(
             "/api/data/upload?dataset_kind=inference&csv_separator=%2C",
             multipart={
                 "file": {
-                    "name": "test_inference_context_clear.csv",
+                    "name": "val11_inference_context_clear.csv",
                     "mimeType": "text/csv",
                     "buffer": csv_content,
                 }
