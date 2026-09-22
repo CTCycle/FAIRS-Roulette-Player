@@ -1,6 +1,6 @@
 ## Workflows
 
-Last updated: 2026-09-21
+Last updated: 2026-09-22
 
 ## Training Workflow
 
@@ -16,6 +16,8 @@ If the workflow is unfamiliar, open Help and choose the Training walkthrough for
 Stored-dataset subsampling selects a deterministic contiguous window instead of randomly reordering rows. This preserves roulette sequence adjacency before the chronological train/validation split. The split seed controls data-window selection; `training_seed` controls model initialization, agent exploration/replay randomness, and environment random starts.
 
 The dashboard calls the period before the replay buffer is ready `Replay warm-up`. This is distinct from epsilon-greedy exploration, which can continue after replay training begins. Validation values appear only for fresh validation measurements.
+
+When a run completes, the dashboard retains the worker's final loss and RMSE in the completed training projection. Validation loss/RMSE remain `N/A` until a fresh validation measurement exists.
 
 ## Resume Training Workflow
 

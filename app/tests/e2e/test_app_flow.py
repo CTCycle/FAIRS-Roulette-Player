@@ -285,6 +285,250 @@ class TestTrainingPage:
         expect(page.get_by_text("Checkpoints", exact=False).first).to_be_visible()
 
 ###############################################################################
+def _open_stored_training_wizard(page: Page, base_url: str):
+    page.goto(f"{base_url}/training")
+    page.wait_for_load_state("networkidle")
+    dataset_row = page.locator(".preview-row").filter(has_text="val00_training_lineage")
+    expect(dataset_row).to_contain_text("120 rows")
+    dataset_row.get_by_role(
+        "button", name="Configure training with this dataset", exact=True
+    ).click()
+    modal = page.get_by_role("dialog")
+    expect(modal).to_be_visible()
+    return modal
+
+
+###############################################################################
+class TestTrainingWizardFlow:
+    """Browser coverage for the six-step training configuration boundary."""
+
+    # -------------------------------------------------------------------------
+    def test_stored_dataset_wizard_navigation_state_and_summary(
+        self, page: Page, base_url: str
+    ) -> None:
+        page_errors: list[str] = []
+        console_errors: list[str] = []
+        failed_requests: list[str] = []
+        page.on("pageerror", lambda error: page_errors.append(str(error)))
+        page.on(
+            "console",
+            lambda message: console_errors.append(message.text)
+            if message.type == "error"
+            else None,
+        )
+        page.on(
+            "requestfailed",
+            lambda request: failed_requests.append(
+                f"{request.method} {request.url}: {request.failure}"
+            ),
+        )
+
+        modal = _open_stored_training_wizard(page, base_url)
+        expect(modal.locator(".wizard-breadcrumb")).to_have_count(6)
+        expect(modal.locator(".wizard-modal-subtitle")).to_contain_text(
+            "Dataset: val00_training_lineage"
+        )
+
+        perceptive_field = modal.locator('input[name="perceptiveField"]')
+        perceptive_field.fill("8")
+        modal.get_by_role("button", name="Next", exact=True).click()
+
+        max_memory = modal.locator('input[name="maxMemorySize"]')
+        replay_buffer = modal.locator('input[name="replayBufferSize"]')
+        max_memory.fill("100")
+        replay_buffer.fill("100")
+        modal.get_by_role("button", name="Previous", exact=True).click()
+        expect(perceptive_field).to_have_value("8")
+        modal.get_by_role("button", name="Next", exact=True).click()
+        expect(max_memory).to_have_value("100")
+        expect(replay_buffer).to_have_value("100")
+        modal.get_by_role("button", name="Next", exact=True).click()
+
+        dynamic_betting = modal.locator('input[name="dynamicBettingEnabled"]')
+        strategy_model = modal.locator('input[name="betStrategyModelEnabled"]')
+        fixed_strategy = modal.locator('select[name="betStrategyFixedId"]')
+        bet_unit_toggle = modal.locator('input[name="betUnitEnabled"]')
+        bet_unit = modal.locator('input[name="betUnit"]')
+        bet_max_toggle = modal.locator('input[name="betMaxEnabled"]')
+        bet_max = modal.locator('input[name="betMax"]')
+
+        expect(strategy_model).to_be_disabled()
+        expect(fixed_strategy).to_be_disabled()
+        expect(bet_unit_toggle).to_be_disabled()
+        expect(bet_unit).to_be_disabled()
+        expect(bet_max_toggle).to_be_disabled()
+        expect(bet_max).to_be_disabled()
+
+        dynamic_betting.check()
+        expect(strategy_model).to_be_enabled()
+        expect(fixed_strategy).to_be_enabled()
+        expect(bet_unit_toggle).to_be_enabled()
+        expect(bet_max_toggle).to_be_enabled()
+        strategy_model.check()
+        expect(fixed_strategy).to_be_disabled()
+        strategy_model.uncheck()
+        fixed_strategy.select_option("2")
+        bet_unit_toggle.check()
+        bet_max_toggle.check()
+        bet_unit.fill("5")
+        bet_max.fill("20")
+        modal.get_by_role("button", name="Next", exact=True).click()
+
+        expect(modal.locator('input[type="range"]')).to_have_count(2)
+        modal.locator('input[name="splitSeed"]').fill("123")
+        modal.get_by_role("button", name="Next", exact=True).click()
+
+        episodes = modal.locator('input[name="episodes"]')
+        max_steps = modal.locator('input[name="maxStepsEpisode"]')
+        batch_size = modal.locator('input[name="batchSize"]')
+        training_seed = modal.locator('input[name="trainingSeed"]')
+        episodes.fill("1")
+        max_steps.fill("100")
+        batch_size.fill("100")
+        training_seed.fill("2026")
+        device_gpu = modal.locator('input[name="deviceGPU"]')
+        mixed_precision = modal.locator('input[name="useMixedPrecision"]')
+        expect(device_gpu).to_be_enabled()
+        expect(mixed_precision).to_be_enabled()
+        device_gpu.check()
+        device_gpu.uncheck()
+        mixed_precision.check()
+        mixed_precision.uncheck()
+        modal.get_by_role("button", name="Next", exact=True).click()
+
+        summary = modal.locator(".wizard-summary")
+
+        def assert_summary_value(label: str, value: str) -> None:
+            row = summary.locator(".wizard-summary-row").filter(has_text=label)
+            expect(row).to_contain_text(value)
+
+        assert_summary_value("Dataset", "val00_training_lineage")
+        assert_summary_value("Perceptive Field", "8")
+        assert_summary_value("Max Memory", "100")
+        assert_summary_value("Replay Buffer", "100")
+        assert_summary_value("Dynamic Betting", "Enabled")
+        assert_summary_value("Strategy Model", "Disabled")
+        assert_summary_value("Fixed Strategy", "Reverse")
+        assert_summary_value("Bet Unit", "5")
+        assert_summary_value("Bet Max", "20")
+        assert_summary_value("Split Seed", "123")
+        assert_summary_value("Episodes", "1")
+        assert_summary_value("Max Steps", "100")
+        assert_summary_value("Batch Size", "100")
+        assert_summary_value("Training Seed", "2026")
+        assert_summary_value("Use GPU", "No")
+        assert_summary_value("Mixed Precision", "No")
+
+        modal.get_by_role("button", name=re.compile(r"^1\s+Agent Configuration")).click()
+        expect(perceptive_field).to_have_value("8")
+        modal.get_by_role("button", name=re.compile(r"^6\s+Summary")).click()
+        expect(summary.locator(".wizard-summary-row").filter(has_text="Batch Size")).to_contain_text(
+            "100"
+        )
+        modal.get_by_role("button", name="Cancel", exact=True).click()
+
+        page_errors_seen = page_errors[:]
+        console_errors_seen = console_errors[:]
+        assert page_errors_seen == []
+        assert console_errors_seen == []
+        assert failed_requests == []
+
+    # -------------------------------------------------------------------------
+    def test_generator_entry_has_distinct_mode_and_summary_values(
+        self, page: Page, base_url: str
+    ) -> None:
+        page.goto(f"{base_url}/training")
+        page.wait_for_load_state("networkidle")
+        page.get_by_role("button", name="Use generator", exact=True).click()
+        modal = page.get_by_role("dialog")
+        expect(modal.locator(".wizard-modal-subtitle")).to_contain_text(
+            "Mode: Synthetic Generator"
+        )
+
+        modal.get_by_role("button", name=re.compile(r"^4\s+Dataset Configuration")).click()
+        expect(modal.locator(".wizard-step-title")).to_have_text("Generator Parameters")
+        generated_samples = modal.locator('input[name="numGeneratedSamples"]')
+        generated_samples.fill("200")
+        modal.get_by_role("button", name=re.compile(r"^6\s+Summary")).click()
+        summary = modal.locator(".wizard-summary")
+        expect(summary.locator(".wizard-summary-row").filter(has_text="Dataset")).to_contain_text(
+            "Synthetic Data"
+        )
+        expect(
+            summary.locator(".wizard-summary-row").filter(has_text="Generated Samples")
+        ).to_contain_text("200")
+        modal.get_by_role("button", name="Cancel", exact=True).click()
+
+    # -------------------------------------------------------------------------
+    def test_invalid_semantic_configuration_stays_open_and_never_starts(
+        self, page: Page, base_url: str
+    ) -> None:
+        start_requests: list[str] = []
+        page.on(
+            "request",
+            lambda request: start_requests.append(request.url)
+            if request.method == "POST" and request.url.endswith("/api/training/start")
+            else None,
+        )
+        modal = _open_stored_training_wizard(page, base_url)
+        modal.locator('input[name="explorationRate"]').fill("0.2")
+        modal.locator('input[name="minExplorationRate"]').fill("0.5")
+        modal.get_by_role("button", name=re.compile(r"^6\s+Summary")).click()
+        modal.get_by_role("button", name="Confirm", exact=True).click()
+
+        expect(modal).to_be_visible()
+        expect(modal.locator(".wizard-error")).to_contain_text(
+            "minimum_exploration_rate"
+        )
+        assert start_requests == []
+
+    # -------------------------------------------------------------------------
+    def test_valid_configuration_orders_validate_then_start_with_validated_payload(
+        self, page: Page, base_url: str
+    ) -> None:
+        request_order: list[str] = []
+        page.on(
+            "request",
+            lambda request: request_order.append("validate")
+            if request.method == "POST" and request.url.endswith("/api/training/validate")
+            else request_order.append("start")
+            if request.method == "POST" and request.url.endswith("/api/training/start")
+            else None,
+        )
+
+        def fulfill_start(route) -> None:
+            route.fulfill(
+                status=202,
+                content_type="application/json",
+                body=json.dumps(
+                    {
+                        "job_id": "browser-wizard-order-test",
+                        "job_type": "training",
+                        "status": "started",
+                        "message": "Training started.",
+                        "poll_interval": 1.0,
+                    }
+                ),
+            )
+
+        page.route("**/api/training/start", fulfill_start)
+        modal = _open_stored_training_wizard(page, base_url)
+        modal.get_by_role("button", name=re.compile(r"^6\s+Summary")).click()
+        modal.locator('input[name="checkpointName"]').fill("browser_order_check")
+
+        with page.expect_response("**/api/training/validate") as validation_response_info:
+            with page.expect_request("**/api/training/start") as start_request_info:
+                modal.get_by_role("button", name="Confirm", exact=True).click()
+
+        validation_payload = validation_response_info.value.json()
+        start_payload = json.loads(start_request_info.value.post_data or "{}")
+        expect(modal).not_to_be_visible()
+        assert request_order == ["validate", "start"]
+        assert validation_payload == start_payload
+        assert start_payload["dataset_id"] == 5
+        assert start_payload["use_data_generator"] is False
+
+###############################################################################
 class TestInferencePage:
     """Tests for the Inference page."""
 

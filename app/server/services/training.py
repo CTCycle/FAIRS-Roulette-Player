@@ -241,6 +241,28 @@ class TrainingService:
         return {}
 
     # -------------------------------------------------------------------------
+    @staticmethod
+    def _completed_training_stats(
+        result: dict[str, Any],
+        *,
+        epoch: Any,
+        message: str,
+    ) -> dict[str, Any]:
+        stats: dict[str, Any] = {
+            "status": "completed",
+            "message": message,
+            "epoch": epoch,
+        }
+        for result_key, stats_key in (
+            ("final_loss", "loss"),
+            ("final_rmse", "rmse"),
+        ):
+            value = coerce_optional_finite_float(result.get(result_key))
+            if value is not None:
+                stats[stats_key] = value
+        return stats
+
+    # -------------------------------------------------------------------------
     def run_training_job(
         self, configuration: dict[str, Any], job_id: str
     ) -> dict[str, Any]:
@@ -274,11 +296,11 @@ class TrainingService:
                 final_epoch = current_status["latest_stats"].get("total_epochs", 0)
                 self.training_run_manager.update_training_stats(
                     job_id,
-                    {
-                        "status": "completed",
-                        "message": "Training completed",
-                        "epoch": final_epoch,
-                    },
+                    self._completed_training_stats(
+                        result,
+                        epoch=final_epoch,
+                        message="Training completed",
+                    ),
                 )
             return result
         except Exception as exc:
@@ -336,11 +358,11 @@ class TrainingService:
                 final_epoch = current_status["latest_stats"].get("total_epochs", 0)
                 self.training_run_manager.update_training_stats(
                     job_id,
-                    {
-                        "status": "completed",
-                        "message": "Resume training completed",
-                        "epoch": final_epoch,
-                    },
+                    self._completed_training_stats(
+                        result,
+                        epoch=final_epoch,
+                        message="Resume training completed",
+                    ),
                 )
             return result
         except Exception as exc:
