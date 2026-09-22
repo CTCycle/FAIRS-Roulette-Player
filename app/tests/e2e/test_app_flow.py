@@ -483,6 +483,34 @@ class TestTrainingWizardFlow:
         assert start_requests == []
 
     # -------------------------------------------------------------------------
+    def test_missing_required_numeric_value_is_rejected_before_start(
+        self, page: Page, base_url: str
+    ) -> None:
+        request_order: list[str] = []
+        page.on(
+            "request",
+            lambda request: request_order.append("validate")
+            if request.method == "POST"
+            and request.url.endswith("/api/training/validate")
+            else request_order.append("start")
+            if request.method == "POST"
+            and request.url.endswith("/api/training/start")
+            else None,
+        )
+        modal = _open_stored_training_wizard(page, base_url)
+        modal.get_by_role("button", name=re.compile(r"^5\s+Session")).click()
+        modal.locator('input[name="episodes"]').fill("")
+        modal.get_by_role("button", name=re.compile(r"^6\s+Summary")).click()
+
+        with page.expect_response("**/api/training/validate") as validation_response:
+            modal.get_by_role("button", name="Confirm", exact=True).click()
+
+        assert validation_response.value.status == 422
+        expect(modal).to_be_visible()
+        expect(modal.locator(".wizard-error")).to_contain_text("episodes")
+        assert request_order == ["validate"]
+
+    # -------------------------------------------------------------------------
     def test_valid_configuration_orders_validate_then_start_with_validated_payload(
         self, page: Page, base_url: str
     ) -> None:

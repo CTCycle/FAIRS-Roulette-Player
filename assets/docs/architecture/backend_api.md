@@ -1,6 +1,6 @@
 ## Backend API
 
-Last updated: 2026-09-17
+Last updated: 2026-09-22
 
 ## Mounting Model
 
@@ -31,7 +31,7 @@ Router prefix: `/training`
 - `GET /api/training/jobs/{job_id}`
 - `DELETE /api/training/jobs/{job_id}`
 
-`POST /api/training/validate` validates the same `TrainingConfig` contract used by training start. The frontend does not maintain an independent copy of semantic training validation rules.
+`POST /api/training/validate` validates the same `TrainingConfig` contract used by training start, checks runtime capability, verifies that a selected stored dataset still exists as a training dataset, and rejects an already-used output checkpoint name. `/api/training/start` repeats the resource preflight before registering a job. Missing datasets return `404`, occupied checkpoint names return `409`, and invalid configuration fields return `422`. Validation is read-only. The frontend does not maintain an independent copy of semantic training validation rules.
 
 ## Dataset Endpoints
 

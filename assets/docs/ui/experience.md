@@ -1,6 +1,6 @@
 ## Experience
 
-Last updated: 2026-09-20
+Last updated: 2026-09-22
 
 ## Page Composition
 
@@ -46,7 +46,7 @@ Composition rules:
   - start the workflow
 - Prevent invalid actions with disabled controls and local validation messages.
 - Detect common CSV delimiters during Training uploads while preserving XLSX support.
-- Training configuration validates relationships between exploration settings, replay memory, batch size, and dynamic-betting options before submission; the backend remains authoritative for the same constraints.
+- Training configuration validates relationships between exploration settings, replay memory, batch size, and dynamic-betting options before submission; the backend remains authoritative for those constraints and rechecks selected datasets and output checkpoint names before job creation.
 - Keep error feedback local to the action that failed.
 - Preserve explicit loading states for long-running or multi-step actions.
 - Settings loads from the backend before showing editable controls, saves only changed fields, and leaves environment and per-training configuration in their existing workflows.

@@ -18,6 +18,8 @@ def build_service(
     training_run_manager = Mock()
     training_run_manager.is_job_running.return_value = False
     training_run_manager.start_job.return_value = "job123"
+    dataset_repository = Mock()
+    dataset_repository.get.return_value = {"dataset_kind": "training"}
     training_run_manager.training_status.return_value = {
         "job_id": "job123",
         "is_training": True,
@@ -36,6 +38,7 @@ def build_service(
     service = TrainingService(
         training_run_manager=training_run_manager,
         checkpoint_service=checkpoint_service,
+        dataset_repository=dataset_repository,
         polling_interval_seconds=polling_interval_seconds,
     )
     return service, training_run_manager, checkpoint_service
@@ -55,6 +58,49 @@ def test_start_training_requires_dataset_without_generator() -> None:
         service.start_training(
             TrainingConfig(use_data_generator=False, dataset_id=None)
         )
+
+###########################################################################
+def test_start_training_rejects_missing_dataset_before_creating_job() -> None:
+    service, training_run_manager, _ = build_service()
+    service.dataset_repository.get.return_value = None
+
+    with pytest.raises(FileNotFoundError, match="Training dataset '987654321'"):
+        service.start_training(
+            TrainingConfig(dataset_id=987654321, use_data_generator=False)
+        )
+
+    service.dataset_repository.get.assert_called_once_with(987654321)
+    training_run_manager.start_job.assert_not_called()
+
+###########################################################################
+def test_start_training_rejects_non_training_dataset_before_creating_job() -> None:
+    service, training_run_manager, _ = build_service()
+    service.dataset_repository.get.return_value = {"dataset_kind": "inference"}
+
+    with pytest.raises(ValueError, match="is not a training dataset"):
+        service.start_training(
+            TrainingConfig(dataset_id=987654321, use_data_generator=False)
+        )
+
+    service.dataset_repository.get.assert_called_once_with(987654321)
+    training_run_manager.start_job.assert_not_called()
+
+###########################################################################
+def test_validation_rejects_existing_checkpoint_before_creating_job() -> None:
+    service, training_run_manager, checkpoint_service = build_service()
+    checkpoint_service.list_checkpoints.return_value = ["already_saved"]
+    config = TrainingConfig(
+        use_data_generator=True,
+        checkpoint_name="already_saved",
+    )
+
+    with pytest.raises(FileExistsError, match="Checkpoint already exists"):
+        service.validate_training_configuration(config)
+
+    with pytest.raises(FileExistsError, match="Checkpoint already exists"):
+        service.start_training(config)
+
+    training_run_manager.start_job.assert_not_called()
 
 ###############################################################################
 def test_training_responses_use_injected_polling_interval() -> None:
@@ -167,6 +213,7 @@ def test_training_worker_receives_explicit_runtime_dependencies(monkeypatch) -> 
     service = TrainingService(
         training_run_manager=training_run_manager,
         checkpoint_service=Mock(),
+        dataset_repository=Mock(),
         database_settings=object(),
         database_path=Path("isolated.db"),
         polling_interval_seconds=2.5,
