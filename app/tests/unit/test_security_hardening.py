@@ -38,6 +38,7 @@ def test_checkpoint_path_builder_stays_under_checkpoint_root() -> None:
 ###############################################################################
 def test_upload_parameter_normalizers_apply_bounds() -> None:
     assert normalize_csv_separator(";") == ";"
+    assert normalize_csv_separator("\t") == "\t"
     assert normalize_sheet_name(0) == 0
     assert normalize_sheet_name("Sheet1") == "Sheet1"
     assert normalize_filename(r"..\dataset.csv") == "dataset.csv"
