@@ -138,6 +138,19 @@ def test_resume_training_starts_resume_job() -> None:
     training_run_manager.start_job.assert_called_once()
 
 ###############################################################################
+def test_resume_training_rejects_an_active_training_job_before_checkpoint_load() -> None:
+    service, training_run_manager, checkpoint_service = build_service()
+    training_run_manager.is_job_running.return_value = True
+
+    with pytest.raises(RuntimeError, match="Training is already in progress"):
+        service.resume_training(
+            ResumeConfig(checkpoint="cp1", additional_episodes=1)
+        )
+
+    checkpoint_service.resolve_existing_checkpoint.assert_not_called()
+    training_run_manager.start_job.assert_not_called()
+
+###############################################################################
 def test_stop_sets_cancellation_on_current_job() -> None:
     service, training_run_manager, _ = build_service()
     payload = service.stop()

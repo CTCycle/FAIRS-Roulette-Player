@@ -285,6 +285,104 @@ class TestTrainingPage:
         expect(page.get_by_text("Checkpoints", exact=False).first).to_be_visible()
 
 ###############################################################################
+class TestCheckpointHandoff:
+    """Browser evidence for checkpoint provenance handoff boundaries."""
+
+    # -------------------------------------------------------------------------
+    def test_open_in_inference_preserves_checkpoint_provenance(
+        self, page: Page, base_url: str
+    ) -> None:
+        page_errors: list[str] = []
+        console_errors: list[str] = []
+        failed_requests: list[str] = []
+        page.on("pageerror", lambda error: page_errors.append(str(error)))
+        page.on(
+            "console",
+            lambda message: console_errors.append(message.text)
+            if message.type == "error"
+            else None,
+        )
+        page.on(
+            "requestfailed",
+            lambda request: failed_requests.append(
+                f"{request.method} {request.url}: {request.failure}"
+            ),
+        )
+
+        page.goto(f"{base_url}/training")
+        page.wait_for_load_state("networkidle")
+        checkpoint_row = page.locator(".preview-row").filter(
+            has_text="val00_lineage_20260921"
+        )
+        expect(checkpoint_row).to_be_visible()
+        checkpoint_row.get_by_title(
+            "Open checkpoint in Inference using its training dataset"
+        ).click()
+
+        expect(page).to_have_url(re.compile(r".*/inference$"))
+        expect(page.locator("#inference-checkpoint")).to_have_value(
+            "val00_lineage_20260921"
+        )
+        expect(page.locator("#inference-dataset")).to_have_value("5")
+        expect(page.locator("#inference-initial-capital")).to_have_value("1000")
+        expect(page.locator("#inference-bet-amount")).to_have_value("10")
+        assert page_errors == []
+        assert console_errors == []
+        assert failed_requests == []
+
+    # -------------------------------------------------------------------------
+    def test_missing_checkpoint_dataset_requires_explicit_selection(
+        self, page: Page, base_url: str
+    ) -> None:
+        page.route(
+            "**/api/training/checkpoints/val00_lineage_20260921/metadata",
+            lambda route: route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps(
+                    {
+                        "checkpoint": "val00_lineage_20260921",
+                        "summary": {
+                            "dataset_id": 999999,
+                            "sample_size": 1.0,
+                            "seed": 42,
+                            "episodes": 1,
+                            "batch_size": 1,
+                            "learning_rate": 0.0001,
+                            "perceptive_field_size": 8,
+                            "qnet_neurons": 8,
+                            "embedding_dimensions": 8,
+                            "exploration_rate": 0.75,
+                            "exploration_rate_decay": 0.995,
+                            "discount_rate": 0.5,
+                            "model_update_frequency": 10,
+                            "bet_amount": 10,
+                            "initial_capital": 1000,
+                            "final_loss": 1.0,
+                            "final_rmse": 1.0,
+                            "final_val_loss": None,
+                            "final_val_rmse": None,
+                        },
+                    }
+                ),
+            ),
+        )
+        page.goto(f"{base_url}/training")
+        page.wait_for_load_state("networkidle")
+        checkpoint_row = page.locator(".preview-row").filter(
+            has_text="val00_lineage_20260921"
+        )
+        expect(checkpoint_row).to_be_visible()
+        checkpoint_row.get_by_title(
+            "Open checkpoint in Inference using its training dataset"
+        ).click()
+
+        expect(page).to_have_url(re.compile(r".*/training$"))
+        expect(page.locator(".preview-error")).to_contain_text(
+            "choose a dataset explicitly instead of substituting one automatically"
+        )
+
+###############################################################################
 def _open_stored_training_wizard(page: Page, base_url: str):
     page.goto(f"{base_url}/training")
     page.wait_for_load_state("networkidle")
