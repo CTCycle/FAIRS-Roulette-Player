@@ -316,6 +316,9 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
         { label: 'Sample Size', value: sampleSizeValue },
         { label: 'Validation Split', value: validationValue },
         { label: 'Split Seed', value: newConfig.splitSeed },
+        ...(newConfig.useDataGen
+            ? [{ label: 'Generated Samples', value: newConfig.numGeneratedSamples }]
+            : []),
         { label: 'Episodes', value: newConfig.episodes },
         { label: 'Max Steps', value: newConfig.maxStepsEpisode },
         { label: 'Batch Size', value: newConfig.batchSize },

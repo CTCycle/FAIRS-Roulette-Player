@@ -10,8 +10,12 @@ NOTE: Training tests use minimal configurations to ensure fast test execution:
 - replay_buffer_size: 100 (minimum allowed)
 """
 
+import json
 import os
 import time
+from pathlib import Path
+from uuid import uuid4
+
 import pytest
 from playwright.sync_api import APIRequestContext
 
@@ -36,6 +40,20 @@ RUNNING_TRAINING_CONFIG = dict(
     max_steps_episode=500,
     initial_capital=100000,
     bet_amount=1,
+)
+
+VAL08_STORED_CPU_CONFIG = dict(
+    MINIMAL_TRAINING_CONFIG,
+    episodes=1,
+    max_steps_episode=100,
+    perceptive_field_size=8,
+    batch_size=100,
+    replay_buffer_size=100,
+    max_memory_size=100,
+    dataset_id=5,
+    use_data_generator=False,
+    use_device_gpu=False,
+    use_mixed_precision=False,
 )
 
 RESUME_TRAINING_CONFIG = {
@@ -100,6 +118,161 @@ def wait_for_job_completion(
             return payload
         time.sleep(interval)
     return last_payload
+
+###############################################################################
+@pytest.mark.parametrize(
+    ("overrides", "expected_fragment"),
+    [
+        (
+            {"minimum_exploration_rate": 0.8},
+            "minimum_exploration_rate",
+        ),
+        ({"replay_buffer_size": 101}, "replay_buffer_size"),
+        ({"batch_size": 101}, "batch_size"),
+        (
+            {"bet_strategy_model_enabled": True},
+            "bet_strategy_model_enabled",
+        ),
+        (
+            {
+                "dynamic_betting_enabled": True,
+                "bet_unit": 20,
+                "bet_max": 10,
+            },
+            "bet_max",
+        ),
+        (
+            {"dataset_id": None, "use_data_generator": False},
+            "dataset_id",
+        ),
+        ({"checkpoint_name": "../invalid-checkpoint"}, "checkpoint"),
+        ({"perceptive_field_size": 0}, "perceptive_field_size"),
+        ({"perceptive_field_size": 1025}, "perceptive_field_size"),
+    ],
+)
+def test_validate_rejects_invalid_training_relationships(
+    api_context: APIRequestContext,
+    overrides: dict[str, object],
+    expected_fragment: str,
+):
+    payload = dict(VAL08_STORED_CPU_CONFIG)
+    payload.update(overrides)
+    response = api_context.post("/api/training/validate", data=payload)
+
+    assert response.status == 422, response.text()
+    assert expected_fragment in response.text()
+
+###############################################################################
+def test_validate_accepts_stored_cpu_configuration(
+    api_context: APIRequestContext,
+):
+    response = api_context.post("/api/training/validate", data=VAL08_STORED_CPU_CONFIG)
+
+    assert response.ok, f"Expected 200, got {response.status}: {response.text()}"
+    normalized = response.json()
+    assert normalized["dataset_id"] == 5
+    assert normalized["use_data_generator"] is False
+    assert normalized["episodes"] == 1
+    assert normalized["max_steps_episode"] == 100
+    assert normalized["perceptive_field_size"] == 8
+    assert normalized["batch_size"] == 100
+    assert normalized["replay_buffer_size"] == 100
+    assert normalized["max_memory_size"] == 100
+    assert normalized["use_device_gpu"] is False
+    assert normalized["use_mixed_precision"] is False
+
+###############################################################################
+class TestTrainingCheckpointPublication:
+    """Deterministic VAL-08 checkpoint publication evidence."""
+
+    # -------------------------------------------------------------------------
+    def test_stored_cpu_run_completes_and_publishes_expected_checkpoint(
+        self, api_context: APIRequestContext
+    ):
+        checkpoint = f"val08_api_{uuid4().hex[:10]}"
+        config = dict(VAL08_STORED_CPU_CONFIG, checkpoint_name=checkpoint)
+        before_response = api_context.get("/api/training/checkpoints")
+        assert before_response.ok
+        assert checkpoint not in before_response.json()
+
+        start_response = api_context.post("/api/training/start", data=config)
+        assert start_response.status == 202, (
+            f"Expected 202, got {start_response.status}: {start_response.text()}"
+        )
+        job_id = start_response.json().get("job_id")
+        assert isinstance(job_id, str) and job_id
+
+        try:
+            job_payload = wait_for_job_completion(api_context, job_id, timeout=180.0)
+            assert job_payload.get("job_id") == job_id
+            assert job_payload.get("status") == "completed", job_payload
+            assert float(job_payload.get("progress", 0.0)) == pytest.approx(100.0)
+            assert wait_for_training_stopped(api_context, timeout=30.0)
+
+            status_response = api_context.get("/api/training/status")
+            assert status_response.ok
+            status_payload = status_response.json()
+            assert status_payload["is_training"] is False
+            assert status_payload["job_id"] is None
+            assert status_payload["latest_stats"]["status"] == "completed"
+            assert status_payload["latest_stats"]["loss"] is not None
+            assert status_payload["latest_stats"]["rmse"] is not None
+
+            after_response = api_context.get("/api/training/checkpoints")
+            assert after_response.ok
+            assert checkpoint in after_response.json()
+
+            metadata_response = api_context.get(
+                f"/api/training/checkpoints/{checkpoint}/metadata"
+            )
+            assert metadata_response.ok
+            metadata = metadata_response.json()
+            assert metadata["checkpoint"] == checkpoint
+            summary = metadata["summary"]
+            assert summary["dataset_id"] == 5
+            assert summary["episodes"] == 1
+            assert summary["perceptive_field_size"] == 8
+            assert summary["batch_size"] == 100
+            assert summary["final_loss"] is not None
+            assert summary["final_rmse"] is not None
+
+            checkpoint_root = (
+                Path(__file__).resolve().parents[2]
+                / "resources"
+                / "checkpoints"
+                / checkpoint
+            )
+            configuration_path = checkpoint_root / "configuration" / "configuration.json"
+            assert (checkpoint_root / ".complete").is_file()
+            assert (checkpoint_root / "saved_model.keras").is_file()
+            assert configuration_path.is_file()
+            persisted = json.loads(
+                configuration_path.read_text(encoding="utf-8")
+            )
+            persisted_training = persisted["training"]
+            for key in (
+                "dataset_id",
+                "use_data_generator",
+                "episodes",
+                "max_steps_episode",
+                "perceptive_field_size",
+                "batch_size",
+                "replay_buffer_size",
+                "max_memory_size",
+                "use_device_gpu",
+                "use_mixed_precision",
+                "checkpoint_name",
+            ):
+                assert persisted_training[key] == config[key]
+        finally:
+            api_context.post("/api/training/stop")
+            wait_for_training_stopped(api_context, timeout=30.0)
+            current_response = api_context.get("/api/training/checkpoints")
+            if current_response.ok and checkpoint in current_response.json():
+                delete_response = api_context.delete(
+                    f"/api/training/checkpoints/{checkpoint}"
+                )
+                assert delete_response.ok
 
 ###############################################################################
 class TestTrainingEndpoints:

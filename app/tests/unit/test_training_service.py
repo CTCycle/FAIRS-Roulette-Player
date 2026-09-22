@@ -142,8 +142,13 @@ def test_training_worker_receives_explicit_runtime_dependencies(monkeypatch) -> 
             return None
 
         # -------------------------------------------------------------------------
-        def read_result(self) -> None:
-            return None
+        def read_result(self) -> dict[str, object]:
+            return {
+                "result": {
+                    "final_loss": 1.25,
+                    "final_rmse": 1.11803398875,
+                }
+            }
 
         # -------------------------------------------------------------------------
         def poll(self, timeout: float = 0.0) -> None:  # noqa: ARG002
@@ -181,3 +186,13 @@ def test_training_worker_receives_explicit_runtime_dependencies(monkeypatch) -> 
         "jit_compile": True,
         "jit_backend": "eager",
     }
+    training_run_manager.update_training_stats.assert_called_once_with(
+        "job123",
+        {
+            "status": "completed",
+            "message": "Training completed",
+            "epoch": 0,
+            "loss": 1.25,
+            "rmse": 1.11803398875,
+        },
+    )

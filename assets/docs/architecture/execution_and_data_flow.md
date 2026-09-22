@@ -88,6 +88,8 @@ sequenceDiagram
 
 `TrainingRunManager` is the authoritative in-process job state owner. Training work executes in a child process, but there is no second job model or durable job table.
 
+When the worker completes, `TrainingService` merges finite final loss/RMSE values from the worker result into the authoritative completed `latest_stats` projection. Sparse validation values are not carried forward when the current telemetry sample has no fresh validation measurement.
+
 The training worker revalidates the serialized `TrainingConfig` once at the process boundary. Downstream learning code consumes that complete validated configuration directly instead of using repeated `.get(..., default)` fallback paths.
 
 Global JIT/compiler configuration is injected from `ServerSettings.device`. The bundled Windows runtime uses the `eager` JIT backend; `inductor` requires Triton and is rejected by runtime preflight. Per-training GPU selection and mixed precision remain in `TrainingConfig`. JIT fields are not accepted as ignored per-training request settings.
