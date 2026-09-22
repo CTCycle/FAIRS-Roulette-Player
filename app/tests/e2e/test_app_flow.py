@@ -314,3 +314,94 @@ class TestInferencePage:
         page.wait_for_load_state("networkidle")
         expect(page.get_by_text("Select checkpoint", exact=False)).to_be_visible()
         expect(page.get_by_text("Selected dataset", exact=False)).to_be_visible()
+
+###############################################################################
+class TestDesktopWindowBoundary:
+    """The shared shell keeps its desktop geometry below the supported width."""
+
+    # -------------------------------------------------------------------------
+    def test_main_layout_respects_desktop_minimum(
+        self, page: Page, base_url: str
+    ) -> None:
+        page_errors: list[str] = []
+        console_errors: list[str] = []
+        failed_requests: list[str] = []
+        failed_responses: list[str] = []
+
+        page.on("pageerror", lambda error: page_errors.append(str(error)))
+        page.on(
+            "console",
+            lambda message: console_errors.append(message.text)
+            if message.type == "error"
+            else None,
+        )
+        page.on(
+            "requestfailed",
+            lambda request: failed_requests.append(
+                f"{request.method} {request.url}: {request.failure}"
+            ),
+        )
+        page.on(
+            "response",
+            lambda response: failed_responses.append(
+                f"{response.status} {response.url}"
+            )
+            if response.status >= 400
+            else None,
+        )
+
+        page.set_viewport_size({"width": 1100, "height": 800})
+        page.goto(f"{base_url}/training")
+        page.wait_for_load_state("networkidle")
+
+        expect(
+            page.get_by_role("heading", name="Training Monitor", exact=True)
+        ).to_be_visible()
+        expect(page.locator(".desktop-size-notice")).to_be_hidden()
+        supported_metrics = page.evaluate(
+            """() => ({
+                viewportWidth: window.innerWidth,
+                mainWidth: document.querySelector('.main-layout').getBoundingClientRect().width,
+                horizontalOverflow: document.documentElement.scrollWidth > window.innerWidth,
+            })"""
+        )
+        assert supported_metrics["viewportWidth"] == 1100
+        assert abs(supported_metrics["mainWidth"] - 1100) < 1
+        assert supported_metrics["horizontalOverflow"] is False
+
+        page.set_viewport_size({"width": 1099, "height": 800})
+        page.goto(f"{base_url}/inference")
+        page.wait_for_load_state("networkidle")
+
+        expect(
+            page.get_by_role("heading", name="Session History", exact=True)
+        ).to_be_visible()
+        notice = page.locator(".desktop-size-notice")
+        expect(notice).to_be_visible()
+        expect(notice).to_contain_text("at least 1100px wide")
+        below_minimum_metrics = page.locator(
+            ".inference-workspace > div"
+        ).evaluate(
+            """root => {
+                const panels = Array.from(root.children).map((panel) => {
+                    const rect = panel.getBoundingClientRect();
+                    return { left: rect.left, top: rect.top };
+                });
+                return {
+                    viewportWidth: window.innerWidth,
+                    mainWidth: document.querySelector('.main-layout').getBoundingClientRect().width,
+                    noticeDisplay: getComputedStyle(document.querySelector('.desktop-size-notice')).display,
+                    gridColumns: getComputedStyle(root).gridTemplateColumns.trim().split(/\\s+/).length,
+                    panelTopDelta: Math.abs(panels[0].top - panels[1].top),
+                };
+            }"""
+        )
+        assert below_minimum_metrics["viewportWidth"] == 1099
+        assert abs(below_minimum_metrics["mainWidth"] - 1100) < 1
+        assert below_minimum_metrics["noticeDisplay"] == "flex"
+        assert below_minimum_metrics["gridColumns"] == 2
+        assert below_minimum_metrics["panelTopDelta"] < 1
+        assert page_errors == []
+        assert console_errors == []
+        assert failed_requests == []
+        assert failed_responses == []
