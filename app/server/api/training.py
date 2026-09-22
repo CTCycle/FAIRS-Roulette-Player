@@ -46,7 +46,7 @@ def validate_training(
 ) -> TrainingConfig:
     """Validate and normalize a training payload without starting work."""
     try:
-        service.validate_runtime_settings()
+        service.validate_training_configuration(config)
     except Exception as exc:
         raise _map_training_exception(exc) from exc
     return config

@@ -11,6 +11,8 @@ Last updated: 2026-09-22
 5. Monitor status, episode/step progress, loss/RMSE, validation metrics, reward, capital, current bet, strategy, epsilon, replay-buffer warm-up, and history charts.
 6. Review generated checkpoints from the checkpoint preview. Inspect metadata, open a checkpoint in Inference, resume training, or delete an obsolete checkpoint. A cancelled run is shown as stopped/cancelled and does not become a completed checkpoint.
 
+On confirmation, the backend validates the configuration and rechecks that a selected stored dataset still exists as a training dataset. It also rejects an output checkpoint name that is already in use. A stale dataset or invalid configuration leaves the wizard open and does not create a training job.
+
 If the workflow is unfamiliar, open Help and choose the Training walkthrough for a short guided tour. It can be dismissed at any time with the X button and can later be reopened from Tips & Tricks.
 
 Stored-dataset subsampling selects a deterministic contiguous window instead of randomly reordering rows. This preserves roulette sequence adjacency before the chronological train/validation split. The split seed controls data-window selection; `training_seed` controls model initialization, agent exploration/replay randomness, and environment random starts.

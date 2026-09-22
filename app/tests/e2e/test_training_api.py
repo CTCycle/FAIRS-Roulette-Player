@@ -148,6 +148,10 @@ def wait_for_job_completion(
         ({"checkpoint_name": "../invalid-checkpoint"}, "checkpoint"),
         ({"perceptive_field_size": 0}, "perceptive_field_size"),
         ({"perceptive_field_size": 1025}, "perceptive_field_size"),
+        ({"episodes": 0}, "episodes"),
+        ({"learning_rate": 0}, "learning_rate"),
+        ({"sample_size": 0}, "sample_size"),
+        ({"validation_size": 1}, "validation_size"),
     ],
 )
 def test_validate_rejects_invalid_training_relationships(
@@ -180,6 +184,115 @@ def test_validate_accepts_stored_cpu_configuration(
     assert normalized["max_memory_size"] == 100
     assert normalized["use_device_gpu"] is False
     assert normalized["use_mixed_precision"] is False
+
+###############################################################################
+def test_stale_dataset_is_rejected_deterministically_without_side_effects(
+    api_context: APIRequestContext,
+):
+    checkpoint_name = f"val07_stale_dataset_{uuid4().hex[:10]}"
+    payload = dict(
+        VAL08_STORED_CPU_CONFIG,
+        dataset_id=2_147_483_647,
+        checkpoint_name=checkpoint_name,
+    )
+    before_status = api_context.get("/api/training/status").json()
+    before_checkpoints = api_context.get("/api/training/checkpoints").json()
+    assert before_status["is_training"] is False
+    assert before_status["job_id"] is None
+
+    first_validation = api_context.post("/api/training/validate", data=payload)
+    repeated_validation = api_context.post("/api/training/validate", data=payload)
+    start = api_context.post("/api/training/start", data=payload)
+
+    assert first_validation.status == 404, first_validation.text()
+    assert repeated_validation.status == 404, repeated_validation.text()
+    assert first_validation.json() == repeated_validation.json()
+    assert start.status == 404, start.text()
+
+    after_status = api_context.get("/api/training/status").json()
+    after_checkpoints = api_context.get("/api/training/checkpoints").json()
+    assert after_status["is_training"] is False
+    assert after_status["job_id"] is None
+    assert after_checkpoints == before_checkpoints
+    assert checkpoint_name not in after_checkpoints
+
+###############################################################################
+def test_dataset_deleted_after_validation_is_rejected_before_start(
+    api_context: APIRequestContext,
+):
+    dataset_name = f"val07_deleted_dataset_{uuid4().hex[:10]}"
+    checkpoint_name = f"val07_deleted_dataset_{uuid4().hex[:10]}"
+    upload = api_context.post(
+        "/api/data/upload?dataset_kind=training&csv_separator=%2C",
+        multipart={
+            "file": {
+                "name": f"{dataset_name}.csv",
+                "mimeType": "text/csv",
+                "buffer": b"draw_index,observed_outcome\n0,0\n1,15\n2,32\n3,7\n4,21",
+            }
+        },
+    )
+    assert upload.ok, f"Expected 200, got {upload.status}: {upload.text()}"
+    dataset_id = upload.json().get("dataset_id")
+    assert isinstance(dataset_id, int)
+
+    payload = dict(
+        VAL08_STORED_CPU_CONFIG,
+        dataset_id=dataset_id,
+        checkpoint_name=checkpoint_name,
+    )
+    before_status = api_context.get("/api/training/status").json()
+    before_checkpoints = api_context.get("/api/training/checkpoints").json()
+    assert before_status["is_training"] is False
+    assert before_status["job_id"] is None
+
+    try:
+        validation = api_context.post("/api/training/validate", data=payload)
+        assert validation.ok, (
+            f"Expected 200, got {validation.status}: {validation.text()}"
+        )
+        deletion = api_context.delete(f"/api/datasets/training/{dataset_id}")
+        assert deletion.ok, (
+            f"Expected 200, got {deletion.status}: {deletion.text()}"
+        )
+
+        start = api_context.post("/api/training/start", data=payload)
+        assert start.status == 404, start.text()
+        after_status = api_context.get("/api/training/status").json()
+        after_checkpoints = api_context.get("/api/training/checkpoints").json()
+        assert after_status["is_training"] is False
+        assert after_status["job_id"] is None
+        assert after_checkpoints == before_checkpoints
+        assert checkpoint_name not in after_checkpoints
+    finally:
+        # Keep the test safe if validation or deletion fails before cleanup.
+        api_context.delete(f"/api/datasets/training/{dataset_id}")
+
+###############################################################################
+def test_start_rejects_invalid_semantics_when_validation_is_bypassed(
+    api_context: APIRequestContext,
+):
+    checkpoint_name = f"val07_invalid_start_{uuid4().hex[:10]}"
+    payload = dict(
+        VAL08_STORED_CPU_CONFIG,
+        minimum_exploration_rate=0.8,
+        checkpoint_name=checkpoint_name,
+    )
+    before_status = api_context.get("/api/training/status").json()
+    before_checkpoints = api_context.get("/api/training/checkpoints").json()
+    assert before_status["is_training"] is False
+    assert before_status["job_id"] is None
+
+    response = api_context.post("/api/training/start", data=payload)
+
+    assert response.status == 422, response.text()
+    assert "minimum_exploration_rate" in response.text()
+    after_status = api_context.get("/api/training/status").json()
+    after_checkpoints = api_context.get("/api/training/checkpoints").json()
+    assert after_status["is_training"] is False
+    assert after_status["job_id"] is None
+    assert after_checkpoints == before_checkpoints
+    assert checkpoint_name not in after_checkpoints
 
 ###############################################################################
 class TestTrainingCheckpointPublication:
@@ -328,6 +441,7 @@ class TestTrainingEndpoints:
         """
         # Ensure training is running
         api_context.post("/api/training/stop")  # Clean slate
+        assert wait_for_training_stopped(api_context, timeout=30.0)
         start_response = api_context.post(
             "/api/training/start", data=RUNNING_TRAINING_CONFIG
         )
@@ -342,7 +456,7 @@ class TestTrainingEndpoints:
 
         # Cleanup
         api_context.post("/api/training/stop")
-        wait_for_training_stopped(api_context)
+        assert wait_for_training_stopped(api_context, timeout=30.0)
 
     # -------------------------------------------------------------------------
     def test_start_training_with_minimal_config(self, api_context: APIRequestContext):
@@ -353,6 +467,7 @@ class TestTrainingEndpoints:
         # Check if training is already running
         # Ensure clean state
         api_context.post("/api/training/stop")
+        assert wait_for_training_stopped(api_context, timeout=30.0)
 
         # Start training with minimal config
         response = api_context.post("/api/training/start", data=MINIMAL_TRAINING_CONFIG)

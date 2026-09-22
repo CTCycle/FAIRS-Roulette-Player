@@ -185,6 +185,7 @@ async def app_lifespan(application: FastAPI) -> AsyncIterator[None]:
         training_service = TrainingService(
             training_run_manager=training_run_manager,
             checkpoint_service=checkpoint_service,
+            dataset_repository=dataset_repository,
             database_settings=settings.database,
             database_path=shared_paths.DATABASE_PATH,
             polling_interval_seconds=settings.jobs.polling_interval,

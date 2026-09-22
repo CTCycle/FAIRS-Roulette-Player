@@ -1,6 +1,6 @@
 ## Execution And Data Flow
 
-Last updated: 2026-09-17
+Last updated: 2026-09-22
 
 ## Current Layering
 
@@ -64,6 +64,8 @@ sequenceDiagram
     participant Client
     participant API
     participant Service as TrainingService
+    participant Dataset as DatasetRepository
+    participant Checkpoint as CheckpointService
     participant Runs as TrainingRunManager
     participant Worker as ProcessWorker
     participant Data as TrainingDataService
@@ -71,9 +73,15 @@ sequenceDiagram
     participant Files as CheckpointRepository
 
     Client->>API: POST /api/training/validate
-    API-->>Client: validated TrainingConfig
+    API->>Service: validate_training_configuration(TrainingConfig)
+    Service->>Dataset: verify selected stored training dataset
+    Service->>Checkpoint: verify requested output name is unused
+    Service-->>API: validated configuration or rejection
+    API-->>Client: validated TrainingConfig or error
     Client->>API: POST /api/training/start
     API->>Service: start_training(TrainingConfig)
+    Service->>Dataset: repeat stored dataset preflight
+    Service->>Checkpoint: repeat output-name preflight
     Service->>Runs: start_job
     Runs->>Worker: start validated process payload
     Worker->>Worker: revalidate TrainingConfig boundary
@@ -87,6 +95,8 @@ sequenceDiagram
 ```
 
 `TrainingRunManager` is the authoritative in-process job state owner. Training work executes in a child process, but there is no second job model or durable job table.
+
+The canonical validation endpoint checks runtime capability and persisted resource references in addition to the `TrainingConfig` contract. A selected dataset must still exist as a training dataset, and a requested checkpoint name must be unused. `start_training` repeats these checks before registering a job so a stale dataset or occupied checkpoint name cannot create a failed job when the start endpoint is called directly or the resource changes after validation.
 
 When the worker completes, `TrainingService` merges finite final loss/RMSE values from the worker result into the authoritative completed `latest_stats` projection. Sparse validation values are not carried forward when the current telemetry sample has no fresh validation measurement.
 

@@ -16,6 +16,7 @@ from server.contracts.configuration import (
     JobsSettings,
 )
 from server.contracts.training import ResumeConfig, TrainingConfig
+from server.repositories.datasets import DatasetRepository
 from server.services.checkpoints import CheckpointService
 from server.services.training_data import load_training_series
 from server.services.training_run import TrainingRun, TrainingRunManager
@@ -112,6 +113,7 @@ class TrainingService:
         self,
         training_run_manager: TrainingRunManager,
         checkpoint_service: CheckpointService,
+        dataset_repository: DatasetRepository,
         database_settings: DatabaseSettings | None = None,
         database_path: str | Path | None = None,
         polling_interval_seconds: float = 1.0,
@@ -120,6 +122,7 @@ class TrainingService:
     ) -> None:
         self.training_run_manager = training_run_manager
         self.checkpoint_service = checkpoint_service
+        self.dataset_repository = dataset_repository
         self.database_settings = database_settings
         self.database_path = database_path
         self._runtime_settings_lock = RLock()
@@ -163,6 +166,33 @@ class TrainingService:
         """Validate optional runtime features before a training operation starts."""
         _, jit_compile, jit_backend = self._runtime_snapshot()
         validate_jit_runtime(jit_compile, jit_backend)
+
+    # -------------------------------------------------------------------------
+    def validate_training_configuration(self, config: TrainingConfig) -> None:
+        """Validate runtime and persisted-resource requirements before job creation."""
+        self.validate_runtime_settings()
+
+        if not config.use_data_generator:
+            if config.dataset_id is None:
+                raise ValueError(
+                    "dataset_id is required when use_data_generator is false."
+                )
+            dataset = self.dataset_repository.get(config.dataset_id)
+            if dataset is None:
+                raise FileNotFoundError(
+                    f"Training dataset '{config.dataset_id}' was not found."
+                )
+            if dataset["dataset_kind"] != "training":
+                raise ValueError(
+                    f"Dataset '{config.dataset_id}' is not a training dataset."
+                )
+
+        if config.checkpoint_name is not None:
+            existing_checkpoints = set(self.checkpoint_service.list_checkpoints())
+            if config.checkpoint_name in existing_checkpoints:
+                raise FileExistsError(
+                    f"Checkpoint already exists: {config.checkpoint_name}"
+                )
 
     # -------------------------------------------------------------------------
     def _polling_interval(self) -> float:
@@ -388,14 +418,9 @@ class TrainingService:
     def start_training(self, config: TrainingConfig) -> dict[str, Any]:
         if self.training_run_manager.is_job_running(self.JOB_TYPE):
             raise RuntimeError("Training is already in progress.")
-        self.validate_runtime_settings()
+        self.validate_training_configuration(config)
 
         configuration = config.model_dump()
-        checkpoint_name = config.checkpoint_name
-        if checkpoint_name is not None:
-            existing_checkpoints = set(self.checkpoint_service.list_checkpoints())
-            if checkpoint_name in existing_checkpoints:
-                raise FileExistsError(f"Checkpoint already exists: {checkpoint_name}")
 
         job_id = self.training_run_manager.start_job(
             job_type=self.JOB_TYPE,
