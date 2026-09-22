@@ -96,3 +96,49 @@ class TestSettingsPage:
         expect(page).to_have_url(f"{base_url}/settings")
 
         assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
+
+    # -------------------------------------------------------------------------
+    def test_roulette_range_validation_prevents_persistence(
+        self, page: Page, base_url: str
+    ) -> None:
+        settings_patches: list[str] = []
+
+        def capture_settings_patch(request) -> None:
+            if request.method == "PATCH" and request.url.endswith("/api/settings"):
+                settings_patches.append(request.url)
+
+        page.on("request", capture_settings_patch)
+        page.goto(f"{base_url}/settings")
+        page.wait_for_load_state("networkidle")
+
+        minimum = page.get_by_label("Minimum", exact=True)
+        maximum = page.get_by_label("Maximum", exact=True)
+        include_zero = page.get_by_label("Include zero", exact=True)
+        save = page.get_by_role("button", name="Save settings", exact=True)
+
+        minimum.fill("12")
+        maximum.fill("1")
+        save.click()
+        expect(
+            page.get_by_text(
+                "Minimum number cannot be greater than maximum number.", exact=True
+            )
+        ).to_be_visible()
+
+        minimum.fill("0")
+        maximum.fill("0")
+        include_zero.uncheck()
+        save.click()
+        expect(
+            page.get_by_text(
+                "Excluding zero would leave the roulette number pool empty.",
+                exact=True,
+            )
+        ).to_be_visible()
+        assert settings_patches == []
+
+        page.reload()
+        page.wait_for_load_state("networkidle")
+        expect(minimum).to_have_value("0")
+        expect(maximum).to_have_value("36")
+        expect(include_zero).to_be_checked()
