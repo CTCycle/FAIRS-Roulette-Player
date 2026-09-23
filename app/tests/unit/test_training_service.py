@@ -7,7 +7,7 @@ import pytest
 
 from server.contracts.configuration import DeviceSettings, JobsSettings
 from server.contracts.training import ResumeConfig, TrainingConfig
-from server.services.training_worker import run_training_process
+from server.services.training_worker import process_target, run_training_process
 from server.services import training as training_module
 from server.services.training import TrainingService
 
@@ -256,3 +256,25 @@ def test_training_worker_receives_explicit_runtime_dependencies(monkeypatch) -> 
             "rmse": 1.11803398875,
         },
     )
+
+###############################################################################
+def test_training_process_bootstraps_runtime_before_running_target(monkeypatch) -> None:
+    from server import bootstrap as bootstrap_module
+
+    calls: list[tuple[str, object]] = []
+    worker = object()
+
+    def bootstrap() -> None:
+        calls.append(("bootstrap", None))
+
+    def target(*, worker: object, marker: str) -> None:
+        calls.append(("target", (worker, marker)))
+
+    monkeypatch.setattr(bootstrap_module, "bootstrap_runtime", bootstrap)
+
+    process_target(target, {"marker": "isolated"}, worker)
+
+    assert calls == [
+        ("bootstrap", None),
+        ("target", (worker, "isolated")),
+    ]
