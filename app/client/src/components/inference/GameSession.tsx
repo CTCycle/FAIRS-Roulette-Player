@@ -752,11 +752,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
                 if (isAbortError(err)) {
                     return;
                 }
-                if (err instanceof ApiRequestError && err.status === 404) {
-                    resetExpiredSession();
-                    return;
-                }
-                if (err instanceof ApiRequestError && err.status === 409 && config) {
+                if (config) {
                     await reconcileSession(config.sessionId, signal);
                 }
                 setLocalError(err instanceof Error ? err.message : 'Unable to recompute session.');
