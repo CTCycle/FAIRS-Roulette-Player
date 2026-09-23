@@ -219,6 +219,7 @@ function Remove-LauncherPath {
         }
         $found
     } else { @($item) }
+    $entries = @($entries)
     $protectedDirectories = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
     $preservedPaths = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
     foreach ($entry in @($entries)) {
