@@ -26,6 +26,22 @@ class EmptyLogitsModel:
         return np.zeros((1, 0), dtype=np.float32)
 
 ###############################################################################
+class StrategyLogitsModel:
+
+    def __init__(self, strategy_id: int) -> None:
+        self.strategy_id = strategy_id
+        self.inputs: dict[str, np.ndarray] | None = None
+
+    # -------------------------------------------------------------------------
+    def predict(
+        self, inputs: dict[str, np.ndarray], verbose: int = 0  # noqa: ARG002
+    ) -> np.ndarray:
+        self.inputs = inputs
+        logits = np.zeros((1, 5), dtype=np.float32)
+        logits[0, self.strategy_id] = 1.0
+        return logits
+
+###############################################################################
 def build_configuration(**overrides: object) -> dict[str, object]:
     configuration = TrainingConfig(use_data_generator=True).model_dump()
     configuration.update(
@@ -65,6 +81,39 @@ def test_fixed_strategy_is_deterministic_when_strategy_model_disabled() -> None:
     assert prediction["bet_strategy_name"] == "DAlembert"
     assert prediction["suggested_bet_amount"] == 10
     assert prediction["current_bet_amount"] == 10
+
+###############################################################################
+def test_strategy_model_selects_canonical_strategy_and_suggests_bet() -> None:
+    os.environ.setdefault("KERAS_BACKEND", "torch")
+    from server.learning.inference.player import RoulettePlayer
+
+    config = build_configuration(
+        seed=42,
+        perceptive_field_size=4,
+        game_capital=100,
+        game_bet=10,
+        dynamic_betting_enabled=True,
+        bet_strategy_model_enabled=True,
+        bet_strategy_fixed_id=0,
+    )
+    strategy_model = StrategyLogitsModel(strategy_id=3)
+    player = RoulettePlayer(
+        model=DummyModel(),  # type: ignore[arg-type]
+        strategy_model=strategy_model,  # type: ignore[arg-type]
+        configuration=config,
+        session_id="strategy-session",
+        dataset_context=pd.DataFrame({"outcome": [1, 2, 3, 4, 5, 6, 7, 8]}),
+    )
+
+    prediction = player.predict_next()
+
+    assert prediction["bet_strategy_id"] == 3
+    assert prediction["bet_strategy_name"] == "DAlembert"
+    assert prediction["suggested_bet_amount"] == 10
+    assert prediction["current_bet_amount"] == 10
+    assert strategy_model.inputs is not None
+    assert strategy_model.inputs["timeseries"].shape == (1, 4)
+    assert strategy_model.inputs["gain"].shape == (1, 1)
 
 ###############################################################################
 def test_predict_next_rejects_wrong_action_output_size() -> None:

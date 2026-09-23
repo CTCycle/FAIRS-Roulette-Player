@@ -153,6 +153,9 @@ def assert_training_idle(api_context: APIRequestContext) -> dict:
 
 ###############################################################################
 def checkpoint_root() -> Path:
+    configured_data_dir = os.getenv("FAIRS_DATA_DIR", "").strip()
+    if configured_data_dir:
+        return Path(configured_data_dir).expanduser().resolve() / "checkpoints"
     return Path(__file__).resolve().parents[2] / "resources" / "checkpoints"
 
 ###############################################################################
@@ -472,15 +475,12 @@ class TestTrainingCheckpointPublication:
             assert summary["final_loss"] is not None
             assert summary["final_rmse"] is not None
 
-            checkpoint_root = (
-                Path(__file__).resolve().parents[2]
-                / "resources"
-                / "checkpoints"
-                / checkpoint
+            published_checkpoint = checkpoint_root() / checkpoint
+            configuration_path = (
+                published_checkpoint / "configuration" / "configuration.json"
             )
-            configuration_path = checkpoint_root / "configuration" / "configuration.json"
-            assert (checkpoint_root / ".complete").is_file()
-            assert (checkpoint_root / "saved_model.keras").is_file()
+            assert (published_checkpoint / ".complete").is_file()
+            assert (published_checkpoint / "saved_model.keras").is_file()
             assert configuration_path.is_file()
             persisted = json.loads(
                 configuration_path.read_text(encoding="utf-8")
@@ -629,10 +629,21 @@ class TestTrainingEndpoints:
             assert job_data.get("job_type") == "training"
             assert job_data.get("status") in ("pending", "running", "completed")
 
-            # Wait briefly then stop training to clean up
+            # Stop the exact run and wait for its terminal state before returning.
             time.sleep(1)
-            api_context.post("/api/training/stop")
-            wait_for_training_stopped(api_context)
+            job_status_response = api_context.get(
+                f"/api/training/jobs/{job_id}"
+            )
+            assert job_status_response.ok, job_status_response.text()
+            job_status = job_status_response.json().get("status")
+            if job_status in ("pending", "running"):
+                stop_response = api_context.post("/api/training/stop")
+                assert stop_response.status in (200, 400), stop_response.text()
+
+            terminal = wait_for_job_completion(api_context, job_id, timeout=30.0)
+            assert terminal.get("status") in ("completed", "cancelled"), terminal
+            assert wait_for_training_stopped(api_context, timeout=30.0)
+            assert_training_idle(api_context)
 
     # -------------------------------------------------------------------------
     def test_cancel_unknown_training_job_returns_404(

@@ -265,6 +265,9 @@ def process_target(
 ) -> None:
     if os.name != "nt":
         os.setsid()
+    from server.bootstrap import bootstrap_runtime
+
+    bootstrap_runtime()
     target(worker=worker, **kwargs)
 
 ###############################################################################
