@@ -11,6 +11,8 @@ This slice validates inference history replay after correcting an observed resul
 
 Profile: Windows `10.0.26200.0`, FAIRS `3.4.2`, Python `3.14.7`, Node `22.13.0`, SQLite `3.50.4`, CPU, one Uvicorn worker, ports `8890` and `8051`. The official Windows launcher started the app; `/api/health` returned `ok`, version `3.4.2`.
 
+Python/E2E commands used `PYTHONPATH=app` and `PLAYWRIGHT_BROWSERS_PATH=runtimes/cache/playwright-browsers`. Focused pytest used repository-local cache/temp directories; the final Windows suite used scratch under `assets/QA/` because data roots under the canonical cache are prohibited.
+
 The backend used isolated copies under `%TEMP%/fairs-val12-20260923-7720` of `database.db`, `runtime-settings.json`, and checkpoint `val00_lineage_20260921`. Dataset `5` was `val00_training_lineage` with `120` outcomes. `settings/.env` temporarily pointed `FAIRS_DATA_DIR` at that root; it was restored byte-for-byte (SHA-256 `a421db30276b690d1ac14549afce9e850af72533b95ebff6fbc2db42610eecde`).
 
 ## Browser replay and persisted state
