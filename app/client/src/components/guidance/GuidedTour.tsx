@@ -104,6 +104,24 @@ export const GuidedTour: React.FC = () => {
     useDialogFocus(panelRef, dismissTour, Boolean(activeTour));
 
     useEffect(() => {
+        if (!activeTour) {
+            return;
+        }
+
+        const panel = panelRef.current;
+        const focusedElement = document.activeElement;
+        const focusIsUsable = focusedElement instanceof HTMLElement
+            && panel?.contains(focusedElement)
+            && !focusedElement.matches(':disabled')
+            && focusedElement.getAttribute('aria-disabled') !== 'true';
+        if (!panel || focusIsUsable) {
+            return;
+        }
+
+        panel.querySelector<HTMLElement>('[data-dialog-autofocus="true"]')?.focus();
+    }, [activeTour, activeTourStep]);
+
+    useEffect(() => {
         if (activeTour && activeTour.route !== location.pathname) {
             dismissTour();
         }
