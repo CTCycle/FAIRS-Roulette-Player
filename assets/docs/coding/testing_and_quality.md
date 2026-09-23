@@ -35,6 +35,7 @@ Primary automated test surfaces live under `app/tests`:
   - repository-standard Windows test entry point; synchronizes the test extra and ensures Playwright Chromium is installed below `runtimes/cache/playwright-browsers` before collection
 - `pytest.ini`
   - keeps pytest's cache and basetemp under `runtimes/cache/pytest` and `runtimes/cache/pytest-tmp`, limits collection to `app/tests/unit` and `app/tests/e2e`, and excludes generated/cache directories; Ruff and other test tooling use sibling paths below `runtimes/cache`
+- Set `STANDARD_TEST_CACHE_ROOT` before invoking `app/tests/run_tests.bat` to place all runner caches, including pytest basetemp and Playwright browser storage, under an isolated root. Without it, the runner uses `runtimes/cache`.
 - `.github/workflows/ci.yml`
   - Linux CI runs the backend Ruff/unit/Alembic/OpenAPI/PostgreSQL checks and a separate frontend lint/build job. Python dependencies resolve from `app/server/pyproject.toml` when `uv.lock` is absent, while the repository-root `ruff.toml` owns Ruff’s canonical cache path; generated QA assets are excluded from lint traversal.
 
