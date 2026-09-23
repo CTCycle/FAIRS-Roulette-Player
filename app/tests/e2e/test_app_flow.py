@@ -5,9 +5,12 @@ Tests basic UI functionality using Playwright browser automation.
 
 import json
 import re
+import sqlite3
 from pathlib import Path
 
 from playwright.sync_api import APIRequestContext, Page, expect
+
+from server.common import path as shared_paths
 
 ###############################################################################
 class TestStartupFlow:
@@ -918,12 +921,310 @@ class TestInferencePage:
                 full_page=True,
             )
         finally:
+            # Close sessions but preserve persisted rows as audit evidence.
             for session_id in reversed(created_session_ids):
                 api_context.post(
                     f"/api/inference/sessions/{session_id}/shutdown"
                 )
                 api_context.post(
                     f"/api/inference/sessions/{session_id}/rows/clear"
+                )
+
+    # -------------------------------------------------------------------------
+    def test_failed_history_replay_keeps_previous_session_active(
+        self,
+        page: Page,
+        base_url: str,
+        api_context: APIRequestContext,
+    ) -> None:
+        """A partial failed replay is closed without replacing the live session."""
+        page_errors: list[str] = []
+        console_errors: list[str] = []
+        failed_requests: list[str] = []
+        failed_responses: list[str] = []
+        created_session_ids: list[str] = []
+        replacement_session_id: str | None = None
+        replacement_step_count = 0
+        replacement_start_status: int | None = None
+        armed = False
+        failure_detail = "Injected VAL-13 replay failure."
+
+        page.on("pageerror", lambda error: page_errors.append(str(error)))
+        page.on(
+            "console",
+            lambda message: console_errors.append(message.text)
+            if message.type == "error"
+            else None,
+        )
+        page.on(
+            "requestfailed",
+            lambda request: failed_requests.append(
+                f"{request.method} {request.url}: {request.failure}"
+            ),
+        )
+        page.on(
+            "response",
+            lambda response: failed_responses.append(
+                f"{response.status} {response.url}"
+            )
+            if response.status >= 400
+            else None,
+        )
+
+        def is_session_start(response) -> bool:
+            return (
+                response.request.method == "POST"
+                and response.url.endswith("/api/inference/sessions/start")
+            )
+
+        def capture_replacement_start(route) -> None:
+            nonlocal replacement_session_id, replacement_start_status
+            if not armed:
+                route.continue_()
+                return
+
+            response = route.fetch()
+            replacement_start_status = response.status
+            if response.status == 200:
+                replacement_session_id = str(response.json()["session_id"])
+                created_session_ids.append(replacement_session_id)
+            route.fulfill(response=response)
+
+        def fail_second_replay_step(route) -> None:
+            nonlocal replacement_step_count
+            request_url = route.request.url
+            if (
+                not armed
+                or replacement_session_id is None
+                or not request_url.endswith(
+                    f"/api/inference/sessions/{replacement_session_id}/step"
+                )
+            ):
+                route.continue_()
+                return
+
+            replacement_step_count += 1
+            if replacement_step_count == 2:
+                route.fulfill(
+                    status=503,
+                    content_type="application/json",
+                    body=json.dumps({"detail": failure_detail}),
+                )
+                return
+            route.continue_()
+
+        page.route("**/api/inference/sessions/start", capture_replacement_start)
+        page.route("**/api/inference/sessions/*/step", fail_second_replay_step)
+
+        def session_snapshot(session_id: str) -> dict:
+            response = api_context.get(f"/api/inference/sessions/{session_id}")
+            assert response.status == 200, (
+                f"Expected session snapshot 200, got {response.status}: "
+                f"{response.text()}"
+            )
+            return response.json()
+
+        def persisted_session_state(session_id: str) -> tuple[str | None, list[tuple]]:
+            with sqlite3.connect(shared_paths.DATABASE_PATH, timeout=20) as connection:
+                session_row = connection.execute(
+                    "SELECT ended_at FROM inference_sessions WHERE session_id = ?",
+                    (session_id,),
+                ).fetchone()
+                steps = connection.execute(
+                    "SELECT step_number, observed_outcome_id "
+                    "FROM inference_session_steps WHERE session_id = ? "
+                    "ORDER BY step_number",
+                    (session_id,),
+                ).fetchall()
+            assert session_row is not None, f"Missing persisted session {session_id}"
+            return session_row[0], steps
+
+        def assert_session_closed(session_id: str) -> None:
+            response = api_context.post(
+                f"/api/inference/sessions/{session_id}/next"
+            )
+            assert response.status == 404, (
+                f"Expected closed session 404, got {response.status}: "
+                f"{response.text()}"
+            )
+
+        def assert_ui_step_matches_snapshot(row, step: dict) -> None:
+            cells = row.get_by_role("cell")
+            assert int(cells.nth(3).inner_text().replace("+", "")) == step["reward"]
+            assert float(cells.nth(4).inner_text()) == step["capital_after"]
+
+        page.set_viewport_size({"width": 1440, "height": 900})
+        try:
+            page.goto(f"{base_url}/inference")
+            page.wait_for_load_state("networkidle")
+            page.locator("#inference-checkpoint").select_option(
+                "val00_lineage_20260921"
+            )
+            page.locator("#inference-dataset").select_option("5")
+            page.locator("#inference-initial-capital").fill("1000")
+            page.locator("#inference-bet-amount").fill("10")
+
+            with page.expect_response(is_session_start, timeout=60_000) as start_info:
+                page.get_by_role("button", name="Play", exact=True).click()
+            start_response = start_info.value
+            assert start_response.status == 200, start_response.text()
+            existing_session_id = str(start_response.json()["session_id"])
+            created_session_ids.append(existing_session_id)
+
+            rows = page.locator("table").get_by_role("row")
+            expect(rows).to_have_count(2)
+            first_row = rows.nth(1)
+            prediction_text = first_row.get_by_role("cell").nth(1).inner_text()
+            prediction_match = re.search(r"Bet on number (\d+)", prediction_text)
+            assert prediction_match is not None, prediction_text
+            predicted_number = int(prediction_match.group(1))
+            original_outcome = (predicted_number + 1) % 37
+
+            first_field = page.get_by_label("Observed value for step 1")
+            first_field.fill(str(original_outcome))
+            with page.expect_response(
+                lambda response: response.request.method == "POST"
+                and response.url.endswith(
+                    f"/api/inference/sessions/{existing_session_id}/step"
+                )
+            ) as first_step_info:
+                first_row.get_by_role(
+                    "button", name="Confirm observed"
+                ).click()
+            assert first_step_info.value.status == 200
+            first_row.get_by_role("button", name="Next prediction").click()
+
+            expect(rows).to_have_count(3)
+            second_row = rows.nth(2)
+            second_prediction_text = second_row.get_by_role("cell").nth(1).inner_text()
+            second_prediction_match = re.search(
+                r"Bet on number (\d+)", second_prediction_text
+            )
+            assert second_prediction_match is not None, second_prediction_text
+            second_predicted_number = int(second_prediction_match.group(1))
+            second_outcome = (second_predicted_number + 1) % 37
+            second_field = page.get_by_label("Observed value for step 2")
+            second_field.fill(str(second_outcome))
+            with page.expect_response(
+                lambda response: response.request.method == "POST"
+                and response.url.endswith(
+                    f"/api/inference/sessions/{existing_session_id}/step"
+                )
+            ) as second_step_info:
+                second_row.get_by_role(
+                    "button", name="Confirm observed"
+                ).click()
+            assert second_step_info.value.status == 200
+            second_row.get_by_role("button", name="Next prediction").click()
+            expect(rows).to_have_count(4)
+
+            before_failure_snapshot = session_snapshot(existing_session_id)
+            assert before_failure_snapshot["step_count"] == 2
+            assert before_failure_snapshot["prediction_pending"] is True
+            assert len(before_failure_snapshot["steps"]) == 3
+
+            first_row = rows.nth(1)
+            first_row.get_by_role("button", name="Modify observed").click()
+            first_field = page.get_by_label("Observed value for step 1")
+            first_field.fill(str(predicted_number))
+            armed = True
+            with (
+                page.expect_response(is_session_start, timeout=60_000) as replacement_info,
+                page.expect_response(
+                    lambda response: response.status == 503
+                    and response.request.method == "POST"
+                    and response.url.endswith("/step"),
+                    timeout=60_000,
+                ) as failure_info,
+            ):
+                first_row.get_by_role(
+                    "button", name="Confirm observed"
+                ).click()
+
+            assert replacement_info.value.status == 200
+            assert replacement_session_id == str(
+                replacement_info.value.json()["session_id"]
+            )
+            assert (
+                replacement_info.value.request.headers.get(
+                    "x-preserve-inference-session"
+                )
+                == existing_session_id
+            )
+            assert replacement_start_status == 200
+            assert replacement_step_count == 2
+            assert failure_info.value.status == 503
+            assert failure_info.value.url.endswith(
+                f"/api/inference/sessions/{replacement_session_id}/step"
+            )
+
+            expect(page.get_by_role("alert")).to_have_text(failure_detail)
+            expect(page.get_by_role("button", name="Stop", exact=True)).to_be_enabled()
+            assert session_snapshot(existing_session_id) == before_failure_snapshot
+            same_bet_response = api_context.post(
+                f"/api/inference/sessions/{existing_session_id}/bet",
+                data={"bet_amount": before_failure_snapshot["current_bet"]},
+            )
+            assert same_bet_response.status == 200, same_bet_response.text()
+            assert session_snapshot(existing_session_id) == before_failure_snapshot
+
+            assert replacement_session_id is not None
+            assert_session_closed(replacement_session_id)
+            existing_ended_at, existing_steps = persisted_session_state(
+                existing_session_id
+            )
+            assert existing_ended_at is None
+            assert existing_steps == [
+                (1, original_outcome),
+                (2, second_outcome),
+                (3, None),
+            ]
+            replacement_ended_at, replacement_steps = persisted_session_state(
+                replacement_session_id
+            )
+            assert replacement_ended_at is not None
+            assert replacement_steps == [(1, predicted_number), (2, None)]
+            expect(page.get_by_label("Observed value for step 1")).to_have_value(
+                str(original_outcome)
+            )
+            expect(
+                rows.nth(1).get_by_role("button", name="Modify observed")
+            ).to_be_visible()
+            assert_ui_step_matches_snapshot(
+                rows.nth(1), before_failure_snapshot["steps"][0]
+            )
+
+            qa_dir = Path(__file__).resolve().parents[3] / "assets" / "QA"
+            page.screenshot(
+                path=str(qa_dir / "val13-inference-replacement-rollback.png"),
+                full_page=True,
+            )
+
+            page.reload()
+            page.wait_for_load_state("networkidle")
+            expect(page.get_by_role("button", name="Stop", exact=True)).to_be_enabled()
+            rows = page.locator("table").get_by_role("row")
+            expect(rows).to_have_count(4)
+            expect(page.get_by_label("Observed value for step 1")).to_have_value(
+                str(original_outcome)
+            )
+            expect(page.get_by_label("Observed value for step 2")).to_have_value(
+                str(second_outcome)
+            )
+            assert_ui_step_matches_snapshot(rows.nth(1), before_failure_snapshot["steps"][0])
+            assert_ui_step_matches_snapshot(rows.nth(2), before_failure_snapshot["steps"][1])
+            expect(page.get_by_label("Observed value for step 3")).to_have_value("")
+            assert page_errors == []
+            assert len(console_errors) == 1
+            assert "503 (Service Unavailable)" in console_errors[0]
+            assert failed_requests == []
+            assert failed_responses == [
+                f"503 {failure_info.value.url}"
+            ]
+        finally:
+            for session_id in reversed(created_session_ids):
+                api_context.post(
+                    f"/api/inference/sessions/{session_id}/shutdown"
                 )
 
 ###############################################################################

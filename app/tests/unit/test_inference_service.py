@@ -184,6 +184,51 @@ def test_session_start_rolls_back_persistence_and_model_on_registration_failure(
     assert released_players[0].model is None
 
 ###############################################################################
+def test_replacement_start_failure_preserves_existing_session_and_releases_candidate(
+    monkeypatch,
+) -> None:
+    service, _ = build_service(monkeypatch)
+    service.state.max_sessions = 1
+    existing = service.start_session(
+        InferenceStartRequest(checkpoint="cp1", dataset_id=1)
+    )
+    existing_id = existing["session_id"]
+    service.inference_repository.list_steps.return_value = []
+    existing_snapshot = service.get_session_snapshot(existing_id)
+    candidate_players: list[FakePlayer] = []
+
+    ###########################################################################
+    class TrackingPlayer(FakePlayer):
+
+        # ---------------------------------------------------------------------
+        def __init__(self, *args, **kwargs):  # noqa: ANN002, ANN003
+            super().__init__(*args, **kwargs)
+            self.model = object()
+            candidate_players.append(self)
+
+    monkeypatch.setattr("server.services.inference.RoulettePlayer", TrackingPlayer)
+    service.inference_repository.create_session_with_initial_step.side_effect = (
+        RuntimeError("replacement persistence failed")
+    )
+
+    with pytest.raises(RuntimeError, match="replacement persistence failed"):
+        service.start_session(
+            InferenceStartRequest(checkpoint="cp1", dataset_id=1),
+            preserve_session_id=existing_id,
+        )
+
+    failed_candidate_id = service.inference_repository.delete_session.call_args.args[0]
+    assert failed_candidate_id != existing_id
+    assert service.state.session_ids() == [existing_id]
+    assert service.state.get_session(existing_id).player is not None
+    assert service.get_session_snapshot(existing_id) == existing_snapshot
+    service.inference_repository.end_session.assert_not_called()
+    service.inference_repository.delete_session.assert_called_once_with(
+        failed_candidate_id
+    )
+    assert candidate_players[0].model is None
+
+###############################################################################
 def test_session_snapshot_returns_authoritative_persisted_steps(monkeypatch) -> None:
     service, _ = build_service(monkeypatch)
     start = service.start_session(InferenceStartRequest(checkpoint="cp1", dataset_id=1))
