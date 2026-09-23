@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDown, Database, Play, RefreshCw, X } from 'lucide-react';
 import type { TrainingNewConfig } from '../../../types/training';
 import { initialTrainingNewConfig } from '../../../types/training';
@@ -397,7 +398,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                 )}
             </div>
 
-            {wizardOpen && (
+            {wizardOpen && createPortal(
                 <div className="wizard-modal-overlay">
                     <div
                         className="wizard-modal"
@@ -747,7 +748,8 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                             onConfirm={handleStartTraining}
                         />
                     </div>
-                </div>
+                </div>,
+                document.body,
             )}
         </div>
     );
