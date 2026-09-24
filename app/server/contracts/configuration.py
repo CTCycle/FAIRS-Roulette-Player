@@ -26,6 +26,8 @@ def normalize_jit_backend(value: Any) -> str:
         raise ValueError(
             "jit_backend may contain only letters, numbers, '.', '_', ':', and '-'."
         )
+    if text not in {"eager", "inductor"}:
+        raise ValueError("jit_backend must be either 'eager' or 'inductor'.")
     return text
 
 ###############################################################################
