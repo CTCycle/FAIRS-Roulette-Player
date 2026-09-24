@@ -48,6 +48,19 @@ def _dataset_state() -> tuple[list[tuple], list[tuple]]:
     return datasets, outcomes
 
 ###############################################################################
+def _inference_persistence_state() -> tuple[list[tuple], list[tuple]]:
+    sessions = _database_rows(
+        "SELECT session_id, dataset_id, checkpoint_name, initial_capital, "
+        "started_at, ended_at FROM inference_sessions ORDER BY session_id"
+    )
+    steps = _database_rows(
+        "SELECT session_id, step_number, bet_amount, predicted_action, "
+        "predicted_relative_preference, observed_outcome_id, reward, capital_after "
+        "FROM inference_session_steps ORDER BY session_id, step_number"
+    )
+    return sessions, steps
+
+###############################################################################
 def _checkpoint_state(api_context: APIRequestContext) -> dict[str, dict[str, str]]:
     response = api_context.get("/api/training/checkpoints")
     assert response.status == 200, response.text()
@@ -326,71 +339,69 @@ def test_inference_rejections_preserve_live_session_and_recover(
 ) -> None:
     checkpoint = require_checkpoint(api_context)
     dataset_id = require_dataset_id(api_context)
-    invalid_checkpoint = api_context.post(
-        "/api/inference/sessions/start",
-        data={
-            "checkpoint": "val21_missing_checkpoint",
-            "dataset_id": dataset_id,
-            "game_capital": 1000,
-            "game_bet": 10,
-        },
-    )
-    assert invalid_checkpoint.status == 404, invalid_checkpoint.text()
-
-    invalid_dataset = api_context.post(
-        "/api/inference/sessions/start",
-        data={
-            "checkpoint": checkpoint,
-            "dataset_id": 999999999,
-            "game_capital": 1000,
-            "game_bet": 10,
-        },
-    )
-    assert invalid_dataset.status == 404, invalid_dataset.text()
-
     started = start_inference_session(api_context, checkpoint, dataset_id)
     session_id = started["session_id"]
     before_snapshot = get_session_snapshot(api_context, session_id)
-    before_rows = _database_rows(
-        "SELECT session_id, step_number, bet_amount, predicted_action, "
-        "predicted_relative_preference, observed_outcome_id, reward, capital_after "
-        "FROM inference_session_steps WHERE session_id = ? ORDER BY step_number",
-        (session_id,),
-    )
+    before_persistence = _inference_persistence_state()
+
+    def assert_session_unchanged() -> None:
+        assert get_session_snapshot(api_context, session_id) == before_snapshot
+        assert _inference_persistence_state() == before_persistence
+
     try:
+        invalid_starts = (
+            lambda: api_context.post(
+                "/api/inference/sessions/start",
+                data={
+                    "checkpoint": "val21_missing_checkpoint",
+                    "dataset_id": dataset_id,
+                    "game_capital": 1000,
+                    "game_bet": 10,
+                },
+            ),
+            lambda: api_context.post(
+                "/api/inference/sessions/start",
+                data={
+                    "checkpoint": checkpoint,
+                    "dataset_id": 999999999,
+                    "game_capital": 1000,
+                    "game_bet": 10,
+                },
+            ),
+        )
+        invalid_start_statuses: list[int] = []
+        for request in invalid_starts:
+            response = request()
+            assert response.status == 404, response.text()
+            invalid_start_statuses.append(response.status)
+            assert_session_unchanged()
+            _assert_healthy(api_context)
+
         invalid_operations = (
-            api_context.post(
+            lambda: api_context.post(
                 f"/api/inference/sessions/{session_id}/step",
                 data={"extraction": 37},
             ),
-            api_context.post(
+            lambda: api_context.post(
                 f"/api/inference/sessions/{session_id}/step",
                 data={"extraction": "not-a-number"},
             ),
-            api_context.post(
+            lambda: api_context.post(
                 f"/api/inference/sessions/{session_id}/bet",
                 data={"bet_amount": 0},
             ),
-            api_context.post(
+            lambda: api_context.post(
                 "/api/inference/sessions/val21_stale_session/step",
                 data={"extraction": 17},
             ),
         )
         invalid_statuses: list[int] = []
-        for response in invalid_operations:
+        for request in invalid_operations:
+            response = request()
             _assert_client_error(response)
             invalid_statuses.append(response.status)
-            assert get_session_snapshot(api_context, session_id) == before_snapshot
-            assert (
-                _database_rows(
-                    "SELECT session_id, step_number, bet_amount, predicted_action, "
-                    "predicted_relative_preference, observed_outcome_id, reward, "
-                    "capital_after FROM inference_session_steps "
-                    "WHERE session_id = ? ORDER BY step_number",
-                    (session_id,),
-                )
-                == before_rows
-            )
+            assert_session_unchanged()
+            _assert_healthy(api_context)
 
         updated_bet = api_context.post(
             f"/api/inference/sessions/{session_id}/bet",
@@ -431,6 +442,7 @@ def test_inference_rejections_preserve_live_session_and_recover(
     print(
         "VAL21 inference rejects/recovery: "
         f"checkpoint={checkpoint}, dataset_id={dataset_id}, "
-        f"missing_checkpoint=404, missing_dataset=404, rejected_statuses={invalid_statuses}, "
+        f"invalid_start_statuses={invalid_start_statuses}, "
+        f"rejected_statuses={invalid_statuses}, "
         f"failed_session_id={session_id}, recovery_session_id={recovery_id}, ended=yes"
     )
