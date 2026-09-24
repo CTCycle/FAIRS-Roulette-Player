@@ -1,0 +1,68 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0 -- G:\Projects\Repositories\Active projects\FAIRS Roulette Player\app\server\.venv\Scripts\python.exe
+cachedir: C:\Users\THOMAS~1\AppData\Local\Temp\fairs-val21-val22-42902f0a61f3408da7737646169ddfa7\cache\pytest
+rootdir: G:\Projects\Repositories\Active projects\FAIRS Roulette Player
+configfile: pytest.ini
+plugins: anyio-4.14.0, base-url-2.1.0, playwright-0.8.0
+[INFO] setup plugin alembic.autogenerate.schemas
+[INFO] setup plugin alembic.autogenerate.tables
+[INFO] setup plugin alembic.autogenerate.types
+[INFO] setup plugin alembic.autogenerate.constraints
+[INFO] setup plugin alembic.autogenerate.defaults
+[INFO] setup plugin alembic.autogenerate.comments
+[INFO] setup plugin alembic.autogenerate.checkconstraint_byname
+collecting ... collected 49 items / 33 deselected / 16 selected
+
+app/tests/e2e/test_val21_resilience.py::test_malformed_requests_are_4xx_and_leave_api_healthy VAL21 malformed requests: responses=[422, 422, 422, 422, 404], health=200 after each
+PASSED
+app/tests/e2e/test_val21_resilience.py::test_rejected_settings_patches_preserve_file_and_recover VAL21 settings patches: rejected_statuses=[422, 422, 422, 422], recovery=200
+PASSED
+app/tests/e2e/test_val21_resilience.py::test_rejected_training_requests_create_no_jobs_or_checkpoints VAL21 training rejects: statuses=[422, 422, 404], job_id=None, checkpoint=val21_rejected_c074d79542 absent, staging=empty, valid_validation=200
+PASSED
+app/tests/e2e/test_val21_resilience.py::test_failed_uploads_are_transactional_and_valid_upload_recovers VAL21 upload rejects/recovery: rejected_statuses=[422, 400, 400, 400, 413, 400], recovered_dataset_id=7, name=val21_recovery_8e6b879d3e, rows_imported=2, cleanup=complete
+PASSED
+app/tests/e2e/test_val21_resilience.py::test_inference_rejections_preserve_live_session_and_recover VAL21 inference rejects/recovery: checkpoint=val00_lineage_20260921, dataset_id=5, invalid_start_statuses=[404, 404], rejected_statuses=[422, 422, 422, 404], failed_session_id=e92e9fee032d4d18aeea102f4b5cd0e9, recovery_session_id=ff3447a298ad42d4b27a77a9914e1d34, ended=yes
+PASSED
+app/tests/e2e/test_val22_resilience.py::test_repeated_inference_cycles_do_not_leak_session_state VAL22 inference cycles: checkpoint=val00_lineage_20260921, dataset_id=5, session_ids=['46cb33b050304d65bcdc77df276a4799', '11fb8f91bc4c4e8b9c1ce9ec43f6697d', 'b21a0270fb5a41a78176ac3e83561a33', '4db51065911f4c67b943009ad5a45846', 'add271e428284ade8fcbf44a6a8cbb33', '6061594386024bde8dba4f4f9994a8f4', '519f5dcf2ac74444a9f1a44880dda47e', '92a8c49c6e8a4b24879e00ce8cc64de9', '06f8b51689f14c43abe9e347ff90d5bf'], count=3, total=4.229s, per_cycle=[1.794, 1.296, 1.139], max=1.794s, request_timeout=30s, active_after=()
+PASSED
+app/tests/e2e/test_val22_resilience.py::test_repeated_settings_writes_remain_parseable_and_leave_no_temp_files VAL22 settings cycles: count=10, total=0.928s, per_cycle=[0.079, 0.087, 0.087, 0.097, 0.099, 0.099, 0.099, 0.096, 0.092, 0.094], max=0.099s, request_timeout=30s, values=[0.5, 0.75, 1.0, 1.25, 1.5, 0.5, 0.75, 1.0, 1.25, 1.5], reset_count=10, final_polling_interval=1.0, temp_files=0
+PASSED
+app/tests/e2e/test_val22_resilience.py::test_repeated_training_cancellation_returns_to_idle_and_recovers VAL22 training cycles: cancelled_job_ids=['a5bd0072', '51e27097', 'c734764d'], recovery_job_ids=['ffc4ecd0', 'c32732ea', '3f387ec1'], checkpoints=['val22_cancel_3aa697cef3', 'val22_recovery_79d2239146', 'val22_cancel_5632b590d0', 'val22_recovery_4c216ddbc4', 'val22_cancel_ed76ad81b2', 'val22_recovery_fcb64d5163'], count=3, total=48.355s, per_cycle=[14.884, 14.394, 19.076], max=19.076s, cancel_timeout=45s, recovery_timeout=90s, active_after=False
+PASSED
+app/tests/e2e/test_upload_api.py::TestDataUploadEdgeCases::test_upload_oversized_file_returns_413 PASSED
+[INFO] HTTP Request: GET http://testserver/ "HTTP/1.1 200 OK"
+[INFO] HTTP Request: GET http://testserver/ "HTTP/1.1 200 OK"
+[INFO] HTTP Request: GET http://testserver/ "HTTP/1.1 200 OK"
+[INFO] HTTP Request: GET http://testserver/ "HTTP/1.1 200 OK"
+app/tests/unit/test_app_entrypoint.py::test_repeated_lifespan_entry_reinitializes_and_disposes_once_per_run VAL22 application lifecycles: cycles=4, total=0.1030s, per_cycle=[0.0263, 0.0301, 0.0253, 0.0214], max=0.0301s, timeout=none (unit TestClient path)
+PASSED
+app/tests/unit/test_inference_service.py::test_capacity_eviction_closes_persisted_session PASSED
+[INFO] Context impl SQLiteImpl.
+[INFO] Will assume non-transactional DDL.
+[INFO] Database migration state detected: backend=sqlite current=unversioned target=0002_rename_relative_preference
+[INFO] Database is empty; applying Alembic upgrade to head.
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_initial_schema, Immutable baseline for the current FAIRS relational schema.
+INFO  [alembic.runtime.migration] Running upgrade 0001_initial_schema -> 0002_rename_relative_preference, Rename inference confidence to relative preference.
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.schemas
+INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.tables
+INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.types
+INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.constraints
+INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.defaults
+INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.comments
+INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.checkconstraint_byname
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+app/tests/unit/test_inference_service.py::test_capacity_bound_evicts_oldest_and_releases_models VAL22 inference capacity: starts=18, bound=16, total=0.0828s, mean_per_start=0.0046s, max=0.0109s, timeout=none (unit service path), evicted=['b389e8933e9b4cfd9c6886e1f36368c3', 'ae617c6041bf426d9e7cfd3a8d1f52a4'], persistence=ended
+PASSED
+app/tests/unit/test_inference_service.py::test_replacement_start_failure_preserves_existing_session_and_releases_candidate PASSED
+app/tests/unit/test_inference_service.py::test_capacity_eviction_failure_keeps_existing_session_live PASSED
+app/tests/unit/test_training_run.py::test_training_history_stays_bounded_and_keeps_newest_observations VAL22 telemetry bound: updates=2001, retained=2000, total=0.0163s, mean_per_update=0.000008s, max=0.000686s, timeout=none (unit in-process path)
+PASSED
+app/tests/unit/test_training_run.py::test_terminal_jobs_release_thread_and_worker_references VAL22 training manager cleanup: cycles=4, total=0.0036s, per_cycle=[0.0011, 0.0007, 0.0008, 0.001], max=0.0011s, timeout=worker join 2s; shutdown 1s
+PASSED
+
+================ 16 passed, 33 deselected in 73.45s (0:01:13) =================
