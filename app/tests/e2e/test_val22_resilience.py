@@ -297,6 +297,13 @@ def test_repeated_settings_writes_remain_parseable_and_leave_no_temp_files(
                 assert reset_defaults == {
                     "jobs": {"polling_interval": 1.0},
                     "device": {"jit_compile": False, "jit_backend": "eager"},
+                    "roulette": {
+                        "minimum_number": 0,
+                        "maximum_number": 36,
+                        "exclude_zero": False,
+                        "invert_colors": False,
+                        "show_number_labels": True,
+                    },
                 }
             else:
                 assert reset.json() == reset_defaults
