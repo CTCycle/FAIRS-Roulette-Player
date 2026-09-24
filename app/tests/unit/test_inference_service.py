@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 
 import pytest
 
@@ -121,6 +121,47 @@ def test_capacity_eviction_closes_persisted_session(monkeypatch) -> None:
     assert first_id not in service.state.sessions
     assert second_id in service.state.sessions
     service.inference_repository.end_session.assert_called_once_with(first_id)
+
+###############################################################################
+def test_capacity_bound_evicts_oldest_and_releases_models(monkeypatch) -> None:
+    service, _ = build_service(monkeypatch)
+    created_players: list[FakePlayer] = []
+
+    class TrackingPlayer(FakePlayer):
+        def __init__(self, *args, **kwargs):  # noqa: ANN002, ANN003
+            super().__init__(*args, **kwargs)
+            self.model = object()
+            self.strategy_model = object()
+            self.context = object()
+            created_players.append(self)
+
+    monkeypatch.setattr("server.services.inference.RoulettePlayer", TrackingPlayer)
+    service.state.max_sessions = 16
+    session_ids: list[str] = []
+
+    for _ in range(18):
+        started = service.start_session(
+            InferenceStartRequest(checkpoint="cp1", dataset_id=1)
+        )
+        session_ids.append(started["session_id"])
+        assert len(service.state.session_ids()) <= 16
+
+    assert service.state.session_ids() == session_ids[-16:]
+    assert service.inference_repository.end_session.call_args_list[:2] == [
+        call(session_ids[0]),
+        call(session_ids[1]),
+    ]
+    for player in created_players[:2]:
+        assert player.model is None
+        assert player.strategy_model is None
+        assert player.context is None
+
+    service.shutdown()
+    assert service.state.session_ids() == []
+    for player in created_players:
+        assert player.model is None
+        assert player.strategy_model is None
+        assert player.context is None
 
 ###############################################################################
 def test_clear_context_rejects_active_session(monkeypatch) -> None:

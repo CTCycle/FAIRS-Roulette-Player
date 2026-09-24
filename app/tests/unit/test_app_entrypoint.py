@@ -148,14 +148,67 @@ def test_repeated_lifespan_entry_reinitializes_and_disposes_once_per_run(
     monkeypatch.setenv("ENABLE_API_DOCS", "false")
     monkeypatch.setattr(app_module, "_client_build_available", lambda: False)
 
-    application = app_module.create_app()
-    with TestClient(application) as first_client:
-        assert first_client.get("/").json() == {"status": "ok"}
-    with TestClient(application) as second_client:
-        assert second_client.get("/").json() == {"status": "ok"}
+    class ShutdownSpy:
+        def __init__(self) -> None:
+            self.shutdown_calls = 0
 
-    assert len(initialize_calls) == 2
-    assert dispose_calls == [True, True]
+        def shutdown(self) -> None:
+            self.shutdown_calls += 1
+
+    class DatabaseSpy:
+        def __init__(self) -> None:
+            self.dispose_calls = 0
+
+        def dispose(self) -> None:
+            self.dispose_calls += 1
+            dispose_calls.append(True)
+
+    managers: list[ShutdownSpy] = []
+    training_services: list[ShutdownSpy] = []
+    inference_services: list[ShutdownSpy] = []
+    databases: list[DatabaseSpy] = []
+
+    def build_spy(values: list[ShutdownSpy]) -> ShutdownSpy:
+        spy = ShutdownSpy()
+        values.append(spy)
+        return spy
+
+    monkeypatch.setattr(
+        app_module,
+        "FAIRSDatabase",
+        lambda *_args: (databases.append(DatabaseSpy()) or databases[-1]),
+    )
+    monkeypatch.setattr(
+        app_module,
+        "TrainingRunManager",
+        lambda: build_spy(managers),
+    )
+    monkeypatch.setattr(
+        app_module,
+        "TrainingService",
+        lambda **_kwargs: build_spy(training_services),
+    )
+    monkeypatch.setattr(
+        app_module,
+        "InferenceService",
+        lambda **_kwargs: build_spy(inference_services),
+    )
+
+    application = app_module.create_app()
+    for _cycle in range(4):
+        with TestClient(application) as client:
+            assert application.state.lifecycle == "ready"
+            assert client.get("/").json() == {"status": "ok"}
+        assert application.state.lifecycle == "stopped"
+
+    assert len(initialize_calls) == 4
+    assert len(databases) == 4
+    assert [database.dispose_calls for database in databases] == [1, 1, 1, 1]
+    assert dispose_calls == [True, True, True, True]
+    assert len(managers) == len(training_services) == len(inference_services) == 4
+    assert [manager.shutdown_calls for manager in managers] == [1, 1, 1, 1]
+    assert [service.shutdown_calls for service in training_services] == [1] * 4
+    assert [service.shutdown_calls for service in inference_services] == [1] * 4
 
 ###############################################################################
 def test_root_and_nested_routes_serve_built_client_when_available(

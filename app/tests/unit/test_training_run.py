@@ -52,6 +52,27 @@ def test_training_run_projects_dqn_warmup_telemetry_into_history() -> None:
     assert run.history_points[-1]["replay_buffer_size"] == 100
 
 ###############################################################################
+def test_training_history_stays_bounded_and_keeps_newest_observations() -> None:
+    run = TrainingRun(job_id="bounded", job_type="training")
+    run.reset_training_state(total_epochs=1, max_steps=3000)
+
+    for time_step in range(1, run.max_history_points + 2):
+        run.update_stats(
+            {
+                "status": "training",
+                "epoch": 1,
+                "time_step": time_step,
+                "loss": float(time_step),
+                "rmse": 0.5,
+            }
+        )
+        assert len(run.history_points) <= run.max_history_points
+
+    assert len(run.history_points) == 2000
+    assert run.history_points[0]["time_step"] == 2
+    assert run.history_points[-1]["time_step"] == 2001
+
+###############################################################################
 def test_training_run_manager_owns_the_completed_run_projection() -> None:
     manager = TrainingRunManager()
     runner_started = Event()
@@ -145,3 +166,49 @@ def test_manager_shutdown_force_terminates_an_unresponsive_worker() -> None:
     assert worker.stop_calls == 1
     assert worker.terminate_calls == 1
     assert manager.get_job_status(job_id)["status"] == "cancelled"
+
+###############################################################################
+def test_terminal_jobs_release_thread_and_worker_references() -> None:
+    manager = TrainingRunManager()
+
+    class Worker:
+        def __init__(self) -> None:
+            self.stopped = False
+
+        def stop(self) -> None:
+            self.stopped = True
+
+        def is_alive(self) -> bool:
+            return False
+
+    previous_job_id: str | None = None
+    for _cycle in range(4):
+        runner_started = Event()
+        release_runner = Event()
+        worker = Worker()
+
+        def runner(*, job_id: str) -> dict[str, str]:
+            manager.set_worker(job_id, worker)
+            runner_started.set()
+            assert release_runner.wait(timeout=2)
+            return {}
+
+        job_id = manager.start_job("training", runner)
+        thread = manager.threads[job_id]
+        assert runner_started.wait(timeout=2)
+        release_runner.set()
+        thread.join(timeout=2)
+
+        assert not thread.is_alive()
+        assert manager.get_job_status(job_id)["status"] == "completed"
+        assert not manager.is_job_running()
+        if previous_job_id is not None:
+            assert previous_job_id not in manager.threads
+            assert manager.get_worker(previous_job_id) is None
+        previous_job_id = job_id
+
+    assert manager.shutdown(timeout_seconds=1.0) is True
+    assert manager.shutdown(timeout_seconds=1.0) is True
+    assert manager.threads == {}
+    assert previous_job_id is not None
+    assert manager.get_worker(previous_job_id) is None
