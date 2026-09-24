@@ -1,14 +1,22 @@
 from __future__ import annotations
 
-from unittest.mock import Mock, call
+import time
+from unittest.mock import Mock
 
+import pandas as pd
 import pytest
+from sqlalchemy import create_engine, event, text
 
+from server.contracts.configuration import DatabaseSettings
 from server.contracts.inference import (
     InferenceBetUpdateRequest,
     InferenceStartRequest,
     InferenceStepRequest,
 )
+from server.repositories.database.backend import FAIRSDatabase
+from server.repositories.database.initializer import run_migrations_on_engine
+from server.repositories.datasets import DatasetRepository
+from server.repositories.inference import InferenceRepository
 from server.services.inference import InferenceService
 
 ###############################################################################
@@ -124,7 +132,26 @@ def test_capacity_eviction_closes_persisted_session(monkeypatch) -> None:
 
 ###############################################################################
 def test_capacity_bound_evicts_oldest_and_releases_models(monkeypatch) -> None:
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
+    event.listen(
+        engine,
+        "connect",
+        lambda connection, _: connection.execute("PRAGMA foreign_keys=ON"),
+    )
+    database = FAIRSDatabase(
+        DatabaseSettings(True, None, None, None, None, None, None, False, None, 10, 1000),
+        engine=engine,
+    )
+    run_migrations_on_engine(engine)
+    dataset_repository = DatasetRepository(database)
+    dataset = dataset_repository.import_replacement(
+        "VAL22 capacity lineage",
+        "inference",
+        pd.DataFrame({"sequence_index": [0], "outcome_id": [17]}),
+    )
     service, _ = build_service(monkeypatch)
+    service.dataset_repository = dataset_repository
+    service.inference_repository = InferenceRepository(database)
     created_players: list[FakePlayer] = []
 
     class TrackingPlayer(FakePlayer):
@@ -138,30 +165,60 @@ def test_capacity_bound_evicts_oldest_and_releases_models(monkeypatch) -> None:
     monkeypatch.setattr("server.services.inference.RoulettePlayer", TrackingPlayer)
     service.state.max_sessions = 16
     session_ids: list[str] = []
+    cycle_durations: list[float] = []
 
-    for _ in range(18):
-        started = service.start_session(
-            InferenceStartRequest(checkpoint="cp1", dataset_id=1)
-        )
-        session_ids.append(started["session_id"])
-        assert len(service.state.session_ids()) <= 16
+    try:
+        for _ in range(18):
+            started_at = time.perf_counter()
+            started = service.start_session(
+                InferenceStartRequest(
+                    checkpoint="cp1", dataset_id=dataset["dataset_id"]
+                )
+            )
+            cycle_durations.append(time.perf_counter() - started_at)
+            session_ids.append(started["session_id"])
+            assert len(service.state.session_ids()) <= 16
 
-    assert service.state.session_ids() == session_ids[-16:]
-    assert service.inference_repository.end_session.call_args_list[:2] == [
-        call(session_ids[0]),
-        call(session_ids[1]),
-    ]
-    for player in created_players[:2]:
-        assert player.model is None
-        assert player.strategy_model is None
-        assert player.context is None
+        assert service.state.session_ids() == session_ids[-16:]
+        with database.Session() as session:
+            persisted = dict(
+                session.execute(
+                    text("SELECT session_id, ended_at FROM inference_sessions")
+                ).all()
+            )
+        assert set(persisted) == set(session_ids)
+        assert all(persisted[session_id] is not None for session_id in session_ids[:2])
+        assert all(persisted[session_id] is None for session_id in session_ids[2:])
 
-    service.shutdown()
-    assert service.state.session_ids() == []
-    for player in created_players:
-        assert player.model is None
-        assert player.strategy_model is None
-        assert player.context is None
+        for player in created_players[:2]:
+            assert player.model is None
+            assert player.strategy_model is None
+            assert player.context is None
+
+        service.shutdown()
+        assert service.state.session_ids() == []
+        with database.Session() as session:
+            after_shutdown = dict(
+                session.execute(
+                    text("SELECT session_id, ended_at FROM inference_sessions")
+                ).all()
+            )
+        assert all(after_shutdown[session_id] is not None for session_id in session_ids)
+        for player in created_players:
+            assert player.model is None
+            assert player.strategy_model is None
+            assert player.context is None
+    finally:
+        service.shutdown()
+        database.dispose()
+
+    print(
+        "VAL22 inference capacity: "
+        f"starts={len(cycle_durations)}, bound=16, total={sum(cycle_durations):.4f}s, "
+        f"mean_per_start={sum(cycle_durations) / len(cycle_durations):.4f}s, "
+        f"max={max(cycle_durations):.4f}s, timeout=none (unit service path), "
+        f"evicted={session_ids[:2]}, persistence=ended"
+    )
 
 ###############################################################################
 def test_clear_context_rejects_active_session(monkeypatch) -> None:

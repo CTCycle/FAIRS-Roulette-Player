@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import time
 from unittest.mock import Mock
 
 import pytest
@@ -195,11 +196,14 @@ def test_repeated_lifespan_entry_reinitializes_and_disposes_once_per_run(
     )
 
     application = app_module.create_app()
+    cycle_durations: list[float] = []
     for _cycle in range(4):
+        started_at = time.perf_counter()
         with TestClient(application) as client:
             assert application.state.lifecycle == "ready"
             assert client.get("/").json() == {"status": "ok"}
         assert application.state.lifecycle == "stopped"
+        cycle_durations.append(time.perf_counter() - started_at)
 
     assert len(initialize_calls) == 4
     assert len(databases) == 4
@@ -209,6 +213,12 @@ def test_repeated_lifespan_entry_reinitializes_and_disposes_once_per_run(
     assert [manager.shutdown_calls for manager in managers] == [1, 1, 1, 1]
     assert [service.shutdown_calls for service in training_services] == [1] * 4
     assert [service.shutdown_calls for service in inference_services] == [1] * 4
+    print(
+        "VAL22 application lifecycles: "
+        f"cycles={len(cycle_durations)}, total={sum(cycle_durations):.4f}s, "
+        f"per_cycle={[round(value, 4) for value in cycle_durations]}, "
+        f"max={max(cycle_durations):.4f}s, timeout=none (unit TestClient path)"
+    )
 
 ###############################################################################
 def test_root_and_nested_routes_serve_built_client_when_available(

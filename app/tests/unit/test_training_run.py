@@ -55,8 +55,10 @@ def test_training_run_projects_dqn_warmup_telemetry_into_history() -> None:
 def test_training_history_stays_bounded_and_keeps_newest_observations() -> None:
     run = TrainingRun(job_id="bounded", job_type="training")
     run.reset_training_state(total_epochs=1, max_steps=3000)
+    update_durations: list[float] = []
 
     for time_step in range(1, run.max_history_points + 2):
+        started_at = time.perf_counter()
         run.update_stats(
             {
                 "status": "training",
@@ -66,11 +68,19 @@ def test_training_history_stays_bounded_and_keeps_newest_observations() -> None:
                 "rmse": 0.5,
             }
         )
+        update_durations.append(time.perf_counter() - started_at)
         assert len(run.history_points) <= run.max_history_points
 
     assert len(run.history_points) == 2000
     assert run.history_points[0]["time_step"] == 2
     assert run.history_points[-1]["time_step"] == 2001
+    print(
+        "VAL22 telemetry bound: "
+        f"updates={len(update_durations)}, retained={len(run.history_points)}, "
+        f"total={sum(update_durations):.4f}s, "
+        f"mean_per_update={sum(update_durations) / len(update_durations):.6f}s, "
+        f"max={max(update_durations):.6f}s, timeout=none (unit in-process path)"
+    )
 
 ###############################################################################
 def test_training_run_manager_owns_the_completed_run_projection() -> None:
@@ -182,7 +192,9 @@ def test_terminal_jobs_release_thread_and_worker_references() -> None:
             return False
 
     previous_job_id: str | None = None
+    cycle_durations: list[float] = []
     for _cycle in range(4):
+        started_at = time.perf_counter()
         runner_started = Event()
         release_runner = Event()
         worker = Worker()
@@ -206,9 +218,16 @@ def test_terminal_jobs_release_thread_and_worker_references() -> None:
             assert previous_job_id not in manager.threads
             assert manager.get_worker(previous_job_id) is None
         previous_job_id = job_id
+        cycle_durations.append(time.perf_counter() - started_at)
 
     assert manager.shutdown(timeout_seconds=1.0) is True
     assert manager.shutdown(timeout_seconds=1.0) is True
     assert manager.threads == {}
     assert previous_job_id is not None
     assert manager.get_worker(previous_job_id) is None
+    print(
+        "VAL22 training manager cleanup: "
+        f"cycles={len(cycle_durations)}, total={sum(cycle_durations):.4f}s, "
+        f"per_cycle={[round(value, 4) for value in cycle_durations]}, "
+        f"max={max(cycle_durations):.4f}s, timeout=worker join 2s; shutdown 1s"
+    )
