@@ -191,10 +191,16 @@ def test_rejected_training_requests_create_no_jobs_or_checkpoints(
     assert _dataset_state() == before_datasets
     assert _checkpoint_state(api_context) == before_checkpoints
     assert not list(shared_paths.CHECKPOINT_PATH.glob(".*.staging-*"))
+    valid_validation = api_context.post(
+        "/api/training/validate", data=MINIMAL_TRAINING_CONFIG
+    )
+    assert valid_validation.status == 200, valid_validation.text()
+    assert api_context.get("/api/training/status").json() == before_status.json()
     _assert_healthy(api_context)
     print(
         "VAL21 training rejects: "
-        f"statuses={statuses}, job_id=None, checkpoint={rejected_checkpoint} absent, staging=empty"
+        f"statuses={statuses}, job_id=None, checkpoint={rejected_checkpoint} absent, "
+        "staging=empty, valid_validation=200"
     )
 
 ###############################################################################
