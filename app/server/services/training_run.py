@@ -459,14 +459,22 @@ class TrainingRunManager:
     def _prune_terminal_runs_locked(self) -> None:
         retained = self.last_training_run
         for job_id, run in list(self.runs.items()):
-            if run is retained:
-                continue
             with run.lock:
                 terminal = run.status not in ACTIVE_RUN_STATUSES
             thread = self.threads.get(job_id)
             if terminal and (thread is None or not thread.is_alive()):
-                self.runs.pop(job_id, None)
                 self.threads.pop(job_id, None)
+                with run.lock:
+                    worker = run.worker
+                    worker_is_alive = getattr(worker, "is_alive", None)
+                    if (
+                        worker is None
+                        or not callable(worker_is_alive)
+                        or not worker_is_alive()
+                    ):
+                        run.worker = None
+                if run is not retained:
+                    self.runs.pop(job_id, None)
 
     # -------------------------------------------------------------------------
     def shutdown(self, timeout_seconds: float = 10.0) -> bool:
