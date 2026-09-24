@@ -33,6 +33,7 @@ Primary automated test surfaces live under `app/tests`:
   - API and workflow coverage
 - `app/tests/run_tests.bat`
   - repository-standard Windows test entry point; synchronizes the test extra and ensures Playwright Chromium is installed below `runtimes/cache/playwright-browsers` before collection
+- `app/tests/unit/test_windows_launcher_contract.py` contains static launcher checks that can run on Linux; `test_windows_launcher_maintenance.py` invokes the Windows PowerShell harness and skips on non-Windows even when `pwsh` is installed
 - `pytest.ini`
   - keeps pytest's cache and basetemp under `runtimes/cache/pytest` and `runtimes/cache/pytest-tmp`, limits collection to `app/tests/unit` and `app/tests/e2e`, and excludes generated/cache directories; Ruff and other test tooling use sibling paths below `runtimes/cache`
 - Set `STANDARD_TEST_CACHE_ROOT` before invoking `app/tests/run_tests.bat` to place all runner caches, including pytest basetemp and Playwright browser storage, under an isolated root. Without it, the runner uses `runtimes/cache`.
