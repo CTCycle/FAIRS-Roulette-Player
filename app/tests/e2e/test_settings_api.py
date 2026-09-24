@@ -141,10 +141,14 @@ def test_settings_api_rejects_unknown_and_invalid_values(tmp_path: Path) -> None
         unknown = client.patch("/api/settings", json={"database": {"host": "x"}})
         low = client.patch("/api/settings", json={"jobs": {"polling_interval": 0.01}})
         blank = client.patch("/api/settings", json={"device": {"jit_backend": " "}})
+        unknown_backend = client.patch(
+            "/api/settings", json={"device": {"jit_backend": "unknown"}}
+        )
 
     assert unknown.status_code == 422
     assert low.status_code == 422
     assert blank.status_code == 422
+    assert unknown_backend.status_code == 422
 
 ###############################################################################
 def test_settings_api_reset_restores_defaults(tmp_path: Path) -> None:
