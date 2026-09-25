@@ -4,6 +4,7 @@
 - Branch: `develop`
 - Source/test revision: `c6a4a8d5f9c6e72c2828c852f4d2e14b2789964f`
 - Checkout HEAD during the run: `7299de1c6e02299046e414dd31c42de53fcb4b17` (ledger-only documentation commit after the source/test revision)
+- Hosted CI: [run 36101766128](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/runs/36101766128) passed on pushed documentation commit `4fa2c206603b5a35853b79a895fac0fc7d50f46b`; the tested source/test tree remains at `c6a4a8d`.
 - Result: Standard Windows runner passed on the current source/test tree; the validation campaign remains `PARTIAL` because conditional and frontend coverage gaps remain open.
 
 ## Selected scope
@@ -24,7 +25,7 @@ The complete log is [`validation-campaign-tier5-val21-val22-standard-rerun-20260
 
 | Gate | Current result | Remaining boundary |
 | --- | --- | --- |
-| `qa.standard-runner` | `VALIDATED`; the full run completed on source/test revision `c6a4a8d`. | PostgreSQL and the transient VAL-15 fixture were skipped for the reasons above; hosted CI for this push is tracked separately. |
+| `qa.standard-runner` | `VALIDATED`; the full run completed on source/test revision `c6a4a8d`, and hosted CI run 36101766128 passed on the pushed documentation commit. | PostgreSQL and the transient VAL-15 fixture were skipped for the reasons above. |
 | VAL-18 | Passed again on Windows 11 build 26200, Python 3.14.7, PyTorch 2.10.0+cu130, CUDA 13.0, SQLite 3.50.4, and NVIDIA GeForce RTX 3060 Laptop GPU. Device selection/rejection, CPU mixed-precision rejection, and the real one-episode dataset-5 CUDA/eager-JIT/mixed-precision job all passed. The job completed, published a complete checkpoint, and reported finite metrics; the test cleaned up the generated checkpoint and restored runtime settings. | Evidence covers this single GPU and supported Windows eager path only; no performance, multi-GPU, other-device, or driver comparison was run. |
 | VAL-20 | The current Windows boundary was exercised again: `eager` training and the API rejection of `inductor` while JIT is enabled passed; the existing regression checks that `eager` remains selected after the 422 rejection. | Remains conditional because the checked-in docs do not define the complete VAL-20 trigger and acceptance contract. |
 | VAL-21 and VAL-22 | Both validated slices passed in the complete current-tree run, following the prior focused current-tree run. | No acceptance gap remains within their documented Windows/SQLite profiles. |
