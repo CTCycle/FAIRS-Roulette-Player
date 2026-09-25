@@ -1,0 +1,12 @@
+
+> test:unit
+> vitest run --config vitest.config.ts
+
+
+ RUN  v5.0.1 G:/Projects/Repositories/Active projects/FAIRS Roulette Player/app/client
+
+
+ Test Files  3 passed (3)
+      Tests  11 passed (11)
+   Start at  17:08:24
+   Duration  642ms (transform 71%, import 21%, tests 4%, worker 4%)
