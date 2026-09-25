@@ -3,6 +3,7 @@
 - Date: 2026-09-25
 - Branch: `develop`
 - Base revision: `6e4e7c84dcbd3223494e940424a6662c6954097e`
+- Tested implementation commit: `cefe3220df513e781e1fd0f905d615f95211ccac`
 - Working tree: frontend validation scripts, Windows runner integration, and the restart-test isolation correction described below.
 
 ## Scope
@@ -51,4 +52,4 @@ The six Python skips were five PostgreSQL tests without `TEST_POSTGRES_URL` and 
 - VAL-20 remains **CONDITIONAL**: existing `eager`/`inductor` evidence does not define the complete gate or its acceptance criteria. None were inferred for this pass.
 - No validation gate is **BLOCKED**. Next-release checks and packaged distribution remain outside this task; mobile layouts are unsupported by the desktop specification.
 
-Hosted CI and push verification are recorded here after the final commit.
+The implementation commit is pushed to `origin/develop`. [Hosted CI run 36120392031](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/runs/36120392031) passed `persistence-conformance`, `backend-validation`, and `frontend-validation` on commit `cefe3220df513e781e1fd0f905d615f95211ccac`.
