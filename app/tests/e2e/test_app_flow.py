@@ -689,6 +689,106 @@ class TestInferencePage:
         expect(page.get_by_text("Selected dataset", exact=False)).to_be_visible()
 
     # -------------------------------------------------------------------------
+    def test_out_of_range_observation_is_rejected_without_advancing_session(
+        self,
+        page: Page,
+        base_url: str,
+        api_context: APIRequestContext,
+    ) -> None:
+        """An invalid observed outcome stays visible and does not alter session state."""
+        created_session_id: str | None = None
+        try:
+            page.set_viewport_size({"width": 1440, "height": 900})
+            page.goto(f"{base_url}/inference")
+            page.wait_for_load_state("networkidle")
+            page.locator("#inference-checkpoint").select_option(
+                "val00_lineage_20260921"
+            )
+            page.locator("#inference-dataset").select_option("5")
+            page.locator("#inference-initial-capital").fill("1000")
+            page.locator("#inference-bet-amount").fill("10")
+
+            with page.expect_response(
+                lambda response: response.request.method == "POST"
+                and response.url.endswith("/api/inference/sessions/start"),
+                timeout=60_000,
+            ) as start_info:
+                page.get_by_role("button", name="Play", exact=True).click()
+            start_response = start_info.value
+            assert start_response.status == 200, start_response.text()
+            created_session_id = str(start_response.json()["session_id"])
+
+            rows = page.locator("table").get_by_role("row")
+            expect(rows).to_have_count(2)
+            row = rows.nth(1)
+            observed_field = page.get_by_label("Observed value for step 1")
+            observed_field.fill("1.5")
+            row.get_by_role("button", name="Confirm observed").click()
+            expect(observed_field).to_have_value("1.5")
+            expect(page.get_by_role("alert")).to_contain_text(
+                "Observed value must be a whole number."
+            )
+
+            for invalid_value, expected_error in (
+                ("-1", "greater than or equal to 0"),
+                ("99", "less than or equal to 36"),
+            ):
+                observed_field.fill(invalid_value)
+                with page.expect_response(
+                    lambda response: response.request.method == "POST"
+                    and response.url.endswith(
+                        f"/api/inference/sessions/{created_session_id}/step"
+                    )
+                ) as rejection_info:
+                    row.get_by_role("button", name="Confirm observed").click()
+                rejection = rejection_info.value
+                assert rejection.status == 422, rejection.text()
+                expect(observed_field).to_have_value(invalid_value)
+                expect(page.get_by_role("alert")).to_contain_text(expected_error)
+
+                snapshot_response = api_context.get(
+                    f"/api/inference/sessions/{created_session_id}"
+                )
+                assert snapshot_response.status == 200, snapshot_response.text()
+                rejected_snapshot = snapshot_response.json()
+                assert rejected_snapshot["step_count"] == 0
+                assert rejected_snapshot["prediction_pending"] is True
+                assert rejected_snapshot["current_capital"] == 1000
+                assert rejected_snapshot["steps"][0]["observed_outcome_id"] is None
+
+            prediction_match = re.search(
+                r"Bet on number (\d+)", row.get_by_role("cell").nth(1).inner_text()
+            )
+            assert prediction_match is not None
+            observed_field.fill(prediction_match.group(1))
+            with page.expect_response(
+                lambda response: response.request.method == "POST"
+                and response.url.endswith(
+                    f"/api/inference/sessions/{created_session_id}/step"
+                )
+            ) as recovery_info:
+                row.get_by_role("button", name="Confirm observed").click()
+            recovery = recovery_info.value
+            assert recovery.status == 200, recovery.text()
+            expect(observed_field).to_be_disabled()
+
+            recovered_response = api_context.get(
+                f"/api/inference/sessions/{created_session_id}"
+            )
+            assert recovered_response.status == 200, recovered_response.text()
+            recovered_snapshot = recovered_response.json()
+            assert recovered_snapshot["step_count"] == 1
+            assert recovered_snapshot["prediction_pending"] is False
+        finally:
+            if created_session_id is not None:
+                api_context.post(
+                    f"/api/inference/sessions/{created_session_id}/shutdown"
+                )
+                api_context.post(
+                    f"/api/inference/sessions/{created_session_id}/rows/clear"
+                )
+
+    # -------------------------------------------------------------------------
     def test_history_correction_and_removal_replay_persisted_session(
         self,
         page: Page,

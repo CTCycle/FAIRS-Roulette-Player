@@ -1,0 +1,82 @@
+
+============================================================
+ Standard Test Runner
+============================================================
+[INFO] Project root: G:\Projects\Repositories\Active projects\FAIRS Roulette Player
+[INFO] Backend URL : http://127.0.0.1:8890
+[INFO] Frontend URL: http://127.0.0.1:8051
+
+[STEP] Syncing backend test dependencies...
+Resolved 93 packages in 1ms
+Checked 74 packages in 6ms
+[STEP] Ensuring Playwright Chromium browser...
+[INFO] Starting backend server...
+[INFO] Building frontend...
+
+> build
+> tsc -b && vite build
+
+vite v7.3.5 building client environment for production...
+transforming...
+✓ 1771 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   2.34 kB │ gzip:   1.01 kB
+dist/assets/index-DkUuEdyc.css   55.60 kB │ gzip:  10.47 kB
+dist/assets/index-B-Kq9sz9.js   358.23 kB │ gzip: 108.09 kB
+✓ built in 2.87s
+[INFO] Starting frontend preview server...
+[INFO] Waiting for live services...
+[STEP] Running Python tests...
+============================= test session starts =============================
+platform win32 -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0 -- G:\Projects\Repositories\Active projects\FAIRS Roulette Player\app\server\.venv\Scripts\python.exe
+cachedir: C:\Users\Thomas V\AppData\Local\Temp\Codex-FAIRS-Release-1790333246447-651678\cache\pytest
+rootdir: G:\Projects\Repositories\Active projects\FAIRS Roulette Player
+configfile: pytest.ini
+plugins: anyio-4.14.0, base-url-2.1.0, playwright-0.8.0
+collecting ... collected 1 item
+
+app/tests/e2e/test_val18_hardware.py::test_cuda_mixed_precision_eager_jit_training_publishes_checkpoint PASSED [100%]
+
+============================= 1 passed in 14.53s ==============================
+[STEP] Running frontend unit tests...
+
+> test:unit
+> vitest run --config vitest.config.ts
+
+
+ RUN  v5.0.1 G:/Projects/Repositories/Active projects/FAIRS Roulette Player/app/client
+
+
+ Test Files  3 passed (3)
+      Tests  11 passed (11)
+   Start at  13:52:35
+   Duration  278ms (transform 60%, import 28%, tests 6%, worker 6%)
+
+[STEP] Ensuring Node Playwright Chromium browser...
+[STEP] Running frontend E2E tests...
+
+> test:e2e
+> playwright test --config playwright.config.ts
+
+
+Running 4 tests using 1 worker
+
+(node:18740) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 1 tests\e2e\frontend.spec.ts:115:1 › Training wizard advances and returns to a selected step (1.3s)
+  ok 2 tests\e2e\frontend.spec.ts:132:1 › Inference setup loads checkpoint and dataset options (351ms)
+  ok 3 tests\e2e\frontend.spec.ts:139:1 › Settings save feedback follows the mocked update response (559ms)
+  ok 4 tests\e2e\frontend.spec.ts:149:1 › 1100px is supported and 1099px shows the minimum-width notice (529ms)
+
+  4 passed (4.2s)
+
+============================================================
+ Test Summary
+============================================================
+ Live server phase   : PASS
+ Python tests        : PASS
+ Frontend bootstrap  : PASS
+ Frontend unit tests : PASS
+ Frontend E2E tests  : PASS
+============================================================

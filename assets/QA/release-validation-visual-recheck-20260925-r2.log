@@ -1,0 +1,84 @@
+
+============================================================
+ Standard Test Runner
+============================================================
+[INFO] Project root: G:\Projects\Repositories\Active projects\FAIRS Roulette Player
+[INFO] Backend URL : http://127.0.0.1:8890
+[INFO] Frontend URL: http://127.0.0.1:8051
+
+[STEP] Syncing backend test dependencies...
+Resolved 93 packages in 1ms
+Checked 74 packages in 9ms
+[STEP] Ensuring Playwright Chromium browser...
+[INFO] Starting backend server...
+[INFO] Building frontend...
+
+> build
+> tsc -b && vite build
+
+vite v7.3.5 building client environment for production...
+transforming...
+✓ 1771 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   2.34 kB │ gzip:   1.00 kB
+dist/assets/index-DkUuEdyc.css   55.60 kB │ gzip:  10.47 kB
+dist/assets/index-DuiyQnp_.js   358.27 kB │ gzip: 108.09 kB
+✓ built in 4.32s
+[INFO] Starting frontend preview server...
+[INFO] Waiting for live services...
+[STEP] Running Python tests...
+============================= test session starts =============================
+platform win32 -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0 -- G:\Projects\Repositories\Active projects\FAIRS Roulette Player\app\server\.venv\Scripts\python.exe
+cachedir: C:\Users\Thomas V\AppData\Local\Temp\Codex-FAIRS-Release-1790333246447-651678\cache\pytest
+rootdir: G:\Projects\Repositories\Active projects\FAIRS Roulette Player
+configfile: pytest.ini
+plugins: anyio-4.14.0, base-url-2.1.0, playwright-0.8.0
+collecting ... collected 3 items
+
+app/tests/e2e/test_val16_val17_visuals.py::test_desktop_page_views_and_minimum_width_boundary[chromium] PASSED [ 33%]
+app/tests/e2e/test_val16_val17_visuals.py::test_training_setup_and_active_monitor_render[chromium] PASSED [ 66%]
+app/tests/e2e/test_val16_val17_visuals.py::test_inference_active_session_render[chromium] PASSED [100%]
+
+============================= 3 passed in 21.97s ==============================
+[STEP] Running frontend unit tests...
+
+> test:unit
+> vitest run --config vitest.config.ts
+
+
+ RUN  v5.0.1 G:/Projects/Repositories/Active projects/FAIRS Roulette Player/app/client
+
+
+ Test Files  3 passed (3)
+      Tests  11 passed (11)
+   Start at  13:09:25
+   Duration  417ms (transform 62%, import 26%, tests 6%, worker 6%)
+
+[STEP] Ensuring Node Playwright Chromium browser...
+[STEP] Running frontend E2E tests...
+
+> test:e2e
+> playwright test --config playwright.config.ts
+
+
+Running 4 tests using 1 worker
+
+(node:412) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 1 tests\e2e\frontend.spec.ts:115:1 › Training wizard advances and returns to a selected step (1.0s)
+  ok 2 tests\e2e\frontend.spec.ts:132:1 › Inference setup loads checkpoint and dataset options (466ms)
+  ok 3 tests\e2e\frontend.spec.ts:139:1 › Settings save feedback follows the mocked update response (629ms)
+  ok 4 tests\e2e\frontend.spec.ts:149:1 › 1100px is supported and 1099px shows the minimum-width notice (799ms)
+
+  4 passed (3.9s)
+
+============================================================
+ Test Summary
+============================================================
+ Live server phase   : PASS
+ Python tests        : PASS
+ Frontend bootstrap  : PASS
+ Frontend unit tests : PASS
+ Frontend E2E tests  : PASS
+============================================================

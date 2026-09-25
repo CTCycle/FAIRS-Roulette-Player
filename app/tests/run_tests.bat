@@ -197,9 +197,9 @@ if /i "%STANDARD_TEST_SKIP_LIVE_SERVERS%"=="false" if "%HAS_E2E%"=="1" (
     echo [INFO] Building frontend...
     pushd "%CLIENT_DIR%" >nul
     call "%NPM_CMD%" run build
-    set "FRONTEND_BUILD_RC=%ERRORLEVEL%"
+    set "FRONTEND_BUILD_RC=!ERRORLEVEL!"
     popd >nul
-    if not "%FRONTEND_BUILD_RC%"=="0" (
+    if not "!FRONTEND_BUILD_RC!"=="0" (
       set "LIVE_SERVER_PHASE=FAIL"
       set "TEST_RESULT=1"
       goto cleanup
