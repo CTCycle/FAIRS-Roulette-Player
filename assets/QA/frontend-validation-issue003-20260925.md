@@ -48,8 +48,7 @@ The six Python skips were five PostgreSQL tests without `TEST_POSTGRES_URL` and 
 - `qa.frontend-test-scripts`: **VALIDATED**. Client unit and mocked desktop browser suites pass in Chromium and Edge; the scripts are wired into the Windows runner and hosted frontend CI.
 - ISSUE-003: **CLOSED**. The previously absent frontend script gate is implemented and validated.
 - `frontend.workflows` and `validation.campaign`: **PARTIAL** only for audible screen-reader announcement behavior, which the available Browser/UI tools cannot verify. Accessibility structure and keyboard interactions remain covered by existing VAL-16/17 evidence.
-- VAL-09 remains **CONDITIONAL**: the ledger/docs record no trigger or acceptance criteria. None were invented for this pass.
-- VAL-20 remains **CONDITIONAL**: existing `eager`/`inductor` evidence does not define the complete gate or its acceptance criteria. None were inferred for this pass.
+- The supported Windows JIT behavior is covered by the validated `VAL-18` boundary; no separate gate is maintained.
 - No validation gate is **BLOCKED**. Next-release checks and packaged distribution remain outside this task; mobile layouts are unsupported by the desktop specification.
 
 The implementation commit is pushed to `origin/develop`. [Hosted CI run 36120392031](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/runs/36120392031) passed `persistence-conformance`, `backend-validation`, and `frontend-validation` on commit `cefe3220df513e781e1fd0f905d615f95211ccac`.

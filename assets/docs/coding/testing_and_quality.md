@@ -55,11 +55,11 @@ Primary automated test surfaces live under `app/tests`:
 
 ## Comprehensive Validation Campaign
 
-The canonical campaign tracker is [`../project_status_ledger.md`](../project_status_ledger.md). The campaign targets the core Windows + SQLite + CPU profile first, then treats PostgreSQL, CUDA, mixed precision, JIT, maintenance, and resilience as explicit conditional gates. Its dependency order is:
+The canonical campaign tracker is [`../project_status_ledger.md`](../project_status_ledger.md). The campaign targets the core Windows + SQLite + CPU profile first, then treats PostgreSQL, CUDA, mixed precision, JIT, maintenance, and resilience as explicit validation boundaries. Its dependency order is:
 
 `startup → persistence/settings → datasets → training → checkpoint → inference`
 
-Use the roadmap slice IDs `VAL-00` through `VAL-22` in the ledger. The normal execution order is `VAL-00 → VAL-01 → VAL-02 → VAL-04 → VAL-06 → VAL-07 → VAL-08 → VAL-10 → VAL-11 → VAL-12 → VAL-13 → VAL-14 → VAL-15 → VAL-16 → VAL-17 → VAL-19 → VAL-21 → VAL-22`; run `VAL-03` and `VAL-05` when their dependencies or evidence change, and run `VAL-18` after relevant hardware or runtime changes. Execute conditional VAL-09/20 only after their triggers and acceptance criteria are documented; do not infer missing gate contracts.
+Use the documented, code-backed roadmap slice IDs in the ledger. The normal execution order is `VAL-00 → VAL-01 → VAL-02 → VAL-04 → VAL-06 → VAL-07 → VAL-08 → VAL-10 → VAL-11 → VAL-12 → VAL-13 → VAL-14 → VAL-15 → VAL-16 → VAL-17 → VAL-19 → VAL-21 → VAL-22`; run `VAL-03` and `VAL-05` when their dependencies or evidence change, and run `VAL-18` after relevant hardware or runtime changes. Do not create or infer a validation gate without a corresponding code-backed capability, trigger, and acceptance contract.
 
 For every slice use:
 

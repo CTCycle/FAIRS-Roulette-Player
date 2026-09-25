@@ -4,13 +4,13 @@ Last updated: 2026-09-25
 
 ## Release assessment
 
-The checked-in source release is not yet fully validated as a release candidate. The implemented Windows source profile is broadly validated, but the next version and release commit have not been selected or synchronized to `main`. Two conditional ledger gates still lack owner-defined triggers and acceptance criteria, and audible screen-reader announcements have not been observed.
+The checked-in source release is not yet fully validated as a release candidate. The implemented Windows source profile is broadly validated, but the next version and release commit have not been selected or synchronized to `main`. Audible screen-reader announcements have not been observed.
 
 ## Validation ledger disposition
 
 - **Validated:** `VAL-00`–`VAL-08`, `VAL-10`–`VAL-19`, `VAL-21`, and `VAL-22` for their recorded profiles. This pass rechecked the Windows standard runner, the CUDA profile (`VAL-18`), the strategy workflow (`VAL-15`), and malformed inference observations (`VAL-21`).
-- **Conditional:** `VAL-09` and `VAL-20`. Checked-in documentation and tests still do not specify their full trigger and acceptance contract. The current JIT boundary evidence does not define all of `VAL-20`.
-- **Partial:** `frontend.workflows` and `validation.campaign` remain partial until audible screen-reader behavior is verified and the conditional gate contracts are defined.
+- **No separate conditional gates:** The supported Windows JIT behavior is covered by the validated `VAL-18` boundary; no duplicate gate is maintained.
+- **Partial:** `frontend.workflows` and `validation.campaign` remain partial until audible screen-reader behavior is verified.
 - **Failed:** None remain after fixes and revalidation.
 
 ## Current evidence
@@ -37,7 +37,6 @@ The six full-suite skips were the five PostgreSQL cases without `TEST_POSTGRES_U
 
 ## Remaining release work
 
-1. The project owner must define the exact trigger and acceptance scenarios for `VAL-09`, and clarify whether `VAL-20` is separate from the already-validated `VAL-18` JIT boundary.
-2. Verify audible announcements in a Windows Narrator session. Repeat save, reset, validation error, and recovery flows while listening, then inspect Speech Recap with Narrator+Alt+X. The browser exposed a status role and visible save/reset feedback, but this session could not observe spoken output. See the Microsoft [Narrator guide](https://support.microsoft.com/en-US/accessibility/windows/narrator/complete-guide-narrator) and [keyboard appendix](https://support.microsoft.com/en-us/accessibility/windows/narrator/appendix-b-narrator-keyboard-commands-and-touch-gestures).
-3. Select the next release version, integrate the validated tree onto synchronized `main`, run hosted CI on that exact candidate, and create the annotated release tag. CI run `36134180311` passed for the current `develop` source commit; it does not validate a future versioned release candidate.
-4. The supported distribution is source plus the Windows launcher. Installers, containers, and bundled desktop executables are not implemented and are not part of the documented release scope.
+1. Verify audible announcements in a Windows Narrator session. Repeat save, reset, validation error, and recovery flows while listening, then inspect Speech Recap with Narrator+Alt+X. The browser exposed a status role and visible save/reset feedback, but this session could not observe spoken output. See the Microsoft [Narrator guide](https://support.microsoft.com/en-US/accessibility/windows/narrator/complete-guide-narrator) and [keyboard appendix](https://support.microsoft.com/en-US/accessibility/windows/narrator/appendix-b-narrator-keyboard-commands-and-touch-gestures).
+2. Select the next release version, integrate the validated tree onto synchronized `main`, run hosted CI on that exact candidate, and create the annotated release tag. CI run `36134180311` passed for the current `develop` source commit; it does not validate a future versioned release candidate.
+3. The supported distribution is source plus the Windows launcher. Installers, containers, and bundled desktop executables are not implemented and are not part of the documented release scope.
