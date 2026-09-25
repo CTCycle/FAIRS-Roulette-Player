@@ -1,0 +1,16 @@
+
+> test:unit
+> vitest run --config vitest.config.ts
+
+
+ RUN  v5.0.1 G:/Projects/Repositories/Active projects/FAIRS Roulette Player/app/client
+
+
+ Test Files  3 passed (3)
+      Tests  11 passed (11)
+   Start at  16:37:53
+   Duration  34.56s (transform 85%, worker 13%, import 2%)
+
+  Transform  transforming modules took 44.30s · 85% of tracked time, re-done on every run
+             persist transforms across runs with fsModuleCache: true
+             learn more: https://vitest.dev/guide/improving-performance#caching-between-reruns
