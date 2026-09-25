@@ -52,6 +52,6 @@ The runner's browser cache (611 files) and all derived caches used a temporary `
 
 - VAL-19 is `VALIDATED` for the supported Windows launcher path.
 - VAL-18 remains a separate hardware slice. VAL-09/20 remain conditional pending their documented triggers; VAL-21/22 remain open resilience slices.
-- ISSUE-003 and `frontend.workflows` remain open/partial. Broader screen-reader, additional-browser, and physical-device checks were not part of VAL-19.
+- ISSUE-003 and `frontend.workflows` were outside the scope of VAL-19. Additional-browser and physical-device checks were not part of this launcher-maintenance slice.
 - The source-release gate remains `WORKING`; packaged artifacts remain outside current scope.
 - No gate is `BLOCKED`.

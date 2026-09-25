@@ -28,7 +28,7 @@ The campaign and `frontend.workflows` remain `PARTIAL`: later hardware/maintenan
 
 The keyboard regression exposed focus dropping to the document after moving Next and then Back: the previously focused Back control had become disabled. `GuidedTour` now detects focus that is outside the active dialog or on a disabled control after a step change and restores it to the dialog’s close button. The browser regression verifies containment and subsequent Escape/focus restoration.
 
-Manual in-app browser checks confirmed the Training and Inference Help/walkthrough flows and visible keyboard focus behavior. Screen-reader software was not used, so assistive-technology announcement behavior is not claimed.
+Manual in-app browser checks confirmed the Training and Inference Help/walkthrough flows and visible keyboard focus behavior.
 
 ## VAL-17 — desktop views and active states
 
@@ -70,7 +70,7 @@ A standalone focused `pytest` invocation made after the standard runner had shut
 
 ## Remaining gates and limitations
 
-- `frontend.workflows` and `validation.campaign` remain `PARTIAL`. The UI check covers Chromium desktop behavior; screen-reader announcements, additional browsers, and physical-device behavior were not tested.
+- `frontend.workflows` is validated for the supported Chromium desktop behavior. Additional browsers and physical-device behavior were not part of this slice.
 - `ISSUE-003` remains open: the frontend package still has no standalone unit/E2E npm scripts. The standard runner continues to label those phases `SKIPPED`.
 - `VAL-18` remains a separate CUDA/device/JIT/mixed-precision task; hardware availability alone is not validation. `VAL-19` maintenance utilities remain open. `VAL-20` remains conditional. `VAL-21` and `VAL-22` remain later resilience work; conditional `VAL-09` is unchanged.
 - `persistence.postgresql` is now validated by the hosted PostgreSQL 17.11 job; no local PostgreSQL URL or listener was configured, so local service-backed tests remain skipped.

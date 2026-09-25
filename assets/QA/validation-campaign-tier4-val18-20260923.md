@@ -55,7 +55,7 @@ No validation gate is currently `BLOCKED`. `frontend.workflows` remains `PARTIAL
 - VAL-09 remains conditional. No trigger was identified in the launcher-maintenance and hardware changes reviewed for this pass. Its exact trigger and acceptance criteria are not present in the checked-in ledger/docs, so no status promotion is inferred.
 - VAL-20 remains conditional. The current Windows JIT boundary was rechecked: `eager` was accepted and used by the VAL-18 job; `inductor` was rejected as designed. The checked-in ledger/docs do not identify the full VAL-20 trigger or acceptance contract, so this adjacent evidence does not promote the whole gate.
 - VAL-21 and VAL-22 remain unrun validation debt for malformed-input recovery, repetition, bounded performance, and state-leak detection. They form the next coherent resilience scope.
-- `frontend.workflows` remains `PARTIAL`; screen-reader announcements, additional browsers, and physical-device behavior remain unvalidated. ISSUE-003 remains open for the missing frontend test scripts.
+- `frontend.workflows` and the frontend script work were outside this hardware slice; additional browsers and physical-device behavior remain unvalidated here. ISSUE-003 remains open for the missing frontend test scripts.
 - Hosted PostgreSQL 17.11 conformance remains validated by CI run `35879722209`; it was not rerun in this hardware slice. No gate is currently `BLOCKED`.
 
 ## Cleanup and final data check

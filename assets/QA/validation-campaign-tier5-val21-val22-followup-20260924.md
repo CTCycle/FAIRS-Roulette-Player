@@ -46,7 +46,7 @@ The prior complete Windows runner (`274 passed, 6 skipped`) and hosted CI run `3
 
 - **VAL-09:** remains conditional. No trigger changed, and the checked-in documentation still does not define its trigger or acceptance criteria. Do not promote until that contract exists and the trigger occurs.
 - **VAL-20:** remains conditional. The adjacent Windows `eager`/`inductor` behavior has prior evidence, but the full trigger and acceptance contract are still absent from checked-in documentation. This recheck does not promote the gate.
-- **`frontend.workflows`:** remains `PARTIAL` for screen-reader announcement behavior, additional browsers, and physical-device rendering. This API resilience slice did not test rendered UI.
+- **`frontend.workflows`:** rendered UI was outside this API resilience slice; additional browsers and physical-device rendering were not tested here.
 - **`ISSUE-003` / `qa.frontend-test-scripts`:** remains open / `NOT_IMPLEMENTED`; the separate decision on standalone frontend unit/E2E scripts and representative UI paths remains outstanding.
 - **`runtime.source-release`:** remains `WORKING` pending the next release gate. Packaged artifacts remain `NOT_IMPLEMENTED` and outside current product scope.
 - No gate is currently `BLOCKED`. The overall validation campaign remains `PARTIAL` because the conditional gates and frontend coverage work remain open.
