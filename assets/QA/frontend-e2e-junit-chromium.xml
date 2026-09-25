@@ -1,0 +1,12 @@
+<testsuites id="" name="" tests="4" failures="0" skipped="0" errors="0" time="5.044690999999999">
+<testsuite name="frontend.spec.ts" timestamp="2026-09-25T09:35:20.687Z" hostname="" tests="4" failures="0" skipped="0" time="3.194" errors="0">
+<testcase name="Training wizard advances and returns to a selected step" classname="frontend.spec.ts" time="1.858">
+</testcase>
+<testcase name="Inference setup loads checkpoint and dataset options" classname="frontend.spec.ts" time="0.306">
+</testcase>
+<testcase name="Settings save feedback follows the mocked update response" classname="frontend.spec.ts" time="0.525">
+</testcase>
+<testcase name="1100px is supported and 1099px shows the minimum-width notice" classname="frontend.spec.ts" time="0.505">
+</testcase>
+</testsuite>
+</testsuites>

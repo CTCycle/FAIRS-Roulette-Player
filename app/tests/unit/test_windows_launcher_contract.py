@@ -158,6 +158,26 @@ def test_standard_runner_supports_isolated_cache_root() -> None:
     assert runner.index(cache_root_override) < runner.index('set "PYTEST_BASETEMP_DIR=%RUNTIME_CACHE_DIR%\\pytest-tmp"')
 
 
+def test_standard_runner_builds_frontend_from_the_client_directory() -> None:
+    runner = (REPOSITORY_ROOT / "app" / "tests" / "run_tests.bat").read_text(encoding="utf-8")
+    build_phase = runner.split("echo [INFO] Building frontend...", 1)[1].split(
+        "curl -s --max-time 2 \"%APP_TEST_FRONTEND_URL%\"", 1
+    )[0]
+
+    assert 'pushd "%CLIENT_DIR%" >nul' in build_phase
+    assert 'call "%NPM_CMD%" run build' in build_phase
+    assert 'set "FRONTEND_BUILD_RC=%ERRORLEVEL%"' in build_phase
+    assert 'popd >nul' in build_phase
+
+
+def test_standard_runner_wait_loops_do_not_depend_on_interactive_stdin() -> None:
+    runner = (REPOSITORY_ROOT / "app" / "tests" / "run_tests.bat").read_text(encoding="utf-8")
+    wait_loop = runner.split(":wait_loop", 1)[1].split("echo [STEP] Running Python tests...", 1)[0]
+
+    assert wait_loop.count('powershell.exe -NoProfile -Command "Start-Sleep -Seconds 1"') == 2
+    assert "timeout /t 1 /nobreak" not in wait_loop
+
+
 def test_dependency_state_is_published_only_by_successful_sync_paths() -> None:
     source = _launcher_source()
     backend_sync = _section(

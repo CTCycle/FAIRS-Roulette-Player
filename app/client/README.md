@@ -31,7 +31,11 @@ Run these commands from the repository root with the managed Node runtime when a
 & '.\runtimes\nodejs\npm.cmd' --prefix app/client run preview
 ```
 
-The package currently defines lint, build, dev, and preview scripts but no standalone frontend unit or E2E script. The repository test runner detects that state and skips absent frontend test phases.
+`npm run test:unit` runs the Vitest checks for client-owned payload conversion, API error parsing, and inference session storage. `npm run test:e2e` runs the Playwright desktop workflow and viewport checks against an existing Vite preview server with mocked API responses. Set `FRONTEND_E2E_BASE_URL` when the preview server is not at `http://127.0.0.1:4173`. The Windows standard runner and hosted CI supply the preview server. Playwright JUnit output, traces, and the retained 1100px/1099px screenshots are written under the repository's ignored `assets/QA/` directory.
+
+On Windows, set `FRONTEND_E2E_BROWSER_CHANNEL=msedge` to run the same suite against the installed Microsoft Edge browser. Chromium remains the default and the hosted CI browser.
+
+The Windows standard runner installs Node Playwright Chromium into its configured browser cache and executes both scripts. Backend lifecycle behavior remains covered by the Python Playwright suite.
 
 Vite's dependency cache and TypeScript build-info files are written below `../../runtimes/cache` through `vite.config.ts` and the TypeScript project configurations. Do not add frontend cache paths under `node_modules` or the client source tree.
 

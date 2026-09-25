@@ -113,9 +113,54 @@ jobs:
       - name: Install dependencies
         working-directory: app/client
         run: npm ci --no-audit --no-fund
+      - name: Install Playwright Chromium
+        working-directory: app/client
+        run: npx playwright install --with-deps chromium
+      - name: Frontend unit tests
+        working-directory: app/client
+        run: npm run test:unit
       - name: Lint
         working-directory: app/client
         run: npm run lint
       - name: Production build
         working-directory: app/client
         run: npm run build
+      - name: Prepare frontend QA output
+        run: mkdir -p assets/QA
+      - name: Start frontend preview
+        shell: bash
+        working-directory: app/client
+        run: |
+          nohup node ./node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port 4173 --strictPort > "$RUNNER_TEMP/frontend-preview.log" 2>&1 < /dev/null &
+          echo "FRONTEND_PREVIEW_PID=$!" >> "$GITHUB_ENV"
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/frontend-preview.log"
+          exit 1
+      - name: Frontend browser tests
+        working-directory: app/client
+        env:
+          FRONTEND_E2E_BASE_URL: http://127.0.0.1:4173
+        run: npm run test:e2e
+      - name: Stop frontend preview
+        if: always()
+        shell: bash
+        run: |
+          if [[ -n "${FRONTEND_PREVIEW_PID:-}" ]]; then
+            kill "$FRONTEND_PREVIEW_PID" 2>/dev/null || true
+          fi
+      - name: Upload frontend test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-validation-evidence
+          path: |
+            assets/QA/frontend-e2e-junit-chromium.xml
+            assets/QA/frontend-e2e-artifacts/
+            assets/QA/frontend-viewport-1100-chromium.png
+            assets/QA/frontend-viewport-1099-chromium.png
+          if-no-files-found: warn
