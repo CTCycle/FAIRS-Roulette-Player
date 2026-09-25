@@ -184,28 +184,29 @@ if /i "%STANDARD_TEST_SKIP_LIVE_SERVERS%"=="false" if "%HAS_E2E%"=="1" (
   )
 
   if /i "%STANDARD_TEST_SKIP_FRONTEND%"=="false" if exist "%CLIENT_DIR%\package.json" (
+    if not exist "%CLIENT_DIR%\node_modules" (
+      echo [INFO] Installing frontend dependencies...
+      call "%NPM_CMD%" --prefix "%CLIENT_DIR%" ci
+      if errorlevel 1 (
+        set "LIVE_SERVER_PHASE=FAIL"
+        set "TEST_RESULT=1"
+        goto cleanup
+      )
+    )
+
+    echo [INFO] Building frontend...
+    pushd "%CLIENT_DIR%" >nul
+    call "%NPM_CMD%" run build
+    set "FRONTEND_BUILD_RC=%ERRORLEVEL%"
+    popd >nul
+    if not "%FRONTEND_BUILD_RC%"=="0" (
+      set "LIVE_SERVER_PHASE=FAIL"
+      set "TEST_RESULT=1"
+      goto cleanup
+    )
+
     curl -s --max-time 2 "%APP_TEST_FRONTEND_URL%" >nul 2>&1
     if errorlevel 1 (
-      if not exist "%CLIENT_DIR%\node_modules" (
-        echo [INFO] Installing frontend dependencies...
-        call "%NPM_CMD%" --prefix "%CLIENT_DIR%" ci
-        if errorlevel 1 (
-          set "LIVE_SERVER_PHASE=FAIL"
-          set "TEST_RESULT=1"
-          goto cleanup
-        )
-      )
-
-      if not exist "%CLIENT_DIR%\dist" (
-        echo [INFO] Building frontend...
-        call "%NPM_CMD%" --prefix "%CLIENT_DIR%" run build
-        if errorlevel 1 (
-          set "LIVE_SERVER_PHASE=FAIL"
-          set "TEST_RESULT=1"
-          goto cleanup
-        )
-      )
-
       echo [INFO] Starting frontend preview server...
       for /f "usebackq delims=" %%P in (`powershell.exe -NoProfile -Command "$p = Start-Process -FilePath '%NPM_CMD%' -ArgumentList @('run','preview','--','--host','%UI_HOST%','--port','%UI_PORT%','--strictPort') -WorkingDirectory '%CLIENT_DIR%' -WindowStyle Hidden -PassThru; $p.Id"`) do set "STARTED_FRONTEND_PID=%%P"
       if not defined STARTED_FRONTEND_PID (
@@ -230,7 +231,7 @@ if /i "%STANDARD_TEST_SKIP_LIVE_SERVERS%"=="false" if "%HAS_E2E%"=="1" (
   curl -s --max-time 2 "%APP_TEST_BACKEND_URL%/api/health" >nul 2>&1
   if errorlevel 1 (
     set /a ATTEMPTS+=1
-    timeout /t 1 /nobreak >nul
+    powershell.exe -NoProfile -Command "Start-Sleep -Seconds 1"
     goto wait_loop
   )
 
@@ -238,7 +239,7 @@ if /i "%STANDARD_TEST_SKIP_LIVE_SERVERS%"=="false" if "%HAS_E2E%"=="1" (
     curl -s --max-time 2 "%APP_TEST_FRONTEND_URL%" >nul 2>&1
     if errorlevel 1 (
       set /a ATTEMPTS+=1
-      timeout /t 1 /nobreak >nul
+      powershell.exe -NoProfile -Command "Start-Sleep -Seconds 1"
       goto wait_loop
     )
   )
@@ -277,13 +278,27 @@ if "%HAS_FRONTEND_UNIT%"=="1" (
 )
 
 if "%HAS_FRONTEND_E2E%"=="1" (
-  echo [STEP] Running frontend E2E tests...
-  call "%NPM_CMD%" --prefix "%CLIENT_DIR%" run test:e2e --if-present
-  if errorlevel 1 (
-    set "FRONTEND_E2E_PHASE=FAIL"
-    set "TEST_RESULT=1"
+  if /i "%STANDARD_TEST_SKIP_LIVE_SERVERS%"=="true" (
+    echo [INFO] Frontend E2E skipped because live servers were explicitly skipped.
   ) else (
-    set "FRONTEND_E2E_PHASE=PASS"
+    echo [STEP] Ensuring Node Playwright Chromium browser...
+    call "%NPM_CMD%" exec --prefix "%CLIENT_DIR%" -- playwright install chromium
+    if errorlevel 1 (
+      set "FRONTEND_E2E_PHASE=FAIL"
+      set "TEST_RESULT=1"
+      goto summary
+    )
+
+    echo [STEP] Running frontend E2E tests...
+    if not exist "%PROJECT_ROOT%\assets\QA" mkdir "%PROJECT_ROOT%\assets\QA"
+    set "FRONTEND_E2E_BASE_URL=%APP_TEST_FRONTEND_URL%"
+    call "%NPM_CMD%" --prefix "%CLIENT_DIR%" run test:e2e --if-present
+    if errorlevel 1 (
+      set "FRONTEND_E2E_PHASE=FAIL"
+      set "TEST_RESULT=1"
+    ) else (
+      set "FRONTEND_E2E_PHASE=PASS"
+    )
   )
 )
 

@@ -4,7 +4,9 @@ import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
 const envDir = path.resolve(__dirname, '../../settings')
-const cacheRoot = path.resolve(__dirname, '../../runtimes/cache')
+const cacheRoot = process.env.FAIRS_CACHE_DIR
+    ? path.resolve(process.env.FAIRS_CACHE_DIR)
+    : path.resolve(__dirname, '../../runtimes/cache')
 const INTERNAL_API_BASE = '/api'
 
 export default defineConfig(({ mode }) => {

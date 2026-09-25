@@ -11,10 +11,12 @@ import socket
 import sqlite3
 import subprocess
 import sys
+import tempfile
 import time
 from collections.abc import Iterator
 
 import httpx
+import pytest
 from playwright.sync_api import Page, expect
 
 
@@ -65,6 +67,24 @@ Thread(target=request_shutdown, daemon=True).start()
 server.run()
 print("FAIRS_RESTART_TEST_SERVER_STOPPED", flush=True)
 """
+
+
+@pytest.fixture
+def isolated_app_data_parent(
+    request: pytest.FixtureRequest, isolated_app_data_temp_root: Path
+) -> Path:
+    """Keep app data outside cache and defer cleanup until subprocesses have exited."""
+    test_name = re.sub(r"[^A-Za-z0-9_.-]", "_", request.node.name)
+    data_parent = isolated_app_data_temp_root / test_name
+    data_parent.mkdir()
+    return data_parent
+
+
+@pytest.fixture(scope="session")
+def isolated_app_data_temp_root() -> Iterator[Path]:
+    """Give restart subprocesses a session-long data parent outside pytest's cache."""
+    with tempfile.TemporaryDirectory(prefix="fairs-restart-data-") as temp_dir:
+        yield Path(temp_dir)
 
 
 def _available_port() -> int:
@@ -292,10 +312,10 @@ def _assert_alembic_head(database_path: Path) -> None:
 
 
 def test_uploaded_dataset_survives_backend_restart_and_stays_deleted(
-    tmp_path: Path,
+    tmp_path: Path, isolated_app_data_parent: Path
 ) -> None:
     """Upload, stop, restart, delete, and restart against one SQLite file."""
-    data_root = tmp_path / "fairs-data"
+    data_root = isolated_app_data_parent / "fairs-data"
     database_path = data_root / "database.db"
     log_path = tmp_path / "isolated-backend.log"
     dataset_name = "val05_restart_persistence"
@@ -346,10 +366,10 @@ def test_uploaded_dataset_survives_backend_restart_and_stays_deleted(
 
 
 def test_inference_session_recovers_live_and_expires_after_backend_restart(
-    tmp_path: Path, page: Page
+    tmp_path: Path, page: Page, isolated_app_data_parent: Path
 ) -> None:
     """A browser restores a live session, then clears it after backend restart."""
-    data_root = tmp_path / "fairs-data"
+    data_root = isolated_app_data_parent / "fairs-data"
     database_path = _copy_inference_restart_fixture(data_root)
     backend_port = _available_port()
     ui_port = _available_port()

@@ -1,6 +1,6 @@
 ## TypeScript
 
-Last updated: 2026-09-01
+Last updated: 2026-09-25
 
 ## Baseline
 
@@ -50,7 +50,7 @@ Use the npm scripts from `app/client/package.json`:
 - `npm run lint`
 - `npm run preview`
 
-The frontend package does not currently define `test:unit` or `test:e2e` scripts; the standard Windows test runner detects and skips those phases when absent.
+The frontend package defines `test:unit` with Vitest for client-owned payload, parser, and session-storage logic, and `test:e2e` with Playwright for mocked Training, Inference, Settings, and supported desktop-width workflows. The standard Windows test runner executes these scripts when present.
 
 ## Related Files
 

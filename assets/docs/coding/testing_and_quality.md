@@ -1,6 +1,6 @@
 ## Testing And Quality
 
-Last updated: 2026-09-21
+Last updated: 2026-09-25
 
 ## Quality Baseline
 
@@ -20,8 +20,8 @@ Last updated: 2026-09-21
 - Use the existing npm scripts for linting and build validation.
 - Keep parser logic strict at the current snake_case contract boundary; reject malformed, aliased, or legacy payloads instead of silently defaulting them.
 - Validate UI behavior visually when user-facing layout or interaction changes are involved.
-- The current frontend package provides build and lint scripts but no standalone frontend test scripts.
-- CI enforces the frontend gate in `.github/workflows/ci.yml` with Node 22: `npm ci`, `npm run lint`, and `npm run build` from `app/client`. A checked-in `package-lock.json` is required.
+- The frontend package provides `test:unit` for client-owned payload, parser, and session-storage behavior, plus `test:e2e` for mocked Training, Inference, Settings, and supported desktop-width paths. Keep real backend lifecycle behavior in the Python Playwright suite.
+- CI enforces the frontend gate in `.github/workflows/ci.yml` with Node 22: `npm ci`, Chromium installation, `npm run test:unit`, `npm run lint`, `npm run build`, and `npm run test:e2e` from `app/client`. A checked-in `package-lock.json` is required.
 
 ## Test Layout
 
@@ -59,7 +59,7 @@ The canonical campaign tracker is [`../project_status_ledger.md`](../project_sta
 
 `startup → persistence/settings → datasets → training → checkpoint → inference`
 
-Use the roadmap slice IDs `VAL-00` through `VAL-22` in the ledger. The normal execution order is `VAL-00 → VAL-01 → VAL-02 → VAL-04 → VAL-06 → VAL-07 → VAL-08 → VAL-10 → VAL-11 → VAL-12 → VAL-13 → VAL-14 → VAL-15 → VAL-16 → VAL-17 → VAL-19 → VAL-21 → VAL-22`; run `VAL-03`, `VAL-05`, `VAL-09`, `VAL-18`, and `VAL-20` when their dependencies or evidence change.
+Use the roadmap slice IDs `VAL-00` through `VAL-22` in the ledger. The normal execution order is `VAL-00 → VAL-01 → VAL-02 → VAL-04 → VAL-06 → VAL-07 → VAL-08 → VAL-10 → VAL-11 → VAL-12 → VAL-13 → VAL-14 → VAL-15 → VAL-16 → VAL-17 → VAL-19 → VAL-21 → VAL-22`; run `VAL-03` and `VAL-05` when their dependencies or evidence change, and run `VAL-18` after relevant hardware or runtime changes. Execute conditional VAL-09/20 only after their triggers and acceptance criteria are documented; do not infer missing gate contracts.
 
 For every slice use:
 
