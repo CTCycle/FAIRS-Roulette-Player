@@ -166,7 +166,8 @@ def test_standard_runner_builds_frontend_from_the_client_directory() -> None:
 
     assert 'pushd "%CLIENT_DIR%" >nul' in build_phase
     assert 'call "%NPM_CMD%" run build' in build_phase
-    assert 'set "FRONTEND_BUILD_RC=%ERRORLEVEL%"' in build_phase
+    assert 'set "FRONTEND_BUILD_RC=!ERRORLEVEL!"' in build_phase
+    assert 'if not "!FRONTEND_BUILD_RC!"=="0"' in build_phase
     assert 'popd >nul' in build_phase
 
 

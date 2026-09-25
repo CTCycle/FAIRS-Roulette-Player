@@ -39,12 +39,7 @@ interface GameSessionProps {
 }
 
 const cleanObserved = (val: string) => {
-    if (val === '') return '';
-    const num = parseInt(val, 10);
-    if (Number.isNaN(num)) return '';
-    if (num < 0) return '0';
-    if (num > 36) return '36';
-    return String(num);
+    return val.trim();
 };
 
 export const GameSession: React.FC<GameSessionProps> = ({
@@ -775,9 +770,13 @@ export const GameSession: React.FC<GameSessionProps> = ({
         if (!row || row.observedInput === '') {
             return;
         }
-        const extraction = parseInt(row.observedInput, 10);
-        if (Number.isNaN(extraction)) {
-            return;
+        const observedInput = row.observedInput.trim();
+        if (!/^[+-]?\d+$/.test(observedInput)) {
+            throw new Error('Observed value must be a whole number.');
+        }
+        const extraction = Number(observedInput);
+        if (!Number.isSafeInteger(extraction)) {
+            throw new Error('Observed value must be a whole number.');
         }
         const result = await submitInferenceStep(config.sessionId, extraction, signal);
         const capitalAfter = Number(result.capital_after);
