@@ -1,5 +1,5 @@
 # FAIRS: Fabulous Automated Intelligent Roulette System
-Last updated: 2026-09-21
+Last updated: 2026-09-26
 
 [![Release](https://img.shields.io/github/v/release/CTCycle/FAIRS-Roulette-Player?display_name=tag)](https://github.com/CTCycle/FAIRS-Roulette-Player/releases) [![Python](https://img.shields.io/badge/python-3.14.7-3776AB?logo=python&logoColor=white)](https://www.python.org/) [![Node.js](https://img.shields.io/badge/node.js-22.13.0-339933?logo=node.js&logoColor=white)](https://nodejs.org/) [![React](https://img.shields.io/badge/react-19.2.8-61DAFB?logo=react&logoColor=black)](https://react.dev/) [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE) [![CI](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml?query=branch%3Adevelop)
 
@@ -34,7 +34,7 @@ macOS and Linux are not supported launch targets for this checkout. There is no 
 
 ## Download the source
 
-The current source release is v3.4.2. Download the version you want from the [GitHub Releases page](https://github.com/CTCycle/FAIRS-Roulette-Player/releases), extract it completely, and keep the extracted folder in a writable location.
+The current source release is v3.5.0. Download the version you want from the [GitHub Releases page](https://github.com/CTCycle/FAIRS-Roulette-Player/releases), extract it completely, and keep the extracted folder in a writable location.
 
 ## Install and launch on Windows
 
