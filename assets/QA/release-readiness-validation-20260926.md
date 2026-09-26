@@ -36,4 +36,4 @@ The official launcher remains an environment observation, not an application def
 
 ## Release-operation status
 
-Before branch synchronization, `develop` contains candidate commit `306576036ba0a71d880966dc442c993027b9660d` and local `main` remains at `33f972f`; the candidate hosted CI is green. Fast-forwarding `main` and creating any annotated tag remain release operations tracked separately from this validation ledger.
+Release operations completed after the validation decision: `develop` and `main` were fast-forwarded and pushed at `b7000413b071c263c4314b2e515aa570a5031018`; hosted candidate CI run `36235992990` passed all three jobs; annotated tag `v3.5.0` points to that commit; and the GitHub source release [FAIRS Roulette Player v3.5.0](https://github.com/CTCycle/FAIRS-Roulette-Player/releases/tag/v3.5.0) was published. These operations remain separate from the validation-gate disposition above.
