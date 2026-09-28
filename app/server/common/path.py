@@ -8,8 +8,9 @@ SERVER_DIR = APP_DIR / "server"
 CLIENT_DIR = APP_DIR / "client"
 SETTINGS_DIR = ROOT_DIR / "settings"
 CACHE_PATH = ROOT_DIR / "runtimes" / "cache"
+DEFAULT_RESOURCES_PATH = ROOT_DIR / "resources"
 DATA_DIR: Path | None = None
-RESOURCES_PATH = APP_DIR / "resources"
+RESOURCES_PATH = DEFAULT_RESOURCES_PATH
 LOGS_PATH = RESOURCES_PATH / "logs"
 CHECKPOINT_PATH = RESOURCES_PATH / "checkpoints"
 RUNTIME_SETTINGS_FILE = RESOURCES_PATH / "runtime-settings.json"
@@ -47,7 +48,7 @@ def configure_runtime_paths(data_dir: str | Path | None = None) -> None:
         )
 
     DATA_DIR = configured_data_dir
-    RESOURCES_PATH = DATA_DIR if DATA_DIR is not None else APP_DIR / "resources"
+    RESOURCES_PATH = DATA_DIR if DATA_DIR is not None else DEFAULT_RESOURCES_PATH
     LOGS_PATH = RESOURCES_PATH / "logs"
     CHECKPOINT_PATH = RESOURCES_PATH / "checkpoints"
     RUNTIME_SETTINGS_FILE = RESOURCES_PATH / "runtime-settings.json"

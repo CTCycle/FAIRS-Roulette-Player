@@ -1,6 +1,6 @@
 ## System Overview
 
-Last updated: 2026-09-20
+Last updated: 2026-09-28
 
 ## Current State
 
@@ -72,11 +72,6 @@ Generated TypeScript is a derived artifact, not a parallel authority. CI regener
 │  │     ├─ styles/
 │  │     ├─ types/
 │  │     └─ utils/
-│  ├─ resources/
-│  │  ├─ checkpoints/
-│  │  ├─ logs/
-│  │  ├─ database.db
-│  │  └─ runtime-settings.json (generated local state)
 │  ├─ scripts/
 │  │  ├─ export_openapi.py
 │  │  ├─ generate_frontend_contracts.py
@@ -93,6 +88,11 @@ Generated TypeScript is a derived artifact, not a parallel authority. CI regener
 │  │  ├─ repositories/
 │  │  └─ services/
 │  └─ tests/
+├─ resources/
+│  ├─ checkpoints/
+│  ├─ logs/
+│  ├─ database.db
+│  └─ runtime-settings.json (generated local state)
 ├─ assets/docs/
 ├─ runtimes/
 ├─ settings/

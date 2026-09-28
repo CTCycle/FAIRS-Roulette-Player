@@ -25,7 +25,7 @@ def test_cuda_mixed_precision_eager_jit_training_publishes_checkpoint(
     if not configured_data_dir:
         pytest.skip("VAL-18 requires an isolated FAIRS_DATA_DIR")
     data_root = Path(configured_data_dir).expanduser().resolve()
-    canonical_data_root = Path(__file__).resolve().parents[2] / "resources"
+    canonical_data_root = Path(__file__).resolve().parents[3] / "resources"
     if data_root == canonical_data_root.resolve():
         pytest.skip("VAL-18 must not mutate the canonical application data root")
 

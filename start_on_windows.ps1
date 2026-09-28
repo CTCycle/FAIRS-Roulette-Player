@@ -1228,7 +1228,7 @@ function Get-UserDataTargets {
     $dataRoot = if ($env:FAIRS_DATA_DIR -and $env:FAIRS_DATA_DIR.Trim()) {
         Resolve-LauncherPath $env:FAIRS_DATA_DIR.Trim()
     } else {
-        Join-Path $repoRoot 'app\resources'
+        Join-Path $repoRoot 'resources'
     }
     $logRoot = Join-Path $dataRoot 'logs'
 
