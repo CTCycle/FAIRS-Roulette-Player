@@ -53,7 +53,7 @@ The launcher sets only execution-scoped tool variables:
 - `FAIRS_CACHE_DIR`, `UV_CACHE_DIR`, `NPM_CONFIG_CACHE`, `PIP_CACHE_DIR`, `PYTHONPYCACHEPREFIX`, `PYTEST_CACHE_DIR`, `PYTEST_BASETEMP_DIR`, `RUFF_CACHE_DIR`, `MYPY_CACHE_DIR`, `COVERAGE_FILE`, and `PLAYWRIGHT_BROWSERS_PATH` are rooted below `runtimes/cache`.
 - `KERAS_HOME`, `TORCH_HOME`, `TORCHINDUCTOR_CACHE_DIR`, `TRITON_CACHE_DIR`, `MPLCONFIGDIR`, `XDG_CACHE_HOME`, and `CUDA_CACHE_PATH` are also rooted below `runtimes/cache` so normal application execution does not fall back to user-profile or system temporary cache locations.
 
-This cache root is canonical. The launcher does not scan the repository for historical or alternate cache locations. `FAIRS_DATA_DIR` is rejected when it overlaps `runtimes/cache`.
+This cache root is canonical. Clear Cache additionally removes source-tree `__pycache__` directories under `app/server` but does not scan for historical or alternate cache roots. `FAIRS_DATA_DIR` is rejected when it overlaps `runtimes/cache`.
 
 ## Runtime Settings File
 

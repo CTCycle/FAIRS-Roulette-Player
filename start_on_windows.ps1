@@ -278,8 +278,35 @@ function Remove-PathBestEffort([string]$Path) {
     return $result.Skipped -eq 0 -and $result.EnumerationErrors.Count -eq 0
 }
 
+function Get-ServerBytecodeCleanupPaths {
+    if (-not (Test-Path -LiteralPath $serverDir -PathType Container)) { return @() }
+
+    $serverPath = [IO.Path]::GetFullPath($serverDir).TrimEnd('\')
+    $venvPath = [IO.Path]::GetFullPath($venvDir).TrimEnd('\') + '\'
+    $pendingDirectories = [Collections.Generic.Stack[string]]::new()
+    $bytecodePaths = [Collections.Generic.List[string]]::new()
+    $pendingDirectories.Push($serverPath)
+
+    while ($pendingDirectories.Count -gt 0) {
+        $currentPath = $pendingDirectories.Pop()
+        $directories = @(Get-ChildItem -LiteralPath $currentPath -Directory -Force -ErrorAction SilentlyContinue)
+        foreach ($directory in $directories) {
+            if (($directory.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { continue }
+            if ($directory.FullName.Equals($venvPath.TrimEnd('\'), [StringComparison]::OrdinalIgnoreCase) -or
+                $directory.FullName.StartsWith($venvPath, [StringComparison]::OrdinalIgnoreCase)) { continue }
+            if ($directory.Name -eq '__pycache__') {
+                [void]$bytecodePaths.Add($directory.FullName)
+                continue
+            }
+            $pendingDirectories.Push($directory.FullName)
+        }
+    }
+
+    return @($bytecodePaths | Sort-Object Length -Descending)
+}
+
 function Get-CacheCleanupPaths {
-    return @($runtimeCacheDir)
+    return @($runtimeCacheDir) + @(Get-ServerBytecodeCleanupPaths)
 }
 
 # -----------------------------------------------------------------------------
@@ -1182,7 +1209,7 @@ function Remove-UserLogFiles([string]$Path) {
 function Clear-Cache {
     Import-DotEnv
     Assert-ApplicationStopped
-    if (-not (Confirm-DestructiveAction 'clear all disposable caches under runtimes/cache')) { return }
+    if (-not (Confirm-DestructiveAction 'clear disposable caches and app/server Python bytecode')) { return }
 
     $cachePaths = @(Get-CacheCleanupPaths)
     $progressId = Start-LauncherProgress -Activity 'FAIRS: clear caches' -Status "0 of $($cachePaths.Count) roots"
@@ -1197,7 +1224,7 @@ function Clear-Cache {
         Complete-LauncherProgress $progressId
     }
     Set-CacheEnvironment
-    Write-Ok 'All disposable caches under runtimes/cache were cleared. Locked or protected entries were skipped.'
+    Write-Ok 'Disposable caches and app/server Python bytecode were cleared. Locked or protected entries were skipped.'
 }
 
 function Resolve-LauncherPath([string]$Path) {
@@ -1406,7 +1433,7 @@ function Get-LauncherMenuEntries {
         [pscustomobject]@{ Section = 'SOURCE CONTROL'; Key = 'Check'; Label = 'Check for updates'; Description = 'Report local main-branch update status only'; Color = [ConsoleColor]::Yellow }
         [pscustomobject]@{ Section = 'SOURCE CONTROL'; Key = 'Update'; Label = 'Update application'; Description = 'Pull application changes from the main branch'; Color = [ConsoleColor]::Yellow }
         [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'Logs'; Label = 'Remove logs'; Description = 'Delete application log files'; Color = [ConsoleColor]::DarkYellow }
-        [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'Cache'; Label = 'Clear cache'; Description = 'Remove all disposable caches under runtimes/cache'; Color = [ConsoleColor]::DarkYellow }
+        [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'Cache'; Label = 'Clear cache'; Description = 'Remove disposable caches and app/server Python bytecode'; Color = [ConsoleColor]::DarkYellow }
         [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'Checkpoints'; Label = 'Remove checkpoints'; Description = 'Delete saved checkpoints only'; Color = [ConsoleColor]::Red }
         [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'AllData'; Label = 'Remove all data'; Description = 'Delete local database and logs, preserving checkpoints'; Color = [ConsoleColor]::Red }
         [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'Uninstall'; Label = 'Uninstall application'; Description = 'Remove local runtimes, caches, dependencies, and build outputs'; Color = [ConsoleColor]::Red }
