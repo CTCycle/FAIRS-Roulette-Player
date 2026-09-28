@@ -1,6 +1,6 @@
 ## Architecture Findings And Remediation
 
-Last updated: 2026-09-21
+Last updated: 2026-09-26
 
 ## Audit Objective
 
@@ -148,7 +148,7 @@ Additional coverage verifies:
 
 The architecture has one local owner per responsibility, but ownership correctness does not by itself prove the end-to-end product path. The current validation campaign therefore follows the dependency chain `startup → persistence/settings → datasets → training → checkpoint → inference` and keeps the highest-risk boundary explicit: a real serialized checkpoint must load against its recorded dataset and produce a persisted initial inference prediction.
 
-The campaign is tracked by the documented, code-backed validation slices in [`../project_status_ledger.md`](../project_status_ledger.md). `VAL-00` establishes a disposable real lineage; `VAL-01` refreshes launcher/startup evidence; `VAL-11` begins the live checkpoint-backed inference campaign. Inference replay/replacement remains a separate state-transition risk, while PostgreSQL, CUDA, mixed precision, and unsupported JIT behavior remain environment-specific gates. A passing unit suite or HTTP health response does not close those boundaries.
+The campaign is tracked by the consolidated, code-backed gate register in [`../project_status_ledger.md`](../project_status_ledger.md). `VAL-00` establishes a disposable real lineage; `VAL-01` refreshes launcher/startup evidence; `VAL-11` begins the live checkpoint-backed inference campaign. All registered `VAL-*` functional gates are currently passed for their recorded profiles; `STARTUP-01` remains `PARTIAL` only because the protected canonical Python/cache boundary prevented one cold-launch path from completing, while the isolated-cache live launch passed. The frontend workflow is also `PARTIAL` for spoken screen-reader evidence because DOM, accessibility-tree, keyboard, and visual checks do not replace user-controlled Narrator/Speech Recap observation. Inference replay/replacement remains a separate state-transition risk, while PostgreSQL, CUDA, mixed precision, and unsupported JIT behavior remain environment-specific gates. A passing unit suite or HTTP health response does not close those boundaries.
 
 ## Final Architecture
 

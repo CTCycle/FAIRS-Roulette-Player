@@ -1,6 +1,6 @@
 ## Testing And Quality
 
-Last updated: 2026-09-25
+Last updated: 2026-09-26
 
 ## Quality Baseline
 
@@ -50,7 +50,8 @@ Primary automated test surfaces live under `app/tests`:
 
 - Run the smallest relevant test slice first.
 - Use broader checks when shared infrastructure or startup flow changes.
-- Keep QA artifacts in `assets/QA/` when persistent evidence is needed.
+- Treat `assets/QA/` as an ignored transient output path for runner logs, JUnit results, traces, and screenshots; it is not a durable evidence store.
+- After a validation slice, synthesize the result, limitation, defect history, exact revision, and follow-up into the project status ledger. Keep only source tests, implementation docs, hosted CI links, and approved product figures as durable traceability.
 - Do not leave temporary logs, screenshots, or validation scraps scattered through the repository.
 
 ## Comprehensive Validation Campaign
@@ -65,14 +66,14 @@ For every slice use:
 
 `Inspect → Execute → Observe → Diagnose → Fix → Retest → Regress → Record`
 
-Record only scenarios actually executed, the exact source revision, environment, stable issue IDs, classification, root cause, remediation, adjacent regression, evidence paths, and remaining gaps. Browser evidence includes the visible state, console errors, failed network requests, backend errors, and screenshots for failures. Persistence/model evidence also includes database state and dataset, checkpoint, session, or job identifiers. Store detailed QA artifacts under `assets/QA/`; keep the conclusion and limitation in the tracked ledger.
+Record only scenarios actually executed, the exact source revision, environment, stable issue IDs, classification, root cause, remediation, adjacent regression, evidence paths, and remaining gaps. Browser evidence includes the rendered state, console errors, failed network requests, backend errors, and screenshots for failures. DOM roles, accessibility-tree text, and visible feedback do not prove spoken screen-reader output; a spoken accessibility claim requires a user-controlled Windows Narrator/Speech Recap observation. Persistence/model evidence also includes database state and dataset, checkpoint, session, or job identifiers. Store transient runner output under `assets/QA/` only as needed during execution, then move the durable conclusion and limitation into the tracked ledger and remove redundant artifacts.
 
 The first active tier is Tier 0:
 
 - `VAL-00` creates or identifies one disposable training dataset and produces a real short CPU checkpoint through the supported application path. This lineage is the prerequisite for live inference validation; mocked checkpoints do not satisfy the campaign.
 - `VAL-01` smoke-tests the official Windows launcher, frontend-before-backend loading, `/api/health` transition, route entry, explicit owned-process shutdown, and port cleanup. It does not certify Training or Inference behavior after route mount.
 
-Use repository-local cache/temp paths and preserve unrelated data or processes. Do not infer a pass from source presence, a test definition, an HTTP 200 alone, or a hosted result from a different revision.
+Use repository-local cache/temp paths and preserve unrelated data or processes. Do not infer a pass from source presence, a test definition, an HTTP 200 alone, or a hosted result from a different revision. The current consolidated gate result is in [`../project_status_ledger.md`](../project_status_ledger.md): all registered `VAL-*` campaign gates are `PASSED` for their recorded profiles, while `STARTUP-01` and the frontend workflow's spoken-accessibility follow-up remain `PARTIAL` for their documented boundaries.
 
 ## Related Files
 
