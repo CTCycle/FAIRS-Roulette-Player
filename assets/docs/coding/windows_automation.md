@@ -31,7 +31,7 @@ A failed dependency sync is surfaced directly. Do not interpret it as evidence o
 
 ## Cache Ownership
 
-`runtimes/cache` is the only cache root owned by current automation. Fixed child directories hold uv, npm, pip, Python bytecode, pytest, pytest basetemp, Ruff, mypy, coverage, Playwright, Vite, TypeScript, Keras, Torch, Triton, Matplotlib, XDG, and CUDA cache data. Clear Cache also removes source-tree `__pycache__` directories under `app/server`, while leaving the managed `app/server/.venv` runtime untouched. Do not recursively discover or create other cache directories elsewhere in the repository.
+`runtimes/cache` is the only cache root owned by current automation. Fixed child directories hold uv, npm, pip, Python bytecode, pytest, pytest basetemp, Ruff, mypy, coverage, Playwright, Vite, TypeScript, Keras, Torch, Triton, Matplotlib, XDG, and CUDA cache data. Clear Cache removes all child files and folders under this root, preserves only its `.gitkeep` marker, and also removes source-tree `__pycache__` directories under `app/server`, while leaving the managed `app/server/.venv` runtime untouched. Do not recursively discover or create other cache directories elsewhere in the repository.
 
 ## Lifecycle Rules
 

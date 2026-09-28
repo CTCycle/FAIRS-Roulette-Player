@@ -89,7 +89,7 @@ The Windows launcher no longer:
 - retries failed dependency sync by assuming an old-location virtual environment;
 - includes obsolete root `.venv` or `.angular` paths in uninstall behavior.
 
-Only current application-owned runtime, dependency, build, and cache locations are managed. Every disposable cache is created below `runtimes/cache`; the cleanup action removes that root and recreates it on demand, and also removes source-tree `__pycache__` directories under `app/server` without traversing the managed virtual environment.
+Only current application-owned runtime, dependency, build, and cache locations are managed. Every disposable cache is created below `runtimes/cache`; the cleanup action empties that root while preserving its marker, removes source-tree `__pycache__` directories under `app/server`, and recreates child cache paths only when a later runtime operation needs them.
 
 ## Current Designs Intentionally Retained
 

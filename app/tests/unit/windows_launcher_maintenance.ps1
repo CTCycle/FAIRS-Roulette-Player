@@ -209,8 +209,10 @@ function Test-RemoveLogs {
 
 function Test-ClearCache {
     Reset-Fixture
+    New-FixtureFile (Join-Path $script:runtimeCacheDir '.gitkeep') ''
     New-FixtureFile (Join-Path $script:runtimeCacheDir 'sentinel.cache') 'cache'
     New-FixtureFile (Join-Path $script:runtimeCacheDir 'pytest\nodeids') 'cache child'
+    New-FixtureFile (Join-Path $script:runtimeCacheDir 'uv\.gitkeep') ''
     New-FixtureFile (Join-Path $script:serverDir '__pycache__\module.cpython-314.pyc') 'server bytecode'
     New-FixtureFile (Join-Path $script:serverDir 'services\predictions\__pycache__\module.cpython-314.pyc') 'nested bytecode'
     New-FixtureFile (Join-Path $script:venvDir '__pycache__\module.cpython-314.pyc') 'venv bytecode'
@@ -222,11 +224,12 @@ function Test-ClearCache {
 
     Assert-Condition (-not (Test-Path -LiteralPath (Join-Path $script:runtimeCacheDir 'sentinel.cache'))) 'Clear cache left its root sentinel.'
     Assert-Condition (-not (Test-Path -LiteralPath (Join-Path $script:runtimeCacheDir 'pytest\nodeids'))) 'Clear cache left a nested cache sentinel.'
+    Assert-Condition (Test-Path -LiteralPath (Join-Path $script:runtimeCacheDir '.gitkeep')) 'Clear cache removed the canonical cache-root marker.'
+    Assert-Condition (@(Get-ChildItem -LiteralPath $script:runtimeCacheDir -Directory -Force).Count -eq 0) 'Clear cache left a runtime cache folder.'
     Assert-Condition (-not (Test-Path -LiteralPath (Join-Path $script:serverDir '__pycache__'))) 'Clear cache left the server bytecode directory.'
     Assert-Condition (-not (Test-Path -LiteralPath (Join-Path $script:serverDir 'services\predictions\__pycache__'))) 'Clear cache left a nested server bytecode directory.'
     Assert-FileContains (Join-Path $script:venvDir '__pycache__\module.cpython-314.pyc') 'venv bytecode'
     Assert-FileContains (Join-Path $neighbor 'keep.txt') 'keep neighbor'
-    Assert-Condition ($env:FAIRS_CACHE_DIR -eq $script:runtimeCacheDir) 'Clear cache did not restore cache environment paths.'
 }
 
 function Test-RemoveCheckpoints {
