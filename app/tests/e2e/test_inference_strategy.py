@@ -26,7 +26,7 @@ def _data_root() -> Path:
     configured = os.getenv("FAIRS_DATA_DIR", "").strip()
     if configured:
         return Path(configured).resolve()
-    return Path(__file__).resolve().parents[2] / "resources"
+    return Path(__file__).resolve().parents[3] / "resources"
 
 
 def _persisted_steps(session_id: str) -> list[tuple[object, ...]]:

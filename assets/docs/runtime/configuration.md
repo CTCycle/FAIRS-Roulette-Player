@@ -1,6 +1,6 @@
 ## Configuration
 
-Last updated: 2026-09-18
+Last updated: 2026-09-28
 
 ## Configuration Ownership
 
@@ -42,7 +42,8 @@ The runtime consumes these environment keys:
 
 For launcher operations, the following values must be explicitly present and non-empty in `.env`: `FASTAPI_HOST`, `FASTAPI_PORT`, `UI_HOST`, `UI_PORT`, `RELOAD`, and `EMBEDDED_DATABASE`. An existing stale `.env` that omits them fails with an actionable message instead of silently inheriting compatibility defaults.
 
-`FAIRS_DATA_DIR` may be empty. An empty value means the normal `app/resources` data root.
+`FAIRS_DATA_DIR` may be empty. An empty value means the normal `resources` data root.
+Set `FAIRS_DATA_DIR` to select a different persistent data root; it takes precedence over `resources` and must not overlap `runtimes/cache`.
 
 ## Internal Runtime Settings
 
@@ -56,7 +57,7 @@ This cache root is canonical. The launcher does not scan the repository for hist
 
 ## Runtime Settings File
 
-The runtime settings file is `<FAIRS_DATA_DIR>/runtime-settings.json` when `FAIRS_DATA_DIR` is configured; otherwise it is `app/resources/runtime-settings.json`. It is created on startup when absent and is ignored by source control because it is local user state.
+The runtime settings file is `<FAIRS_DATA_DIR>/runtime-settings.json` when `FAIRS_DATA_DIR` is configured; otherwise it is `resources/runtime-settings.json`. It is created on startup when absent and is ignored by source control because it is local user state.
 
 Startup resolution is strict and deterministic:
 

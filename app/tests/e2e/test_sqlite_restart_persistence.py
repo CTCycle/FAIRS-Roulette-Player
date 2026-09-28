@@ -245,7 +245,7 @@ def _running_frontend(
 
 
 def _copy_inference_restart_fixture(data_root: Path) -> Path:
-    source_resources = APP_ROOT / "resources"
+    source_resources = PROJECT_ROOT / "resources"
     database_path = data_root / "database.db"
     data_root.mkdir(parents=True)
 

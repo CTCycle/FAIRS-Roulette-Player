@@ -11,9 +11,9 @@ runtimes/**
 !runtimes/cache/uv/.gitkeep
 !runtimes/cache/pytest-tmp/
 !runtimes/cache/pytest-tmp/.gitkeep
-app/resources/logs/**
-app/resources/checkpoints/**
-app/resources/runtime-settings.json
+resources/logs/**
+resources/checkpoints/**
+resources/runtime-settings.json
 app/client/node_modules/
 app/client/dist/
 app/client/dist-ssr/
