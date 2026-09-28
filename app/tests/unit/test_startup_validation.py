@@ -63,13 +63,11 @@ def test_startup_validations_create_runtime_directories(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    resources_dir = tmp_path / "resources"
-    logs_dir = resources_dir / "logs"
-    checkpoints_dir = resources_dir / "checkpoints"
+    data_dir = tmp_path / "data"
+    logs_dir = data_dir / "logs"
+    checkpoints_dir = data_dir / "checkpoints"
 
-    monkeypatch.setattr(
-        startup_validation.shared_paths, "RESOURCES_PATH", resources_dir
-    )
+    monkeypatch.setattr(startup_validation.shared_paths, "DATA_ROOT", data_dir)
     monkeypatch.setattr(startup_validation.shared_paths, "LOGS_PATH", logs_dir)
     monkeypatch.setattr(
         startup_validation.shared_paths,
@@ -79,7 +77,7 @@ def test_startup_validations_create_runtime_directories(
 
     startup_validation.run_startup_validations(_embedded_settings())
 
-    assert resources_dir.is_dir()
+    assert data_dir.is_dir()
     assert logs_dir.is_dir()
     assert checkpoints_dir.is_dir()
 

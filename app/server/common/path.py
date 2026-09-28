@@ -8,15 +8,15 @@ SERVER_DIR = APP_DIR / "server"
 CLIENT_DIR = APP_DIR / "client"
 SETTINGS_DIR = ROOT_DIR / "settings"
 CACHE_PATH = ROOT_DIR / "runtimes" / "cache"
-DEFAULT_RESOURCES_PATH = ROOT_DIR / "resources"
+DEFAULT_DATA_ROOT = ROOT_DIR / "data"
 DATA_DIR: Path | None = None
-RESOURCES_PATH = DEFAULT_RESOURCES_PATH
-LOGS_PATH = RESOURCES_PATH / "logs"
-CHECKPOINT_PATH = RESOURCES_PATH / "checkpoints"
-RUNTIME_SETTINGS_FILE = RESOURCES_PATH / "runtime-settings.json"
+DATA_ROOT = DEFAULT_DATA_ROOT
+LOGS_PATH = DATA_ROOT / "logs"
+CHECKPOINT_PATH = DATA_ROOT / "checkpoints"
+RUNTIME_SETTINGS_FILE = DATA_ROOT / "runtime-settings.json"
 ENV_FILE_PATH = SETTINGS_DIR / ".env"
 ENV_EXAMPLE_FILE_PATH = SETTINGS_DIR / ".env.example"
-DATABASE_PATH = RESOURCES_PATH / "database.db"
+DATABASE_PATH = DATA_ROOT / "database.db"
 CLIENT_DIST_PATH = CLIENT_DIR / "dist"
 CLIENT_ASSETS_PATH = CLIENT_DIST_PATH / "assets"
 CLIENT_INDEX_FILE_PATH = CLIENT_DIST_PATH / "index.html"
@@ -36,7 +36,7 @@ def _paths_overlap(left: Path, right: Path) -> bool:
 ###############################################################################
 def configure_runtime_paths(data_dir: str | Path | None = None) -> None:
     """Resolve mutable runtime paths after environment loading."""
-    global CHECKPOINT_PATH, DATABASE_PATH, DATA_DIR, LOGS_PATH, RESOURCES_PATH
+    global CHECKPOINT_PATH, DATABASE_PATH, DATA_DIR, DATA_ROOT, LOGS_PATH
     global RUNTIME_SETTINGS_FILE
 
     configured = str(data_dir).strip() if data_dir is not None else ""
@@ -48,11 +48,11 @@ def configure_runtime_paths(data_dir: str | Path | None = None) -> None:
         )
 
     DATA_DIR = configured_data_dir
-    RESOURCES_PATH = DATA_DIR if DATA_DIR is not None else DEFAULT_RESOURCES_PATH
-    LOGS_PATH = RESOURCES_PATH / "logs"
-    CHECKPOINT_PATH = RESOURCES_PATH / "checkpoints"
-    RUNTIME_SETTINGS_FILE = RESOURCES_PATH / "runtime-settings.json"
-    DATABASE_PATH = RESOURCES_PATH / "database.db"
+    DATA_ROOT = DATA_DIR if DATA_DIR is not None else DEFAULT_DATA_ROOT
+    LOGS_PATH = DATA_ROOT / "logs"
+    CHECKPOINT_PATH = DATA_ROOT / "checkpoints"
+    RUNTIME_SETTINGS_FILE = DATA_ROOT / "runtime-settings.json"
+    DATABASE_PATH = DATA_ROOT / "database.db"
 
 ###############################################################################
 def as_path(value: str | Path) -> Path:

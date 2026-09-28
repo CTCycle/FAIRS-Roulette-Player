@@ -88,7 +88,7 @@ Generated TypeScript is a derived artifact, not a parallel authority. CI regener
 │  │  ├─ repositories/
 │  │  └─ services/
 │  └─ tests/
-├─ resources/
+├─ data/
 │  ├─ checkpoints/
 │  ├─ logs/
 │  ├─ database.db
