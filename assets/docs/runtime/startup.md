@@ -1,6 +1,6 @@
 ## Startup
 
-Last updated: 2026-09-21
+Last updated: 2026-09-26
 
 ## Local Application Startup
 
@@ -108,7 +108,9 @@ The first campaign tier is recorded in the project status ledger as `VAL-00` and
 - `VAL-00` records the exact revision, managed runtime, SQLite mode, health response, clean training/inference state, disposable dataset, short real CPU training job, and completed checkpoint identifiers. The checkpoint must be produced through the supported API/launcher path so later inference slices exercise real serialization and dataset lineage.
 - `VAL-01` uses the official launcher to verify that the frontend is reachable while backend lifespan startup is still pending, that the browser transitions only after `/api/health` is healthy, and that explicit launcher stop removes only repository-owned backend/frontend processes and leaves ports `8890` and `8051` clear.
 
-When capturing evidence, record browser-visible state, console/network failures, backend logs, process identity, and screenshots for failures. Do not treat a source inspection, a test definition, or a successful response from an unrelated revision as current startup evidence.
+The current ledger records `VAL-00` and `VAL-01` as `PASSED`, and `application.startup` as `VALIDATED` for the supported warm/standard profile. `STARTUP-01` remains `PARTIAL`: the prepared runtime and alternate-cache/live-application path passed, but the official cold launcher cannot be reproduced under the current execution identity because portable-runtime preparation cannot rewrite `runtimes/python/python314._pth` and protected canonical cache residue prevents a clean dependency path. This is an environment permission boundary, not a reproduced application defect; rerun it after the owner repairs the protected boundary or provides an approved alternate-cache launcher path.
+
+When capturing evidence, record browser-visible state, console/network failures, backend logs, process identity, and screenshots for failures. Keep runner output transient and record the durable result, tested revision, limitation, and follow-up in the project status ledger. Do not treat a source inspection, a test definition, or a successful response from an unrelated revision as current startup evidence.
 
 ## Related Files
 
