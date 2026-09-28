@@ -39,7 +39,7 @@ Frontend freshness is content-based rather than timestamp-based. The launcher ha
 
 ## Cache Ownership
 
-`runtimes/cache` is the only canonical cache root. Fixed child directories contain runtime, dependency, application, frontend, and test/tool caches. The cache action removes this root and recreates it as needed, and removes source-tree `__pycache__` directories under `app/server`. It does not scan the managed `app/server/.venv` runtime or discover historical project-local cache names. Obsolete cache directories, if manually left in an old checkout, are outside current ownership and should be removed during repository cleanup.
+`runtimes/cache` is the only canonical cache root. Fixed child directories contain runtime, dependency, application, frontend, and test/tool caches. The cache action empties this root by removing all child files and folders while preserving only its `.gitkeep` marker, and removes source-tree `__pycache__` directories under `app/server`; later runtime/setup operations recreate cache paths when needed. It does not scan the managed `app/server/.venv` runtime or discover historical project-local cache names. Obsolete cache directories, if manually left in an old checkout, are outside current ownership and should be removed during repository cleanup.
 
 ## Application Lifecycle
 

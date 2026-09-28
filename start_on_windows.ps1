@@ -278,6 +278,16 @@ function Remove-PathBestEffort([string]$Path) {
     return $result.Skipped -eq 0 -and $result.EnumerationErrors.Count -eq 0
 }
 
+function Clear-RuntimeCacheDirectory {
+    if (-not (Test-Path -LiteralPath $runtimeCacheDir -PathType Container)) { return }
+
+    $cacheEntries = @(Get-ChildItem -LiteralPath $runtimeCacheDir -Force -ErrorAction SilentlyContinue)
+    foreach ($entry in $cacheEntries) {
+        if (-not $entry.PSIsContainer -and $entry.Name -eq '.gitkeep') { continue }
+        Remove-LauncherPath -Path $entry.FullName -PreserveNames @() -Activity "FAIRS: remove $($entry.Name)" | Out-Null
+    }
+}
+
 function Get-ServerBytecodeCleanupPaths {
     if (-not (Test-Path -LiteralPath $serverDir -PathType Container)) { return @() }
 
@@ -1217,14 +1227,18 @@ function Clear-Cache {
         for ($index = 0; $index -lt $cachePaths.Count; $index++) {
             $cachePath = $cachePaths[$index]
             Update-LauncherProgress -Id $progressId -Activity 'FAIRS: clear caches' -Status "$($index + 1) of $($cachePaths.Count): $cachePath" -PercentComplete ([int](($index + 1) * 100 / $cachePaths.Count))
-            Remove-PathBestEffort $cachePath | Out-Null
+            if ([IO.Path]::GetFullPath($cachePath).Equals([IO.Path]::GetFullPath($runtimeCacheDir), [StringComparison]::OrdinalIgnoreCase)) {
+                Clear-RuntimeCacheDirectory
+            }
+            else {
+                Remove-PathBestEffort $cachePath | Out-Null
+            }
         }
     }
     finally {
         Complete-LauncherProgress $progressId
     }
-    Set-CacheEnvironment
-    Write-Ok 'Disposable caches and app/server Python bytecode were cleared. Locked or protected entries were skipped.'
+    Write-Ok 'Disposable cache folders and app/server Python bytecode were cleared. Locked or protected entries were skipped.'
 }
 
 function Resolve-LauncherPath([string]$Path) {
