@@ -156,7 +156,7 @@ def checkpoint_root() -> Path:
     configured_data_dir = os.getenv("FAIRS_DATA_DIR", "").strip()
     if configured_data_dir:
         return Path(configured_data_dir).expanduser().resolve() / "checkpoints"
-    return Path(__file__).resolve().parents[3] / "resources" / "checkpoints"
+    return Path(__file__).resolve().parents[3] / "data" / "checkpoints"
 
 ###############################################################################
 def checkpoint_file_signatures(checkpoint: str) -> dict[str, str]:

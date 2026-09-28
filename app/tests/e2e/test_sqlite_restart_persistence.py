@@ -245,19 +245,19 @@ def _running_frontend(
 
 
 def _copy_inference_restart_fixture(data_root: Path) -> Path:
-    source_resources = PROJECT_ROOT / "resources"
+    source_data = PROJECT_ROOT / "data"
     database_path = data_root / "database.db"
     data_root.mkdir(parents=True)
 
     with sqlite3.connect(
-        f"{(source_resources / 'database.db').resolve().as_uri()}?mode=ro",
+        f"{(source_data / 'database.db').resolve().as_uri()}?mode=ro",
         uri=True,
     ) as source, sqlite3.connect(database_path) as target:
         source.backup(target)
 
-    shutil.copy2(source_resources / "runtime-settings.json", data_root)
+    shutil.copy2(source_data / "runtime-settings.json", data_root)
     checkpoint_source = (
-        source_resources / "checkpoints" / "val00_lineage_20260921"
+        source_data / "checkpoints" / "val00_lineage_20260921"
     )
     if not checkpoint_source.is_dir():
         raise FileNotFoundError(f"Required VAL-00 checkpoint is missing: {checkpoint_source}")

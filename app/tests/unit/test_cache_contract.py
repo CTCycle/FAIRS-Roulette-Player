@@ -25,9 +25,9 @@ def test_gitignore_keeps_defensive_cache_rules() -> None:
     for rule in (
         "runtimes/**",
         "**/assets/QA/**",
-        "resources/logs/**",
-        "resources/checkpoints/**",
-        "resources/runtime-settings.json",
+        "data/logs/**",
+        "data/checkpoints/**",
+        "data/runtime-settings.json",
         "__pycache__/",
         ".pytest_cache/",
         ".ruff_cache/",
@@ -65,12 +65,12 @@ def test_cache_environment_contains_only_canonical_paths() -> None:
         assert Path(configured_path).resolve().is_relative_to(canonical_root)
 
 ###############################################################################
-def test_default_data_directory_uses_repository_root_resources() -> None:
+def test_default_data_directory_uses_repository_root_data() -> None:
     original_data_dir = shared_paths.DATA_DIR
     try:
         shared_paths.configure_runtime_paths(None)
-        expected_root = REPOSITORY_ROOT / "resources"
-        assert shared_paths.RESOURCES_PATH == expected_root
+        expected_root = REPOSITORY_ROOT / "data"
+        assert shared_paths.DATA_ROOT == expected_root
         assert shared_paths.DATABASE_PATH == expected_root / "database.db"
         assert shared_paths.CHECKPOINT_PATH == expected_root / "checkpoints"
     finally:
@@ -84,7 +84,7 @@ def test_custom_data_directory_remains_selectable() -> None:
         shared_paths.configure_runtime_paths(custom_root)
         expected_root = custom_root.resolve()
         assert shared_paths.DATA_DIR == expected_root
-        assert shared_paths.RESOURCES_PATH == expected_root
+        assert shared_paths.DATA_ROOT == expected_root
         assert shared_paths.DATABASE_PATH == expected_root / "database.db"
         assert shared_paths.CHECKPOINT_PATH == expected_root / "checkpoints"
     finally:

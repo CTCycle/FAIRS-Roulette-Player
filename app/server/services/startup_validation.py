@@ -7,7 +7,7 @@ from server.repositories.database.utils import is_supported_postgres_engine
 ###############################################################################
 def run_startup_validations(settings: ServerSettings) -> None:
     for directory in (
-        shared_paths.RESOURCES_PATH,
+        shared_paths.DATA_ROOT,
         shared_paths.LOGS_PATH,
         shared_paths.CHECKPOINT_PATH,
     ):

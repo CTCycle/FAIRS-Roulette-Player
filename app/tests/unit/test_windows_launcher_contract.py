@@ -21,10 +21,10 @@ def test_launcher_has_no_legacy_always_rebuild_switch() -> None:
     assert "always_rebuild" not in _launcher_source().lower()
 
 
-def test_launcher_uses_root_resources_as_the_default_data_directory() -> None:
+def test_launcher_uses_root_data_as_the_default_data_directory() -> None:
     source = _launcher_source()
 
-    assert "Join-Path $repoRoot 'resources'" in source
+    assert "Join-Path $repoRoot 'data'" in source
 
 
 def test_launch_uses_port_resolver_before_runtime_work() -> None:
