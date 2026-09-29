@@ -154,7 +154,10 @@ def test_capacity_bound_evicts_oldest_and_releases_models(monkeypatch) -> None:
     service.inference_repository = InferenceRepository(database)
     created_players: list[FakePlayer] = []
 
+    ###############################################################################
     class TrackingPlayer(FakePlayer):
+
+        # -------------------------------------------------------------------------
         def __init__(self, *args, **kwargs):  # noqa: ANN002, ANN003
             super().__init__(*args, **kwargs)
             self.model = object()
@@ -295,10 +298,10 @@ def test_replacement_start_failure_preserves_existing_session_and_releases_candi
     existing_snapshot = service.get_session_snapshot(existing_id)
     candidate_players: list[FakePlayer] = []
 
-    ###########################################################################
+    ###############################################################################
     class TrackingPlayer(FakePlayer):
 
-        # ---------------------------------------------------------------------
+        # -------------------------------------------------------------------------
         def __init__(self, *args, **kwargs):  # noqa: ANN002, ANN003
             super().__init__(*args, **kwargs)
             self.model = object()

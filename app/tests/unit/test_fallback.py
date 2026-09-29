@@ -28,6 +28,7 @@ class EmptyLogitsModel:
 ###############################################################################
 class StrategyLogitsModel:
 
+    # -------------------------------------------------------------------------
     def __init__(self, strategy_id: int) -> None:
         self.strategy_id = strategy_id
         self.inputs: dict[str, np.ndarray] | None = None

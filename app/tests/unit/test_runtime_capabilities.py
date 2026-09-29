@@ -8,6 +8,7 @@ from server.common import runtime_capabilities
 def test_disabled_jit_has_no_runtime_requirement() -> None:
     assert runtime_capabilities.get_jit_runtime_error(False) is None
 
+###############################################################################
 def test_supported_runtime_accepts_jit() -> None:
     assert runtime_capabilities.validate_jit_runtime(True, "eager") is None
 

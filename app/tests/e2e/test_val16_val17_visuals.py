@@ -9,12 +9,10 @@ from playwright.sync_api import Page, expect
 
 QA_ROOT = Path(__file__).resolve().parents[3] / "assets" / "QA"
 
-
 ###############################################################################
 def _capture(page: Page, name: str) -> None:
     QA_ROOT.mkdir(parents=True, exist_ok=True)
     page.screenshot(path=str(QA_ROOT / name), full_page=False)
-
 
 ###############################################################################
 def _assert_supported_desktop(page: Page, width: int, height: int) -> None:
@@ -31,7 +29,6 @@ def _assert_supported_desktop(page: Page, width: int, height: int) -> None:
         "horizontalOverflow": False,
     }
     expect(page.locator(".desktop-size-notice")).to_be_hidden()
-
 
 ###############################################################################
 def test_desktop_page_views_and_minimum_width_boundary(page: Page, base_url: str):
@@ -130,7 +127,6 @@ def test_desktop_page_views_and_minimum_width_boundary(page: Page, base_url: str
     assert console_errors == []
     assert failed_requests == []
     assert failed_responses == []
-
 
 ###############################################################################
 def test_training_setup_and_active_monitor_render(page: Page, base_url: str):
@@ -237,7 +233,6 @@ def test_training_setup_and_active_monitor_render(page: Page, base_url: str):
     assert console_errors == []
     assert failed_requests == []
     assert failed_responses == []
-
 
 ###############################################################################
 def test_inference_active_session_render(page: Page, base_url: str):

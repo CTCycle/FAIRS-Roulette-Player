@@ -398,7 +398,6 @@ def _open_stored_training_wizard(page: Page, base_url: str):
     expect(modal).to_be_visible()
     return modal
 
-
 ###############################################################################
 class TestTrainingWizardFlow:
     """Browser coverage for the six-step training configuration boundary."""

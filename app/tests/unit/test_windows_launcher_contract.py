@@ -7,26 +7,31 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2].parent
 LAUNCHER_PATH = REPOSITORY_ROOT / "start_on_windows.ps1"
 
 
+###############################################################################
 def _launcher_source() -> str:
     return LAUNCHER_PATH.read_text(encoding="utf-8")
 
 
+###############################################################################
 def _section(source: str, start_marker: str, end_marker: str) -> str:
     start = source.index(start_marker)
     end = source.index(end_marker, start)
     return source[start:end]
 
 
+###############################################################################
 def test_launcher_has_no_legacy_always_rebuild_switch() -> None:
     assert "always_rebuild" not in _launcher_source().lower()
 
 
+###############################################################################
 def test_launcher_uses_root_data_as_the_default_data_directory() -> None:
     source = _launcher_source()
 
     assert "Join-Path $repoRoot 'data'" in source
 
 
+###############################################################################
 def test_launch_uses_port_resolver_before_runtime_work() -> None:
     source = _launcher_source()
     start_application = _section(
@@ -44,6 +49,7 @@ def test_launch_uses_port_resolver_before_runtime_work() -> None:
     assert "return $true" in start_application
 
 
+###############################################################################
 def test_port_conflicts_are_grouped_and_stopped_once_per_pid() -> None:
     source = _launcher_source()
     conflict_discovery = _section(
@@ -66,6 +72,7 @@ def test_port_conflicts_are_grouped_and_stopped_once_per_pid() -> None:
     assert "TargetedProcessIds" in stop_conflicts
 
 
+###############################################################################
 def test_frontend_freshness_uses_content_fingerprint_state() -> None:
     source = _launcher_source()
     assert "LastWriteTimeUtc" not in source
@@ -78,6 +85,7 @@ def test_frontend_freshness_uses_content_fingerprint_state() -> None:
     assert "fingerprint" in source
 
 
+###############################################################################
 def test_frontend_build_inputs_match_documented_invalidation_scope() -> None:
     source = _launcher_source()
     build_inputs = _section(
@@ -102,6 +110,7 @@ def test_frontend_build_inputs_match_documented_invalidation_scope() -> None:
     assert "eslint.config.js" not in build_inputs
 
 
+###############################################################################
 def test_backend_and_frontend_dependency_recovery_are_independent() -> None:
     source = _launcher_source()
     start_application = _section(
@@ -129,6 +138,7 @@ def test_backend_and_frontend_dependency_recovery_are_independent() -> None:
     assert "Test-BackendPackageCurrent" not in source
 
 
+###############################################################################
 def test_explicit_install_and_rebuild_options_still_build_frontend() -> None:
     source = _launcher_source()
     menu = _section(source, "function Show-Menu {", "Set-CacheEnvironment\nShow-Menu")
@@ -140,6 +150,7 @@ def test_explicit_install_and_rebuild_options_still_build_frontend() -> None:
     assert "'Launch' { if (Start-Application) { exit 0 } }" in menu
 
 
+###############################################################################
 def test_maintenance_menu_entries_dispatch_their_handlers() -> None:
     source = _launcher_source()
     menu = _section(source, "function Show-Menu {", "Set-CacheEnvironment\nShow-Menu")
@@ -155,6 +166,7 @@ def test_maintenance_menu_entries_dispatch_their_handlers() -> None:
         assert f"'{key}' {{ {handler} }}" in menu
 
 
+###############################################################################
 def test_standard_runner_supports_isolated_cache_root() -> None:
     runner = (REPOSITORY_ROOT / "app" / "tests" / "run_tests.bat").read_text(encoding="utf-8")
 
@@ -164,6 +176,7 @@ def test_standard_runner_supports_isolated_cache_root() -> None:
     assert runner.index(cache_root_override) < runner.index('set "PYTEST_BASETEMP_DIR=%RUNTIME_CACHE_DIR%\\pytest-tmp"')
 
 
+###############################################################################
 def test_standard_runner_builds_frontend_from_the_client_directory() -> None:
     runner = (REPOSITORY_ROOT / "app" / "tests" / "run_tests.bat").read_text(encoding="utf-8")
     build_phase = runner.split("echo [INFO] Building frontend...", 1)[1].split(
@@ -177,6 +190,7 @@ def test_standard_runner_builds_frontend_from_the_client_directory() -> None:
     assert 'popd >nul' in build_phase
 
 
+###############################################################################
 def test_standard_runner_wait_loops_do_not_depend_on_interactive_stdin() -> None:
     runner = (REPOSITORY_ROOT / "app" / "tests" / "run_tests.bat").read_text(encoding="utf-8")
     wait_loop = runner.split(":wait_loop", 1)[1].split("echo [STEP] Running Python tests...", 1)[0]
@@ -185,6 +199,7 @@ def test_standard_runner_wait_loops_do_not_depend_on_interactive_stdin() -> None
     assert "timeout /t 1 /nobreak" not in wait_loop
 
 
+###############################################################################
 def test_dependency_state_is_published_only_by_successful_sync_paths() -> None:
     source = _launcher_source()
     backend_sync = _section(

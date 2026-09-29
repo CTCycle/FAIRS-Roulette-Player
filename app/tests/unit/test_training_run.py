@@ -181,13 +181,18 @@ def test_manager_shutdown_force_terminates_an_unresponsive_worker() -> None:
 def test_terminal_jobs_release_thread_and_worker_references() -> None:
     manager = TrainingRunManager()
 
+    ###############################################################################
     class Worker:
+
+        # -------------------------------------------------------------------------
         def __init__(self) -> None:
             self.stopped = False
 
+        # -------------------------------------------------------------------------
         def stop(self) -> None:
             self.stopped = True
 
+        # -------------------------------------------------------------------------
         def is_alive(self) -> bool:
             return False
 
