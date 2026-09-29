@@ -17,6 +17,7 @@ from playwright.sync_api import APIRequestContext
 from server.learning.training.device import DeviceConfig
 
 
+###############################################################################
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="VAL-18 requires CUDA")
 def test_cuda_mixed_precision_eager_jit_training_publishes_checkpoint(
     api_context: APIRequestContext,

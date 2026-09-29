@@ -59,7 +59,7 @@ def test_start_training_requires_dataset_without_generator() -> None:
             TrainingConfig(use_data_generator=False, dataset_id=None)
         )
 
-###########################################################################
+###############################################################################
 def test_start_training_rejects_missing_dataset_before_creating_job() -> None:
     service, training_run_manager, _ = build_service()
     service.dataset_repository.get.return_value = None
@@ -72,7 +72,7 @@ def test_start_training_rejects_missing_dataset_before_creating_job() -> None:
     service.dataset_repository.get.assert_called_once_with(987654321)
     training_run_manager.start_job.assert_not_called()
 
-###########################################################################
+###############################################################################
 def test_start_training_rejects_non_training_dataset_before_creating_job() -> None:
     service, training_run_manager, _ = build_service()
     service.dataset_repository.get.return_value = {"dataset_kind": "inference"}
@@ -85,7 +85,7 @@ def test_start_training_rejects_non_training_dataset_before_creating_job() -> No
     service.dataset_repository.get.assert_called_once_with(987654321)
     training_run_manager.start_job.assert_not_called()
 
-###########################################################################
+###############################################################################
 def test_validation_rejects_existing_checkpoint_before_creating_job() -> None:
     service, training_run_manager, checkpoint_service = build_service()
     checkpoint_service.list_checkpoints.return_value = ["already_saved"]

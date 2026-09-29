@@ -11,6 +11,7 @@ import pytest
 TEST_SCRIPT = Path(__file__).with_name("windows_launcher_maintenance.ps1")
 
 
+###############################################################################
 def test_launcher_maintenance_actions_in_isolated_fixture() -> None:
     if sys.platform != "win32":
         pytest.skip("Windows-only launcher maintenance harness")

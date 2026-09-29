@@ -149,17 +149,25 @@ def test_repeated_lifespan_entry_reinitializes_and_disposes_once_per_run(
     monkeypatch.setenv("ENABLE_API_DOCS", "false")
     monkeypatch.setattr(app_module, "_client_build_available", lambda: False)
 
+    ###############################################################################
     class ShutdownSpy:
+
+        # -------------------------------------------------------------------------
         def __init__(self) -> None:
             self.shutdown_calls = 0
 
+        # -------------------------------------------------------------------------
         def shutdown(self) -> None:
             self.shutdown_calls += 1
 
+    ###############################################################################
     class DatabaseSpy:
+
+        # -------------------------------------------------------------------------
         def __init__(self) -> None:
             self.dispose_calls = 0
 
+        # -------------------------------------------------------------------------
         def dispose(self) -> None:
             self.dispose_calls += 1
             dispose_calls.append(True)

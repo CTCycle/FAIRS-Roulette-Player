@@ -28,7 +28,6 @@ def _assert_tour_keyboard_dismissal(page: Page, title: str) -> None:
     expect(tour).not_to_be_visible()
     expect(page.get_by_role("button", name="Help")).to_be_focused()
 
-
 ###############################################################################
 def _prepare_training_guidance(page: Page, base_url: str) -> None:
     page.goto(f"{base_url}/training")

@@ -22,6 +22,7 @@ STRATEGY_NAMES = {
 }
 
 
+###############################################################################
 def _data_root() -> Path:
     configured = os.getenv("FAIRS_DATA_DIR", "").strip()
     if configured:
@@ -29,6 +30,7 @@ def _data_root() -> Path:
     return Path(__file__).resolve().parents[3] / "data"
 
 
+###############################################################################
 def _persisted_steps(session_id: str) -> list[tuple[object, ...]]:
     database_path = _data_root() / "database.db"
     database_uri = f"{database_path.resolve().as_uri()}?mode=ro"
@@ -46,6 +48,7 @@ def _persisted_steps(session_id: str) -> list[tuple[object, ...]]:
         ).fetchall()
 
 
+###############################################################################
 def _require_val15_fixture(api_context: APIRequestContext) -> str:
     checkpoints_response = api_context.get("/api/training/checkpoints")
     assert checkpoints_response.ok, checkpoints_response.text()
@@ -75,6 +78,7 @@ def _require_val15_fixture(api_context: APIRequestContext) -> str:
     return VAL15_CHECKPOINT
 
 
+###############################################################################
 def test_learned_strategy_suggestion_applies_without_advancing_pending_step(
     page: Page,
     base_url: str,
