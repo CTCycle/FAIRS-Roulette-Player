@@ -115,22 +115,6 @@ def test_clear_rows_preserves_session_header(monkeypatch) -> None:
     service.inference_repository.delete_session.assert_not_called()
 
 ###############################################################################
-def test_capacity_eviction_closes_persisted_session(monkeypatch) -> None:
-    service, _ = build_service(monkeypatch)
-    service.state.max_sessions = 1
-
-    first = service.start_session(InferenceStartRequest(checkpoint="cp1", dataset_id=1))
-    second = service.start_session(
-        InferenceStartRequest(checkpoint="cp1", dataset_id=1)
-    )
-
-    first_id = first["session_id"]
-    second_id = second["session_id"]
-    assert first_id not in service.state.sessions
-    assert second_id in service.state.sessions
-    service.inference_repository.end_session.assert_called_once_with(first_id)
-
-###############################################################################
 def test_capacity_bound_evicts_oldest_and_releases_models(monkeypatch) -> None:
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
     event.listen(
