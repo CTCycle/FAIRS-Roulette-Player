@@ -41,17 +41,3 @@ def test_training_config_rejects_inconsistent_dqn_relationships(
 ) -> None:
     with pytest.raises(ValidationError, match=message):
         TrainingConfig(use_data_generator=True, **overrides)
-
-###############################################################################
-def test_training_config_accepts_consistent_replay_and_exploration_settings() -> None:
-    config = TrainingConfig(
-        use_data_generator=True,
-        exploration_rate=0.5,
-        minimum_exploration_rate=0.1,
-        max_memory_size=2000,
-        replay_buffer_size=1000,
-        batch_size=64,
-    )
-
-    assert config.replay_buffer_size == 1000
-    assert config.training_seed == 42

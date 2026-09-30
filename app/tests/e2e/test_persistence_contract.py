@@ -79,6 +79,12 @@ def exercise_contract(database: FAIRSDatabase) -> None:
     with database.Session() as session:
         assert (
             session.execute(
+                text("SELECT COUNT(*) FROM inference_sessions")
+            ).scalar_one()
+            == 0
+        )
+        assert (
+            session.execute(
                 text("SELECT COUNT(*) FROM inference_session_steps")
             ).scalar_one()
             == 0

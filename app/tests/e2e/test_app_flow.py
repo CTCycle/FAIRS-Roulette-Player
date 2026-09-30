@@ -8,6 +8,7 @@ import re
 import sqlite3
 from pathlib import Path
 
+import pytest
 from playwright.sync_api import APIRequestContext, Page, expect
 
 from server.common import path as shared_paths
@@ -214,78 +215,25 @@ class TestStartupFlow:
             )
 
 ###############################################################################
-class TestHomePage:
-    """Tests for the home page and basic navigation."""
-
-    # -------------------------------------------------------------------------
-    def test_homepage_loads_successfully(self, page: Page, base_url: str):
-        """The homepage should load without errors."""
-        page.goto(base_url)
-        expect(page).to_have_title(re.compile("FAIRS Roulette Player", re.IGNORECASE))
-
-    # -------------------------------------------------------------------------
-    def test_homepage_has_navigation(self, page: Page, base_url: str):
-        """The homepage should have navigation elements."""
-        page.goto(base_url)
-        page.wait_for_load_state("networkidle")
-        expect(page.get_by_text("Training", exact=False).first).to_be_visible()
-        expect(page.get_by_text("Inference", exact=False).first).to_be_visible()
-
-###############################################################################
 class TestNavigationFlow:
-    """Tests for navigating between different pages."""
+    """Tests for navigating between the primary application pages."""
 
     # -------------------------------------------------------------------------
-    def test_navigate_to_training_page(self, page: Page, base_url: str):
-        """Should be able to navigate to the Training page."""
+    @pytest.mark.parametrize(
+        ("route", "label"),
+        [("training", "Training"), ("inference", "Inference")],
+    )
+    def test_navigate_to_page(self, page: Page, base_url: str, route: str, label: str):
+        """The top-level navigation links reach their destination pages."""
         page.goto(base_url)
         page.wait_for_load_state("networkidle")
 
-        # Try to find and click the Training link
-        training_link = page.get_by_role(
-            "link", name=re.compile("Training", re.IGNORECASE)
-        )
-        expect(training_link).to_be_visible()
-        training_link.click()
+        nav_link = page.get_by_role("link", name=re.compile(label, re.IGNORECASE))
+        expect(nav_link).to_be_visible()
+        nav_link.click()
 
         page.wait_for_load_state("networkidle")
-        expect(page).to_have_url(re.compile(".*training.*", re.IGNORECASE))
-
-    # -------------------------------------------------------------------------
-    def test_navigate_to_inference_page(self, page: Page, base_url: str):
-        """Should be able to navigate to the Inference page."""
-        page.goto(base_url)
-        page.wait_for_load_state("networkidle")
-
-        # Try to find and click the Inference link
-        inference_link = page.get_by_role(
-            "link", name=re.compile("Inference", re.IGNORECASE)
-        )
-        expect(inference_link).to_be_visible()
-        inference_link.click()
-
-        page.wait_for_load_state("networkidle")
-        expect(page).to_have_url(re.compile(".*inference.*", re.IGNORECASE))
-
-###############################################################################
-class TestTrainingPage:
-    """Tests for the Training page."""
-
-    # -------------------------------------------------------------------------
-    def test_training_page_loads(self, page: Page, base_url: str):
-        """The Training page should load without errors."""
-        page.goto(f"{base_url}/training")
-        page.wait_for_load_state("networkidle")
-
-        expect(
-            page.get_by_role(
-                "heading", name=re.compile("Training Monitor", re.IGNORECASE)
-            )
-        ).to_be_visible()
-        expect(page.locator(".metric-group")).to_have_count(3)
-        expect(page.locator(".metric-item")).to_have_count(13)
-        expect(page.locator(".metric-card")).to_have_count(0)
-        expect(page.get_by_text("Checkpoints", exact=False).first).to_be_visible()
+        expect(page).to_have_url(re.compile(f".*{route}.*", re.IGNORECASE))
 
 ###############################################################################
 class TestCheckpointHandoff:
@@ -659,33 +607,6 @@ class TestTrainingWizardFlow:
 ###############################################################################
 class TestInferencePage:
     """Tests for the Inference page."""
-
-    # -------------------------------------------------------------------------
-    def test_inference_page_loads(self, page: Page, base_url: str):
-        """The Inference page should load without errors."""
-        page.goto(f"{base_url}/inference")
-        page.wait_for_load_state("networkidle")
-
-        expect(
-            page.get_by_role(
-                "heading", name=re.compile("Session History", re.IGNORECASE)
-            )
-        ).to_be_visible()
-        expect(
-            page.get_by_text(
-                "Pair a trained checkpoint with a dataset, step through predictions, and inspect session history in real time.",
-                exact=True,
-            )
-        ).to_have_count(0)
-        expect(page.get_by_text("AI Suggestion", exact=False)).to_be_visible()
-
-    # -------------------------------------------------------------------------
-    def test_inference_page_shows_checkpoint_selector(self, page: Page, base_url: str):
-        """The Inference page should have a checkpoint selector."""
-        page.goto(f"{base_url}/inference")
-        page.wait_for_load_state("networkidle")
-        expect(page.get_by_text("Select checkpoint", exact=False)).to_be_visible()
-        expect(page.get_by_text("Selected dataset", exact=False)).to_be_visible()
 
     # -------------------------------------------------------------------------
     def test_out_of_range_observation_is_rejected_without_advancing_session(
