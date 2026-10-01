@@ -1,3 +1,6 @@
+# Copyright © 2023 Thomas Virdis
+# Licensed under the MIT License.
+
 """Current-revision desktop evidence for the Training, Inference, and Settings pages."""
 
 from pathlib import Path

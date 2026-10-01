@@ -1,3 +1,6 @@
+# Copyright © 2023 Thomas Virdis
+# Licensed under the MIT License.
+
 """VAL-18 live CUDA, mixed-precision, and JIT training coverage."""
 
 from __future__ import annotations

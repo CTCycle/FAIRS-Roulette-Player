@@ -1,3 +1,6 @@
+// Copyright © 2023 Thomas Virdis
+// Licensed under the MIT License.
+
 import React from 'react';
 import { BrainCircuit, LayoutDashboard } from 'lucide-react';
 import { NavLink } from 'react-router-dom';

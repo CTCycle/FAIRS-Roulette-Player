@@ -1,3 +1,6 @@
+# Copyright © 2023 Thomas Virdis
+# Licensed under the MIT License.
+
 """Tier 5 VAL-21 malformed-input and fail-closed recovery coverage."""
 
 from __future__ import annotations

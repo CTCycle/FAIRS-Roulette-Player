@@ -1,3 +1,6 @@
+// Copyright © 2023 Thomas Virdis
+// Licensed under the MIT License.
+
 import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { CircleHelp, X } from 'lucide-react';
 import { createPortal } from 'react-dom';

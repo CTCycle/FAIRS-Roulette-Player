@@ -1,3 +1,6 @@
+// Copyright © 2023 Thomas Virdis
+// Licensed under the MIT License.
+
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { GuidanceContext, type GuidanceContextValue } from './GuidanceContext';
 import { GuidedTour } from './GuidedTour';

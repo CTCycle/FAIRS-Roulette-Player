@@ -1,3 +1,6 @@
+# Copyright © 2023 Thomas Virdis
+# Licensed under the MIT License.
+
 """
 E2E tests for Inference API endpoints.
 Tests: /inference/sessions/start, /inference/sessions/{id}/next,

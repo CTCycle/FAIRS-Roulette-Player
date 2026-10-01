@@ -1,3 +1,6 @@
+# Copyright © 2023 Thomas Virdis
+# Licensed under the MIT License.
+
 """Dynamic betting engine used by training and inference.
 
 The engine consumes the canonical training betting keys. Inference explicitly maps

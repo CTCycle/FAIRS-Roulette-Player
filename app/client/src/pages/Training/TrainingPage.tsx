@@ -1,3 +1,6 @@
+// Copyright © 2023 Thomas Virdis
+// Licensed under the MIT License.
+
 import React, { useState } from 'react';
 import { useDatasetUploadState } from '../../hooks/useDatasetUploadState';
 import { useTrainingStatus } from '../../hooks/useTrainingStatus';

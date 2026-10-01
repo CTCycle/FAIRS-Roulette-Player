@@ -1,3 +1,6 @@
+// Copyright © 2023 Thomas Virdis
+// Licensed under the MIT License.
+
 import { useEffect, useRef, useState } from 'react';
 import { fetchTrainingCheckpoints } from '../utils/trainingApi';
 import { isAbortError } from '../utils/apiClient';
