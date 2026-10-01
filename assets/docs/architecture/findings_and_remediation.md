@@ -131,7 +131,7 @@ A missing `.env` is created from `.env.example`. Existing files are not patched 
 
 ## Regression Guards
 
-`app/tests/unit/test_architecture_cleanup.py` protects removed paths and names, including old AppState paths, obsolete inference preference naming, permissive strategy helpers, stale polling helpers, the old OpenAPI snapshot, and launcher compatibility-cache behavior.
+The migration removed obsolete AppState paths, inference preference naming, permissive strategy helpers, stale polling helpers, the old OpenAPI snapshot, and launcher compatibility-cache behavior. The current unit suite protects current contracts directly (OpenAPI/schema parity, Alembic consistency, strict strategy/action invariants) rather than scanning for absence of the removed legacy paths.
 
 Additional coverage verifies:
 

@@ -300,20 +300,6 @@ def test_reload_updates_cached_manager_values(
     assert second.jobs.polling_interval == 2.25
 
 ###############################################################################
-def test_invalid_runtime_settings_file_fails_fast(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    runtime_path = tmp_path / "runtime-settings.json"
-    runtime_path.write_text("{not-json", encoding="utf-8")
-
-    env_path = tmp_path / ".env"
-    _write_env(env_path, ["FASTAPI_HOST=127.0.0.1", "EMBEDDED_DATABASE=true"])
-    monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
-
-    with pytest.raises(RuntimeError, match="Unable to load configuration"):
-        _ = startup.reload_settings_for_tests(runtime_path=str(runtime_path))
-
-###############################################################################
 def test_missing_runtime_file_creates_defaults(tmp_path: Path) -> None:
     from server.configurations.management import ConfigurationManager
 

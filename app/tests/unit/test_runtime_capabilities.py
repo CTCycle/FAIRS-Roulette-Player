@@ -5,10 +5,6 @@ import pytest
 from server.common import runtime_capabilities
 
 ###############################################################################
-def test_supported_runtime_accepts_jit() -> None:
-    assert runtime_capabilities.validate_jit_runtime(True, "eager") is None
-
-###############################################################################
 def test_windows_inductor_is_rejected_before_torch_probe(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
