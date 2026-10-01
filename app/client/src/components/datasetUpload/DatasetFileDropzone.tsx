@@ -1,3 +1,6 @@
+// Copyright © 2023 Thomas Virdis
+// Licensed under the MIT License.
+
 import React from 'react';
 import type { ChangeEvent, DragEvent, ReactNode, RefObject } from 'react';
 import { useKeyboardActivation } from '../../hooks/useKeyboardActivation';

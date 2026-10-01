@@ -1,3 +1,6 @@
+/* Copyright © 2023 Thomas Virdis */
+/* Licensed under the MIT License. */
+
 .settings-page {
     padding: var(--spacing-xl) var(--spacing-lg) var(--spacing-2xl);
     overflow-y: auto;

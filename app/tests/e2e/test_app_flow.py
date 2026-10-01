@@ -1,3 +1,6 @@
+# Copyright © 2023 Thomas Virdis
+# Licensed under the MIT License.
+
 """
 E2E tests for UI navigation and page rendering.
 Tests basic UI functionality using Playwright browser automation.

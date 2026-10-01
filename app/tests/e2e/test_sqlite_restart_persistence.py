@@ -1,3 +1,6 @@
+# Copyright © 2023 Thomas Virdis
+# Licensed under the MIT License.
+
 """Process-restart persistence coverage using an isolated SQLite data root."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# Copyright © 2023 Thomas Virdis
+# Licensed under the MIT License.
+
 """
 Pytest configuration for FAIRS E2E tests.
 Provides fixtures for Playwright page objects and API client.

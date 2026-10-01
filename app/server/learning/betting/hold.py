@@ -1,3 +1,6 @@
+# Copyright © 2023 Thomas Virdis
+# Licensed under the MIT License.
+
 from __future__ import annotations
 
 from server.learning.betting.types import require_strategy_id

@@ -1,3 +1,6 @@
+// Copyright © 2023 Thomas Virdis
+// Licensed under the MIT License.
+
 import type { TrainingCheckpointMetadataResponse } from '../generated/api';
 
 export interface DatasetSummaryItem {

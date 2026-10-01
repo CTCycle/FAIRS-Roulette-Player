@@ -1,3 +1,6 @@
+# Copyright © 2023 Thomas Virdis
+# Licensed under the MIT License.
+
 """Live browser coverage for learned inference betting suggestions."""
 
 from __future__ import annotations

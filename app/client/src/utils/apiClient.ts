@@ -1,3 +1,6 @@
+// Copyright © 2023 Thomas Virdis
+// Licensed under the MIT License.
+
 import { parseApiErrorDetail } from './apiParsers';
 
 export class ApiRequestError extends Error {

@@ -1,3 +1,6 @@
+# Copyright © 2023 Thomas Virdis
+# Licensed under the MIT License.
+
 """Tier 5 VAL-22 repetition, bounded execution, and state-leak coverage."""
 
 from __future__ import annotations

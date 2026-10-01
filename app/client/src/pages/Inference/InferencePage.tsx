@@ -1,3 +1,6 @@
+// Copyright © 2023 Thomas Virdis
+// Licensed under the MIT License.
+
 import React, { useCallback, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { GameSession } from '../../components/inference/GameSession';

@@ -1,3 +1,6 @@
+// Copyright © 2023 Thomas Virdis
+// Licensed under the MIT License.
+
 import React, { useId, useMemo } from 'react';
 import { Activity, AlertCircle, ArrowUpRight, Clock, DollarSign, Target, TrendingUp } from 'lucide-react';
 

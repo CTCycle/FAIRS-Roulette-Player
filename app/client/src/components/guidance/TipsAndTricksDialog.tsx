@@ -1,3 +1,6 @@
+// Copyright © 2023 Thomas Virdis
+// Licensed under the MIT License.
+
 import React from 'react';
 import { ArrowRight, BookOpen } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
