@@ -1,3 +1,6 @@
+# Copyright © 2023 Thomas Virdis
+# Licensed under the MIT License.
+
 """Immutable baseline for the current FAIRS relational schema.
 
 Revision ID: 0001_initial_schema

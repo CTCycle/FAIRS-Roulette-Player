@@ -1,3 +1,6 @@
+// Copyright © 2023 Thomas Virdis
+// Licensed under the MIT License.
+
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { SettingsPatchRequest, SettingsResponse } from '../../generated/api';
 import { isAbortError } from '../../utils/apiClient';

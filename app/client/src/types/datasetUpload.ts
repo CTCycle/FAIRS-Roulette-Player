@@ -1,3 +1,6 @@
+// Copyright © 2023 Thomas Virdis
+// Licensed under the MIT License.
+
 import type { DatasetUploadStatus } from '../utils/datasetUpload';
 
 export interface FileMetadata {

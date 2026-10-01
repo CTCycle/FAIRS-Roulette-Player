@@ -1,3 +1,6 @@
+# Copyright © 2023 Thomas Virdis
+# Licensed under the MIT License.
+
 """Rename inference confidence to relative preference.
 
 Revision ID: 0002_rename_relative_preference

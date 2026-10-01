@@ -1,3 +1,6 @@
+// Copyright © 2023 Thomas Virdis
+// Licensed under the MIT License.
+
 import { useCallback, useState } from 'react';
 import type {
     DatasetUploadState,

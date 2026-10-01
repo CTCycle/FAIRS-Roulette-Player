@@ -1,3 +1,6 @@
+// Copyright © 2023 Thomas Virdis
+// Licensed under the MIT License.
+
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, DragEvent, RefObject } from 'react';
 import {

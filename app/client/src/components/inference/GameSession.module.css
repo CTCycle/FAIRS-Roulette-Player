@@ -1,3 +1,6 @@
+/* Copyright © 2023 Thomas Virdis */
+/* Licensed under the MIT License. */
+
 .sessionContainer {
     display: grid;
     grid-template-columns: minmax(330px, 0.9fr) minmax(0, 1.6fr);

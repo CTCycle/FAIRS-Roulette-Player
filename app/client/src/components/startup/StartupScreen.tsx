@@ -1,3 +1,6 @@
+// Copyright © 2023 Thomas Virdis
+// Licensed under the MIT License.
+
 import React from 'react';
 import RouletteWheel from './RouletteWheel';
 import type { BackendStartupStatus } from '../../types/startup';

@@ -1,3 +1,6 @@
+// Copyright © 2023 Thomas Virdis
+// Licensed under the MIT License.
+
 import type { TrainingConfig as ApiTrainingConfig } from '../../../generated/api';
 import type { TrainingNewConfig } from '../../../types/training';
 
