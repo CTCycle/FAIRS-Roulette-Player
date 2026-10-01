@@ -23,7 +23,7 @@ The normal setup runs locally in your browser. The application is built with a P
 
 ## Before you begin
 
-- Windows with PowerShell is the supported launch environment. The repository includes a portable Python runtime, uv, and Node.js setup, so a separate global Python or Node.js installation is not required.
+- Windows with PowerShell is the supported launch environment. Portable Python, uv, and Node.js runtimes are included, so no separate global installation is required.
 - Use a fully extracted copy of the repository in a writable folder. Do not run the application from inside a ZIP archive or from a location where Windows prevents the launcher from creating files.
 - The first setup needs outbound network access so the launcher can download runtimes and dependencies. Later starts reuse the prepared environment when it is ready.
 - CPU operation is the normal path. Optional GPU, mixed-precision, and JIT choices are useful only when the local machine and installed machine-learning support them.
@@ -52,15 +52,9 @@ On the first run:
 
 If the environment is missing, option 1 can prepare the Standard environment automatically. The first setup may take several minutes while runtimes and dependencies are downloaded. When the backend and web interface are ready, the launcher opens FAIRS in your default browser and prints the active addresses.
 
-With the default settings, the [main interface](http://127.0.0.1:8051) is available at port 8051. If the browser does not open automatically, use the interface address printed by the launcher. The [backend health check](http://127.0.0.1:8890/api/health) is available for troubleshooting; the [API documentation](http://127.0.0.1:8890/docs) is intended for advanced users.
+With the default settings, the [main interface](http://127.0.0.1:8051) runs on port 8051. The [backend health check](http://127.0.0.1:8890/api/health) and the [API documentation](http://127.0.0.1:8890/docs) run on port 8890 for troubleshooting and advanced use.
 
-Later launches check the configured backend and frontend ports before doing runtime, dependency, or build work. If a listener is present, option 1 displays the PID, process name, occupied configured port, and executable path when available, then asks whether to terminate those exact processes. Answering **No** terminates nothing and returns to the menu; noninteractive launches fail closed. Each confirmed PID is targeted once, and a remaining or replacement listener aborts startup rather than being killed automatically.
-
-Prepared launches reuse independent backend and frontend dependency state. A changed `app/server/pyproject.toml` or `uv.lock` can resync backend dependencies without rebuilding the web interface. Frontend rebuild decisions use a SHA-256 content fingerprint and `app/client/dist/.fairs-build-state.json`, so they respond to real build-input changes, missing/corrupt state, incomplete output, or a changed Node.js baseline—not to timestamps, README edits, or lint-only configuration changes.
-
-The launcher keeps the backend terminal visible while the application is running.
-
-Close the application terminal to stop the local application session.
+Later launches reuse the prepared environment and rebuild the web interface only when its build inputs change. If a configured port is already occupied, option 1 asks before terminating those exact processes; answering **No** leaves them untouched. The launcher keeps the backend terminal visible while the application runs, and closing that terminal stops the session.
 
 ### Launcher menu
 
@@ -99,9 +93,10 @@ FAIRS separates an experiment into two related phases:
 2. Upload a CSV/XLSX roulette dataset or start the synthetic generator. CSV delimiters are detected automatically for comma-, semicolon-, tab-, and pipe-separated files.
 3. Inspect the dataset preview before using it. Synthetic data is useful for a quick baseline and does not represent proof of a real-world advantage.
 4. Open the training wizard and work through its six sections: **Agent Configuration**, **Environment & Memory**, **Bet Strategy Policy**, **Dataset Configuration**, **Session & Compute**, and **Summary**. Use the breadcrumbs to revisit a section and review the summary before starting.
-5. Start training and monitor status, progress, loss/RMSE, reward, simulated capital, current bet, strategy, timestep, and history charts. Loss/RMSE is an error measure; reward and simulated capital show how the configuration performed in the experiment.
+5. Start training and monitor progress, loss/RMSE, reward, simulated capital, and the history charts. Loss/RMSE is an error measure; reward and simulated capital show how the configuration performed in the experiment.
 6. Open the checkpoint panel when the run completes. Inspect checkpoint metadata, resume an interrupted run, or delete an obsolete checkpoint from that panel. If a run is cancelled, the monitor reports the stopped/cancelled state and does not create a completed checkpoint.
 
+![Training workspace](assets/figures/training-page.png)
 _The Training workspace combines dataset upload, checkpoint management, and a balanced monitor with grouped metrics and history charts._
 
 Training data uses the same canonical 0..36 roulette range whether it comes from an uploaded file or the synthetic generator. The application also applies the same preparation rules to both sources so that comparisons are meaningful.
@@ -119,7 +114,7 @@ The agent also revisits earlier experiences in a randomized order and uses a slo
 
 ### Understanding the experiment controls
 
-The wizard exposes controls that affect how much history the agent sees, how much capacity the model has, how quickly it learns, how much experience it retains, how strongly it values future rewards, how much it explores, and how long it trains.
+The wizard exposes controls that affect the agent's history, model capacity, learning speed, experience retention, future-reward weighting, exploration, and training length.
 
 In practice:
 
@@ -141,9 +136,7 @@ Change only one or two controls at a time, and keep the dataset, validation spli
 5. Enter the observed wheel value, confirm it, and then request the next prediction. Repeat this loop for each round.
 6. Review the session history, including predictions, observed values, outcomes, bets, capital, and step results. Use **Stop** to shut down the active session and **Clear** to remove its persisted step history after the session has stopped.
 
-Dynamic betting strategies expose the strategy name, current bet, and suggested next bet alongside the prediction. Applying the suggestion changes the current bet for the experiment; it does not advance the round. Session history is restored when you navigate away and back while the local backend session still exists. A backend restart ends process-local live sessions, as described in the startup guide.
-
-**Play** starts a session and fetches a prediction; it does not submit a wheel result for you. Applying a suggested bet changes the current bet amount only; it does not advance the session. The observed value must be recorded before the next prediction can use it as context.
+**Play** starts a session and fetches a prediction; it does not enter the observed result for you. Applying a suggested bet changes the bet amount without advancing the round. Dynamic betting strategies show the strategy name, current bet, and suggested next bet alongside the prediction. Session history is restored when you navigate away and back while the local backend session still exists; a backend restart ends live sessions.
 
 ![Inference session](assets/figures/inference-page.png)
 _The Inference workspace keeps setup, live metrics, and the AI suggestion stacked on the left beside a large, bounded session-history table._
