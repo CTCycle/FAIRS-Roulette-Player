@@ -1,3 +1,6 @@
+// Copyright © 2023 Thomas Virdis
+// Licensed under the MIT License.
+
 import { describe, expect, it } from 'vitest'
 import { initialTrainingNewConfig } from '../../src/types/training'
 import { buildTrainingPayload } from '../../src/pages/Training/components/trainingPayload'

@@ -1,3 +1,6 @@
+// Copyright © 2023 Thomas Virdis
+// Licensed under the MIT License.
+
 import { defineConfig } from '@playwright/test'
 
 const baseURL = process.env.FRONTEND_E2E_BASE_URL ?? 'http://127.0.0.1:4173'

@@ -1,3 +1,6 @@
+# Copyright © 2023 Thomas Virdis
+# Licensed under the MIT License.
+
 """Focused browser coverage for the optional in-app guidance system."""
 
 from playwright.sync_api import Page, expect

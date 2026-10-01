@@ -1,3 +1,6 @@
+// Copyright © 2023 Thomas Virdis
+// Licensed under the MIT License.
+
 import React from 'react';
 import { ArrowRight, Check, Eye, Play } from 'lucide-react';
 

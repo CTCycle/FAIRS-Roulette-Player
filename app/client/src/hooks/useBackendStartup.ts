@@ -1,3 +1,6 @@
+// Copyright © 2023 Thomas Virdis
+// Licensed under the MIT License.
+
 import { useCallback, useEffect, useState } from 'react';
 import type { HealthResponse } from '../generated/api';
 import type { BackendStartupState } from '../types/startup';

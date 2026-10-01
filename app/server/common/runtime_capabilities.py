@@ -1,3 +1,6 @@
+# Copyright © 2023 Thomas Virdis
+# Licensed under the MIT License.
+
 """Runtime capability checks for optional backend execution features."""
 
 from __future__ import annotations

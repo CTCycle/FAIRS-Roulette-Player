@@ -1,3 +1,6 @@
+// Copyright © 2023 Thomas Virdis
+// Licensed under the MIT License.
+
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { InferenceSetupState } from '../types/inference';
 import { useCheckpointOptions } from './useCheckpointOptions';
