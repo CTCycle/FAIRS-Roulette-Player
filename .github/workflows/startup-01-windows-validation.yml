@@ -1,0 +1,110 @@
+name: STARTUP-01 Windows cold-start validation
+on:
+  push:
+    branches: [validation/startup-01-windows-20261015]
+permissions:
+  contents: read
+jobs:
+  cold-start:
+    runs-on: windows-2025
+    timeout-minutes: 100
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@v4
+      - name: Assert clean baseline
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory startup01-results -Force | Out-Null
+          foreach ($path in @('runtimes/python/python.exe', 'runtimes/nodejs/node.exe', 'app/server/.venv/Scripts/python.exe', 'app/client/node_modules')) {
+            if (Test-Path $path) { throw "Dirty runtime at $path" }
+          }
+          Write-Host "Clean checkout: $env:GITHUB_SHA"
+      - name: Official Windows cold installation
+        shell: pwsh
+        timeout-minutes: 75
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $answers = Join-Path $env:RUNNER_TEMP 'install-answers.txt'
+          [IO.File]::WriteAllText($answers, ('2' + [Environment]::NewLine + '2' + [Environment]::NewLine))
+          $cmd = 'type "' + $answers + '" | powershell.exe -NoProfile -ExecutionPolicy Bypass -File "start_on_windows.ps1"'
+          cmd.exe /d /s /c $cmd 2>&1 | Tee-Object 'startup01-results/cold-install.log'
+          if ($LASTEXITCODE -ne 0) { throw "Cold install failed ($LASTEXITCODE)" }
+          'COLD_INSTALL_PASS' | Set-Content 'startup01-results/install-result.txt'
+      - name: Verify installation artifacts
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($path in @(
+            'runtimes/python/python.exe',
+            'runtimes/python/python314._pth',
+            'runtimes/uv/uv.exe',
+            'runtimes/nodejs/node.exe',
+            'app/server/.venv/Scripts/python.exe',
+            'app/server/.venv/.fairs-install-state.json',
+            'app/client/node_modules/.fairs-install-state.json',
+            'app/client/dist/.fairs-build-state.json'
+          )) {
+            if (-not (Test-Path $path)) { throw "Missing artifact: $path" }
+            Write-Host "PASS $path"
+          }
+          if (-not ((Get-Content 'runtimes/python/python314._pth') -contains 'import site')) { throw 'site is disabled in portable Python' }
+          & 'runtimes/python/python.exe' -c 'import platform; print(platform.python_version())'
+          if ($LASTEXITCODE -ne 0) { throw 'Python verification failed' }
+          'ARTIFACTS_PASS' | Set-Content 'startup01-results/artifacts-result.txt'
+      - name: Protected Python pth reuse
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pth = Get-Item 'runtimes/python/python314._pth'
+          $hash = (Get-FileHash $pth.FullName -Algorithm SHA256).Hash
+          $pth.IsReadOnly = $true
+          try {
+            $answers = Join-Path $env:RUNNER_TEMP 'protected-answers.txt'
+            [IO.File]::WriteAllText($answers, ('2' + [Environment]::NewLine + '2' + [Environment]::NewLine))
+            $cmd = 'type "' + $answers + '" | powershell.exe -NoProfile -ExecutionPolicy Bypass -File "start_on_windows.ps1"'
+            cmd.exe /d /s /c $cmd 2>&1 | Tee-Object 'startup01-results/protected-pth.log'
+            $code = $LASTEXITCODE
+          } finally { $pth.IsReadOnly = $false }
+          if ((Get-FileHash $pth.FullName -Algorithm SHA256).Hash -ne $hash) { throw 'Protected file mutated' }
+          if ($code -ne 0) {
+            'PROTECTED_PTH_FAIL' | Set-Content 'startup01-results/protected-result.txt'
+            throw "Reusing prepared read-only pth failed ($code)"
+          }
+          'PROTECTED_PTH_PASS' | Set-Content 'startup01-results/protected-result.txt'
+      - name: Official launcher and live health
+        if: always()
+        shell: pwsh
+        timeout-minutes: 15
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (-not (Test-Path 'app/client/dist/.fairs-build-state.json')) {
+            Write-Host 'SKIP: installation incomplete'
+            exit 0
+          }
+          $answers = Join-Path $env:RUNNER_TEMP 'launch-answers.txt'
+          [IO.File]::WriteAllText($answers, ('1' + [Environment]::NewLine))
+          $cmd = 'type "' + $answers + '" | powershell.exe -NoProfile -ExecutionPolicy Bypass -File "start_on_windows.ps1"'
+          cmd.exe /d /s /c $cmd 2>&1 | Tee-Object 'startup01-results/live-launch.log'
+          if ($LASTEXITCODE -ne 0) { throw "Official launch failed ($LASTEXITCODE)" }
+          $ready = $false
+          foreach ($attempt in 1..90) {
+            try {
+              $health = Invoke-WebRequest 'http://127.0.0.1:8890/api/health' -UseBasicParsing -TimeoutSec 3
+              $ui = Invoke-WebRequest 'http://127.0.0.1:8051/' -UseBasicParsing -TimeoutSec 3
+              if ($health.StatusCode -eq 200 -and $ui.StatusCode -eq 200) {
+                $ready = $true
+                break
+              }
+            } catch { Start-Sleep -Seconds 2 }
+          }
+          if (-not $ready) { throw 'Backend/frontend readiness not reached' }
+          'LIVE_PASS' | Set-Content 'startup01-results/live-result.txt'
+          Write-Host 'PASS: backend and frontend are ready'
+      - name: Preserve evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: startup01-windows-evidence
+          path: startup01-results/
+          if-no-files-found: warn
