@@ -12,7 +12,7 @@ jobs:
       - name: Checkout candidate
         uses: actions/checkout@v4
       - name: Assert clean baseline
-        shell: pwsh
+        shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           New-Item -ItemType Directory startup01-results -Force | Out-Null
@@ -21,7 +21,7 @@ jobs:
           }
           Write-Host "Clean checkout: $env:GITHUB_SHA"
       - name: Official Windows cold installation
-        shell: pwsh
+        shell: powershell
         timeout-minutes: 75
         run: |
           $ErrorActionPreference = 'Stop'
@@ -32,7 +32,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Cold install failed ($LASTEXITCODE)" }
           'COLD_INSTALL_PASS' | Set-Content 'startup01-results/install-result.txt'
       - name: Verify installation artifacts
-        shell: pwsh
+        shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           foreach ($path in @(
@@ -53,7 +53,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Python verification failed' }
           'ARTIFACTS_PASS' | Set-Content 'startup01-results/artifacts-result.txt'
       - name: Protected Python pth reuse
-        shell: pwsh
+        shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           $pth = Get-Item 'runtimes/python/python314._pth'
@@ -74,7 +74,7 @@ jobs:
           'PROTECTED_PTH_PASS' | Set-Content 'startup01-results/protected-result.txt'
       - name: Official launcher and live health
         if: always()
-        shell: pwsh
+        shell: powershell
         timeout-minutes: 15
         run: |
           $ErrorActionPreference = 'Stop'
