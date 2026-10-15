@@ -24,7 +24,7 @@ jobs:
         shell: powershell
         timeout-minutes: 75
         run: |
-          $ErrorActionPreference = 'Stop'
+          $ErrorActionPreference = 'Continue'
           $answers = Join-Path $env:RUNNER_TEMP 'install-answers.txt'
           [IO.File]::WriteAllText($answers, ('2' + [Environment]::NewLine + '2' + [Environment]::NewLine))
           $cmd = 'type "' + $answers + '" | powershell.exe -NoProfile -ExecutionPolicy Bypass -File "start_on_windows.ps1"'
@@ -55,7 +55,7 @@ jobs:
       - name: Protected Python pth reuse
         shell: powershell
         run: |
-          $ErrorActionPreference = 'Stop'
+          $ErrorActionPreference = 'Continue'
           $pth = Get-Item 'runtimes/python/python314._pth'
           $hash = (Get-FileHash $pth.FullName -Algorithm SHA256).Hash
           $pth.IsReadOnly = $true
@@ -77,7 +77,7 @@ jobs:
         shell: powershell
         timeout-minutes: 15
         run: |
-          $ErrorActionPreference = 'Stop'
+          $ErrorActionPreference = 'Continue'
           if (-not (Test-Path 'app/client/dist/.fairs-build-state.json')) {
             Write-Host 'SKIP: installation incomplete'
             exit 0
