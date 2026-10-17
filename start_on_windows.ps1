@@ -344,7 +344,10 @@ function Invoke-DownloadAndExtract([string]$Uri, [string]$ArchivePath, [string]$
 }
 
 function Invoke-PatchPth([string]$Path) {
-    (Get-Content -LiteralPath $Path) -replace '^#import site$', 'import site' | Set-Content -LiteralPath $Path -Encoding ASCII
+    $lines = @(Get-Content -LiteralPath $Path)
+    if ($lines -contains 'import site') { return }
+    if (-not ($lines -contains '#import site')) { throw "Portable Python site configuration is missing: $Path" }
+    $lines -replace '^#import site$', 'import site' | Set-Content -LiteralPath $Path -Encoding ASCII
 }
 
 function Invoke-CheckPyver([string]$PythonExe) {
@@ -533,7 +536,7 @@ function Get-ContentFingerprint {
 
     $sha256 = [Security.Cryptography.SHA256]::Create()
     try {
-        return ([Convert]::ToHexString($sha256.ComputeHash([Text.Encoding]::UTF8.GetBytes($canonicalText)))).ToLowerInvariant()
+        return ([BitConverter]::ToString($sha256.ComputeHash([Text.Encoding]::UTF8.GetBytes($canonicalText))).Replace('-', '')).ToLowerInvariant()
     } finally {
         $sha256.Dispose()
     }
