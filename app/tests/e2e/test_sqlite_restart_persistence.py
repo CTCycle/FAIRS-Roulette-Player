@@ -71,7 +71,6 @@ server.run()
 print("FAIRS_RESTART_TEST_SERVER_STOPPED", flush=True)
 """
 
-
 ###############################################################################
 @pytest.fixture
 def isolated_app_data_parent(
@@ -83,7 +82,6 @@ def isolated_app_data_parent(
     data_parent.mkdir()
     return data_parent
 
-
 ###############################################################################
 @pytest.fixture(scope="session")
 def isolated_app_data_temp_root() -> Iterator[Path]:
@@ -91,20 +89,17 @@ def isolated_app_data_temp_root() -> Iterator[Path]:
     with tempfile.TemporaryDirectory(prefix="fairs-restart-data-") as temp_dir:
         yield Path(temp_dir)
 
-
 ###############################################################################
 def _available_port() -> int:
     with socket.socket() as listener:
         listener.bind(("127.0.0.1", 0))
         return int(listener.getsockname()[1])
 
-
 ###############################################################################
 def _log_tail(log_path: Path) -> str:
     if not log_path.exists():
         return ""
     return log_path.read_text(encoding="utf-8", errors="replace")[-4000:]
-
 
 ###############################################################################
 def _wait_until_ready(
@@ -126,7 +121,6 @@ def _wait_until_ready(
             pass
         time.sleep(0.25)
     raise TimeoutError(f"Isolated backend did not become healthy:\n{_log_tail(log_path)}")
-
 
 ###############################################################################
 @contextmanager
@@ -182,7 +176,6 @@ def _running_backend(
                     except subprocess.TimeoutExpired:
                         process.kill()
                         process.wait(timeout=10)
-
 
 ###############################################################################
 @contextmanager
@@ -253,7 +246,6 @@ def _running_frontend(
                     process.kill()
                     process.wait(timeout=10)
 
-
 ###############################################################################
 def _copy_inference_restart_fixture(data_root: Path) -> Path:
     source_data = PROJECT_ROOT / "data"
@@ -277,7 +269,6 @@ def _copy_inference_restart_fixture(data_root: Path) -> Path:
         data_root / "checkpoints" / checkpoint_source.name,
     )
     return database_path
-
 
 ###############################################################################
 def _persisted_inference_session(
@@ -307,13 +298,11 @@ def _persisted_inference_session(
     assert session is not None, f"Inference session {session_id} was not persisted"
     return session, steps
 
-
 ###############################################################################
 def _training_summary(client: httpx.Client) -> list[dict[str, object]]:
     response = client.get("/datasets/training/summary")
     assert response.status_code == 200, response.text
     return response.json()["datasets"]
-
 
 ###############################################################################
 def _assert_alembic_head(database_path: Path) -> None:
@@ -323,7 +312,6 @@ def _assert_alembic_head(database_path: Path) -> None:
             "SELECT version_num FROM alembic_version"
         ).fetchone()
     assert revision == ("0002_rename_relative_preference",)
-
 
 ###############################################################################
 def test_uploaded_dataset_survives_backend_restart_and_stays_deleted(
@@ -378,7 +366,6 @@ def test_uploaded_dataset_survives_backend_restart_and_stays_deleted(
         assert _training_summary(client) == []
 
     _assert_alembic_head(database_path)
-
 
 ###############################################################################
 def test_inference_session_recovers_live_and_expires_after_backend_restart(

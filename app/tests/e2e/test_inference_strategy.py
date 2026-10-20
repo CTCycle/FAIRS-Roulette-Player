@@ -24,14 +24,12 @@ STRATEGY_NAMES = {
     4: "Fibonacci",
 }
 
-
 ###############################################################################
 def _data_root() -> Path:
     configured = os.getenv("FAIRS_DATA_DIR", "").strip()
     if configured:
         return Path(configured).resolve()
     return Path(__file__).resolve().parents[3] / "data"
-
 
 ###############################################################################
 def _persisted_steps(session_id: str) -> list[tuple[object, ...]]:
@@ -49,7 +47,6 @@ def _persisted_steps(session_id: str) -> list[tuple[object, ...]]:
             """,
             (session_id,),
         ).fetchall()
-
 
 ###############################################################################
 def _require_val15_fixture(api_context: APIRequestContext) -> str:
@@ -79,7 +76,6 @@ def _require_val15_fixture(api_context: APIRequestContext) -> str:
     assert training["dynamic_betting_enabled"] is True
     assert training["bet_strategy_model_enabled"] is True
     return VAL15_CHECKPOINT
-
 
 ###############################################################################
 def test_learned_strategy_suggestion_applies_without_advancing_pending_step(
