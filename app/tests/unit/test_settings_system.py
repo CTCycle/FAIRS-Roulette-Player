@@ -12,6 +12,7 @@ import pytest
 from server.configurations import environment
 
 
+###############################################################################
 @pytest.fixture(autouse=True)
 def reset_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     environment.reset_environment_for_tests()
@@ -21,10 +22,12 @@ def reset_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     environment.reset_environment_for_tests()
 
 
+###############################################################################
 def _write_env(path: Path, lines: list[str]) -> None:
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+###############################################################################
 def test_environment_overrides_existing_process_values(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -38,6 +41,7 @@ def test_environment_overrides_existing_process_values(
     assert os.getenv("FASTAPI_HOST") == "from_dotenv"
 
 
+###############################################################################
 def test_environment_creates_missing_env_from_example(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -54,6 +58,7 @@ def test_environment_creates_missing_env_from_example(
     assert "EMBEDDED_DATABASE" not in os.environ
 
 
+###############################################################################
 def test_environment_preserves_existing_env(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -71,6 +76,7 @@ def test_environment_preserves_existing_env(
     assert os.getenv("FASTAPI_HOST") == "from-existing"
 
 
+###############################################################################
 def test_environment_requires_template_when_env_is_missing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -83,6 +89,7 @@ def test_environment_requires_template_when_env_is_missing(
         environment.load_environment(force=True)
 
 
+###############################################################################
 def test_environment_load_is_idempotent_without_force(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -96,6 +103,7 @@ def test_environment_load_is_idempotent_without_force(
     assert os.getenv("FASTAPI_HOST") == "first"
 
 
+###############################################################################
 def test_environment_force_reload_applies_updated_dotenv(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -109,6 +117,7 @@ def test_environment_force_reload_applies_updated_dotenv(
     assert os.getenv("FASTAPI_HOST") == "second"
 
 
+###############################################################################
 def test_environment_does_not_load_database_connection_variables(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -129,6 +138,7 @@ def test_environment_does_not_load_database_connection_variables(
     assert "DATABASE_PASSWORD=legacy-secret" in env_path.read_text(encoding="utf-8")
 
 
+###############################################################################
 def test_server_package_import_does_not_load_environment(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

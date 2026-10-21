@@ -19,6 +19,25 @@ const settings = () => ({
 
 const installApiMocks = async (page: Page) => {
     let currentSettings = settings()
+    let databaseConfiguration = {
+        backend: 'sqlite' as 'sqlite' | 'postgresql',
+        sqlite_path: 'data/database.db',
+        host: '',
+        port: 5432,
+        database_name: '',
+        username: '',
+        password_configured: false,
+        ssl: false,
+        ssl_ca: '',
+        connect_timeout: 10,
+        insert_batch_size: 1000,
+    }
+    const databaseStatus = () => ({
+        configuration: databaseConfiguration,
+        active_backend: databaseConfiguration.backend,
+        status: 'ready',
+        message: null,
+    })
     await page.route('**/api/**', async (route) => {
         const request = route.request()
         const url = new URL(request.url())
@@ -107,6 +126,26 @@ const installApiMocks = async (page: Page) => {
             }
             return json(currentSettings)
         }
+        if (url.pathname === '/api/settings/reset' && method === 'POST') {
+            currentSettings = settings()
+            return json(currentSettings)
+        }
+        if (url.pathname === '/api/settings/database' && method === 'GET') {
+            return json(databaseStatus())
+        }
+        if (url.pathname === '/api/settings/database/test' && method === 'POST') {
+            return json({ success: true, message: 'Connection test succeeded.' })
+        }
+        if (url.pathname === '/api/settings/database' && method === 'PUT') {
+            const candidate = request.postDataJSON() as typeof databaseConfiguration & { password?: string }
+            const { password, ...publicCandidate } = candidate
+            databaseConfiguration = {
+                ...databaseConfiguration,
+                ...publicCandidate,
+                password_configured: Boolean(password) || databaseConfiguration.password_configured,
+            }
+            return json(databaseStatus())
+        }
         return json({ detail: `Unexpected mocked request: ${method} ${url.pathname}` }, 404)
     })
 }
@@ -139,14 +178,175 @@ test('Inference setup loads checkpoint and dataset options', async ({ page }) =>
     await expect(page.getByRole('button', { name: 'Play', exact: true })).toBeEnabled()
 })
 
-test('Settings save feedback follows the mocked update response', async ({ page }) => {
+test('Settings changes save automatically and survive a reload', async ({ page }) => {
     await page.goto('/settings')
+    await expect(page.getByRole('button', { name: 'Save settings', exact: true })).toHaveCount(0)
     const maximum = page.getByLabel('Maximum', { exact: true })
     await expect(maximum).toHaveValue('36')
     await maximum.fill('35')
-    await page.getByRole('button', { name: 'Save settings', exact: true }).click()
-    await expect(page.getByRole('status')).toHaveText('Settings saved.')
+    await expect(page.getByRole('status')).toHaveText('Changes saved.')
     await expect(maximum).toHaveValue('35')
+    const minimum = page.getByLabel('Minimum', { exact: true })
+    const includeZero = page.getByLabel('Include zero', { exact: true })
+    await minimum.fill('3')
+    await includeZero.uncheck()
+    await expect(page.getByRole('status')).toHaveText('Changes saved.')
+
+    await page.getByRole('button', { name: 'Appearance', exact: true }).click()
+    const invert = page.getByLabel('Invert colors', { exact: true })
+    const labels = page.getByLabel('Show number labels', { exact: true })
+    await invert.check()
+    await expect(page.getByRole('status')).toHaveText('Changes saved.')
+    await labels.uncheck()
+    await expect(page.getByRole('status')).toHaveText('Changes saved.')
+
+    await page.getByRole('button', { name: 'Runtime', exact: true }).click()
+    const polling = page.getByLabel('Polling interval', { exact: true })
+    await polling.fill('2.5')
+    await expect(page.getByRole('status')).toHaveText('Changes saved.')
+
+    await page.getByRole('button', { name: 'Advanced', exact: true }).click()
+    const jitCompile = page.getByLabel('Enable JIT compilation', { exact: true })
+    const jitBackend = page.getByLabel('JIT backend', { exact: true })
+    await jitCompile.check()
+    await expect(page.getByRole('status')).toHaveText('Changes saved.')
+    await jitBackend.fill('mock-backend')
+    await expect(page.getByRole('status')).toHaveText('Changes saved.')
+
+    await page.reload()
+    await expect(page.getByLabel('Minimum', { exact: true })).toHaveValue('3')
+    await expect(page.getByLabel('Maximum', { exact: true })).toHaveValue('35')
+    await expect(page.getByLabel('Include zero', { exact: true })).not.toBeChecked()
+    await page.getByRole('button', { name: 'Appearance', exact: true }).click()
+    await expect(page.getByLabel('Invert colors', { exact: true })).toBeChecked()
+    await expect(page.getByLabel('Show number labels', { exact: true })).not.toBeChecked()
+    await page.getByRole('button', { name: 'Runtime', exact: true }).click()
+    await expect(page.getByLabel('Polling interval', { exact: true })).toHaveValue('2.5')
+    await page.getByRole('button', { name: 'Advanced', exact: true }).click()
+    await expect(page.getByLabel('Enable JIT compilation', { exact: true })).toBeChecked()
+    await expect(page.getByLabel('JIT backend', { exact: true })).toHaveValue('mock-backend')
+})
+
+test('Settings debounces continuous edits and preserves later changes after a failed write', async ({ page }) => {
+    const patches: string[] = []
+    let failNextPatch = true
+    page.on('request', (request) => {
+        if (request.method() === 'PATCH' && new URL(request.url()).pathname === '/api/settings') {
+            patches.push(request.postData() ?? '')
+        }
+    })
+    await page.route('**/api/settings', async (route) => {
+        const patch = route.request().postDataJSON() as { roulette?: { invert_colors?: boolean } } | null;
+        if (
+            route.request().method() === 'PATCH'
+            && failNextPatch
+            && patch?.roulette?.invert_colors === true
+        ) {
+            failNextPatch = false
+            await route.fulfill({
+                status: 500,
+                contentType: 'application/json',
+                body: JSON.stringify({ detail: 'Simulated database write failure.' }),
+            })
+            return
+        }
+        await route.fallback()
+    })
+
+    await page.goto('/settings')
+    const polling = page.getByLabel('Polling interval', { exact: true })
+    await page.getByRole('button', { name: 'Runtime', exact: true }).click()
+    await polling.fill('2.1')
+    await polling.fill('3.2')
+    await polling.fill('4.3')
+    await expect(page.getByRole('status')).toHaveText('Changes saved.')
+    expect(patches).toHaveLength(1)
+    expect(JSON.parse(patches[0]).jobs.polling_interval).toBe(4.3)
+
+    await page.getByRole('button', { name: 'Appearance', exact: true }).click()
+    const invert = page.getByLabel('Invert colors', { exact: true })
+    await invert.check()
+    await expect(page.getByRole('alert')).toContainText('Change not saved.')
+    await page.getByLabel('Show number labels', { exact: true }).uncheck()
+    await expect(page.getByRole('status')).toHaveText('Changes saved.')
+
+    await page.reload()
+    await page.getByRole('button', { name: 'Runtime', exact: true }).click()
+    await expect(page.getByLabel('Polling interval', { exact: true })).toHaveValue('4.3')
+    await page.getByRole('button', { name: 'Appearance', exact: true }).click()
+    await expect(page.getByLabel('Invert colors', { exact: true })).toBeChecked()
+    await expect(page.getByLabel('Show number labels', { exact: true })).not.toBeChecked()
+})
+
+test('Settings retries a newer immediate edit queued during a failed write', async ({ page }) => {
+    let failNextPatch = true
+    let notifyFirstPatchStarted!: () => void
+    const firstPatchStarted = new Promise<void>((resolve) => {
+        notifyFirstPatchStarted = resolve
+    })
+    await page.route('**/api/settings', async (route) => {
+        const patch = route.request().postDataJSON() as { roulette?: { invert_colors?: boolean } } | null
+        if (
+            route.request().method() === 'PATCH'
+            && failNextPatch
+            && patch?.roulette?.invert_colors === true
+        ) {
+            failNextPatch = false
+            notifyFirstPatchStarted()
+            await new Promise((resolve) => setTimeout(resolve, 200))
+            await route.fulfill({
+                status: 500,
+                contentType: 'application/json',
+                body: JSON.stringify({ detail: 'Simulated database write failure.' }),
+            })
+            return
+        }
+        await route.fallback()
+    })
+
+    await page.goto('/settings')
+    await page.getByRole('button', { name: 'Appearance', exact: true }).click()
+    await page.getByLabel('Invert colors', { exact: true }).check()
+    await firstPatchStarted
+    await page.getByLabel('Show number labels', { exact: true }).uncheck()
+    await expect(page.getByRole('status')).toHaveText('Changes saved.')
+
+    await page.reload()
+    await page.getByRole('button', { name: 'Appearance', exact: true }).click()
+    await expect(page.getByLabel('Invert colors', { exact: true })).toBeChecked()
+    await expect(page.getByLabel('Show number labels', { exact: true })).not.toBeChecked()
+})
+
+test('Database fields stay as a draft until the explicit switch action', async ({ page }) => {
+    await page.goto('/settings?section=database')
+    await expect(page.getByText('Active: SQLite', { exact: true })).toBeVisible()
+    await page.getByLabel('Backend', { exact: true }).selectOption('postgresql')
+    await page.getByLabel('PostgreSQL host', { exact: true }).fill('db.example.test')
+    await page.getByLabel('PostgreSQL port', { exact: true }).fill('5433')
+    await page.getByLabel('PostgreSQL database name', { exact: true }).fill('fairs_test')
+    await page.getByLabel('PostgreSQL username', { exact: true }).fill('fairs_user')
+    await page.getByLabel('Password', { exact: true }).fill('secret')
+    await page.getByLabel('Require SSL', { exact: true }).check()
+    await page.getByLabel('SSL and CA certificate').fill('certs/ca.pem')
+    await page.getByLabel('Connection timeout', { exact: true }).fill('15')
+    await page.getByLabel('Insert batch size', { exact: true }).fill('2500')
+
+    await page.getByRole('button', { name: 'Advanced', exact: true }).click()
+    await page.getByRole('button', { name: 'Database', exact: true }).click()
+    await expect(page.getByLabel('PostgreSQL host', { exact: true })).toHaveValue('db.example.test')
+
+    await page.getByRole('button', { name: 'Test connection', exact: true }).click()
+    await expect(page.getByText('Connection test succeeded.', { exact: true })).toBeVisible()
+    await expect(page.getByText('Active: SQLite', { exact: true })).toBeVisible()
+    const beforeConfirmation = await page.evaluate(async () => (
+        fetch('/api/settings/database').then((response) => response.json())
+    ))
+    expect(beforeConfirmation.active_backend).toBe('sqlite')
+    expect(beforeConfirmation.configuration.backend).toBe('sqlite')
+
+    await page.getByRole('button', { name: 'Apply and switch', exact: true }).click()
+    await expect(page.getByText('Active: PostgreSQL', { exact: true })).toBeVisible()
+    await expect(page.getByText('Database activated. Settings were reloaded from that database.', { exact: true })).toBeVisible()
 })
 
 test('1100px is supported and 1099px shows the minimum-width notice', async ({ page }) => {

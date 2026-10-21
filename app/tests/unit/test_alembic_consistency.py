@@ -21,11 +21,14 @@ def test_alembic_history_has_one_current_head_and_immutable_baseline() -> None:
     config = Config(str(ALEMBIC_CONFIG_PATH))
     script = ScriptDirectory.from_config(config)
 
-    assert script.get_heads() == ["0002_rename_relative_preference"]
+    assert script.get_heads() == ["0003_application_settings"]
     assert script.get_revision("0001_initial_schema").down_revision is None
     assert (
         script.get_revision("0002_rename_relative_preference").down_revision
         == "0001_initial_schema"
+    )
+    assert script.get_revision("0003_application_settings").down_revision == (
+        "0002_rename_relative_preference"
     )
 
 ###############################################################################

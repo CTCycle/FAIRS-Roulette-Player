@@ -59,6 +59,7 @@ def _build_client(tmp_path: Path) -> tuple[TestClient, RuntimeDatabaseManager]:
     return TestClient(application), manager
 
 
+###############################################################################
 @contextmanager
 def _client_session(tmp_path: Path) -> Iterator[tuple[TestClient, RuntimeDatabaseManager]]:
     client, manager = _build_client(tmp_path)
@@ -95,26 +96,45 @@ def test_settings_api_supports_partial_update_and_reload(tmp_path: Path) -> None
         )
         device_response = client.patch(
             "/api/settings",
-            json={"device": {"jit_compile": False, "jit_backend": "eager"}},
+            json={"device": {"jit_compile": True, "jit_backend": "eager"}},
+        )
+        roulette_response = client.patch(
+            "/api/settings",
+            json={
+                "roulette": {
+                    "minimum_number": 1,
+                    "maximum_number": 12,
+                    "exclude_zero": True,
+                    "invert_colors": True,
+                    "show_number_labels": False,
+                }
+            },
         )
         current_response = client.get("/api/settings")
 
     assert jobs_response.status_code == 200
     assert device_response.status_code == 200
+    assert roulette_response.status_code == 200
     assert current_response.json() == {
         "jobs": {"polling_interval": 2.5},
-        "device": {"jit_compile": False, "jit_backend": "eager"},
+        "device": {"jit_compile": True, "jit_backend": "eager"},
         "roulette": {
-            "minimum_number": 0,
-            "maximum_number": 36,
-            "exclude_zero": False,
-            "invert_colors": False,
-            "show_number_labels": True,
+            "minimum_number": 1,
+            "maximum_number": 12,
+            "exclude_zero": True,
+            "invert_colors": True,
+            "show_number_labels": False,
         },
     }
     persisted = ApplicationSettingsRepository().get(manager)
+    assert persisted.device.jit_compile is True
     assert persisted.device.jit_backend == "eager"
     assert persisted.jobs.polling_interval == 2.5
+    assert persisted.roulette.minimum_number == 1
+    assert persisted.roulette.maximum_number == 12
+    assert persisted.roulette.exclude_zero is True
+    assert persisted.roulette.invert_colors is True
+    assert persisted.roulette.show_number_labels is False
 
 ###############################################################################
 def test_settings_api_accepts_jit_on_supported_python_runtime(tmp_path: Path) -> None:

@@ -81,10 +81,14 @@ def _stub_lifespan_dependencies(
         sqlite_path=Path("configured-test.db") if settings.database.embedded_database else None,
     )
 
+    ###############################################################################
     class StoreStub:
+
+        # -------------------------------------------------------------------------
         def load_or_migrate(self):
             return loaded_database
 
+        # -------------------------------------------------------------------------
         def current(self):
             return loaded_database
 
@@ -120,13 +124,19 @@ def _stub_lifespan_dependencies(
     monkeypatch.setattr(app_module, "DatasetImportService", lambda **kwargs: object())
     monkeypatch.setattr(app_module, "TabularFileLoader", lambda: object())
     monkeypatch.setattr(app_module, "DatasetService", lambda **kwargs: object())
+
+    ###############################################################################
     class TrainingServiceStub:
+
+        # -------------------------------------------------------------------------
         def apply_runtime_settings(self, *_args):
             return None
 
+        # -------------------------------------------------------------------------
         def apply_roulette_settings(self, *_args):
             return None
 
+        # -------------------------------------------------------------------------
         def apply_database_settings(self, *_args):
             return None
 
@@ -198,6 +208,18 @@ def test_repeated_lifespan_entry_reinitializes_and_disposes_once_per_run(
         def shutdown(self) -> None:
             self.shutdown_calls += 1
 
+        # -------------------------------------------------------------------------
+        def apply_runtime_settings(self, *_args) -> None:
+            return None
+
+        # -------------------------------------------------------------------------
+        def apply_roulette_settings(self, *_args) -> None:
+            return None
+
+        # -------------------------------------------------------------------------
+        def apply_database_settings(self, *_args) -> None:
+            return None
+
     ###############################################################################
     class DatabaseSpy:
 
@@ -223,7 +245,7 @@ def test_repeated_lifespan_entry_reinitializes_and_disposes_once_per_run(
     monkeypatch.setattr(
         app_module,
         "FAIRSDatabase",
-        lambda *_args: (databases.append(DatabaseSpy()) or databases[-1]),
+        lambda *_args, **_kwargs: (databases.append(DatabaseSpy()) or databases[-1]),
     )
     monkeypatch.setattr(
         app_module,
@@ -425,12 +447,15 @@ def test_lifespan_has_explicit_order_and_reverse_cleanup(monkeypatch) -> None:
             events.append("training-service")
             return True
 
+        # -------------------------------------------------------------------------
         def apply_runtime_settings(self, *_args) -> None:
             return None
 
+        # -------------------------------------------------------------------------
         def apply_roulette_settings(self, *_args) -> None:
             return None
 
+        # -------------------------------------------------------------------------
         def apply_database_settings(self, *_args) -> None:
             return None
 
@@ -526,12 +551,15 @@ def test_lifespan_rolls_back_partial_initialization(monkeypatch) -> None:
             events.append("training-service")
             return True
 
+        # -------------------------------------------------------------------------
         def apply_runtime_settings(self, *_args) -> None:
             return None
 
+        # -------------------------------------------------------------------------
         def apply_roulette_settings(self, *_args) -> None:
             return None
 
+        # -------------------------------------------------------------------------
         def apply_database_settings(self, *_args) -> None:
             return None
 

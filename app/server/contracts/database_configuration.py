@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from server.contracts.configuration import DatabaseSettings
 
 
+###############################################################################
 class DatabaseConfigurationInput(BaseModel):
     """Editable database connection details accepted by the Settings UI."""
 
@@ -28,6 +29,7 @@ class DatabaseConfigurationInput(BaseModel):
     connect_timeout: int = Field(default=10, ge=1, le=300)
     insert_batch_size: int = Field(default=1000, ge=1, le=100000)
 
+    # -------------------------------------------------------------------------
     @model_validator(mode="after")
     def validate_backend_fields(self) -> "DatabaseConfigurationInput":
         if self.backend == "sqlite":
@@ -52,6 +54,7 @@ class DatabaseConfigurationInput(BaseModel):
         return self
 
 
+###############################################################################
 class DatabaseConfigurationResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -68,6 +71,7 @@ class DatabaseConfigurationResponse(BaseModel):
     insert_batch_size: int = 1000
 
 
+###############################################################################
 class DatabaseStatusResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -77,6 +81,7 @@ class DatabaseStatusResponse(BaseModel):
     message: str | None = None
 
 
+###############################################################################
 class DatabaseTestResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -84,6 +89,7 @@ class DatabaseTestResponse(BaseModel):
     message: str
 
 
+###############################################################################
 def database_settings_from_input(
     candidate: DatabaseConfigurationInput,
     password: str | None,
@@ -117,6 +123,7 @@ def database_settings_from_input(
     )
 
 
+###############################################################################
 def public_configuration(
     *,
     backend: str,

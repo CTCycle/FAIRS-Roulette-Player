@@ -76,7 +76,6 @@ class ServerSettings:
     roulette: RouletteSettings = RouletteSettings()
 
 ###############################################################################
-###############################################################################
 class JsonJobsSettings(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -140,6 +139,7 @@ class JsonServerSettings(BaseModel):
     device: JsonDeviceSettings = Field(default_factory=JsonDeviceSettings)
     roulette: JsonRouletteSettings = Field(default_factory=JsonRouletteSettings)
 
+    # -------------------------------------------------------------------------
     def to_server_settings(self, database: DatabaseSettings) -> ServerSettings:
         return ServerSettings(
             database=database,

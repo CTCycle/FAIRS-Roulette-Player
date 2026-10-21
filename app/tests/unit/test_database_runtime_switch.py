@@ -28,10 +28,12 @@ from server.services.database_configuration import (
 )
 
 
+###############################################################################
 def _sqlite_settings() -> DatabaseSettings:
     return DatabaseSettings(True, None, None, None, None, None, None, False, None, 10, 1000)
 
 
+###############################################################################
 def _initialized_database(path: Path, polling_interval: float) -> FAIRSDatabase:
     settings = _sqlite_settings()
     initialize_database(settings, database_path=path)
@@ -50,6 +52,7 @@ def _initialized_database(path: Path, polling_interval: float) -> FAIRSDatabase:
     return database
 
 
+###############################################################################
 @pytest.fixture
 def api_runtime(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(database_configuration_module, "run_startup_validations", lambda _settings: None)
@@ -94,6 +97,7 @@ def api_runtime(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
         runtime_database.dispose()
 
 
+###############################################################################
 def test_database_status_redacts_saved_password(api_runtime) -> None:
     service, runtime_database, store, _old_path, _fail, _application = api_runtime
     postgres = DatabaseConfigurationInput(
@@ -114,6 +118,7 @@ def test_database_status_redacts_saved_password(api_runtime) -> None:
     assert runtime_database.active.settings.embedded_database is True
 
 
+###############################################################################
 def test_connection_test_does_not_activate_or_persist_candidate(api_runtime, tmp_path: Path) -> None:
     service, runtime_database, store, old_path, _fail, _application = api_runtime
     candidate_path = tmp_path / "test-only.db"
@@ -128,6 +133,7 @@ def test_connection_test_does_not_activate_or_persist_candidate(api_runtime, tmp
     assert store.current().sqlite_path == old_path
 
 
+###############################################################################
 def test_switch_loads_target_settings_without_copying_settings(
     api_runtime, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -163,6 +169,7 @@ def test_switch_loads_target_settings_without_copying_settings(
     assert application.state.loaded_settings.jobs.polling_interval == 3.5
 
 
+###############################################################################
 def test_connection_and_unknown_schema_fail_without_changing_active_config(api_runtime, tmp_path: Path) -> None:
     service, runtime_database, store, old_path, _fail, _application = api_runtime
     directory_candidate = DatabaseConfigurationInput(
@@ -185,6 +192,7 @@ def test_connection_and_unknown_schema_fail_without_changing_active_config(api_r
     assert store.current().sqlite_path == old_path
 
 
+###############################################################################
 def test_activation_failure_rolls_back_to_previous_database(api_runtime, tmp_path: Path) -> None:
     service, runtime_database, store, old_path, fail_candidate, _application = api_runtime
     candidate_path = tmp_path / "activation-failure.db"
@@ -202,6 +210,7 @@ def test_activation_failure_rolls_back_to_previous_database(api_runtime, tmp_pat
     assert store.current().sqlite_path == old_path
 
 
+###############################################################################
 def test_switch_conflicts_with_active_training_and_inference(api_runtime, tmp_path: Path) -> None:
     service, runtime_database, store, old_path, _fail, application = api_runtime
     target = DatabaseConfigurationInput(
@@ -220,6 +229,7 @@ def test_switch_conflicts_with_active_training_and_inference(api_runtime, tmp_pa
         service.activate(target)
 
 
+###############################################################################
 def test_runtime_manager_drains_operations_before_switch(tmp_path: Path) -> None:
     database = _initialized_database(tmp_path / "drain.db", 1.0)
     manager = RuntimeDatabaseManager(database)

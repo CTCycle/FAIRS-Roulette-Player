@@ -30,8 +30,7 @@ class TestSettingsPage:
         minimum.fill("1")
         maximum.fill("12")
         include_zero.uncheck()
-        page.get_by_role("button", name="Save settings", exact=True).click()
-        expect(page.get_by_text("Settings saved.", exact=True)).to_be_visible()
+        expect(page.get_by_role("status")).to_have_text("Changes saved.")
 
         page.reload()
         page.wait_for_load_state("networkidle")
@@ -41,19 +40,27 @@ class TestSettingsPage:
 
         page.get_by_role("button", name="Appearance", exact=True).click()
         expect(page.get_by_role("heading", name="Roulette appearance", exact=True)).to_be_visible()
-        expect(page.get_by_label("Invert colors", exact=True)).to_be_visible()
-        expect(page.get_by_label("Show number labels", exact=True)).to_be_visible()
+        invert_colors = page.get_by_label("Invert colors", exact=True)
+        show_number_labels = page.get_by_label("Show number labels", exact=True)
+        expect(invert_colors).to_be_visible()
+        expect(show_number_labels).to_be_visible()
+        invert_colors.check()
+        expect(page.get_by_role("status")).to_have_text("Changes saved.")
+        show_number_labels.uncheck()
+        expect(page.get_by_role("status")).to_have_text("Changes saved.")
 
         page.get_by_role("button", name="Runtime", exact=True).click()
         expect(page.get_by_role("heading", name="Training polling", exact=True)).to_be_visible()
         polling = page.get_by_label("Polling interval", exact=True)
         expect(polling).to_be_visible()
         polling.fill("2.5")
-        page.get_by_role("button", name="Save settings", exact=True).click()
-        expect(page.get_by_text("Settings saved.", exact=True)).to_be_visible()
+        expect(page.get_by_role("status")).to_have_text("Changes saved.")
 
         page.reload()
         page.wait_for_load_state("networkidle")
+        page.get_by_role("button", name="Appearance", exact=True).click()
+        expect(invert_colors).to_be_checked()
+        expect(show_number_labels).not_to_be_checked()
         page.get_by_role("button", name="Runtime", exact=True).click()
         expect(polling).to_have_value("2.5")
 
@@ -66,9 +73,9 @@ class TestSettingsPage:
 
         jit_compile.check()
         expect(jit_backend).to_be_enabled()
-        jit_backend.fill("eager")
-        page.get_by_role("button", name="Save settings", exact=True).click()
-        expect(page.get_by_text("Settings saved.", exact=True)).to_be_visible()
+        expect(page.get_by_role("status")).to_have_text("Changes saved.")
+        jit_backend.fill(" eager ")
+        expect(page.get_by_role("status")).to_have_text("Changes saved.")
         page.reload()
         page.wait_for_load_state("networkidle")
         page.get_by_role("button", name="Advanced", exact=True).click()
@@ -117,11 +124,8 @@ class TestSettingsPage:
         minimum = page.get_by_label("Minimum", exact=True)
         maximum = page.get_by_label("Maximum", exact=True)
         include_zero = page.get_by_label("Include zero", exact=True)
-        save = page.get_by_role("button", name="Save settings", exact=True)
-
         minimum.fill("12")
         maximum.fill("1")
-        save.click()
         expect(
             page.get_by_text(
                 "Minimum number cannot be greater than maximum number.", exact=True
@@ -131,13 +135,13 @@ class TestSettingsPage:
         minimum.fill("0")
         maximum.fill("0")
         include_zero.uncheck()
-        save.click()
         expect(
             page.get_by_text(
                 "Excluding zero would leave the roulette number pool empty.",
                 exact=True,
             )
         ).to_be_visible()
+        page.wait_for_timeout(450)
         assert settings_patches == []
 
         page.reload()

@@ -107,6 +107,8 @@ erDiagram
 - Logs: `<data-root>/logs/*.log`.
 - Application settings: the `application_settings` row in the active database. `<data-root>/runtime-settings.json` is a legacy import source only and is removed after the database row is committed and validated.
 
+The Settings page persists each valid non-database control change through `PATCH /api/settings`; numeric and text fields use a short debounce. Database connection fields remain a client draft until the explicit switch action succeeds, then the standalone configuration file is atomically updated. Neither ordinary UI settings nor their runtime values are stored in that connection file.
+
 Application settings are relational data. The standalone JSON database configuration is not stored in or read from the database, avoiding a circular initialization dependency. The legacy settings file is never a fallback or a continuing source of truth.
 
 SQLite and PostgreSQL are both supported persistence modes. They use the same SQLAlchemy schema, repositories, Alembic chain, and service contracts. Live switching drains in-flight database operations and is rejected while training or inference is active; each target database remains an independent data store.
