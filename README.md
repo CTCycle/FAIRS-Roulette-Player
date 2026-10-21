@@ -48,7 +48,7 @@ Choose **Launch application**. On first use, the launcher prepares the local run
 
 ## Configuration
 
-The launcher creates `settings/.env` from `settings/.env.example` when needed. FAIRS stores local datasets, checkpoints, and logs under `data` by default; set `FAIRS_DATA_DIR` to choose another persistent data root. Training and inference settings are available in the application.
+The launcher creates `settings/.env` from `settings/.env.example` when needed. Set the API proxy target, listener hosts and ports, or optional CORS origins there before launch; these deployment values are separate from the user preferences saved by the Settings page. FAIRS stores local datasets, checkpoints, and logs under `data` by default; set `FAIRS_DATA_DIR` to choose another persistent data root. Training and inference preferences are available in the application.
 
 ## Documentation
 

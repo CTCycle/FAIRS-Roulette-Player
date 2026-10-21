@@ -19,7 +19,11 @@ export default defineConfig(({ mode }) => {
 
     const apiHost = env.FASTAPI_HOST || '127.0.0.1'
     const apiPort = env.FASTAPI_PORT || '8000'
-    const apiTarget = `http://${apiHost}:${apiPort}`
+    const apiTarget = (
+        process.env.API_BASE_URL
+        || env.API_BASE_URL
+        || `http://${apiHost}:${apiPort}`
+    ).replace(/\/+$/, '')
     const apiBase = '/api'
     const apiBasePattern = /^\/api/
 
