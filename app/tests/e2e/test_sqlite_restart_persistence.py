@@ -258,7 +258,9 @@ def _copy_inference_restart_fixture(data_root: Path) -> Path:
     ) as source, sqlite3.connect(database_path) as target:
         source.backup(target)
 
-    shutil.copy2(source_data / "runtime-settings.json", data_root)
+    legacy_source = source_data / "runtime-settings.json"
+    if legacy_source.is_file():
+        shutil.copy2(legacy_source, data_root)
     checkpoint_source = (
         source_data / "checkpoints" / "val00_lineage_20260921"
     )
