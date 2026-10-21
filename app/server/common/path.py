@@ -16,7 +16,6 @@ DATA_DIR: Path | None = None
 DATA_ROOT = DEFAULT_DATA_ROOT
 LOGS_PATH = DATA_ROOT / "logs"
 CHECKPOINT_PATH = DATA_ROOT / "checkpoints"
-LEGACY_RUNTIME_SETTINGS_FILE = DATA_ROOT / "runtime-settings.json"
 DATABASE_CONFIG_FILE = DATA_ROOT / "database-config.json"
 ENV_FILE_PATH = SETTINGS_DIR / ".env"
 ENV_EXAMPLE_FILE_PATH = SETTINGS_DIR / ".env.example"
@@ -41,7 +40,7 @@ def _paths_overlap(left: Path, right: Path) -> bool:
 def configure_runtime_paths(data_dir: str | Path | None = None) -> None:
     """Resolve mutable runtime paths after environment loading."""
     global CHECKPOINT_PATH, DATABASE_PATH, DATA_DIR, DATA_ROOT, LOGS_PATH
-    global DATABASE_CONFIG_FILE, LEGACY_RUNTIME_SETTINGS_FILE
+    global DATABASE_CONFIG_FILE
 
     configured = str(data_dir).strip() if data_dir is not None else ""
     configured_data_dir = Path(configured).expanduser().resolve() if configured else None
@@ -55,7 +54,6 @@ def configure_runtime_paths(data_dir: str | Path | None = None) -> None:
     DATA_ROOT = DATA_DIR if DATA_DIR is not None else DEFAULT_DATA_ROOT
     LOGS_PATH = DATA_ROOT / "logs"
     CHECKPOINT_PATH = DATA_ROOT / "checkpoints"
-    LEGACY_RUNTIME_SETTINGS_FILE = DATA_ROOT / "runtime-settings.json"
     DATABASE_CONFIG_FILE = DATA_ROOT / "database-config.json"
     DATABASE_PATH = DATA_ROOT / "database.db"
 

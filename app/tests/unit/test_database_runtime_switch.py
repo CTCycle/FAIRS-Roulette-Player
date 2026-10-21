@@ -70,7 +70,6 @@ def api_runtime(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     application = SimpleNamespace(state=SimpleNamespace())
     application.state.lifecycle = "ready"
     application.state.recovery_message = None
-    application.state.legacy_settings_pending = False
     application.state.training_run_manager = SimpleNamespace(is_job_running=lambda: False)
     application.state.inference_service = SimpleNamespace(
         state=SimpleNamespace(has_sessions=lambda: False)

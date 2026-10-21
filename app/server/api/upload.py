@@ -41,6 +41,14 @@ async def upload(
     )
     try:
         try:
+            service.validate_upload_size(file.size)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=str(exc),
+            ) from exc
+
+        try:
             content = await file.read()
         except Exception as exc:
             raise HTTPException(

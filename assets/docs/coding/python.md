@@ -76,7 +76,7 @@ Last updated: 2026-09-16
 - Keep schema, serializer, and API contracts synchronized.
 - Runtime flags come from environment variables.
 - Database connection and selection settings live only in `<data-root>/database-config.json`, independent of database initialization. Keep that file limited to connection details and redact credentials from API responses and logs.
-- Settings UI values are persisted only in the singleton `application_settings` row of the active database. Do not add JSON fallbacks or cross-database synchronization; `runtime-settings.json` is migration input only.
+- Settings UI values are persisted only in the singleton `application_settings` row of the active database. Do not add JSON fallbacks or cross-database synchronization.
 - Route repository access through the shared `RuntimeDatabaseManager` so live switching can drain operations and replace the active connection safely.
 - Synthetic training data must preserve the canonical roulette `outcome` input through encoding and expose the training environment's `extraction` column at the serializer boundary.
 

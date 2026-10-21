@@ -47,7 +47,6 @@ flowchart LR
 | Relational schema | SQLAlchemy models plus current Alembic head |
 | Database migration | Alembic only |
 | Checkpoint persisted configuration | versioned `CheckpointConfiguration` |
-| Checkpoint conversion from known old shape | one-time `app/scripts/migrate_checkpoints.py` |
 | Dataset SQL persistence | `DatasetRepository` |
 | Inference SQL persistence | `InferenceRepository` |
 | Checkpoint filesystem I/O | `CheckpointRepository` |
@@ -78,7 +77,6 @@ Generated TypeScript is a derived artifact, not a parallel authority. CI regener
 │  │  ├─ export_openapi.py
 │  │  ├─ generate_frontend_contracts.py
 │  │  ├─ initialize_database.py
-│  │  └─ migrate_checkpoints.py
 │  ├─ server/
 │  │  ├─ app.py
 │  │  ├─ bootstrap.py

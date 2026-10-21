@@ -45,7 +45,7 @@ def _resolved_url() -> str:
     if configured:
         return configured
 
-    configured = DatabaseConfigurationStore().current()
+    configured = DatabaseConfigurationStore().load_or_initialize()
     settings = configured.settings
     if settings.embedded_database:
         return URL.create(
@@ -93,7 +93,7 @@ def run_migrations_online() -> None:
         url = _resolved_url()
         parsed_url = make_url(url)
         connect_args = {}
-        if parsed_url.get_backend_name() == "sqlite" and sys.version_info >= (3, 12):
+        if parsed_url.get_backend_name() == "sqlite":
             connect_args["autocommit"] = False
         connectable = create_engine(
             url,

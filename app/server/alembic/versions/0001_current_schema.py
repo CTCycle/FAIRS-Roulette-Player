@@ -1,11 +1,11 @@
 # Copyright © 2023 Thomas Virdis
 # Licensed under the MIT License.
 
-"""Immutable baseline for the current FAIRS relational schema.
+"""Current baseline for the FAIRS relational schema.
 
-Revision ID: 0001_initial_schema
+Revision ID: 0001_current_schema
 Revises:
-Create Date: 2026-08-20
+Create Date: 2026-10-21
 """
 
 from typing import Sequence, Union
@@ -14,14 +14,13 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision: str = "0001_initial_schema"
+revision: str = "0001_current_schema"
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 ###############################################################################
 def upgrade() -> None:
-    # This revision is the immutable representation of the pre-Alembic schema.
     op.create_table(
         "datasets",
         sa.Column("dataset_id", sa.Integer(), autoincrement=True, nullable=False),
@@ -107,7 +106,7 @@ def upgrade() -> None:
         sa.Column("step_number", sa.Integer(), nullable=False),
         sa.Column("bet_amount", sa.Integer(), nullable=False),
         sa.Column("predicted_action", sa.Integer(), nullable=False),
-        sa.Column("predicted_confidence", sa.Float(), nullable=True),
+        sa.Column("predicted_relative_preference", sa.Float(), nullable=True),
         sa.Column("observed_outcome_id", sa.SmallInteger(), nullable=True),
         sa.Column("reward", sa.Integer(), nullable=True),
         sa.Column("capital_after", sa.Integer(), nullable=False),
@@ -129,8 +128,9 @@ def upgrade() -> None:
             name="ck_inference_steps_observed_outcome",
         ),
         sa.CheckConstraint(
-            "predicted_confidence IS NULL OR (predicted_confidence >= 0 AND predicted_confidence <= 1)",
-            name="ck_inference_steps_confidence",
+            "predicted_relative_preference IS NULL OR "
+            "(predicted_relative_preference >= 0 AND predicted_relative_preference <= 1)",
+            name="ck_inference_steps_relative_preference",
         ),
         sa.ForeignKeyConstraint(
             ["session_id"],
@@ -146,8 +146,19 @@ def upgrade() -> None:
         unique=False,
     )
 
+    op.create_table(
+        "application_settings",
+        sa.Column("settings_id", sa.Integer(), nullable=False),
+        sa.Column("jobs", sa.JSON(), nullable=False),
+        sa.Column("device", sa.JSON(), nullable=False),
+        sa.Column("roulette", sa.JSON(), nullable=False),
+        sa.CheckConstraint("settings_id = 1", name="ck_application_settings_singleton"),
+        sa.PrimaryKeyConstraint("settings_id"),
+    )
+
 ###############################################################################
 def downgrade() -> None:
+    op.drop_table("application_settings")
     op.drop_index(
         "ix_inference_steps_session_recorded",
         table_name="inference_session_steps",

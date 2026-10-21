@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from server.common.utils.logger import logger
 from server.common.runtime_capabilities import validate_jit_runtime
-from server.contracts.configuration import DeviceSettings, JobsSettings, JsonServerSettings
+from server.contracts.configuration import JsonServerSettings
 from server.contracts.settings import SettingsPatchRequest, SettingsResponse
 from server.repositories.application_settings import ApplicationSettingsRepository
 from server.repositories.database.runtime import RuntimeDatabaseManager
@@ -27,7 +27,7 @@ class SettingsService:
     def __init__(
         self,
         database: RuntimeDatabaseManager,
-        training_service: TrainingService | None = None,
+        training_service: TrainingService,
     ) -> None:
         self.database = database
         self.repository = ApplicationSettingsRepository()
@@ -62,17 +62,6 @@ class SettingsService:
         return JsonServerSettings.model_validate(payload)
 
     # -------------------------------------------------------------------------
-    def _training_snapshot(
-        self,
-        fallback_jobs: JobsSettings,
-        fallback_device: DeviceSettings,
-    ) -> tuple[JobsSettings, DeviceSettings]:
-        snapshot = getattr(self.training_service, "get_runtime_settings", None)
-        if callable(snapshot):
-            return snapshot()
-        return fallback_jobs, fallback_device
-
-    # -------------------------------------------------------------------------
     def _restore_after_propagation_failure(
         self,
         previous_json: JsonServerSettings,
@@ -83,14 +72,13 @@ class SettingsService:
             self.repository.replace(self.database, previous_json)
         except Exception:  # noqa: BLE001
             logger.exception("Failed to restore runtime settings after propagation failure")
-        if self.training_service is not None:
-            try:
-                self.training_service.apply_runtime_settings(*previous_training)
-                set_roulette = getattr(self.training_service, "apply_roulette_settings", None)
-                if callable(set_roulette):
-                    set_roulette(previous_json.roulette.to_runtime_settings())
-            except Exception:  # noqa: BLE001
-                logger.exception("Failed to restore training runtime settings")
+        try:
+            self.training_service.apply_runtime_settings(*previous_training)
+            self.training_service.apply_roulette_settings(
+                previous_json.roulette.to_runtime_settings()
+            )
+        except Exception:  # noqa: BLE001
+            logger.exception("Failed to restore training runtime settings")
         raise SettingsPersistenceError("Unable to save settings.") from cause
 
     # -------------------------------------------------------------------------
@@ -99,13 +87,7 @@ class SettingsService:
         previous_json: JsonServerSettings,
         candidate: JsonServerSettings,
     ) -> SettingsResponse:
-        previous_training = self._training_snapshot(
-            JobsSettings(polling_interval=previous_json.jobs.polling_interval),
-            DeviceSettings(
-                jit_compile=previous_json.device.jit_compile,
-                jit_backend=previous_json.device.jit_backend,
-            ),
-        )
+        previous_training = self.training_service.get_runtime_settings()
         if candidate.device.jit_compile:
             validate_jit_runtime(
                 candidate.device.jit_compile,
@@ -113,14 +95,13 @@ class SettingsService:
             )
         self.repository.replace(self.database, candidate)
         try:
-            if self.training_service is not None:
-                self.training_service.apply_runtime_settings(
-                    candidate.jobs,
-                    candidate.device,
-                )
-                set_roulette = getattr(self.training_service, "apply_roulette_settings", None)
-                if callable(set_roulette):
-                    set_roulette(candidate.roulette.to_runtime_settings())
+            self.training_service.apply_runtime_settings(
+                candidate.jobs,
+                candidate.device,
+            )
+            self.training_service.apply_roulette_settings(
+                candidate.roulette.to_runtime_settings()
+            )
         except Exception as exc:  # noqa: BLE001
             logger.exception("Failed to publish runtime settings to TrainingService")
             self._restore_after_propagation_failure(

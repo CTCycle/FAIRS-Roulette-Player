@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+from datetime import datetime, timezone
 import os
 from pathlib import Path
 import re
@@ -21,6 +22,11 @@ from collections.abc import Iterator
 import httpx
 import pytest
 from playwright.sync_api import Page, expect
+
+from server.contracts.configuration import DatabaseSettings
+from server.repositories.database.backend import FAIRSDatabase
+from server.repositories.database.initializer import initialize_database
+from server.repositories.schemas.models import DatasetOutcomes, Datasets
 
 
 APP_ROOT = Path(__file__).resolve().parents[2]
@@ -252,15 +258,46 @@ def _copy_inference_restart_fixture(data_root: Path) -> Path:
     database_path = data_root / "database.db"
     data_root.mkdir(parents=True)
 
-    with sqlite3.connect(
-        f"{(source_data / 'database.db').resolve().as_uri()}?mode=ro",
-        uri=True,
-    ) as source, sqlite3.connect(database_path) as target:
-        source.backup(target)
+    settings = DatabaseSettings(
+        embedded_database=True,
+        engine=None,
+        host=None,
+        port=None,
+        database_name=None,
+        username=None,
+        password=None,
+        ssl=False,
+        ssl_ca=None,
+        connect_timeout=10,
+        insert_batch_size=1000,
+    )
+    initialize_database(settings, database_path=database_path)
+    database = FAIRSDatabase(settings, database_path=database_path)
+    try:
+        now = datetime.now(timezone.utc)
+        with database.Session.begin() as session:
+            session.add(
+                Datasets(
+                    dataset_id=5,
+                    dataset_name="val00_training_lineage",
+                    dataset_name_key="val00_training_lineage",
+                    dataset_kind="training",
+                    created_at=now,
+                    updated_at=now,
+                )
+            )
+            session.flush()
+            session.add_all(
+                DatasetOutcomes(
+                    dataset_id=5,
+                    sequence_index=index,
+                    outcome_id=index % 37,
+                )
+                for index in range(120)
+            )
+    finally:
+        database.dispose()
 
-    legacy_source = source_data / "runtime-settings.json"
-    if legacy_source.is_file():
-        shutil.copy2(legacy_source, data_root)
     checkpoint_source = (
         source_data / "checkpoints" / "val00_lineage_20260921"
     )
@@ -313,7 +350,7 @@ def _assert_alembic_head(database_path: Path) -> None:
         revision = connection.execute(
             "SELECT version_num FROM alembic_version"
         ).fetchone()
-    assert revision == ("0003_application_settings",)
+    assert revision == ("0001_current_schema",)
 
 ###############################################################################
 def test_uploaded_dataset_survives_backend_restart_and_stays_deleted(

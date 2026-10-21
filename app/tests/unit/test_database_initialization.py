@@ -60,12 +60,11 @@ def _copy_test_alembic_environment(
     source_root = initializer.ALEMBIC_CONFIG_PATH.parent
     fixture_root = tmp_path / "alembic-fixture"
     shutil.copytree(source_root / "alembic", fixture_root / "alembic")
-    (fixture_root / "alembic" / "versions" / "0003_application_settings.py").unlink()
     (fixture_root / "alembic.ini").write_text(
         initializer.ALEMBIC_CONFIG_PATH.read_text(encoding="utf-8"),
         encoding="utf-8",
     )
-    (fixture_root / "alembic" / "versions" / "0003_test_revision.py").write_text(
+    (fixture_root / "alembic" / "versions" / "0002_test_revision.py").write_text(
         revision_body,
         encoding="utf-8",
     )
@@ -106,7 +105,7 @@ def test_clean_sqlite_initialization_creates_exact_alembic_schema(
                 connection.execute(
                     text("SELECT version_num FROM alembic_version")
                 ).scalar_one()
-                == "0003_application_settings"
+                == "0001_current_schema"
             )
             initializer.validate_database_metadata(connection)
     finally:
@@ -180,11 +179,11 @@ def test_populated_unversioned_database_is_rejected_without_mutation(
         engine.dispose()
 
 ###############################################################################
-def test_partial_legacy_schema_is_rejected_unchanged(tmp_path: Path) -> None:
+def test_partial_unversioned_schema_is_rejected_unchanged(tmp_path: Path) -> None:
     database_path = tmp_path / "partial.db"
     legacy_engine = _engine(database_path)
     try:
-        # Deliberately construct an incomplete pre-Alembic legacy fixture.
+        # Deliberately construct an incomplete unversioned fixture.
         Base.metadata.tables["datasets"].create(legacy_engine)
     finally:
         legacy_engine.dispose()
@@ -219,6 +218,29 @@ def test_unknown_or_ahead_revision_is_rejected_before_schema_changes(
     assert _table_names(database_path) == {"alembic_version"}
 
 ###############################################################################
+def test_previous_database_head_is_rejected_without_mutation(tmp_path: Path) -> None:
+    database_path = tmp_path / "previous-head.db"
+    engine = _engine(database_path)
+    try:
+        with engine.begin() as connection:
+            connection.exec_driver_sql(
+                "CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL)"
+            )
+            connection.execute(
+                text(
+                    "INSERT INTO alembic_version (version_num) "
+                    "VALUES ('0003_application_settings')"
+                )
+            )
+    finally:
+        engine.dispose()
+
+    with pytest.raises(DatabaseRevisionError, match="unknown|ahead"):
+        initialize_database(_sqlite_settings(), database_path=database_path)
+
+    assert _table_names(database_path) == {"alembic_version"}
+
+###############################################################################
 def test_multiple_database_heads_are_rejected(tmp_path: Path) -> None:
     database_path = tmp_path / "multiple-heads.db"
     engine = _engine(database_path)
@@ -229,7 +251,7 @@ def test_multiple_database_heads_are_rejected(tmp_path: Path) -> None:
             )
             connection.execute(
                 text(
-                    "INSERT INTO alembic_version (version_num) VALUES ('0002_rename_relative_preference')"
+                    "INSERT INTO alembic_version (version_num) VALUES ('0001_current_schema')"
                 )
             )
             connection.execute(
@@ -276,8 +298,8 @@ def test_failed_migration_rolls_back_schema_and_revision(tmp_path: Path) -> None
         '''"""Test-only failing revision."""
 from alembic import op
 
-revision = "0003_test_revision"
-down_revision = "0002_rename_relative_preference"
+revision = "0002_test_revision"
+down_revision = "0001_current_schema"
 branch_labels = None
 depends_on = None
 
@@ -289,7 +311,7 @@ def downgrade() -> None:
     pass
 ''',
     )
-    _set_revision(database_path, "0002_rename_relative_preference")
+    _set_revision(database_path, "0001_current_schema")
 
     engine = _engine(database_path)
     try:
@@ -301,7 +323,7 @@ def downgrade() -> None:
                 connection.execute(
                     text("SELECT version_num FROM alembic_version")
                 ).scalar_one()
-                == "0002_rename_relative_preference"
+                == "0001_current_schema"
             )
     finally:
         engine.dispose()
@@ -314,8 +336,8 @@ def test_known_behind_revision_upgrades_in_order(tmp_path: Path) -> None:
     behind_config = _copy_test_alembic_environment(
         tmp_path,
         '''"""Test-only no-op revision."""
-revision = "0003_test_revision"
-down_revision = "0002_rename_relative_preference"
+revision = "0002_test_revision"
+down_revision = "0001_current_schema"
 branch_labels = None
 depends_on = None
 
@@ -326,7 +348,7 @@ def downgrade() -> None:
     pass
 ''',
     )
-    _set_revision(database_path, "0002_rename_relative_preference")
+    _set_revision(database_path, "0001_current_schema")
 
     engine = _engine(database_path)
     try:
@@ -336,7 +358,7 @@ def downgrade() -> None:
                 connection.execute(
                     text("SELECT version_num FROM alembic_version")
                 ).scalar_one()
-                == "0003_test_revision"
+                == "0002_test_revision"
             )
     finally:
         engine.dispose()
@@ -363,7 +385,7 @@ def test_concurrent_sqlite_initializers_serialize_and_finish_at_head(
                 connection.execute(
                     text("SELECT version_num FROM alembic_version")
                 ).scalar_one()
-                == "0003_application_settings"
+                == "0001_current_schema"
             )
     finally:
         engine.dispose()

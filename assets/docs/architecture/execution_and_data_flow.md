@@ -204,7 +204,7 @@ Frontend feature code may map snake_case transport data into camelCase view stat
 - `CheckpointRepository` owns model/config/history filesystem I/O.
 - `CheckpointService` owns cross-storage checkpoint lifecycle policy.
 - Alembic owns relational schema evolution.
-- `migrate_checkpoints.py` is the explicit one-time conversion path for the known old checkpoint configuration shape. Runtime loading does not perform compatibility conversion.
+- `CheckpointRepository` accepts only the current versioned checkpoint configuration and rejects old or unsupported formats without modification.
 
 ## Related Files
 

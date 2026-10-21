@@ -21,6 +21,26 @@ from server.contracts.configuration import (
 from server.configurations.database_config import LoadedDatabaseConfiguration
 
 ###############################################################################
+class CheckpointServiceStub:
+
+    def cleanup_incomplete_workspaces(self) -> None:
+        return None
+
+
+###############################################################################
+class InferenceServiceStub:
+
+    def shutdown(self) -> None:
+        return None
+
+
+###############################################################################
+class TrainingRunManagerStub:
+
+    def shutdown(self) -> bool:
+        return True
+
+###############################################################################
 def _build_settings() -> ServerSettings:
     return ServerSettings(
         database=DatabaseSettings(
@@ -84,7 +104,7 @@ def _stub_lifespan_dependencies(
     class StoreStub:
 
         # -------------------------------------------------------------------------
-        def load_or_migrate(self):
+        def load_or_initialize(self):
             return loaded_database
 
         # -------------------------------------------------------------------------
@@ -118,14 +138,18 @@ def _stub_lifespan_dependencies(
     )
     monkeypatch.setattr(app_module, "DatasetRepository", lambda database: object())
     monkeypatch.setattr(app_module, "InferenceRepository", lambda database: object())
-    monkeypatch.setattr(app_module, "TrainingRunManager", lambda: object())
-    monkeypatch.setattr(app_module, "CheckpointService", lambda: object())
+    monkeypatch.setattr(app_module, "TrainingRunManager", TrainingRunManagerStub)
+    monkeypatch.setattr(app_module, "CheckpointService", CheckpointServiceStub)
     monkeypatch.setattr(app_module, "DatasetImportService", lambda **kwargs: object())
     monkeypatch.setattr(app_module, "TabularFileLoader", lambda: object())
     monkeypatch.setattr(app_module, "DatasetService", lambda **kwargs: object())
 
     ###############################################################################
     class TrainingServiceStub:
+
+        # -------------------------------------------------------------------------
+        def get_runtime_settings(self):
+            return settings.jobs, settings.device
 
         # -------------------------------------------------------------------------
         def apply_runtime_settings(self, *_args):
@@ -139,8 +163,12 @@ def _stub_lifespan_dependencies(
         def apply_database_settings(self, *_args):
             return None
 
+        # -------------------------------------------------------------------------
+        def shutdown(self) -> bool:
+            return True
+
     monkeypatch.setattr(app_module, "TrainingService", lambda **_kwargs: TrainingServiceStub())
-    monkeypatch.setattr(app_module, "InferenceService", lambda **kwargs: object())
+    monkeypatch.setattr(app_module, "InferenceService", lambda **kwargs: InferenceServiceStub())
 
     return initialize_calls, dispose_calls
 
@@ -401,7 +429,7 @@ def test_lifespan_has_explicit_order_and_reverse_cleanup(monkeypatch) -> None:
         app_module,
         "DatabaseConfigurationStore",
         lambda: SimpleNamespace(
-            load_or_migrate=lambda: (events.append("settings") or loaded_database),
+            load_or_initialize=lambda: (events.append("settings") or loaded_database),
             current=lambda: loaded_database,
         ),
     )
@@ -477,7 +505,7 @@ def test_lifespan_has_explicit_order_and_reverse_cleanup(monkeypatch) -> None:
     monkeypatch.setattr(app_module, "DatasetRepository", lambda *_: object())
     monkeypatch.setattr(app_module, "InferenceRepository", lambda *_: object())
     monkeypatch.setattr(app_module, "TrainingRunManager", TrainingManager)
-    monkeypatch.setattr(app_module, "CheckpointService", lambda: object())
+    monkeypatch.setattr(app_module, "CheckpointService", CheckpointServiceStub)
     monkeypatch.setattr(app_module, "DatasetImportService", lambda **_: object())
     monkeypatch.setattr(app_module, "TabularFileLoader", lambda: object())
     monkeypatch.setattr(app_module, "DatasetService", lambda **_: object())
@@ -570,7 +598,7 @@ def test_lifespan_rolls_back_partial_initialization(monkeypatch) -> None:
     monkeypatch.setattr(app_module, "DatasetRepository", lambda *_: object())
     monkeypatch.setattr(app_module, "InferenceRepository", lambda *_: object())
     monkeypatch.setattr(app_module, "TrainingRunManager", TrainingManager)
-    monkeypatch.setattr(app_module, "CheckpointService", lambda: object())
+    monkeypatch.setattr(app_module, "CheckpointService", CheckpointServiceStub)
     monkeypatch.setattr(app_module, "DatasetImportService", lambda **_: object())
     monkeypatch.setattr(app_module, "TabularFileLoader", lambda: object())
     monkeypatch.setattr(app_module, "DatasetService", lambda **_: object())

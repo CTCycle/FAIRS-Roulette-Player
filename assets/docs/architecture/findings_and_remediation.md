@@ -24,7 +24,7 @@ The remediation intentionally removes compatibility aliases, hybrid old/new path
 | Relational schema | SQLAlchemy models at current Alembic head |
 | Relational migration | Alembic only |
 | Persisted checkpoint configuration | versioned `CheckpointConfiguration` |
-| Old checkpoint conversion | one-time `app/scripts/migrate_checkpoints.py` |
+| Supported checkpoint configuration | versioned `CheckpointConfiguration`; old unversioned files are rejected |
 | Dataset SQL | `DatasetRepository` |
 | Inference SQL | `InferenceRepository` |
 | Checkpoint filesystem I/O | `CheckpointRepository` |
@@ -61,13 +61,13 @@ FastAPI/Pydantic is authoritative. `app/scripts/generate_frontend_contracts.py` 
 
 `confidence` and `predicted_confidence` are removed from current API/runtime/schema naming. The canonical names are `relative_preference` and `predicted_relative_preference`, reflecting that the value is a softmax-normalized relative Q-score preference rather than a calibrated probability.
 
-Alembic revision `0002_rename_relative_preference` performs the database rename. No API alias preserves the superseded field name.
+The current baseline stores the canonical field directly. Databases created with previous schema revisions are rejected; no API alias preserves superseded field names.
 
 ### Checkpoint metadata and format
 
 The `neurons` checkpoint-summary alias is removed. `qnet_neurons` is canonical end to end.
 
-Checkpoint configuration is explicitly versioned. Runtime loading accepts the current format and rejects unversioned/unsupported data. The known old unversioned format is handled only by the one-time migration script, which performs full preflight validation before atomic writes.
+Checkpoint configuration is explicitly versioned. Runtime loading accepts the current format and rejects unversioned/unsupported data. No conversion utility or fallback path is retained for old checkpoint configuration.
 
 ### Strategy and action handling
 
@@ -108,24 +108,11 @@ These are current requirements, not legacy compatibility:
 
 ### Relational database
 
-Normal application initialization runs Alembic to current `head`. Revision `0002_rename_relative_preference` renames the persisted inference preference field and check constraint; revision `0003_application_settings` adds the singleton Settings UI row.
+Normal application initialization creates an empty database at the sole `0001_current_schema` baseline. Previous revision IDs and non-empty unversioned schemas fail closed and are not modified; recreate such databases to use the current schema.
 
 ### Checkpoints
 
-For existing unversioned checkpoint configuration files, run a read-only preflight first:
-
-```powershell
-$env:PYTHONPATH='app'
-uv --project app/server run python app/scripts/migrate_checkpoints.py
-```
-
-If every checkpoint is recognized and valid:
-
-```powershell
-uv --project app/server run python app/scripts/migrate_checkpoints.py --apply
-```
-
-Unsupported or incomplete checkpoint formats are rejected rather than normalized with current defaults.
+Only the current versioned checkpoint contract is supported. Unversioned or unsupported checkpoint files are rejected without modification.
 
 ### Existing `.env`
 
@@ -138,7 +125,7 @@ The migration removed obsolete AppState paths, inference preference naming, perm
 Additional coverage verifies:
 
 - current Alembic head and migration consistency;
-- versioned checkpoint loading and migration behavior;
+- versioned checkpoint loading and unversioned checkpoint rejection;
 - strict strategy/action invariants;
 - training contract validation;
 - inference persistence/lifecycle behavior;
@@ -154,6 +141,6 @@ The campaign is tracked by the consolidated, code-backed gate register in [`../p
 
 ## Final Architecture
 
-The target architecture is the current architecture after this remediation: one local layered monolith, one explicit owner per responsibility, strict failure for unsupported old states, and explicit one-time migrations for persisted data that genuinely requires conversion.
+The target architecture is the current architecture after this remediation: one local layered monolith, one explicit owner per responsibility, strict failure for unsupported old states, and a single current database baseline.
 
 No permanent runtime compatibility layer is retained solely because an older implementation once existed.

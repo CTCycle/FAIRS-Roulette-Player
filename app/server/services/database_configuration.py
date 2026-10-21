@@ -9,7 +9,6 @@ from typing import Any
 
 from sqlalchemy import text
 
-from server.common import path as shared_paths
 from server.configurations.database_config import (
     DatabaseConfigurationError,
     DatabaseConfigurationStore,
@@ -165,15 +164,8 @@ class DatabaseConfigurationService:
                 candidate_database = FAIRSDatabase(settings, database_path=database_path)
                 with candidate_database.engine.connect() as connection:
                     connection.execute(text("SELECT 1"))
-                legacy_path = shared_paths.LEGACY_RUNTIME_SETTINGS_FILE
-                legacy_pending = bool(
-                    getattr(self.application.state, "legacy_settings_pending", False)
-                )
                 application_settings = self.settings_repository.ensure_row(
-                    candidate_database,
-                    legacy_path=legacy_path,
-                    allow_legacy_import=legacy_pending,
-                    remove_legacy_after=False,
+                    candidate_database
                 )
                 server_settings = application_settings.to_server_settings(settings)
                 run_startup_validations(server_settings)
@@ -200,7 +192,7 @@ class DatabaseConfigurationService:
                     )
                     self.store.write(normalized, password=password)
                     try:
-                        self.store.remove_legacy_environment_keys()
+                        self.store.scrub_database_environment_keys()
                     except DatabaseConfigurationError:
                         pass
                 except Exception as exc:  # noqa: BLE001
@@ -218,12 +210,6 @@ class DatabaseConfigurationService:
 
                 self.application.state.recovery_message = None
                 self.application.state.lifecycle = "ready"
-                if legacy_pending and legacy_path.is_file():
-                    try:
-                        legacy_path.unlink()
-                        self.application.state.legacy_settings_pending = False
-                    except OSError:
-                        pass
                 if previous_database is not None and previous_database is not candidate_database:
                     try:
                         previous_database.dispose()

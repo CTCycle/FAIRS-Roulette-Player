@@ -58,17 +58,17 @@ Frontend freshness is content-based rather than timestamp-based. The launcher ha
 FastAPI lifespan, the CLI, and the launcher use the same Alembic initializer.
 
 - Empty databases upgrade to `head`.
-- Known older Alembic revisions upgrade in order.
+- A fresh database is created at the current `0001_current_schema` baseline. Revisions removed from the migration history are rejected unchanged and require database recreation; known revisions in the current chain still upgrade in order.
 - Current `head` performs strict metadata validation.
 - Non-empty unversioned databases are rejected unchanged.
 - Unknown/ahead revisions, multiple heads, and schema drift fail unchanged.
 - PostgreSQL and SQLite use the same schema and repositories.
 
-The current database head is `0003_application_settings`. The Database section in Settings can switch between validated SQLite and PostgreSQL targets while the application is running, provided training and inference are idle. It drains in-flight database requests, reloads Settings from the target database, and leaves each database's data independent. Connection, schema, or activation failures preserve the previous backend. Startup-only changes such as `FAIRS_DATA_DIR` and listener addresses still require a restart.
+The current database head is `0001_current_schema`. The Database section in Settings can switch between validated SQLite and PostgreSQL targets while the application is running, provided training and inference are idle. It drains in-flight database requests, reloads Settings from the target database, and leaves each database's data independent. Connection, schema, or activation failures preserve the previous backend. Startup-only changes such as `FAIRS_DATA_DIR` and listener addresses still require a restart.
 
 If the saved database configuration cannot be parsed, decrypted, connected, or initialized, the backend remains available in recovery mode. The frontend opens Database settings, `/api/health` reports `recovery`, and database-backed APIs return `503` until a valid target is applied.
 
-Checkpoint format migration is separate from database migration. Before using pre-v1 checkpoint configuration files, run the explicit one-time checkpoint migration preflight described in `../architecture/persistence.md`.
+Only current versioned checkpoint configuration files are supported. Unversioned or unsupported checkpoint data is rejected without modification.
 
 ## Destructive Maintenance
 
