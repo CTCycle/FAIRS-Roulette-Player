@@ -1,19 +1,19 @@
 ## Troubleshooting
 
-Last updated: 2026-09-21
+Last updated: 2026-10-21
 
 ## Startup Problems
 
 - If local startup fails, run option 2 in `start_on_windows.ps1` and choose `Standard` to resync runtimes and application dependencies.
 - If test or browser tooling is missing, run option 2 and choose `Development` so the server's `test` extra is installed.
-- If option 1 reports a listener on a configured port, review the displayed PID, process name, port, and executable path. Answer `Yes` only when you intend to terminate every listed PID; the launcher deduplicates a PID that owns both ports, waits for both ports to clear, and never kills a replacement listener automatically. Answer `No` to leave all processes untouched and return to the menu. Noninteractive launches fail closed when a conflict exists. Option 13 remains the separate FAIRS-owned process cleanup action.
-- If the backend starts without the frontend, verify that `app/client/node_modules` contains Vite and that `app/client/dist/index.html` and its generated assets exist; close the application terminal before retrying option 1, run option 3 for a frontend-only rebuild, or run option 2 when frontend dependencies also need updating.
+- If option 1 reports a listener on `FASTAPI_PORT`, review the displayed PID, process name, port, and executable path. Answer `Yes` only when you intend to terminate each listed PID; the launcher rechecks the port and never kills a replacement listener automatically. Answer `No` to leave processes untouched. `-Launch` is noninteractive and fails closed when the port is occupied. The confirmed stop action remains available for orphaned FAIRS processes.
+- If `/` does not load the SPA after readiness, verify that `app/client/dist/index.html` and its generated assets exist; the launcher rebuilds a stale or missing bundle. Open `/api/health` to check backend status. A missing `/api/*` route should return JSON 404, not the SPA document.
 - If option 1 resynchronizes only backend dependencies after a `pyproject.toml` or `uv.lock` change, that is expected; backend recovery does not rebuild the frontend. A missing or corrupt `app/server/.venv/.fairs-install-state.json`, `app/client/node_modules/.fairs-install-state.json`, or `app/client/dist/.fairs-build-state.json` causes the relevant layer to recover on the next launch.
 - Frontend rebuild decisions use content fingerprints, not file timestamps. Changes to React/TypeScript/CSS source, public assets, package manifests, TypeScript configuration, or `vite.config.ts` rebuild the frontend; README and lint-only configuration changes do not.
-- Maintenance actions require the application terminal to be closed first. If npm reports `EPERM` for `esbuild.exe`, stop any external Vite or Node process using `app/client/node_modules` through its own owner and retry.
-- If the browser remains on the FAIRS startup screen, keep the visible backend terminal open and inspect its startup output. The screen retries transient connection failures and changes to a compact retry state after its bounded startup window; use `Retry connection` after correcting the backend issue.
+- Maintenance actions require the app to be stopped with Ctrl+C in the launcher console. If npm reports `EPERM` for `esbuild.exe`, stop any external Vite or Node process using `app/client/node_modules` through its own owner and retry.
+- If the browser remains on a startup or retry screen, keep the launcher console open and inspect its backend logs. The launcher opens the browser only after health reports `ok` or `recovery`; in recovery, open Settings → Database and apply a valid database target.
 - If startup reports an unsupported worker count, unset `WEB_CONCURRENCY`, `UVICORN_WORKERS`, and `FAIRS_WORKERS`, or set each to `1`. Do not use multiple workers for this process-local runtime.
-- If the frontend preview itself does not become ready, close the application terminal before retrying. Check whether the configured UI port is owned by an unrelated process and verify that `app/client/dist` is complete. If the preview starts but no browser opens, use the frontend URL printed by the launcher.
+- If manual Vite development does not start, check `UI_HOST`, `UI_PORT`, and whether the development port is occupied; verify that `app/client/node_modules` is installed. This Vite workflow is separate from production launch. If the production browser does not open automatically, use the application URL printed by the launcher.
 
 ## API Docs Problems
 

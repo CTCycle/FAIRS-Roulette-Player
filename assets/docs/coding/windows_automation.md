@@ -1,6 +1,6 @@
 ## Windows Automation
 
-Last updated: 2026-09-21
+Last updated: 2026-10-21
 
 ## Scope
 
@@ -12,7 +12,7 @@ This file defines repository-specific rules for the PowerShell launcher and Wind
 - Do not introduce parallel bootstrap or compatibility paths unless a current requirement is demonstrated.
 - `Standard` installation syncs runtime dependencies. `Development` additionally installs the server test extra and Playwright Chromium below `runtimes/cache/playwright-browsers`.
 - `settings/.env.example` is the canonical launcher environment template. The launcher may create a missing `.env` from it once, but must not supply a separate hardcoded defaults map for stale existing files.
-- Existing `.env` files missing launcher-critical keys must fail clearly rather than inherit obsolete behavior.
+- Existing `.env` files missing launcher-critical keys (`FASTAPI_HOST`, `FASTAPI_PORT`, or `RELOAD`) must fail clearly rather than inherit obsolete behavior. `UI_HOST` and `UI_PORT` belong to the manual Vite development workflow.
 
 ## Runtime Layout
 
@@ -35,11 +35,13 @@ A failed dependency sync is surfaced directly. Do not interpret it as evidence o
 
 ## Lifecycle Rules
 
-- Maintenance, database, testing, update, uninstall, and data-removal actions require the application terminal to be closed.
-- There is no separate stop daemon. Closing the application terminal is the local stop action; closing the browser is not.
-- The maintenance menu's `Stop all app processes` action requires confirmation and stops repository-owned backend/frontend processes together with their child process tree; it does not target browser processes.
-- Startup launches the backend and frontend preview independently. The launcher waits for the frontend listener; the browser owns the bounded `/api/health` readiness poll and displays the loading or failure state.
-- A launch resolves configured-port conflicts before runtime, dependency, or build work. Conflict records are grouped by PID, show only process name and executable path metadata (never command lines), and are terminated only after one interactive confirmation. Each confirmed PID is targeted once; the resolver re-queries the configured ports without killing replacement listeners and fails closed if a port remains occupied or termination is denied.
+- Maintenance, database, testing, update, uninstall, and data-removal actions require the application to be stopped from its launcher console.
+- The launcher console owns the local process lifecycle; closing the browser does not stop the app. Both menu Launch and `start_on_windows.ps1 -Launch` supervise Uvicorn until it exits. The direct `-Launch` mode then exits; menu Launch returns to the menu.
+- Production serves `app/client/dist` through FastAPI on the API origin. Launch waits up to 60 seconds for `/api/health` to return `application=FAIRS` with `ok` or `recovery`, then opens the FastAPI root URL. It does not start Vite preview.
+- Ctrl+C in the launcher console is the normal shutdown path and allows Uvicorn/FastAPI lifespan cleanup. On startup failure or incomplete shutdown, wait for a bounded period and terminate only the backend process tree created by that launch.
+- The confirmed `Stop all app processes` action is for orphaned FAIRS backends, older Vite preview processes, and their descendants; it does not target browser or unrelated repository processes.
+- Production checks only `FASTAPI_PORT` before build/start. Port conflict records are grouped by PID, show process name and executable path metadata (never command lines), and are terminated only after one interactive confirmation. Each confirmed PID is targeted once; the resolver re-queries the port without killing replacement listeners and fails closed if a listener remains or termination is denied.
+- Vite `npm run dev` is a manual development workflow using `UI_HOST` and `UI_PORT`; its `/api` proxy points to the configured FastAPI host/port. `npm run preview` remains for preview/test use only.
 - A launch checks backend and frontend dependency fingerprints independently. Successful `uv sync` and `npm ci` operations publish their own generated `.fairs-install-state.json` files; automatic backend recovery does not imply a frontend rebuild.
 - Frontend freshness is determined by the SHA-256 content fingerprint of the exact build inputs plus the Node.js baseline. A successful `npm run build` publishes `app/client/dist/.fairs-build-state.json`; state is written only after the build succeeds. Do not use file timestamps, README changes, lint-only configuration, or Vite cache contents as build invalidation signals.
 - Browser URL handoff is best-effort after service readiness; a handoff failure must leave the healthy services running and print the configured URL.

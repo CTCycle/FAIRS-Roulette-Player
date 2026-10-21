@@ -14,7 +14,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
@@ -253,6 +253,11 @@ def serve_client_root() -> FileResponse:
 
 ###############################################################################
 def serve_client_path(full_path: str) -> FileResponse:
+    if full_path == FASTAPI_API_PREFIX.lstrip("/") or full_path.startswith(
+        f"{FASTAPI_API_PREFIX.lstrip('/')}/"
+    ):
+        raise HTTPException(status_code=404, detail="API route not found")
+
     client_file = _resolve_client_file(full_path)
     if client_file is not None:
         return FileResponse(client_file)

@@ -16,7 +16,7 @@ From repository root in PowerShell:
 
 - If `settings/.env` does not exist, the launcher copies `settings/.env.example` once.
 - An existing `.env` is never supplemented with a hidden compatibility/default map.
-- Launcher-critical values must be explicitly present in `.env`: `FASTAPI_HOST`, `FASTAPI_PORT`, `UI_HOST`, `UI_PORT`, and `RELOAD`. Database selection and connection details come from `<data-root>/database-config.json`.
+- Launcher-critical values must be explicitly present in `.env`: `FASTAPI_HOST`, `FASTAPI_PORT`, and `RELOAD`. `UI_HOST` and `UI_PORT` configure the manual Vite development server. Database selection and connection details come from `<data-root>/database-config.json`.
 - If one of those values is absent or blank, the launcher fails with an instruction to update `.env` from the current template.
 
 ## Runtime Preparation
@@ -31,7 +31,7 @@ The launcher prepares or validates:
 
 `UV_PROJECT_ENVIRONMENT` targets the single server virtual environment. A failed `uv sync` is reported as a failure; the launcher no longer assumes that failure means a legacy environment path and does not delete/recreate the environment as an automatic compatibility retry.
 
-Normal launch resolves conflicts on `FASTAPI_PORT` and `UI_PORT` before runtime, dependency, or build work. When either port is occupied, option 1 lists each unique PID, process name, configured port, and executable path when Windows provides it, then asks once whether those exact processes may be terminated. Declining returns to the menu; a noninteractive launch fails closed without terminating anything. After confirmation, each original PID is targeted at most once, the two ports are re-queried for a bounded period, and any remaining or replacement listener aborts startup without being killed automatically. Maintenance actions retain the strict `Assert-ApplicationStopped` behavior.
+Production launch checks `FASTAPI_PORT` before runtime, dependency, or build work. If it is occupied, the launcher lists each PID, process name, port, and executable path when Windows provides it, then asks once whether those exact processes may be terminated. Declining returns to the menu; `-Launch` fails closed without terminating unconfirmed processes. After confirmation, the port is re-queried for a bounded period, and any remaining or replacement listener aborts startup. `UI_HOST` and `UI_PORT` are used by the manual development server; maintenance actions still check both configured ports when present.
 
 The launcher validates each prepared portable runtime once per startup. Backend and frontend dependency readiness are independent: backend state is recorded at `app/server/.venv/.fairs-install-state.json` after a successful `uv sync`, while frontend state is recorded at `app/client/node_modules/.fairs-install-state.json` after a successful `npm ci`. Each state fingerprint covers its lock/project files and the launcher runtime baseline; a lightweight FastAPI/Uvicorn import remains the backend integrity check.
 
@@ -43,15 +43,24 @@ Frontend freshness is content-based rather than timestamp-based. The launcher ha
 
 ## Application Lifecycle
 
-- Uvicorn is launched with exactly one worker.
-- The built frontend is served through Vite preview in the local launcher flow.
-- The launcher starts the backend and frontend preview independently. Startup succeeds for the launcher once the frontend HTTP response and listener are available; the browser then polls `/api/health` while the backend finishes its lifespan startup.
-- The frontend shows a dedicated FAIRS loading screen during backend startup, transitions into the normal application after a healthy response, and offers a bounded retry state if the backend does not become ready.
-- Opening the frontend in a browser is best-effort after the frontend readiness check. If Windows cannot hand the URL to a browser automatically, the launcher still reports the frontend URL for manual opening.
-- Closing the browser does not stop the backend or live inference session.
-- Closing the application terminal is the local application stop boundary.
-- If the application terminal is unavailable, use launcher option 13, `Stop all app processes`, and confirm the `[y/N]` prompt to terminate the repository-owned backend/frontend process tree.
+- The launcher builds `app/client/dist` and starts one Uvicorn worker. FastAPI serves the built HTML, assets, and client-side routes on the same origin as `/api`; Vite preview is not used in production.
+- The launcher waits up to 60 seconds for `/api/health` to return `application=FAIRS` with `status=ok` or `status=recovery`, then opens `http://<FASTAPI_HOST>:<FASTAPI_PORT>/`. Wildcard bind addresses open through loopback.
+- `.\start_on_windows.ps1 -Launch` starts the production app directly and keeps that console open as lifecycle supervisor until the backend stops. The menu's Launch action also waits in the launcher console, then returns to the menu.
+- Press Ctrl+C in the launcher console to stop the app through Uvicorn and FastAPI lifespan shutdown. If startup or shutdown fails, the launcher reports the issue and only terminates the backend process tree it started after a bounded wait.
+- Closing the browser does not stop the backend or live inference session. If the launcher console is unavailable, use the confirmed `Stop all app processes` maintenance action to clean up orphaned FAIRS backend processes and any older Vite preview process tree.
 - `RELOAD=true` is development-only because a reload discards process-local training and inference state.
+
+## Development Frontend
+
+Start the backend and Vite development server manually when using hot reload:
+
+```powershell
+.\start_on_windows.ps1
+# Choose Install/Check as needed, then in separate terminals:
+.\runtimes\nodejs\npm.cmd --prefix app/client run dev
+```
+
+The Vite server uses `UI_HOST` and `UI_PORT` and proxies `/api` to the backend configured by `API_BASE_URL` or `FASTAPI_HOST` and `FASTAPI_PORT`.
 
 ## Database Behavior
 

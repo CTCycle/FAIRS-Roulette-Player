@@ -379,10 +379,17 @@ def test_root_and_nested_routes_serve_built_client_when_available(
         root_response = client.get("/")
         nested_response = client.get("/training")
         asset_response = client.get("/assets/app.js")
+        health_response = client.get("/api/health")
+        unknown_api_response = client.get("/api/no-such-route")
 
     assert "FAIRS client" in root_response.text
     assert "FAIRS client" in nested_response.text
     assert "console.log('fairs');" in asset_response.text
+    assert health_response.status_code == 200
+    assert health_response.json()["application"] == "FAIRS"
+    assert health_response.json()["status"] == "ok"
+    assert unknown_api_response.status_code == 404
+    assert unknown_api_response.json()["detail"] == "API route not found"
     assert len(initialize_calls) == 1
     assert dispose_calls == [True]
 
