@@ -7,9 +7,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from threading import Condition
 import time
-from typing import Any
 
-from sqlalchemy.orm import Session
 
 from server.repositories.database.backend import FAIRSDatabase
 
