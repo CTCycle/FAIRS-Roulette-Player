@@ -8,7 +8,6 @@ import time
 from types import SimpleNamespace
 from unittest.mock import Mock
 
-import pytest
 from fastapi.testclient import TestClient
 from server.repositories.database.initializer import DatabaseInitializationError
 

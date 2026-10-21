@@ -28,7 +28,6 @@ from server.contracts.configuration import DatabaseSettings
 from server.contracts.database_configuration import (
     DatabaseConfigurationInput,
     DatabaseConfigurationResponse,
-    database_settings_from_input,
     public_configuration,
 )
 

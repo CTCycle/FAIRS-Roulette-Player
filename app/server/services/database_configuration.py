@@ -121,7 +121,7 @@ class DatabaseConfigurationService:
                     connection.execute(text("SELECT 1"))
             finally:
                 database.dispose()
-        except Exception as exc:  # noqa: BLE001
+        except Exception:  # noqa: BLE001
             backend = candidate.backend
             message = (
                 "Unable to open the SQLite file. Check its path and file permissions."

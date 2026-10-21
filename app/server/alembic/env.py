@@ -9,7 +9,7 @@ import sys
 from typing import Any
 
 from alembic import context
-from sqlalchemy import create_engine
+from sqlalchemy import URL, create_engine
 from sqlalchemy.engine import make_url
 from sqlalchemy.pool import NullPool
 
