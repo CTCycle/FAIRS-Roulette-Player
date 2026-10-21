@@ -1,6 +1,6 @@
 ## Testing And Quality
 
-Last updated: 2026-09-26
+Last updated: 2026-10-22
 
 ## Quality Baseline
 
@@ -21,7 +21,7 @@ Last updated: 2026-09-26
 - Keep parser logic strict at the current snake_case contract boundary; reject malformed, aliased, or legacy payloads instead of silently defaulting them.
 - Validate UI behavior visually when user-facing layout or interaction changes are involved.
 - The frontend package provides `test:unit` for client-owned payload, parser, and session-storage behavior, plus `test:e2e` for mocked Training, Inference, Settings, and supported desktop-width paths. Keep real backend lifecycle behavior in the Python Playwright suite.
-- CI enforces the frontend gate in `.github/workflows/ci.yml` with Node 22: `npm ci`, Chromium installation, `npm run test:unit`, `npm run lint`, `npm run build`, and `npm run test:e2e` from `app/client`. A checked-in `package-lock.json` is required.
+- CI runs the Windows PowerShell launcher maintenance harness on `windows-latest`, including live process-tree cleanup for both running and already-exited parents. This complements, but does not replace, the locally observed interactive `-Launch` and Ctrl+C smoke. CI enforces the frontend gate in `.github/workflows/ci.yml` with Node 22: `npm ci`, Chromium installation, `npm run test:unit`, `npm run lint`, `npm run build`, and `npm run test:e2e` from `app/client`. A checked-in `package-lock.json` is required.
 
 ## Test Layout
 
