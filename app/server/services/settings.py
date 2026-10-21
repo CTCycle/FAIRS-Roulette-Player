@@ -8,7 +8,11 @@ from typing import TYPE_CHECKING
 
 from server.common.utils.logger import logger
 from server.common.runtime_capabilities import validate_jit_runtime
-from server.contracts.configuration import JsonServerSettings
+from server.contracts.configuration import (
+    DeviceSettings,
+    JobsSettings,
+    JsonServerSettings,
+)
 from server.contracts.settings import SettingsPatchRequest, SettingsResponse
 from server.repositories.application_settings import ApplicationSettingsRepository
 from server.repositories.database.runtime import RuntimeDatabaseManager
