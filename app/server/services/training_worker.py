@@ -292,6 +292,7 @@ async def run_training_async(
     jit_compile: bool = False,
     jit_backend: str = "eager",
     polling_interval_seconds: float = 1.0,
+    roulette_settings: Any = None,
 ) -> tuple[Any, Any | None, dict[str, Any], dict[str, Any], str, str]:
     configuration = TrainingConfig.model_validate(configuration).model_dump()
     validate_jit_runtime(jit_compile, jit_backend)
@@ -305,6 +306,7 @@ async def run_training_async(
             configuration,
             database_settings,
             database_path,
+            roulette_settings,
         )
         _raise_if_stopped(stop_event, staging_path)
         if synthetic:
@@ -376,6 +378,7 @@ async def run_resume_training_async(
     database_settings: Any = None,
     database_path: str | Path | None = None,
     polling_interval_seconds: float = 1.0,
+    roulette_settings: Any = None,
 ) -> tuple[Any, Any | None, dict[str, Any], dict[str, Any], str, str]:
     _raise_if_stopped(stop_event)
     checkpoint_repository = CheckpointRepository()
@@ -402,6 +405,7 @@ async def run_resume_training_async(
             train_config,
             database_settings,
             database_path,
+            roulette_settings,
         )
         _raise_if_stopped(stop_event, staging_path)
         if synthetic:
@@ -451,6 +455,7 @@ def run_training_process(
     jit_compile: bool,
     jit_backend: str,
     worker: Any,
+    roulette_settings: Any = None,
 ) -> None:
     progress_queue = worker.progress_queue
     result_queue = worker.result_queue
@@ -480,6 +485,7 @@ def run_training_process(
                 jit_compile,
                 jit_backend,
                 polling_interval_seconds,
+                roulette_settings,
             )
         )
 
@@ -529,6 +535,7 @@ def run_resume_training_process(
     database_path: str | Path | None,
     polling_interval_seconds: float,
     worker: Any,
+    roulette_settings: Any = None,
 ) -> None:
     progress_queue = worker.progress_queue
     result_queue = worker.result_queue
@@ -557,6 +564,7 @@ def run_resume_training_process(
                 database_settings,
                 database_path,
                 polling_interval_seconds,
+                roulette_settings,
             )
         )
 

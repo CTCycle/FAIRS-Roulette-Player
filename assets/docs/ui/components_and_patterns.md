@@ -33,16 +33,19 @@ Last updated: 2026-09-17
 - Guidance is progressive and dismissible. Walkthroughs start only when the user chooses them from Help, while contextual tips appear in empty or application-specific states where a next action is useful.
 - The shared guidance layer renders dialogs and tours through portals so they are not clipped by cards or scroll containers. It restores focus on close, traps keyboard focus while open, supports Escape dismissal, and respects `prefers-reduced-motion` for the demonstration animation.
 
-## Runtime Settings Pattern
+## Settings Pattern
 
-- The Settings page groups runtime controls into four left-side navigation sections: `Roulette`, `Appearance`, `Runtime`, and `Advanced`.
+- The Settings page uses flat left-side navigation sections: `Roulette`, `Appearance`, `Runtime`, `Advanced`, and `Database`.
 - `Roulette` owns the selectable inclusive number range and zero exclusion.
 - `Appearance` owns red/black visual inversion and roulette wheel number-label visibility.
 - `Runtime` owns training polling cadence.
 - `Advanced` owns fresh-model JIT construction settings.
+- `Database` owns only backend selection and connection parameters. It shows active/recovery status and uses conditional SQLite or PostgreSQL fields.
 - The left navigation shows one flat settings panel at a time. Do not add nested settings cards, duplicated section titles, or repeated action rows.
-- Defaults and saved values come from `GET /api/settings`; the client does not hardcode a second runtime-settings authority.
+- Defaults and saved application preferences come from `GET /api/settings`; the client does not hardcode a second settings authority. Database connection details come from the redacted `GET /api/settings/database` response.
 - Save sends only changed fields through `PATCH /api/settings`. Reset uses the backend default contract through `POST /api/settings/reset`.
+- Database connection testing uses `POST /api/settings/database/test` without activating or saving the candidate. Applying a switch uses `PUT /api/settings/database`; after success, reload application preferences from the newly active database.
+- Explain that each database retains its own data and preferences. If the Settings form has an unsaved draft, confirm before discarding it during a switch. Never display or prefill the saved password; a blank value retains it and an explicit clear control removes it.
 - Range validation occurs in the UI for immediate feedback and is repeated by the backend on the merged settings document.
 - The JIT backend field remains disabled while JIT is disabled but preserves its saved value. The supported Windows choice is `eager`; `inductor` requires Triton on another supported platform. Loading, saving, reset, success, and error feedback remain visible near the form actions.
 

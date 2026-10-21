@@ -3,16 +3,15 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from threading import RLock
 from typing import TYPE_CHECKING
 
 from server.common.utils.logger import logger
 from server.common.runtime_capabilities import validate_jit_runtime
-from server.configurations.management import ConfigurationManager
-from server.configurations.startup import get_configuration_manager
 from server.contracts.configuration import DeviceSettings, JobsSettings, JsonServerSettings
 from server.contracts.settings import SettingsPatchRequest, SettingsResponse
+from server.repositories.application_settings import ApplicationSettingsRepository
+from server.repositories.database.runtime import RuntimeDatabaseManager
 
 if TYPE_CHECKING:
     from server.services.training import TrainingService
@@ -27,26 +26,13 @@ class SettingsService:
     # -------------------------------------------------------------------------
     def __init__(
         self,
-        configuration_manager: ConfigurationManager | None = None,
+        database: RuntimeDatabaseManager,
         training_service: TrainingService | None = None,
-        *,
-        configuration_manager_factory: Callable[[], ConfigurationManager]
-        | None = None,
     ) -> None:
-        if training_service is None:
-            raise ValueError("SettingsService requires a TrainingService.")
-        self._configuration_manager = configuration_manager
-        self._configuration_manager_factory = (
-            configuration_manager_factory or get_configuration_manager
-        )
+        self.database = database
+        self.repository = ApplicationSettingsRepository()
         self.training_service = training_service
         self._lock = RLock()
-
-    # -------------------------------------------------------------------------
-    def _manager(self) -> ConfigurationManager:
-        if self._configuration_manager is None:
-            self._configuration_manager = self._configuration_manager_factory()
-        return self._configuration_manager
 
     # -------------------------------------------------------------------------
     @staticmethod
@@ -55,7 +41,7 @@ class SettingsService:
 
     # -------------------------------------------------------------------------
     def get_settings(self) -> SettingsResponse:
-        return self._response(self._manager().get_json_settings())
+        return self._response(self.repository.get(self.database))
 
     # -------------------------------------------------------------------------
     @staticmethod
@@ -94,13 +80,17 @@ class SettingsService:
         cause: Exception,
     ) -> None:
         try:
-            self._manager().replace_json_settings(previous_json)
+            self.repository.replace(self.database, previous_json)
         except Exception:  # noqa: BLE001
             logger.exception("Failed to restore runtime settings after propagation failure")
-        try:
-            self.training_service.apply_runtime_settings(*previous_training)
-        except Exception:  # noqa: BLE001
-            logger.exception("Failed to restore training runtime settings")
+        if self.training_service is not None:
+            try:
+                self.training_service.apply_runtime_settings(*previous_training)
+                set_roulette = getattr(self.training_service, "apply_roulette_settings", None)
+                if callable(set_roulette):
+                    set_roulette(previous_json.roulette.to_runtime_settings())
+            except Exception:  # noqa: BLE001
+                logger.exception("Failed to restore training runtime settings")
         raise SettingsPersistenceError("Unable to save settings.") from cause
 
     # -------------------------------------------------------------------------
@@ -121,12 +111,16 @@ class SettingsService:
                 candidate.device.jit_compile,
                 candidate.device.jit_backend,
             )
-        self._manager().replace_json_settings(candidate)
+        self.repository.replace(self.database, candidate)
         try:
-            self.training_service.apply_runtime_settings(
-                candidate.jobs,
-                candidate.device,
-            )
+            if self.training_service is not None:
+                self.training_service.apply_runtime_settings(
+                    candidate.jobs,
+                    candidate.device,
+                )
+                set_roulette = getattr(self.training_service, "apply_roulette_settings", None)
+                if callable(set_roulette):
+                    set_roulette(candidate.roulette.to_runtime_settings())
         except Exception as exc:  # noqa: BLE001
             logger.exception("Failed to publish runtime settings to TrainingService")
             self._restore_after_propagation_failure(
@@ -139,12 +133,12 @@ class SettingsService:
     # -------------------------------------------------------------------------
     def update_settings(self, patch: SettingsPatchRequest) -> SettingsResponse:
         with self._lock:
-            previous = self._manager().get_json_settings()
+            previous = self.repository.get(self.database)
             candidate = self._merge_patch(previous, patch)
             return self._persist_and_apply(previous, candidate)
 
     # -------------------------------------------------------------------------
     def reset_settings(self) -> SettingsResponse:
         with self._lock:
-            previous = self._manager().get_json_settings()
+            previous = self.repository.get(self.database)
             return self._persist_and_apply(previous, JsonServerSettings())

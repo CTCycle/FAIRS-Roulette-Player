@@ -3,16 +3,21 @@
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from pathlib import Path
 import sys
+from collections.abc import Iterator
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 import pytest
 
 from server.api.settings import router as settings_router
-from server.configurations.management import ConfigurationManager
-from server.contracts.configuration import DeviceSettings, JobsSettings
+from server.contracts.configuration import DatabaseSettings, DeviceSettings, JobsSettings
+from server.repositories.application_settings import ApplicationSettingsRepository
+from server.repositories.database.backend import FAIRSDatabase
+from server.repositories.database.initializer import initialize_database
+from server.repositories.database.runtime import RuntimeDatabaseManager
 from server.services.settings import SettingsService
 
 ###############################################################################
@@ -37,17 +42,35 @@ class TrainingSpy:
         self.device = device
 
 ###############################################################################
-def _build_client(tmp_path: Path) -> tuple[TestClient, ConfigurationManager]:
-    manager = ConfigurationManager(runtime_path=tmp_path / "runtime-settings.json")
+def _sqlite_settings() -> DatabaseSettings:
+    return DatabaseSettings(True, None, None, None, None, None, None, False, None, 10, 1000)
+
+###############################################################################
+def _build_client(tmp_path: Path) -> tuple[TestClient, RuntimeDatabaseManager]:
+    database_path = tmp_path / "settings.db"
+    initialize_database(_sqlite_settings(), database_path=database_path)
+    database = FAIRSDatabase(_sqlite_settings(), database_path=database_path)
+    ApplicationSettingsRepository().ensure_row(database)
+    manager = RuntimeDatabaseManager(database)
     service = SettingsService(manager, TrainingSpy())
     application = FastAPI()
     application.state.settings_service = service
     application.include_router(settings_router, prefix="/api")
     return TestClient(application), manager
 
+
+@contextmanager
+def _client_session(tmp_path: Path) -> Iterator[tuple[TestClient, RuntimeDatabaseManager]]:
+    client, manager = _build_client(tmp_path)
+    try:
+        with client:
+            yield client, manager
+    finally:
+        manager.dispose()
+
 ###############################################################################
 def test_settings_api_returns_only_structured_settings(tmp_path: Path) -> None:
-    with _build_client(tmp_path)[0] as client:
+    with _client_session(tmp_path) as (client, _manager):
         response = client.get("/api/settings")
 
     assert response.status_code == 200
@@ -65,8 +88,7 @@ def test_settings_api_returns_only_structured_settings(tmp_path: Path) -> None:
 
 ###############################################################################
 def test_settings_api_supports_partial_update_and_reload(tmp_path: Path) -> None:
-    client, manager = _build_client(tmp_path)
-    with client:
+    with _client_session(tmp_path) as (client, manager):
         jobs_response = client.patch(
             "/api/settings",
             json={"jobs": {"polling_interval": 2.5}},
@@ -90,15 +112,13 @@ def test_settings_api_supports_partial_update_and_reload(tmp_path: Path) -> None
             "show_number_labels": True,
         },
     }
-    assert manager.get_json_settings().device.jit_backend == "eager"
-
-    reloaded = ConfigurationManager(runtime_path=manager.runtime_path)
-    assert reloaded.get_json_settings().jobs.polling_interval == 2.5
+    persisted = ApplicationSettingsRepository().get(manager)
+    assert persisted.device.jit_backend == "eager"
+    assert persisted.jobs.polling_interval == 2.5
 
 ###############################################################################
 def test_settings_api_accepts_jit_on_supported_python_runtime(tmp_path: Path) -> None:
-    client, manager = _build_client(tmp_path)
-    with client:
+    with _client_session(tmp_path) as (client, manager):
         response = client.patch(
             "/api/settings",
             json={"device": {"jit_compile": True, "jit_backend": "eager"}},
@@ -110,15 +130,14 @@ def test_settings_api_accepts_jit_on_supported_python_runtime(tmp_path: Path) ->
         "jit_compile": True,
         "jit_backend": "eager",
     }
-    assert manager.get_json_settings().device.jit_compile is True
+    assert ApplicationSettingsRepository().get(manager).device.jit_compile is True
 
 ###############################################################################
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows backend capability")
 def test_settings_api_rejects_windows_inductor_while_jit_is_enabled(
     tmp_path: Path,
 ) -> None:
-    client, manager = _build_client(tmp_path)
-    with client:
+    with _client_session(tmp_path) as (client, manager):
         enabled = client.patch(
             "/api/settings",
             json={"device": {"jit_compile": True, "jit_backend": "eager"}},
@@ -136,11 +155,11 @@ def test_settings_api_rejects_windows_inductor_while_jit_is_enabled(
         "jit_compile": True,
         "jit_backend": "eager",
     }
-    assert manager.get_json_settings().device.jit_backend == "eager"
+    assert ApplicationSettingsRepository().get(manager).device.jit_backend == "eager"
 
 ###############################################################################
 def test_settings_api_rejects_unknown_and_invalid_values(tmp_path: Path) -> None:
-    with _build_client(tmp_path)[0] as client:
+    with _client_session(tmp_path) as (client, _manager):
         unknown = client.patch("/api/settings", json={"database": {"host": "x"}})
         low = client.patch("/api/settings", json={"jobs": {"polling_interval": 0.01}})
         blank = client.patch("/api/settings", json={"device": {"jit_backend": " "}})
@@ -155,8 +174,7 @@ def test_settings_api_rejects_unknown_and_invalid_values(tmp_path: Path) -> None
 
 ###############################################################################
 def test_settings_api_reset_restores_defaults(tmp_path: Path) -> None:
-    client, _ = _build_client(tmp_path)
-    with client:
+    with _client_session(tmp_path) as (client, _manager):
         client.patch(
             "/api/settings",
             json={"jobs": {"polling_interval": 4.0}},

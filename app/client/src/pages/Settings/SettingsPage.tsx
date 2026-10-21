@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { SettingsPatchRequest, SettingsResponse } from '../../generated/api';
 import { isAbortError } from '../../utils/apiClient';
 import { fetchSettings, resetSettings, updateSettings } from '../../utils/settingsApi';
+import DatabaseSettingsSection from './DatabaseSettingsSection';
 import './SettingsPage.css';
 
 interface ValidationErrors {
@@ -15,7 +16,7 @@ interface ValidationErrors {
     rouletteRange?: string;
 }
 
-type SettingsSection = 'roulette' | 'appearance' | 'runtime' | 'advanced';
+type SettingsSection = 'roulette' | 'appearance' | 'runtime' | 'advanced' | 'database';
 
 const SETTINGS_ERROR = 'Unable to load settings.';
 const SETTINGS_SECTIONS: Array<{ id: SettingsSection; label: string }> = [
@@ -23,11 +24,16 @@ const SETTINGS_SECTIONS: Array<{ id: SettingsSection; label: string }> = [
     { id: 'appearance', label: 'Appearance' },
     { id: 'runtime', label: 'Runtime' },
     { id: 'advanced', label: 'Advanced' },
+    { id: 'database', label: 'Database' },
 ];
 
 const SettingsPage: React.FC = () => {
     const [savedSettings, setSavedSettings] = useState<SettingsResponse | null>(null);
-    const [activeSection, setActiveSection] = useState<SettingsSection>('roulette');
+    const [activeSection, setActiveSection] = useState<SettingsSection>(() => (
+        new URLSearchParams(window.location.search).get('section') === 'database'
+            ? 'database'
+            : 'roulette'
+    ));
     const [minimumNumber, setMinimumNumber] = useState('');
     const [maximumNumber, setMaximumNumber] = useState('');
     const [excludeZero, setExcludeZero] = useState(false);
@@ -285,6 +291,29 @@ const SettingsPage: React.FC = () => {
                 </div>
             )}
             {successMessage && <div className="settings-feedback settings-feedback-success" role="status">{successMessage}</div>}
+
+            {!savedSettings && (
+                <div className="settings-layout">
+                    <nav className="settings-navigation" aria-label="Settings categories">
+                        <button
+                            id="settings-nav-database"
+                            type="button"
+                            className="settings-navigation-item settings-navigation-item-active"
+                            aria-current="page"
+                            aria-controls="settings-panel-database"
+                            disabled={isBusy}
+                        >
+                            Database
+                        </button>
+                    </nav>
+                    <div className="settings-content">
+                        <DatabaseSettingsSection
+                            hasUnsavedSettings={false}
+                            onSettingsReloaded={synchronizeDraft}
+                        />
+                    </div>
+                </div>
+            )}
 
             {savedSettings && (
                 <form
@@ -566,17 +595,24 @@ const SettingsPage: React.FC = () => {
                         </section>
                     )}
 
+                    {activeSection === 'database' && (
+                        <DatabaseSettingsSection
+                            hasUnsavedSettings={isDirty}
+                            onSettingsReloaded={synchronizeDraft}
+                        />
+                    )}
+
                         </div>
                     </div>
 
-                    <div className="settings-actions">
+                    {activeSection !== 'database' && <div className="settings-actions">
                         <button type="button" className="settings-button settings-button-secondary" onClick={() => void handleReset()} disabled={isBusy}>
                             {resetting ? 'Resetting…' : 'Reset to defaults'}
                         </button>
                         <button type="submit" className="settings-button settings-button-primary" disabled={isBusy || !isDirty}>
                             {saving ? 'Saving…' : 'Save settings'}
                         </button>
-                    </div>
+                    </div>}
                 </form>
             )}
         </div>

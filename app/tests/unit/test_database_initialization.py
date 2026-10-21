@@ -60,6 +60,7 @@ def _copy_test_alembic_environment(
     source_root = initializer.ALEMBIC_CONFIG_PATH.parent
     fixture_root = tmp_path / "alembic-fixture"
     shutil.copytree(source_root / "alembic", fixture_root / "alembic")
+    (fixture_root / "alembic" / "versions" / "0003_application_settings.py").unlink()
     (fixture_root / "alembic.ini").write_text(
         initializer.ALEMBIC_CONFIG_PATH.read_text(encoding="utf-8"),
         encoding="utf-8",
@@ -96,6 +97,7 @@ def test_clean_sqlite_initialization_creates_exact_alembic_schema(
         "dataset_outcomes",
         "inference_sessions",
         "inference_session_steps",
+        "application_settings",
     }
     engine = _engine(database_path)
     try:
@@ -104,7 +106,7 @@ def test_clean_sqlite_initialization_creates_exact_alembic_schema(
                 connection.execute(
                     text("SELECT version_num FROM alembic_version")
                 ).scalar_one()
-                == "0002_rename_relative_preference"
+                == "0003_application_settings"
             )
             initializer.validate_database_metadata(connection)
     finally:
@@ -361,7 +363,7 @@ def test_concurrent_sqlite_initializers_serialize_and_finish_at_head(
                 connection.execute(
                     text("SELECT version_num FROM alembic_version")
                 ).scalar_one()
-                == "0002_rename_relative_preference"
+                == "0003_application_settings"
             )
     finally:
         engine.dispose()

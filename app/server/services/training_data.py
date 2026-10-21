@@ -17,7 +17,6 @@ from server.common.roulette import (
 from server.configurations import (
     DatabaseSettings,
     RouletteSettings,
-    get_configuration_manager,
 )
 from server.learning.training.generator import RouletteSyntheticGenerator
 from server.repositories.database.backend import FAIRSDatabase
@@ -163,11 +162,7 @@ def load_training_series(
     """Pickle-safe application callback used by the training process."""
     resolved_roulette = roulette_settings
     if resolved_roulette is None:
-        resolved_roulette = (
-            get_configuration_manager()
-            .get_json_settings()
-            .roulette.to_runtime_settings()
-        )
+        resolved_roulette = RouletteSettings()
     return TrainingDataService(database_settings, database_path).get_training_series(
         configuration,
         resolved_roulette,

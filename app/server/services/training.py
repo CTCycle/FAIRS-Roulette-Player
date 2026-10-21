@@ -17,6 +17,7 @@ from server.contracts.configuration import (
     DatabaseSettings,
     DeviceSettings,
     JobsSettings,
+    RouletteSettings,
 )
 from server.contracts.training import ResumeConfig, TrainingConfig
 from server.repositories.datasets import DatasetRepository
@@ -122,12 +123,14 @@ class TrainingService:
         polling_interval_seconds: float = 1.0,
         jit_compile: bool = False,
         jit_backend: str = "eager",
+        roulette_settings: RouletteSettings | None = None,
     ) -> None:
         self.training_run_manager = training_run_manager
         self.checkpoint_service = checkpoint_service
         self.dataset_repository = dataset_repository
         self.database_settings = database_settings
         self.database_path = database_path
+        self.roulette_settings = roulette_settings or RouletteSettings()
         self._runtime_settings_lock = RLock()
         self.polling_interval_seconds = float(polling_interval_seconds)
         self.jit_compile = bool(jit_compile)
@@ -154,6 +157,17 @@ class TrainingService:
             self.polling_interval_seconds = float(jobs.polling_interval)
             self.jit_compile = bool(device.jit_compile)
             self.jit_backend = device.jit_backend
+
+    def apply_roulette_settings(self, settings: RouletteSettings) -> None:
+        with self._runtime_settings_lock:
+            self.roulette_settings = settings
+
+    def apply_database_settings(
+        self, settings: DatabaseSettings, database_path: str | Path | None
+    ) -> None:
+        with self._runtime_settings_lock:
+            self.database_settings = settings
+            self.database_path = database_path
 
     # -------------------------------------------------------------------------
     def _runtime_snapshot(self) -> tuple[float, bool, str]:
@@ -310,6 +324,7 @@ class TrainingService:
                     "training_data_loader": load_training_series,
                     "database_settings": self.database_settings,
                     "database_path": self.database_path,
+                    "roulette_settings": self.roulette_settings,
                     "polling_interval_seconds": polling_interval_seconds,
                     "jit_compile": jit_compile,
                     "jit_backend": jit_backend,
@@ -374,6 +389,7 @@ class TrainingService:
                     "training_data_loader": load_training_series,
                     "database_settings": self.database_settings,
                     "database_path": self.database_path,
+                    "roulette_settings": self.roulette_settings,
                     "polling_interval_seconds": polling_interval_seconds,
                 },
             )

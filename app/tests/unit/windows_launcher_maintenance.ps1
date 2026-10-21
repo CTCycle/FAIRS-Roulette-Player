@@ -64,7 +64,7 @@ function Get-FreeTcpPort {
 $script:IdleBackendPort = Get-FreeTcpPort
 do { $script:IdleFrontendPort = Get-FreeTcpPort } while ($script:IdleFrontendPort -eq $script:IdleBackendPort)
 
-function Reset-Fixture([string]$EmbeddedDatabase = 'true', [int]$BackendPort = -1, [int]$FrontendPort = -1) {
+function Reset-Fixture([int]$BackendPort = -1, [int]$FrontendPort = -1) {
     if ($BackendPort -lt 1) { $BackendPort = $script:IdleBackendPort }
     if ($FrontendPort -lt 1) { $FrontendPort = $script:IdleFrontendPort }
     Remove-SafeTree $script:FixtureRoot 'fairs-val19-'
@@ -99,7 +99,6 @@ function Reset-Fixture([string]$EmbeddedDatabase = 'true', [int]$BackendPort = -
         'UI_HOST=127.0.0.1',
         "UI_PORT=$FrontendPort",
         'RELOAD=false',
-        "EMBEDDED_DATABASE=$EmbeddedDatabase",
         "FAIRS_DATA_DIR='$script:DataRoot'"
     ) | Set-Content -LiteralPath $script:envFile
 
@@ -108,6 +107,29 @@ function Reset-Fixture([string]$EmbeddedDatabase = 'true', [int]$BackendPort = -
     $env:FAIRS_DATA_DIR = $script:DataRoot
     $script:ConfirmationResponse = 'yes'
     $script:LauncherInteractive = $false
+}
+
+function Test-EnvironmentDatabaseIndependence {
+    Reset-Fixture
+    @(
+        'FASTAPI_HOST=127.0.0.1',
+        "FASTAPI_PORT=$script:IdleBackendPort",
+        'UI_HOST=127.0.0.1',
+        "UI_PORT=$script:IdleFrontendPort",
+        'RELOAD=false',
+        "FAIRS_DATA_DIR='$script:DataRoot'",
+        'EMBEDDED_DATABASE=false',
+        'DATABASE_HOST=legacy-host'
+    ) | Set-Content -LiteralPath $script:envFile
+
+    foreach ($name in @('EMBEDDED_DATABASE', 'DATABASE_HOST')) {
+        Remove-Item "Env:$name" -ErrorAction SilentlyContinue
+    }
+    Import-DotEnv
+
+    Assert-Condition ($env:FASTAPI_HOST -eq '127.0.0.1') 'Import-DotEnv skipped ordinary launcher values.'
+    Assert-Condition ([string]::IsNullOrWhiteSpace($env:EMBEDDED_DATABASE)) 'Import-DotEnv loaded legacy database selection.'
+    Assert-Condition ([string]::IsNullOrWhiteSpace($env:DATABASE_HOST)) 'Import-DotEnv loaded a legacy database host.'
 }
 
 function Get-FixtureSnapshot {
@@ -253,26 +275,50 @@ function Test-RemoveCheckpoints {
 }
 
 function Test-RemoveAllData {
-    Reset-Fixture 'false'
+    Reset-Fixture
+    $configuredDatabase = Join-Path $script:DataRoot 'database-custom.sqlite'
+    $databaseConfiguration = @{
+        schema_version = 1
+        backend = 'sqlite'
+        sqlite = @{ path = $configuredDatabase; insert_batch_size = 1000 }
+    } | ConvertTo-Json -Depth 4
+    New-FixtureFile (Join-Path $script:DataRoot 'database-config.json') $databaseConfiguration
+    New-FixtureFile $configuredDatabase 'configured database'
+    New-FixtureFile "$configuredDatabase-shm" 'shared memory'
+    New-FixtureFile "$configuredDatabase-wal" 'write ahead log'
     New-FixtureFile (Join-Path $script:DataRoot 'database.db') 'database'
-    New-FixtureFile (Join-Path $script:DataRoot 'database.db-shm') 'shared memory'
-    New-FixtureFile (Join-Path $script:DataRoot 'database.db-wal') 'write ahead log'
     New-FixtureFile (Join-Path $script:DataRoot 'logs\run.log') 'log'
     New-FixtureFile (Join-Path $script:DataRoot 'logs\notes.txt') 'keep note'
     New-FixtureFile (Join-Path $script:DataRoot 'checkpoints\model.pt') 'checkpoint'
-    $externalSentinel = Join-Path $script:ExternalRoot 'external-database.marker'
-    New-FixtureFile $externalSentinel 'remote data untouched'
 
     $script:LauncherInteractive = $true
     Invoke-MaintenanceAction 'AllData'
 
-    foreach ($name in @('database.db', 'database.db-shm', 'database.db-wal')) {
-        Assert-Condition (-not (Test-Path -LiteralPath (Join-Path $script:DataRoot $name))) "Remove all data left '$name'."
+    foreach ($path in @($configuredDatabase, "$configuredDatabase-shm", "$configuredDatabase-wal")) {
+        Assert-Condition (-not (Test-Path -LiteralPath $path)) "Remove all data left configured SQLite file '$path'."
     }
+    Assert-FileContains (Join-Path $script:DataRoot 'database.db') 'database'
+    Assert-Condition (Test-Path -LiteralPath (Join-Path $script:DataRoot 'database-config.json')) 'Remove all data deleted the standalone database configuration.'
     Assert-Condition (-not (Test-Path -LiteralPath (Join-Path $script:DataRoot 'logs\run.log'))) 'Remove all data left a log file.'
     Assert-FileContains (Join-Path $script:DataRoot 'logs\notes.txt') 'keep note'
     Assert-FileContains (Join-Path $script:DataRoot 'checkpoints\model.pt') 'checkpoint'
-    Assert-FileContains $externalSentinel 'remote data untouched'
+
+    Reset-Fixture
+    $postgresConfiguration = @{
+        schema_version = 1
+        backend = 'postgresql'
+        postgresql = @{ engine = 'postgresql+psycopg'; host = 'localhost' }
+    } | ConvertTo-Json -Depth 4
+    New-FixtureFile (Join-Path $script:DataRoot 'database-config.json') $postgresConfiguration
+    New-FixtureFile (Join-Path $script:DataRoot 'database.db') 'inactive SQLite database'
+    New-FixtureFile (Join-Path $script:DataRoot 'logs\run.log') 'log'
+
+    $script:LauncherInteractive = $true
+    Invoke-MaintenanceAction 'AllData'
+
+    Assert-FileContains (Join-Path $script:DataRoot 'database.db') 'inactive SQLite database'
+    Assert-Condition (Test-Path -LiteralPath (Join-Path $script:DataRoot 'database-config.json')) 'Remove all data deleted PostgreSQL configuration.'
+    Assert-Condition (-not (Test-Path -LiteralPath (Join-Path $script:DataRoot 'logs\run.log'))) 'Remove all data left a log file in PostgreSQL mode.'
 }
 
 function Test-Uninstall {
@@ -427,6 +473,7 @@ $testableSource = $testableSource.Replace('$repoRoot = $PSScriptRoot', '$repoRoo
 . ([scriptblock]::Create($testableSource))
 
 try {
+    Test-EnvironmentDatabaseIndependence
     Test-DeclinedAndNoninteractiveActions
     Test-RunningApplicationGuards
     Test-RemoveLogs

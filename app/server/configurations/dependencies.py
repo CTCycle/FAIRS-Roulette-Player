@@ -22,3 +22,7 @@ def get_settings_service(request: Request) -> Any:
 ###############################################################################
 def get_inference_service(request: Request) -> Any:
     return request.app.state.inference_service
+
+###############################################################################
+def get_database_configuration_service(request: Request) -> Any:
+    return request.app.state.database_configuration_service

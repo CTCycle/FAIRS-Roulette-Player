@@ -4,72 +4,32 @@
 from __future__ import annotations
 
 import importlib
-import json
 import os
 from pathlib import Path
 
 import pytest
 
-from server.configurations import environment, startup
+from server.configurations import environment
 
-DATABASE_ENV_KEYS = (
-    "EMBEDDED_DATABASE",
-    "DATABASE_URL",
-    "DATABASE_ENGINE",
-    "DATABASE_HOST",
-    "DATABASE_PORT",
-    "DATABASE_NAME",
-    "DATABASE_USERNAME",
-    "DATABASE_PASSWORD",
-    "DATABASE_SSL",
-    "DATABASE_SSL_CA",
-    "DATABASE_CONNECT_TIMEOUT",
-    "DATABASE_INSERT_BATCH_SIZE",
-)
 
-###############################################################################
 @pytest.fixture(autouse=True)
-def reset_configuration_state(monkeypatch: pytest.MonkeyPatch) -> None:
-    startup.get_configuration_manager.cache_clear()
+def reset_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     environment.reset_environment_for_tests()
-    for env_name in DATABASE_ENV_KEYS:
-        monkeypatch.delenv(env_name, raising=False)
+    monkeypatch.delenv("DATABASE_HOST", raising=False)
+    monkeypatch.delenv("EMBEDDED_DATABASE", raising=False)
     yield
-    startup.get_configuration_manager.cache_clear()
     environment.reset_environment_for_tests()
 
-###############################################################################
-def _write_json(path: Path, payload: dict[str, object]) -> None:
-    path.write_text(json.dumps(payload), encoding="utf-8")
 
-###############################################################################
 def _write_env(path: Path, lines: list[str]) -> None:
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
-###############################################################################
-def _default_runtime_settings() -> dict[str, object]:
-    return {
-        "jobs": {"polling_interval": 1.0},
-        "device": {
-            "jit_compile": False,
-            "jit_backend": "eager",
-        },
-        "roulette": {
-            "minimum_number": 0,
-            "maximum_number": 36,
-            "exclude_zero": False,
-            "invert_colors": False,
-            "show_number_labels": True,
-        },
-    }
 
-###############################################################################
 def test_environment_overrides_existing_process_values(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     env_path = tmp_path / ".env"
     _write_env(env_path, ["FASTAPI_HOST=from_dotenv"])
-
     monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
     monkeypatch.setenv("FASTAPI_HOST", "from_process")
 
@@ -77,7 +37,7 @@ def test_environment_overrides_existing_process_values(
 
     assert os.getenv("FASTAPI_HOST") == "from_dotenv"
 
-###############################################################################
+
 def test_environment_creates_missing_env_from_example(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -85,21 +45,15 @@ def test_environment_creates_missing_env_from_example(
     example_path = tmp_path / ".env.example"
     example_contents = "FASTAPI_HOST=from-example\nEMBEDDED_DATABASE=true\n"
     example_path.write_text(example_contents, encoding="utf-8")
-
     monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
-    monkeypatch.setattr(
-        environment.shared_paths,
-        "ENV_EXAMPLE_FILE_PATH",
-        example_path,
-    )
+    monkeypatch.setattr(environment.shared_paths, "ENV_EXAMPLE_FILE_PATH", example_path)
 
-    loaded_path = environment.load_environment(force=True)
-
-    assert loaded_path == env_path
+    assert environment.load_environment(force=True) == env_path
     assert env_path.read_text(encoding="utf-8") == example_contents
     assert os.getenv("FASTAPI_HOST") == "from-example"
+    assert "EMBEDDED_DATABASE" not in os.environ
 
-###############################################################################
+
 def test_environment_preserves_existing_env(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -108,70 +62,78 @@ def test_environment_preserves_existing_env(
     existing_contents = "FASTAPI_HOST=from-existing\n"
     env_path.write_text(existing_contents, encoding="utf-8")
     example_path.write_text("FASTAPI_HOST=from-example\n", encoding="utf-8")
-
     monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
-    monkeypatch.setattr(
-        environment.shared_paths,
-        "ENV_EXAMPLE_FILE_PATH",
-        example_path,
-    )
+    monkeypatch.setattr(environment.shared_paths, "ENV_EXAMPLE_FILE_PATH", example_path)
 
     environment.load_environment(force=True)
 
     assert env_path.read_text(encoding="utf-8") == existing_contents
     assert os.getenv("FASTAPI_HOST") == "from-existing"
 
-###############################################################################
+
 def test_environment_requires_template_when_env_is_missing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    env_path = tmp_path / ".env"
-    monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
+    monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", tmp_path / ".env")
     monkeypatch.setattr(
-        environment.shared_paths,
-        "ENV_EXAMPLE_FILE_PATH",
-        tmp_path / ".env.example",
+        environment.shared_paths, "ENV_EXAMPLE_FILE_PATH", tmp_path / ".env.example"
     )
 
     with pytest.raises(RuntimeError, match="template was not found"):
         environment.load_environment(force=True)
 
-###############################################################################
+
 def test_environment_load_is_idempotent_without_force(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     env_path = tmp_path / ".env"
     _write_env(env_path, ["FASTAPI_HOST=first"])
-
     monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
-
     environment.load_environment()
     _write_env(env_path, ["FASTAPI_HOST=second"])
     environment.load_environment()
 
     assert os.getenv("FASTAPI_HOST") == "first"
 
-###############################################################################
+
 def test_environment_force_reload_applies_updated_dotenv(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     env_path = tmp_path / ".env"
     _write_env(env_path, ["FASTAPI_HOST=first"])
     monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
-
     environment.load_environment()
     _write_env(env_path, ["FASTAPI_HOST=second"])
     environment.load_environment(force=True)
 
     assert os.getenv("FASTAPI_HOST") == "second"
 
-###############################################################################
+
+def test_environment_does_not_load_database_connection_variables(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    env_path = tmp_path / ".env"
+    _write_env(
+        env_path,
+        ["FASTAPI_HOST=local", "DATABASE_HOST=legacy-host", "DATABASE_PASSWORD=legacy-secret"],
+    )
+    monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
+    monkeypatch.setenv("DATABASE_HOST", "process-host")
+    monkeypatch.setenv("DATABASE_PASSWORD", "process-secret")
+
+    environment.load_environment(force=True)
+
+    assert os.getenv("FASTAPI_HOST") == "local"
+    assert "DATABASE_HOST" not in os.environ
+    assert "DATABASE_PASSWORD" not in os.environ
+    assert "DATABASE_PASSWORD=legacy-secret" in env_path.read_text(encoding="utf-8")
+
+
 def test_server_package_import_does_not_load_environment(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     env_path = tmp_path / ".env"
     _write_env(env_path, ["KERAS_BACKEND=torch"])
-
     monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
     monkeypatch.setenv("KERAS_BACKEND", "tensorflow")
 
@@ -180,213 +142,3 @@ def test_server_package_import_does_not_load_environment(
     importlib.reload(server)
     assert server is not None
     assert os.getenv("KERAS_BACKEND") == "tensorflow"
-
-###############################################################################
-def test_server_settings_use_runtime_settings_file(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    runtime_path = tmp_path / "runtime-settings.json"
-    _write_json(runtime_path, _default_runtime_settings())
-
-    env_path = tmp_path / ".env"
-    _write_env(
-        env_path,
-        [
-            "FASTAPI_HOST=127.0.0.1",
-            "EMBEDDED_DATABASE=false",
-            "DATABASE_HOST=env-db",
-            "DATABASE_PORT=5432",
-            "DATABASE_NAME=env_name",
-            "DATABASE_USERNAME=env_user",
-            "DATABASE_PASSWORD=env_pass",
-        ],
-    )
-    monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
-
-    settings = startup.reload_settings_for_tests(runtime_path=str(runtime_path))
-
-    assert settings.database.host == "env-db"
-    assert settings.database.port == 5432
-    assert settings.database.database_name == "env_name"
-    assert settings.database.username == "env_user"
-    assert settings.jobs.polling_interval == 1.0
-    assert settings.device.jit_compile is False
-    assert settings.device.jit_backend == "eager"
-    assert settings.roulette.minimum_number == 0
-    assert settings.roulette.maximum_number == 36
-
-###############################################################################
-def test_database_settings_are_loaded_from_env(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    runtime_path = tmp_path / "runtime-settings.json"
-    _write_json(runtime_path, _default_runtime_settings())
-
-    env_path = tmp_path / ".env"
-    _write_env(
-        env_path,
-        [
-            "EMBEDDED_DATABASE=false",
-            "DATABASE_ENGINE=postgresql+psycopg",
-            "DATABASE_HOST=env-host",
-            "DATABASE_PORT=5544",
-            "DATABASE_USERNAME=env-user",
-            "DATABASE_NAME=env-name",
-        ],
-    )
-    monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
-
-    settings = startup.reload_settings_for_tests(runtime_path=str(runtime_path))
-
-    assert settings.database.host == "env-host"
-    assert settings.database.port == 5544
-    assert settings.database.username == "env-user"
-    assert settings.database.database_name == "env-name"
-
-###############################################################################
-def test_manager_get_block_and_get_value(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    runtime_path = tmp_path / "runtime-settings.json"
-    _write_json(runtime_path, _default_runtime_settings())
-
-    env_path = tmp_path / ".env"
-    _write_env(
-        env_path,
-        [
-            "FASTAPI_HOST=127.0.0.1",
-            "EMBEDDED_DATABASE=false",
-            "DATABASE_HOST=env-db",
-            "DATABASE_PORT=5432",
-            "DATABASE_NAME=env_name",
-            "DATABASE_USERNAME=env_user",
-            "DATABASE_PASSWORD=env_pass",
-        ],
-    )
-    monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
-
-    startup.reload_settings_for_tests(runtime_path=str(runtime_path))
-    manager = startup.get_configuration_manager()
-
-    database_block = manager.get_block("database")
-    assert database_block["host"] == "env-db"
-    assert "database_url" not in database_block
-    assert manager.get_value("jobs", "polling_interval") == 1.0
-    assert manager.get_value("roulette", "maximum_number") == 36
-    assert manager.get_value("device", "missing", default="fallback") == "fallback"
-
-###############################################################################
-def test_reload_updates_cached_manager_values(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    runtime_path = tmp_path / "runtime-settings.json"
-    payload = _default_runtime_settings()
-    _write_json(runtime_path, payload)
-
-    env_path = tmp_path / ".env"
-    _write_env(
-        env_path,
-        [
-            "FASTAPI_HOST=127.0.0.1",
-            "EMBEDDED_DATABASE=true",
-        ],
-    )
-    monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
-
-    first = startup.reload_settings_for_tests(runtime_path=str(runtime_path))
-    assert first.jobs.polling_interval == 1.0
-
-    payload["jobs"] = {"polling_interval": 2.25}
-    _write_json(runtime_path, payload)
-
-    second = startup.reload_settings_for_tests(runtime_path=str(runtime_path))
-    assert second.jobs.polling_interval == 2.25
-
-###############################################################################
-def test_missing_runtime_file_creates_defaults(tmp_path: Path) -> None:
-    from server.configurations.management import ConfigurationManager
-
-    runtime_path = tmp_path / "nested" / "runtime-settings.json"
-    manager = ConfigurationManager(runtime_path=runtime_path)
-
-    assert runtime_path.is_file()
-    assert manager.get_json_settings().model_dump() == _default_runtime_settings()
-
-###############################################################################
-def test_legacy_runtime_file_without_roulette_block_uses_defaults(tmp_path: Path) -> None:
-    from server.configurations.management import ConfigurationManager
-
-    runtime_path = tmp_path / "runtime-settings.json"
-    legacy_payload = {
-        "jobs": {"polling_interval": 2.0},
-        "device": {"jit_compile": True, "jit_backend": "eager"},
-    }
-    _write_json(runtime_path, legacy_payload)
-
-    manager = ConfigurationManager(runtime_path=runtime_path)
-    settings = manager.get_json_settings()
-
-    assert settings.jobs.polling_interval == 2.0
-    assert settings.device.jit_backend == "eager"
-    assert settings.roulette.minimum_number == 0
-    assert settings.roulette.maximum_number == 36
-    assert settings.roulette.exclude_zero is False
-    assert settings.roulette.invert_colors is False
-    assert settings.roulette.show_number_labels is True
-
-###############################################################################
-def test_invalid_runtime_file_fails_fast(tmp_path: Path) -> None:
-    from server.configurations.management import ConfigurationManager
-
-    runtime_path = tmp_path / "runtime-settings.json"
-    runtime_path.write_text("{not-json", encoding="utf-8")
-
-    with pytest.raises(RuntimeError, match="runtime-settings.json"):
-        ConfigurationManager(runtime_path=runtime_path)
-
-###############################################################################
-def test_unknown_runtime_keys_are_rejected(tmp_path: Path) -> None:
-    from server.configurations.management import ConfigurationManager
-
-    runtime_path = tmp_path / "runtime-settings.json"
-    _write_json(
-        runtime_path,
-        {
-            "jobs": {"polling_interval": 1.0, "stale": True},
-            "device": {"jit_compile": False, "jit_backend": "inductor"},
-        },
-    )
-
-    with pytest.raises(RuntimeError, match="stale"):
-        ConfigurationManager(runtime_path=runtime_path)
-
-###############################################################################
-def test_atomic_write_failure_preserves_previous_runtime_file(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    from server.configurations.management import ConfigurationManager
-    import server.configurations.management as management
-    from server.contracts.configuration import JsonServerSettings
-
-    runtime_path = tmp_path / "runtime-settings.json"
-    manager = ConfigurationManager(runtime_path=runtime_path)
-    before = runtime_path.read_text(encoding="utf-8")
-    monkeypatch.setattr(
-        management.os,
-        "replace",
-        lambda *_args: (_ for _ in ()).throw(OSError("replace failed")),
-    )
-
-    with pytest.raises(RuntimeError, match="Unable to persist runtime settings"):
-        manager.replace_json_settings(
-            JsonServerSettings.model_validate(
-                {
-                    "jobs": {"polling_interval": 2.0},
-                    "device": {"jit_compile": False, "jit_backend": "inductor"},
-                }
-            )
-        )
-
-    assert runtime_path.read_text(encoding="utf-8") == before
-    assert manager.get_json_settings().jobs.polling_interval == 1.0

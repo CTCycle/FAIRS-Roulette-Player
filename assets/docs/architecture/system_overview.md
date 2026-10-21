@@ -1,6 +1,6 @@
 ## System Overview
 
-Last updated: 2026-09-28
+Last updated: 2026-10-21
 
 ## Current State
 
@@ -39,9 +39,11 @@ flowchart LR
 | Frontend transport types | generated `app/client/src/generated/api.ts` |
 | Training defaults and semantic validation | `TrainingConfig` |
 | Per-training GPU/device/mixed precision | `TrainingConfig` |
-| Global runtime settings | `SettingsService` and `runtime-settings.json` |
-| Global JIT/compiler behavior | `ServerSettings.device` loaded from `runtime-settings.json` |
-| Deployment/database environment | typed `.env` settings |
+| Database connection configuration | `DatabaseConfigurationStore` and `<data-root>/database-config.json` |
+| Global runtime settings | `SettingsService` and the active database's `application_settings` row |
+| Global JIT/compiler behavior | `ServerSettings.device` loaded from the active database |
+| Deployment environment | typed `.env` values; no database connection settings |
+| Runtime database ownership | `RuntimeDatabaseManager` shared by repositories and services |
 | Relational schema | SQLAlchemy models plus current Alembic head |
 | Database migration | Alembic only |
 | Checkpoint persisted configuration | versioned `CheckpointConfiguration` |
@@ -91,8 +93,8 @@ Generated TypeScript is a derived artifact, not a parallel authority. CI regener
 ├─ data/
 │  ├─ checkpoints/
 │  ├─ logs/
-│  ├─ database.db
-│  └─ runtime-settings.json (generated local state)
+│  ├─ database-config.json (connection settings only)
+│  └─ database.db (SQLite default)
 ├─ assets/docs/
 ├─ runtimes/
 ├─ settings/
@@ -111,8 +113,10 @@ Generated TypeScript is a derived artifact, not a parallel authority. CI regener
 - `app/server/learning` owns roulette rules, neural models, training, and inference execution.
 - `app/server/repositories` owns relational persistence and checkpoint filesystem persistence.
 - `app/server/common` contains narrow shared primitives only.
-- `app/server/configurations` resolves global technical settings and typed environment configuration.
-- `app/server/services/settings.py` owns strict runtime-settings reads, updates, reset-to-defaults, and propagation to `TrainingService`.
+- `app/server/configurations` resolves typed environment values and the database-only connection file.
+- `app/server/repositories/database/runtime.py` owns the active connection and coordinates operation draining during switches.
+- `app/server/services/settings.py` reads, validates, updates, resets, and applies Settings UI values persisted in the active database.
+- `app/server/services/database_configuration.py` validates target connectivity and schema, blocks switches during active training/inference, reloads target settings, and rolls back failed activation.
 
 Learning code receives explicit validated configuration and prepared data. It does not construct persistence adapters or invent fallback defaults for missing required configuration.
 
@@ -123,7 +127,7 @@ Learning code receives explicit validated configuration and prepared data. It do
 - `src/utils/*Api.ts` performs typed transport calls and maps transport fields to UI representations where needed.
 - `src/hooks/useBackendStartup.ts` owns the top-level bounded `/api/health` readiness poll; `src/components/startup` owns the loading, roulette animation, and retry presentation before workflow routes mount.
 - `src/pages`, `src/components`, and `src/hooks` own feature-local workflow and presentation state.
-- `/settings` is a utility route beside Help. It edits only the backend-owned runtime settings contract and obtains defaults from `GET /api/settings`; enabling JIT is accepted on the supported Python 3.14 runtime when `torch.compile` is available and rejected early otherwise.
+- `/settings` is a utility route beside Help. It edits Settings UI values in the active database and exposes a Database section for testing and applying SQLite or PostgreSQL connection settings. During database recovery, the frontend directs the user to that section.
 - Browser inference storage is advisory replay/setup metadata only. Backend `InferenceState` remains authoritative for a live session.
 
 ## Runtime Boundary

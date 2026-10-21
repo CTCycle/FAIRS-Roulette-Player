@@ -1,6 +1,6 @@
 ## Runtime Modes
 
-Last updated: 2026-09-01
+Last updated: 2026-10-21
 
 ## Supported Modes
 
@@ -26,11 +26,11 @@ Last updated: 2026-09-01
 ## Cross-Mode Differences
 
 - Local mode launches browser-based access on the configured UI host and port.
-- Embedded and external database behavior differ by environment configuration.
+- SQLite and PostgreSQL are selected in Settings and saved in `<data-root>/database-config.json`; database selection is not environment configuration. Live switching is supported when training and inference are idle.
 - A built frontend is served by the backend when available in `app/client/dist`; otherwise the backend root redirects to API docs when docs are enabled.
 - `RELOAD=true` may be used for development only; reloads discard process-local jobs and live sessions. Multi-worker Uvicorn execution is unsupported.
 
 ## Related Files
 
 - Read `startup.md` for the command paths into each mode.
-- Read `configuration.md` for the environment variables that switch behavior.
+- Read `configuration.md` for environment and database configuration ownership.

@@ -11,14 +11,14 @@ import StartupScreen from './components/startup/StartupScreen';
 import { useBackendStartup } from './hooks/useBackendStartup';
 import './styles/global.css';
 
-function AppRoutes() {
+function AppRoutes({ databaseRecovery = false }: { databaseRecovery?: boolean }) {
     return (
         <BrowserRouter>
             <GuidanceProvider>
                 <div className="app-ready-transition">
                     <Routes>
                         <Route path="/" element={<MainLayout />}>
-                            <Route index element={<Navigate to="/training" replace />} />
+                            <Route index element={<Navigate to={databaseRecovery ? '/settings?section=database' : '/training'} replace />} />
                             <Route path="training" element={<TrainingPage />} />
                             <Route path="inference" element={<InferencePage />} />
                             <Route path="settings" element={<SettingsPage />} />
@@ -33,7 +33,7 @@ function AppRoutes() {
 function App() {
     const startup = useBackendStartup();
 
-    if (startup.status !== 'ready') {
+    if (startup.status === 'waiting' || startup.status === 'error') {
         return (
             <StartupScreen
                 status={startup.status}
@@ -43,7 +43,7 @@ function App() {
         );
     }
 
-    return <AppRoutes />;
+    return <AppRoutes databaseRecovery={startup.status === 'recovery'} />;
 }
 
 export default App;
