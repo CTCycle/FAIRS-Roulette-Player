@@ -147,11 +147,11 @@ echo.
 
 echo [STEP] Syncing backend test dependencies...
 pushd "%SERVER_DIR%" >nul
-"%UV_CMD%" sync --python "%PYTHON_CMD%" --extra test
+"%UV_CMD%" sync --locked --python "%PYTHON_CMD%" --extra test
 set "UV_SYNC_RC=%ERRORLEVEL%"
 popd >nul
 if not "%UV_SYNC_RC%"=="0" (
-  echo [ERROR] uv sync --extra test failed with code %UV_SYNC_RC%.
+  echo [ERROR] uv sync --locked --extra test failed with code %UV_SYNC_RC%.
   exit /b %UV_SYNC_RC%
 )
 
