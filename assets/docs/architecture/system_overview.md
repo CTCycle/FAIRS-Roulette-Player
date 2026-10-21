@@ -6,13 +6,13 @@ Last updated: 2026-10-21
 
 FAIRS is a Windows-first local web application for roulette training and inference experiments. It is intentionally a layered local monolith with one current implementation for each major responsibility.
 
-The repository contains a React/Vite client and a FastAPI backend. Training runs in a child worker process, while active job state and live inference models remain process-local. SQLite is the embedded default and PostgreSQL is an explicitly configured alternative using the same SQLAlchemy repositories and Alembic schema. Checkpoints and logs are filesystem data.
+The repository contains a React/Vite client and a FastAPI backend. In production the built SPA is served by FastAPI from the same origin as the API; Vite runs separately only for development and frontend preview/test workflows. `start_on_windows.ps1` supervises the single Uvicorn process, waits for API health before opening the browser, and owns its shutdown. Training runs in a child worker process, while active job state and live inference models remain process-local. SQLite is the embedded default and PostgreSQL is an explicitly configured alternative using the same SQLAlchemy repositories and Alembic schema. Checkpoints and logs are filesystem data.
 
 ```mermaid
 flowchart LR
     User[User in browser]
-    Client[React/Vite client]
-    API[FastAPI interface]
+    Client[React/Vite SPA in browser]
+    API[FastAPI: SPA files and API]
     Services[Application services]
     Learning[ML execution]
     Repos[Persistence adapters]
@@ -20,8 +20,9 @@ flowchart LR
     Files[(Checkpoints and logs)]
     Config[Typed runtime configuration]
 
-    User --> Client
-    Client -->|/api/*| API
+    User --> API
+    API -->|HTML, assets, client routes| Client
+    Client -->|same-origin /api/*| API
     API --> Services
     Services --> Learning
     Services --> Repos
@@ -54,7 +55,8 @@ flowchart LR
 | Active inference state | `InferenceState` |
 | Frontend workflow/view state | feature-local React state/hooks |
 | Cache ownership | `runtimes/cache` with fixed tool-specific child directories |
-| Application lifecycle | FastAPI lifespan and `bootstrap_runtime()` |
+| Application resource lifecycle | FastAPI lifespan and `bootstrap_runtime()` |
+| Local process lifecycle | `start_on_windows.ps1` supervises one Uvicorn process; Ctrl+C requests FastAPI lifespan shutdown |
 | Application version | backend package metadata |
 
 Generated TypeScript is a derived artifact, not a parallel authority. CI regenerates it conceptually from the live backend contract and fails if the checked-in result is stale.
@@ -132,7 +134,7 @@ Learning code receives explicit validated configuration and prepared data. It do
 
 The repository supports one local backend process. It does not implement a distributed job store, distributed inference-session store, or multi-worker coordination. One Uvicorn worker is therefore an explicit runtime invariant.
 
-The Windows launcher includes a confirmed maintenance action that stops repository-owned backend/frontend processes and their child process tree without targeting the browser.
+The Windows launcher owns the production Uvicorn process in its visible console. Its confirmed maintenance action can stop orphaned repository-qualified backend or older Vite preview processes and their child process trees without targeting the browser or unrelated repository processes.
 
 ## Related Files
 

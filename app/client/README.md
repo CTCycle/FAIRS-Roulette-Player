@@ -1,6 +1,6 @@
 # FAIRS frontend
 
-The frontend is a React 19 + TypeScript + Vite single-page client for the local FAIRS backend. It is served through Vite during development and can be built into `app/client/dist` for the FastAPI SPA fallback.
+The frontend is a React 19 + TypeScript + Vite single-page client for the local FAIRS backend. Vite serves it during development; production builds into `app/client/dist`, which FastAPI serves from the same origin as `/api`.
 
 ## Structure
 
@@ -19,6 +19,8 @@ The frontend is a React 19 + TypeScript + Vite single-page client for the local 
 All backend calls use the same-origin `/api/*` routes exposed by FastAPI. Training is started asynchronously and polled through `/api/training/status`; inference sessions are stateful within the backend process. The client does not access the database, checkpoint files, or ML modules directly.
 
 The runtime FastAPI/Pydantic schemas are the canonical backend contract. `src/generated/api.ts` is generated from those schemas; OpenAPI is exported from the running backend when an external artifact is needed, and no checked-in `app/shared/openapi.json` is required. Client parsers remain defensive because runtime payloads can be malformed or evolve between versions.
+
+The production launcher starts only FastAPI, waits for `/api/health`, and opens the backend root URL. Vite preview is used for isolated frontend preview/test workflows, not as the local production server.
 
 ## Development commands
 

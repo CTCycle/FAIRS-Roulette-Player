@@ -5,7 +5,9 @@
 # Launcher paths and runtime locations
 # -----------------------------------------------------------------------------
 [CmdletBinding()]
-param()
+param(
+    [switch]$Launch
+)
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = $PSScriptRoot
@@ -402,8 +404,6 @@ function Import-DotEnv {
     $requiredLauncherVariables = @(
         'FASTAPI_HOST',
         'FASTAPI_PORT',
-        'UI_HOST',
-        'UI_PORT',
         'RELOAD'
     )
     $missingVariables = @($requiredLauncherVariables | Where-Object {
@@ -800,12 +800,12 @@ function Get-PortProcessIds([int]$Port) {
 function Get-ConfiguredPortConflicts {
     param(
         [Parameter(Mandatory)][int]$BackendPort,
-        [Parameter(Mandatory)][int]$FrontendPort
+        [int]$FrontendPort = 0
     )
-    $portEntries = @(
-        [pscustomobject]@{ Port = $BackendPort; Label = 'FASTAPI_PORT' },
-        [pscustomobject]@{ Port = $FrontendPort; Label = 'UI_PORT' }
-    )
+    $portEntries = @([pscustomobject]@{ Port = $BackendPort; Label = 'FASTAPI_PORT' })
+    if ($FrontendPort -gt 0 -and $FrontendPort -ne $BackendPort) {
+        $portEntries += [pscustomobject]@{ Port = $FrontendPort; Label = 'UI_PORT' }
+    }
     $recordsByPid = @{}
     foreach ($portEntry in $portEntries) {
         foreach ($processId in @(Get-PortProcessIds -Port ([int]$portEntry.Port))) {
@@ -904,7 +904,7 @@ function Stop-PortConflictProcesses {
 function Resolve-LaunchPortConflicts {
     param(
         [Parameter(Mandatory)][int]$BackendPort,
-        [Parameter(Mandatory)][int]$FrontendPort
+        [int]$FrontendPort = 0
     )
     $conflicts = @(Get-ConfiguredPortConflicts -BackendPort $BackendPort -FrontendPort $FrontendPort)
     if ($conflicts.Count -eq 0) { return $true }
@@ -950,14 +950,11 @@ function Get-ApplicationProcessRecords {
         $processId = [int]$process.ProcessId
         if ($processId -eq $PID) { continue }
 
-        $executablePath = [string]$process.ExecutablePath
         $commandLine = [string]$process.CommandLine
-        $repositoryRuntime = -not [string]::IsNullOrWhiteSpace($executablePath) -and
-            $executablePath.StartsWith($repoRootPrefix, [StringComparison]::OrdinalIgnoreCase)
         $applicationCommand = $commandLine -match $repoRootPattern -and
             $commandLine -match $applicationCommandPattern
 
-        if ($repositoryRuntime -or $applicationCommand) {
+        if ($applicationCommand) {
             [void]$applicationProcessIds.Add($processId)
         }
     }
@@ -982,8 +979,12 @@ function Get-ApplicationProcessRecords {
 
 function Assert-ApplicationStopped {
     $fastApiPort = [int]$env:FASTAPI_PORT
-    $uiPort = [int]$env:UI_PORT
-    $processIds = @(Get-PortProcessIds $fastApiPort) + @(Get-PortProcessIds $uiPort) | Sort-Object -Unique
+    $ports = @($fastApiPort)
+    $uiPort = 0
+    if ([int]::TryParse([string]$env:UI_PORT, [ref]$uiPort) -and $uiPort -gt 0 -and $uiPort -ne $fastApiPort) {
+        $ports += $uiPort
+    }
+    $processIds = @($ports | ForEach-Object { Get-PortProcessIds ([int]$_) }) | Sort-Object -Unique
     if ($processIds.Count -eq 0) { return }
 
     throw "Application is still running on configured port(s). Close the application terminal first. PIDs: $($processIds -join ', ')."
@@ -1006,8 +1007,7 @@ function Assert-SingleWorkerConfiguration {
 function Start-Application {
     Import-DotEnv
     $fastApiPort = [int]$env:FASTAPI_PORT
-    $uiPort = [int]$env:UI_PORT
-    if (-not (Resolve-LaunchPortConflicts -BackendPort $fastApiPort -FrontendPort $uiPort)) {
+    if (-not (Resolve-LaunchPortConflicts -BackendPort $fastApiPort)) {
         return $false
     }
     Assert-SingleWorkerConfiguration
@@ -1026,63 +1026,155 @@ function Start-Application {
         Write-Step 'Frontend dependency state is missing or stale; synchronizing frontend dependencies.'
         Sync-FrontendDependencies
     } else {
-        Write-Ok 'Frontend dependencies are current; skipped frontend synchronization.'
+        Write-Ok 'Frontend dependencies are current; skipped frontend dependency synchronization.'
     }
     if (-not (Test-FrontendBuildCurrent)) {
         Write-Step 'Frontend source or build inputs changed; rebuilding frontend.'
         Invoke-FrontendBuild
-    }
-    else {
+    } else {
         Write-Ok 'Frontend build is current; skipped frontend build.'
     }
 
     if ($env:RELOAD -eq 'true') {
         Write-Info 'RELOAD=true is development-only; reloads discard in-memory training jobs and inference sessions.'
     }
-    Write-Step 'Launching backend in a visible terminal.'
-    $escapedPython = $venvPython.Replace("'", "''")
-    $escapedApp = (Join-Path $repoRoot 'app').Replace("'", "''")
-    $backendCommand = "& '$escapedPython' -m uvicorn server.app:app --app-dir '$escapedApp' --host $($env:FASTAPI_HOST) --port $fastApiPort --workers 1"
-    if ($env:RELOAD -eq 'true') { $backendCommand += ' --reload' }
-    $backendCommand += ' --log-level info'
-    $backendProcess = Start-Process -FilePath 'powershell.exe' `
-        -ArgumentList @('-NoProfile', '-NoExit', '-Command', $backendCommand) `
-        -WorkingDirectory $repoRoot -WindowStyle Normal -PassThru
-
-    $backendUrl = "http://$($env:FASTAPI_HOST):$fastApiPort"
-    Write-Step 'Launching frontend preview.'
-    $frontendArgs = "/c `"`"$npmCmd`" run preview -- --host $($env:UI_HOST) --port $uiPort --strictPort`""
-    $frontendProcess = Start-Process -FilePath 'cmd.exe' -ArgumentList $frontendArgs -WorkingDirectory $clientDir -WindowStyle Hidden -PassThru
-    $uiUrl = "http://$($env:UI_HOST):$uiPort"
-    $frontendReady = $false
-    for ($attempt = 0; $attempt -lt 30; $attempt++) {
-        try {
-            $response = Invoke-WebRequest -UseBasicParsing -Uri $uiUrl -TimeoutSec 2
-            if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 400) {
-                $frontendReady = $true
-                break
-            }
-        } catch { }
-        Start-Sleep -Seconds 1
-    }
-    $frontendPid = (Get-PortProcessIds $uiPort | Select-Object -First 1)
-    if (-not $frontendReady -or -not $frontendPid) {
-        throw "Frontend preview did not become ready at $uiUrl. Close the application terminal if it is still open."
-    }
-
+    $browserHost = ([string]$env:FASTAPI_HOST).Trim()
+    if ($browserHost -in @('0.0.0.0', '::', '[::]')) { $browserHost = '127.0.0.1' }
+    if ($browserHost.Contains(':') -and -not $browserHost.StartsWith('[')) { $browserHost = "[$browserHost]" }
+    $appUrl = 'http://{0}:{1}/' -f $browserHost, $fastApiPort
+    $healthUrl = 'http://{0}:{1}/api/health' -f $browserHost, $fastApiPort
+    $backendProcess = $null
     try {
-        Start-Process -FilePath $uiUrl -ErrorAction Stop | Out-Null
+        Write-Step 'Starting FastAPI with the built frontend.'
+        $appDirArgument = '"{0}"' -f (Join-Path $repoRoot 'app')
+        $backendArguments = '-m uvicorn server.app:app --app-dir {0} --host {1} --port {2} --workers 1' -f $appDirArgument, $env:FASTAPI_HOST, $fastApiPort
+        if ($env:RELOAD -eq 'true') { $backendArguments += ' --reload' }
+        $backendArguments += ' --log-level info'
+        $startParameters = @{
+            FilePath = $venvPython
+            ArgumentList = $backendArguments
+            WorkingDirectory = $repoRoot
+            NoNewWindow = $true
+            PassThru = $true
+            ErrorAction = 'Stop'
+        }
+        $backendProcess = Start-Process @startParameters
+
+        Write-Info "Waiting up to 60 seconds for $healthUrl to report healthy API readiness."
+        $ready = $false
+        $lastReadinessError = 'health response was not ready'
+        $readinessDeadline = (Get-Date).AddSeconds(60)
+        while ((Get-Date) -lt $readinessDeadline) {
+            $backendProcess.Refresh()
+            if ($backendProcess.HasExited) {
+                throw "Backend exited before readiness (exit code $($backendProcess.ExitCode))."
+            }
+            try {
+                $health = Invoke-RestMethod -Uri $healthUrl -TimeoutSec 3 -ErrorAction Stop
+                if ($health.application -eq 'FAIRS' -and $health.status -in @('ok', 'recovery')) {
+                    $ready = $true
+                    break
+                }
+                $lastReadinessError = "unexpected health response (application=$($health.application), status=$($health.status))"
+            } catch {
+                $lastReadinessError = $_.Exception.Message
+            }
+            Start-Sleep -Milliseconds 750
+        }
+        if (-not $ready) {
+            throw "Backend did not become ready within 60 seconds at $healthUrl ($lastReadinessError)."
+        }
+
+        try {
+            Start-Process -FilePath $appUrl -ErrorAction Stop | Out-Null
+        } catch {
+            Write-Info "The browser could not be opened automatically ($($_.Exception.Message)). Open $appUrl manually."
+        }
+        Write-Host ''
+        Write-Ok 'FAIRS is ready.'
+        Write-Host "Application: $appUrl"
+        Write-Info 'This launcher console owns the running app. Press Ctrl+C here to stop FAIRS; closing the browser leaves it running.'
+
+        $ctrlCRequested = $false
+        try {
+            while ($true) {
+                $backendProcess.Refresh()
+                if ($backendProcess.HasExited) { break }
+                Start-Sleep -Milliseconds 300
+            }
+        } catch [System.Management.Automation.PipelineStoppedException] {
+            $ctrlCRequested = $true
+            Write-Info 'Ctrl+C received. Waiting for FastAPI lifespan shutdown.'
+        } finally {
+            Stop-OwnedApplicationProcessTree -RootProcessId $backendProcess.Id -Process $backendProcess -GraceSeconds 20
+        }
+
+        $backendProcess.Refresh()
+        if ($ctrlCRequested) {
+            Write-Ok 'FAIRS stopped after Ctrl+C.'
+        } elseif ($backendProcess.ExitCode -eq 0) {
+            Write-Info 'The backend process exited normally.'
+        } else {
+            throw "Backend stopped with exit code $($backendProcess.ExitCode)."
+        }
+        return $true
     } catch {
-        Write-Info "The browser could not be opened automatically ($($_.Exception.Message)). Open $uiUrl manually."
+        $launchError = $_
+        if ($null -ne $backendProcess) {
+            Stop-OwnedApplicationProcessTree -RootProcessId $backendProcess.Id -Process $backendProcess -GraceSeconds 5
+        }
+        throw $launchError
     }
-    Write-Host ''
-    Write-Ok 'FAIRS frontend is ready.'
-    Write-Info 'Backend readiness is monitored in the browser while the backend finishes starting.'
-    Write-Host "Backend: $backendUrl (launcher PID $($backendProcess.Id))"
-    Write-Host "Frontend: $uiUrl (PID $frontendPid)"
-    return $true
 }
 
+function Stop-OwnedApplicationProcessTree {
+    param(
+        [Parameter(Mandatory)][int]$RootProcessId,
+        [Parameter(Mandatory)][System.Diagnostics.Process]$Process,
+        [int]$GraceSeconds = 15
+    )
+    if ($Process.HasExited) { return }
+
+    Write-Info "Requesting the backend process to close and allowing up to $GraceSeconds seconds for shutdown."
+    try { [void]$Process.CloseMainWindow() } catch { }
+    try { [void]$Process.WaitForExit($GraceSeconds * 1000) } catch { }
+    if ($Process.HasExited) { return }
+
+    $processes = @(Get-CimInstance -ClassName Win32_Process -ErrorAction Stop)
+    $depthById = @{ $RootProcessId = 0 }
+    do {
+        $addedProcess = $false
+        foreach ($record in $processes) {
+            $processId = [int]$record.ProcessId
+            $parentProcessId = [int]$record.ParentProcessId
+            if (-not $depthById.ContainsKey($processId) -and $depthById.ContainsKey($parentProcessId)) {
+                $depthById[$processId] = [int]$depthById[$parentProcessId] + 1
+                $addedProcess = $true
+            }
+        }
+    } while ($addedProcess)
+
+    $ownedProcesses = @($processes | Where-Object { $depthById.ContainsKey([int]$_.ProcessId) } | Sort-Object { $depthById[[int]$_.ProcessId] } -Descending)
+    foreach ($ownedRecord in $ownedProcesses) {
+        $processId = [int]$ownedRecord.ProcessId
+        try { Stop-Process -Id $processId -Force -ErrorAction Stop } catch {
+            if (Get-Process -Id $processId -ErrorAction SilentlyContinue) {
+                Write-Fatal "Could not stop launcher-owned process PID $($processId): $($_.Exception.Message)"
+            }
+        }
+    }
+    try { [void]$Process.WaitForExit(5000) } catch { }
+    $remainingOwnedIds = [Collections.Generic.List[int]]::new()
+    foreach ($processId in @($depthById.Keys)) {
+        if (Get-Process -Id ([int]$processId) -ErrorAction SilentlyContinue) {
+            [void]$remainingOwnedIds.Add([int]$processId)
+        }
+    }
+    if ($remainingOwnedIds.Count -gt 0) {
+        throw "Launcher-owned backend process tree did not stop after the bounded cleanup attempt. Remaining PIDs: $($remainingOwnedIds -join ', ')."
+    }
+    Write-Info 'Stopped the remaining launcher-owned backend process tree after graceful shutdown did not finish.'
+}
 # -----------------------------------------------------------------------------
 # Database and validation operations
 # -----------------------------------------------------------------------------
@@ -1560,7 +1652,7 @@ function Show-Menu {
         try {
             Invoke-TrackedLauncherAction -Name "menu option $($selectedEntry.Number)" -Action {
                 switch ($selectedEntry.Key) {
-                    'Launch' { if (Start-Application) { exit 0 } }
+                    'Launch' { [void](Start-Application) }
                     'Update' { Update-Application }
                     'Check' { Check-ForUpdates }
                     'Install' {
@@ -1587,6 +1679,20 @@ function Show-Menu {
         }
         Wait-ForMenu
     }
+}
+
+if ($Launch) {
+    $launchExitCode = 0
+    try {
+        Set-CacheEnvironment
+        if (-not (Start-Application)) { $launchExitCode = 2 }
+    } catch {
+        Write-Fatal "Launch failed: $($_.Exception.Message)"
+        $launchExitCode = 1
+    } finally {
+        Clear-LauncherProgress
+    }
+    exit $launchExitCode
 }
 
 Set-CacheEnvironment

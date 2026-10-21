@@ -453,6 +453,44 @@ Wait-Process -Id `$child.Id
     }
 }
 
+function Test-LauncherOwnedProcessTreeCleanup {
+    Reset-Fixture
+    $qaRoot = Join-Path $script:RepositoryRoot 'assets\QA'
+    Remove-SafeQaTree $script:ProcessFixtureRoot '.scratch-val19-process-'
+    $script:ProcessFixtureRoot = Join-Path $qaRoot ".scratch-val19-launch-$PID-$([Guid]::NewGuid().ToString('N'))"
+    $childScript = Join-Path $script:ProcessFixtureRoot 'owned-child-sleeper.ps1'
+    $childPidPath = Join-Path $script:ProcessFixtureRoot 'owned-child.pid'
+    $parentScript = Join-Path $script:ProcessFixtureRoot 'uvicorn-parent.ps1'
+    $ordinaryScript = Join-Path $script:ProcessFixtureRoot 'ordinary-sleeper.ps1'
+    New-FixtureFile $childScript 'Start-Sleep -Seconds 300'
+    New-FixtureFile $ordinaryScript 'Start-Sleep -Seconds 300'
+    $quotedChild = $childScript.Replace("'", "''")
+    $quotedChildPid = $childPidPath.Replace("'", "''")
+    $parentContents = @"
+`$child = Start-Process -FilePath '$script:PowerShellExecutable' -ArgumentList '-NoLogo -NoProfile -File `"$quotedChild`"' -PassThru -WindowStyle Hidden
+Set-Content -LiteralPath '$quotedChildPid' -Value `$child.Id
+Wait-Process -Id `$child.Id
+"@
+    New-FixtureFile $parentScript $parentContents
+
+    $parent = New-SleeperProcess $parentScript
+    $script:OwnedProcessIds.Add($parent.Id)
+    $deadline = (Get-Date).AddSeconds(10)
+    while (-not (Test-Path -LiteralPath $childPidPath) -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 100 }
+    Assert-Condition (Test-Path -LiteralPath $childPidPath) 'The launcher-owned process tree did not start its child.'
+    $childId = [int](Get-Content -LiteralPath $childPidPath -Raw)
+    $script:OwnedProcessIds.Add($childId)
+
+    $ordinary = New-SleeperProcess $ordinaryScript
+    $script:OtherProcessIds.Add($ordinary.Id)
+    Stop-OwnedApplicationProcessTree -RootProcessId $parent.Id -Process $parent -GraceSeconds 0
+
+    foreach ($processId in $script:OwnedProcessIds) {
+        Assert-Condition ($null -eq (Get-Process -Id $processId -ErrorAction SilentlyContinue)) "Launcher cleanup left owned PID $processId running."
+    }
+    Assert-Condition ($null -ne (Get-Process -Id $ordinary.Id -ErrorAction SilentlyContinue)) 'Launcher cleanup stopped an unrelated process in the same fixture folder.'
+}
+
 function Cleanup-TestProcesses {
     foreach ($processId in @($script:OwnedProcessIds) + @($script:OtherProcessIds)) {
         if (Get-Process -Id $processId -ErrorAction SilentlyContinue) {
@@ -482,11 +520,12 @@ try {
     Test-RemoveAllData
     Test-Uninstall
     Test-StopApplicationProcesses
+    Test-LauncherOwnedProcessTreeCleanup
     Write-Output 'VAL-19 maintenance behavior passed in isolated fixtures.'
 } finally {
     Cleanup-TestProcesses
     Remove-SafeTree $script:FixtureRoot 'fairs-val19-'
     Remove-SafeTree $script:ExternalRoot 'fairs-val19-external-'
-    Remove-SafeQaTree $script:ProcessFixtureRoot '.scratch-val19-process-'
+    Remove-SafeQaTree $script:ProcessFixtureRoot '.scratch-val19-launch-'
     Remove-SafeQaTree $script:ProcessExternalRoot '.scratch-val19-external-'
 }

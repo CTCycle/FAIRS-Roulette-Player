@@ -16,13 +16,13 @@ FAIRS uses three distinct configuration surfaces:
 
 The runtime consumes these environment keys:
 
-- `FASTAPI_HOST`, `FASTAPI_PORT`, `UI_HOST`, and `UI_PORT`
+- `FASTAPI_HOST` and `FASTAPI_PORT` bind FastAPI and define the production browser origin; `UI_HOST` and `UI_PORT` bind Vite in the manual development workflow
 - `API_BASE_URL` and `CORS_ORIGINS`
 - `ENABLE_API_DOCS`, `RELOAD`, and `FAIRS_DATA_DIR`
 - `MPLBACKEND` and `KERAS_BACKEND`
 - `WEB_CONCURRENCY`, `UVICORN_WORKERS`, and `FAIRS_WORKERS`
 
-`settings/.env.example` is the canonical template. The Windows launcher copies it only when `.env` does not exist. It does not overlay defaults on an existing file. The launcher requires `FASTAPI_HOST`, `FASTAPI_PORT`, `UI_HOST`, `UI_PORT`, and `RELOAD`; database selection is read from `database-config.json`, not `.env`.
+`settings/.env.example` is the canonical template. The Windows launcher copies it only when `.env` does not exist. It does not overlay defaults on an existing file. The launcher requires `FASTAPI_HOST`, `FASTAPI_PORT`, and `RELOAD`; `UI_HOST` and `UI_PORT` are only needed when manually running Vite. Database selection is read from `database-config.json`, not `.env`.
 
 `API_BASE_URL` optionally selects the upstream origin used by Vite's `/api` proxy; when empty, the proxy target is composed from `FASTAPI_HOST` and `FASTAPI_PORT`. An explicit process environment value takes precedence over `.env`. Browser requests use the same-origin `/api` route, and endpoint paths remain part of the application API contract. `CORS_ORIGINS` is an optional comma-separated list of exact browser origins for direct cross-origin API clients; leave it empty for the default same-origin launcher flow. These network settings are process/deployment configuration and are not exposed through the Settings UI or persisted in `application_settings`.
 
