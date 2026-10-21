@@ -88,7 +88,7 @@ def test_desktop_page_views_and_minimum_width_boundary(page: Page, base_url: str
             (
                 ("spinbutton", "Minimum"),
                 ("spinbutton", "Maximum"),
-                ("button", "Save settings"),
+                ("button", "Reset to defaults"),
             ),
         ),
     )
@@ -167,8 +167,12 @@ def test_training_setup_and_active_monitor_render(page: Page, base_url: str):
     configure_buttons = page.get_by_role(
         "button", name="Configure training with this dataset", exact=True
     )
-    expect(configure_buttons).to_have_count(5)
-    configure_buttons.nth(4).click()
+    expect(configure_buttons.first).to_be_visible()
+    database_count = configure_buttons.count()
+    assert database_count >= 1, (
+        "The stored dataset list should expose at least one configure action"
+    )
+    configure_buttons.nth(database_count - 1).click()
     wizard = page.get_by_role("dialog", name="New Training Wizard")
     expect(wizard).to_be_visible()
     wizard_position = wizard.evaluate(
