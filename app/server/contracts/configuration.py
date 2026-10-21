@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-import os
 import re
 from typing import Any
 
@@ -77,93 +76,6 @@ class ServerSettings:
     roulette: RouletteSettings = RouletteSettings()
 
 ###############################################################################
-class EnvDatabaseSettings(BaseModel):
-    embedded_database: bool = True
-    engine: str = "postgresql+psycopg"
-    host: str | None = None
-    port: int = Field(default=5432, ge=1, le=65535)
-    database_name: str | None = None
-    username: str | None = None
-    password: str | None = None
-    ssl: bool = False
-    ssl_ca: str | None = None
-    connect_timeout: int = Field(default=10, ge=1)
-    insert_batch_size: int = Field(default=1000, ge=1)
-
-    # -------------------------------------------------------------------------
-    @field_validator(
-        "host",
-        "database_name",
-        "username",
-        "password",
-        "ssl_ca",
-        mode="before",
-    )
-    @classmethod
-    def normalize_optional_strings(cls, value: Any) -> str | None:
-        if value is None:
-            return None
-        text = str(value).strip()
-        return text or None
-
-    # -------------------------------------------------------------------------
-    @field_validator("engine", mode="before")
-    @classmethod
-    def normalize_engine(cls, value: Any) -> str:
-        text = str(value).strip() if value is not None else ""
-        return text or "postgresql+psycopg"
-
-    # -------------------------------------------------------------------------
-    @classmethod
-    def from_environment(cls) -> "EnvDatabaseSettings":
-        raw: dict[str, Any] = {}
-        database_url = os.getenv("DATABASE_URL")
-        if database_url is not None and database_url.strip():
-            raise ValueError(
-                "DATABASE_URL is unsupported. Configure the individual DATABASE_* values."
-            )
-
-        env_to_field = {
-            "EMBEDDED_DATABASE": "embedded_database",
-            "DATABASE_ENGINE": "engine",
-            "DATABASE_HOST": "host",
-            "DATABASE_PORT": "port",
-            "DATABASE_NAME": "database_name",
-            "DATABASE_USERNAME": "username",
-            "DATABASE_PASSWORD": "password",
-            "DATABASE_SSL": "ssl",
-            "DATABASE_SSL_CA": "ssl_ca",
-            "DATABASE_CONNECT_TIMEOUT": "connect_timeout",
-            "DATABASE_INSERT_BATCH_SIZE": "insert_batch_size",
-        }
-        for env_name, field_name in env_to_field.items():
-            value = os.getenv(env_name)
-            if value is not None:
-                raw[field_name] = value
-
-        return cls.model_validate(raw)
-
-    # -------------------------------------------------------------------------
-    @model_validator(mode="after")
-    def validate_external_database_requirements(self) -> "EnvDatabaseSettings":
-        if self.embedded_database:
-            return self
-
-        missing: list[str] = []
-        if not self.host:
-            missing.append("database.host")
-        if not self.database_name:
-            missing.append("database.database_name")
-        if not self.username:
-            missing.append("database.username")
-
-        if missing:
-            joined = ", ".join(missing)
-            raise ValueError(
-                f"External database mode requires configuration keys: {joined}"
-            )
-        return self
-
 ###############################################################################
 class JsonJobsSettings(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -228,50 +140,9 @@ class JsonServerSettings(BaseModel):
     device: JsonDeviceSettings = Field(default_factory=JsonDeviceSettings)
     roulette: JsonRouletteSettings = Field(default_factory=JsonRouletteSettings)
 
-    # -------------------------------------------------------------------------
-    @model_validator(mode="before")
-    @classmethod
-    def reject_database_block(cls, value: Any) -> Any:
-        if isinstance(value, dict) and "database" in value:
-            raise ValueError(
-                "Database configuration must be provided via settings/.env."
-            )
-        return value
-
-    # -------------------------------------------------------------------------
-    def to_server_settings(self) -> ServerSettings:
-        db = EnvDatabaseSettings.from_environment()
-        if db.embedded_database:
-            database_settings = DatabaseSettings(
-                embedded_database=True,
-                engine=None,
-                host=None,
-                port=None,
-                database_name=None,
-                username=None,
-                password=None,
-                ssl=False,
-                ssl_ca=None,
-                connect_timeout=db.connect_timeout,
-                insert_batch_size=db.insert_batch_size,
-            )
-        else:
-            database_settings = DatabaseSettings(
-                embedded_database=False,
-                engine=db.engine.strip().lower(),
-                host=db.host,
-                port=db.port,
-                database_name=db.database_name,
-                username=db.username,
-                password=db.password,
-                ssl=db.ssl,
-                ssl_ca=db.ssl_ca,
-                connect_timeout=db.connect_timeout,
-                insert_batch_size=db.insert_batch_size,
-            )
-
+    def to_server_settings(self, database: DatabaseSettings) -> ServerSettings:
         return ServerSettings(
-            database=database_settings,
+            database=database,
             jobs=JobsSettings(polling_interval=self.jobs.polling_interval),
             device=DeviceSettings(
                 jit_compile=self.device.jit_compile,
@@ -279,13 +150,3 @@ class JsonServerSettings(BaseModel):
             ),
             roulette=self.roulette.to_runtime_settings(),
         )
-
-    # -------------------------------------------------------------------------
-    def to_blocks(self) -> dict[str, dict[str, Any]]:
-        database = EnvDatabaseSettings.from_environment()
-        return {
-            "database": database.model_dump(),
-            "jobs": self.jobs.model_dump(),
-            "device": self.device.model_dump(),
-            "roulette": self.roulette.model_dump(),
-        }

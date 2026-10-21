@@ -14,8 +14,10 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi import FastAPI, Request
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from server.common.constants import (
@@ -31,17 +33,29 @@ from server.common import path as shared_paths
 from server.common.utils.logger import close_application_logging, logger
 from server.common.version import get_application_version
 from server.api.datasets import router as datasets_router
+from server.api.database_settings import router as database_settings_router
 from server.api.inference import router as inference_router
 from server.api.settings import router as settings_router
 from server.api.training import router as training_router
 from server.api.upload import router as upload_router
 from server.api.system import router as system_router
-from server.configurations import get_server_settings
+from server.configurations.database_config import (
+    DatabaseConfigurationStore,
+    LoadedDatabaseConfiguration,
+)
+from server.contracts.configuration import JsonServerSettings
 from server.contracts.system import RootStatusResponse
 from server.repositories.database.backend import FAIRSDatabase
+from server.repositories.database.runtime import (
+    DatabaseSwitchConflict,
+    DatabaseUnavailableError,
+    RuntimeDatabaseManager,
+)
 from server.repositories.database.initializer import initialize_database
+from server.repositories.application_settings import ApplicationSettingsRepository
 from server.services.startup_validation import run_startup_validations
 from server.services.settings import SettingsService
+from server.services.database_configuration import DatabaseConfigurationService
 
 # These names are deliberately unresolved until the lifespan has bootstrapped
 # the runtime.  Keeping injectable placeholders preserves the test seam
@@ -55,6 +69,114 @@ TabularFileLoader: Any = None
 InferenceService: Any = None
 TrainingService: Any = None
 TrainingRunManager: Any = None
+
+###############################################################################
+def _activate_runtime_services(
+    application: FastAPI,
+    database_configuration: LoadedDatabaseConfiguration | None,
+    application_settings: Any,
+) -> None:
+    """Publish service settings only after a database target is ready."""
+    if database_configuration is None or application_settings is None:
+        for service_name in (
+            "dataset_repository",
+            "inference_repository",
+            "dataset_service",
+            "training_run_manager",
+            "training_service",
+            "settings_service",
+            "inference_service",
+        ):
+            setattr(application.state, service_name, None)
+        return
+
+    settings = application_settings.to_server_settings(database_configuration.settings)
+    runtime_imports = {
+        "DatasetRepository": ("server.repositories.datasets", "DatasetRepository"),
+        "InferenceRepository": ("server.repositories.inference", "InferenceRepository"),
+        "CheckpointService": ("server.services.checkpoints", "CheckpointService"),
+        "DatasetService": ("server.services.datasets", "DatasetService"),
+        "DatasetImportService": ("server.services.importer", "DatasetImportService"),
+        "TabularFileLoader": ("server.services.loader", "TabularFileLoader"),
+        "InferenceService": ("server.services.inference", "InferenceService"),
+        "TrainingService": ("server.services.training", "TrainingService"),
+        "TrainingRunManager": ("server.services.training_run", "TrainingRunManager"),
+    }
+    resolved: dict[str, Any] = {}
+    for name, (module_name, attribute_name) in runtime_imports.items():
+        injected = globals()[name]
+        if injected is not None:
+            resolved[name] = injected
+        else:
+            module = __import__(module_name, fromlist=[attribute_name])
+            resolved[name] = getattr(module, attribute_name)
+
+    runtime_database = application.state.runtime_database
+    application.state.database = runtime_database
+    dataset_repository = application.state.dataset_repository
+    inference_repository = application.state.inference_repository
+    training_run_manager = application.state.training_run_manager
+    checkpoint_service = application.state.checkpoint_service
+    training_service = application.state.training_service
+    inference_service = application.state.inference_service
+
+    if dataset_repository is None:
+        dataset_repository = resolved["DatasetRepository"](runtime_database)
+    application.state.dataset_repository = dataset_repository
+    if inference_repository is None:
+        inference_repository = resolved["InferenceRepository"](runtime_database)
+    application.state.inference_repository = inference_repository
+    if training_run_manager is None:
+        training_run_manager = resolved["TrainingRunManager"]()
+    application.state.training_run_manager = training_run_manager
+    if checkpoint_service is None:
+        checkpoint_service = resolved["CheckpointService"]()
+        application.state.checkpoint_service = checkpoint_service
+        cleanup_workspaces = getattr(checkpoint_service, "cleanup_incomplete_workspaces", None)
+        if callable(cleanup_workspaces):
+            cleanup_workspaces()
+
+    if application.state.dataset_service is None:
+        dataset_service = resolved["DatasetService"](
+            dataset_repository=dataset_repository,
+            importer=resolved["DatasetImportService"](dataset_repository=dataset_repository),
+            loader=resolved["TabularFileLoader"](),
+            checkpoint_service=checkpoint_service,
+        )
+    else:
+        dataset_service = application.state.dataset_service
+    application.state.dataset_service = dataset_service
+
+    if training_service is None:
+        training_service = resolved["TrainingService"](
+            training_run_manager=training_run_manager,
+            checkpoint_service=checkpoint_service,
+            dataset_repository=dataset_repository,
+        )
+        application.state.training_service = training_service
+    training_service.apply_runtime_settings(settings.jobs, settings.device)
+    apply_roulette = getattr(training_service, "apply_roulette_settings", None)
+    if callable(apply_roulette):
+        apply_roulette(settings.roulette)
+    apply_database = getattr(training_service, "apply_database_settings", None)
+    if callable(apply_database):
+        apply_database(database_configuration.settings, database_configuration.sqlite_path)
+    else:
+        training_service.database_settings = database_configuration.settings
+        training_service.database_path = database_configuration.sqlite_path
+
+    if inference_service is None:
+        inference_service = resolved["InferenceService"](
+            dataset_repository=dataset_repository,
+            inference_repository=inference_repository,
+            checkpoint_service=checkpoint_service,
+        )
+        application.state.inference_service = inference_service
+    settings_service = SettingsService(runtime_database, training_service)
+    application.state.settings_service = settings_service
+
+    application.state.training_service = training_service
+    application.state.inference_service = inference_service
 
 ###############################################################################
 def is_api_docs_enabled() -> bool:
@@ -119,99 +241,89 @@ def redirect_root_to_docs() -> RedirectResponse | RootStatusResponse:
 async def app_lifespan(application: FastAPI) -> AsyncIterator[None]:
     application.state.lifecycle = "starting"
     previous_warning_filters = list(warnings.filters)
-    database = None
-    training_run_manager = None
-    training_service = None
-    settings_service = None
-    inference_service = None
+    application.state.database = None
+    application.state.dataset_repository = None
+    application.state.inference_repository = None
+    application.state.dataset_service = None
+    application.state.training_run_manager = None
+    application.state.checkpoint_service = None
+    application.state.training_service = None
+    application.state.settings_service = None
+    application.state.inference_service = None
+    database_configuration_store: DatabaseConfigurationStore | None = None
+    runtime_database = RuntimeDatabaseManager()
+    application.state.runtime_database = runtime_database
+    startup_database: FAIRSDatabase | None = None
     try:
         bootstrap_runtime()
         warnings.filterwarnings("ignore", category=FutureWarning)
-        settings = get_server_settings()
         ensure_single_process_runtime()
         application.version = get_application_version()
-
-        run_startup_validations(settings)
-        initialize_database(settings.database)
-        database = FAIRSDatabase(settings.database)
-
-        # Import ML-backed services only after the runtime bootstrap has
-        # selected the configured Keras backend.
-        runtime_imports = {
-            "DatasetRepository": ("server.repositories.datasets", "DatasetRepository"),
-            "InferenceRepository": ("server.repositories.inference", "InferenceRepository"),
-            "CheckpointService": ("server.services.checkpoints", "CheckpointService"),
-            "DatasetService": ("server.services.datasets", "DatasetService"),
-            "DatasetImportService": ("server.services.importer", "DatasetImportService"),
-            "TabularFileLoader": ("server.services.loader", "TabularFileLoader"),
-            "InferenceService": ("server.services.inference", "InferenceService"),
-            "TrainingService": ("server.services.training", "TrainingService"),
-            "TrainingRunManager": ("server.services.training_run", "TrainingRunManager"),
-        }
-        resolved_imports: dict[str, Any] = {}
-        for name, (module_name, attribute_name) in runtime_imports.items():
-            injected = globals()[name]
-            if injected is not None:
-                resolved_imports[name] = injected
-                continue
-            module = __import__(module_name, fromlist=[attribute_name])
-            resolved_imports[name] = getattr(module, attribute_name)
-
-        DatasetRepository = resolved_imports["DatasetRepository"]
-        InferenceRepository = resolved_imports["InferenceRepository"]
-        CheckpointService = resolved_imports["CheckpointService"]
-        DatasetService = resolved_imports["DatasetService"]
-        DatasetImportService = resolved_imports["DatasetImportService"]
-        TabularFileLoader = resolved_imports["TabularFileLoader"]
-        InferenceService = resolved_imports["InferenceService"]
-        TrainingService = resolved_imports["TrainingService"]
-        TrainingRunManager = resolved_imports["TrainingRunManager"]
-
-        dataset_repository = DatasetRepository(database)
-        inference_repository = InferenceRepository(database)
-        training_run_manager = TrainingRunManager()
-        checkpoint_service = CheckpointService()
-        cleanup_workspaces = getattr(checkpoint_service, "cleanup_incomplete_workspaces", None)
-        if callable(cleanup_workspaces):
-            cleanup_workspaces()
-
-        application.state.database = database
-        application.state.dataset_repository = dataset_repository
-        application.state.inference_repository = inference_repository
-        application.state.dataset_service = DatasetService(
-            dataset_repository=dataset_repository,
-            importer=DatasetImportService(dataset_repository=dataset_repository),
-            loader=TabularFileLoader(),
-            checkpoint_service=checkpoint_service,
-        )
-        application.state.training_run_manager = training_run_manager
-        training_service = TrainingService(
-            training_run_manager=training_run_manager,
-            checkpoint_service=checkpoint_service,
-            dataset_repository=dataset_repository,
-            database_settings=settings.database,
-            database_path=shared_paths.DATABASE_PATH,
-            polling_interval_seconds=settings.jobs.polling_interval,
-            jit_compile=settings.device.jit_compile,
-            jit_backend=settings.device.jit_backend,
-        )
-        application.state.training_service = training_service
-        settings_service = SettingsService(training_service=training_service)
-        application.state.settings_service = settings_service
-        inference_service = InferenceService(
-            dataset_repository=dataset_repository,
-            inference_repository=inference_repository,
-            checkpoint_service=checkpoint_service,
-        )
-        application.state.inference_service = inference_service
         if not getattr(application.state, "client_routes_configured", False):
             configure_client_routes(application)
             application.state.client_routes_configured = True
-        application.state.lifecycle = "ready"
+
+        database_configuration_store = DatabaseConfigurationStore()
+        application.state.database_configuration_service = DatabaseConfigurationService(
+            store=database_configuration_store,
+            runtime_database=runtime_database,
+            application=application,
+            activate_services=lambda loaded, app_settings: _activate_runtime_services(
+                application, loaded, app_settings
+            ),
+        )
+        application.state.legacy_settings_pending = (
+            shared_paths.LEGACY_RUNTIME_SETTINGS_FILE.is_file()
+        )
+        try:
+            loaded_database = database_configuration_store.load_or_migrate()
+            run_startup_validations(
+                JsonServerSettings().to_server_settings(loaded_database.settings)
+            )
+            initialize_database(
+                loaded_database.settings,
+                database_path=loaded_database.sqlite_path,
+            )
+            startup_database = FAIRSDatabase(
+                loaded_database.settings,
+                database_path=loaded_database.sqlite_path,
+            )
+            app_settings = ApplicationSettingsRepository().ensure_row(
+                startup_database,
+                legacy_path=shared_paths.LEGACY_RUNTIME_SETTINGS_FILE,
+                allow_legacy_import=True,
+            )
+            server_settings = app_settings.to_server_settings(loaded_database.settings)
+            run_startup_validations(server_settings)
+            with runtime_database.switching():
+                runtime_database.activate(startup_database)
+                try:
+                    _activate_runtime_services(application, loaded_database, app_settings)
+                except Exception:
+                    runtime_database.activate(None)
+                    raise
+            startup_database = None
+            application.state.legacy_settings_pending = False
+            application.state.lifecycle = "ready"
+        except Exception as exc:  # noqa: BLE001
+            if startup_database is not None:
+                startup_database.dispose()
+                startup_database = None
+            application.state.recovery_message = (
+                "The saved database could not be opened or initialized. Review the Database settings and try again."
+            )
+            application.state.lifecycle = "recovery"
+            logger.error(
+                "Database startup entered recovery mode (%s).",
+                type(exc).__name__,
+            )
 
         yield
     finally:
         application.state.lifecycle = "stopping"
+        inference_service = application.state.inference_service
+        training_service = application.state.training_service
+        training_run_manager = application.state.training_run_manager
         if inference_service is not None:
             try:
                 shutdown = getattr(inference_service, "shutdown", None)
@@ -235,11 +347,10 @@ async def app_lifespan(application: FastAPI) -> AsyncIterator[None]:
             except Exception:  # noqa: BLE001
                 logger.exception("Training manager shutdown failed")
 
-        if database is not None:
-            try:
-                database.dispose()
-            except Exception:  # noqa: BLE001
-                logger.exception("Database shutdown failed")
+        try:
+            runtime_database.dispose()
+        except Exception:  # noqa: BLE001
+            logger.exception("Database shutdown failed")
 
         application.state.lifecycle = "stopped"
         warnings.filters[:] = previous_warning_filters
@@ -256,6 +367,7 @@ def include_api_routers(application: FastAPI) -> None:
         datasets_router,
         inference_router,
         settings_router,
+        database_settings_router,
         system_router,
     ):
         application.include_router(router, prefix=FASTAPI_API_PREFIX)
@@ -304,6 +416,42 @@ def create_app() -> FastAPI:
         openapi_url="/openapi.json" if enable_api_docs else None,
         lifespan=app_lifespan,
     )
+
+    @application.middleware("http")
+    async def database_runtime_guard(request: Request, call_next):
+        api_prefix = f"{FASTAPI_API_PREFIX}/"
+        path = request.url.path
+        exempt = path == f"{FASTAPI_API_PREFIX}/health" or path.startswith(
+            f"{FASTAPI_API_PREFIX}/settings/database"
+        )
+        if path.startswith(api_prefix) and not exempt:
+            if getattr(request.app.state, "lifecycle", "starting") == "recovery":
+                return JSONResponse(
+                    status_code=503,
+                    content={"detail": "Database services are unavailable. Configure a working database."},
+                )
+            database_manager = getattr(request.app.state, "runtime_database", None)
+            if database_manager is not None:
+                try:
+                    with database_manager.operation():
+                        return await call_next(request)
+                except DatabaseSwitchConflict as exc:
+                    return JSONResponse(status_code=409, content={"detail": str(exc)})
+                except DatabaseUnavailableError as exc:
+                    return JSONResponse(status_code=503, content={"detail": str(exc)})
+        return await call_next(request)
+
+    @application.exception_handler(RequestValidationError)
+    async def sanitized_database_validation_error(
+        request: Request, _exc: RequestValidationError
+    ):
+        if "/settings/database" in request.url.path:
+            return JSONResponse(
+                status_code=422,
+                content={"detail": "Invalid database configuration. Review the required fields and options."},
+            )
+        return await request_validation_exception_handler(request, _exc)
+
     include_api_routers(application)
     return application
 

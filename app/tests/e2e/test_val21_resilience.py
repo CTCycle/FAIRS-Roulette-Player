@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import sqlite3
 from uuid import uuid4
 
@@ -116,8 +115,6 @@ def test_rejected_settings_patches_preserve_file_and_recover(
     before_response = api_context.get("/api/settings")
     assert before_response.status == 200, before_response.text()
     before_settings = before_response.json()
-    settings_path = shared_paths.RUNTIME_SETTINGS_FILE
-    before_document = settings_path.read_bytes()
 
     invalid_patches = (
         {"database": {"host": "invalid.example"}},
@@ -130,7 +127,7 @@ def test_rejected_settings_patches_preserve_file_and_recover(
         response = api_context.patch("/api/settings", data=patch)
         _assert_client_error(response)
         statuses.append(response.status)
-        assert settings_path.read_bytes() == before_document
+        assert api_context.get("/api/settings").json() == before_settings
 
     unchanged = api_context.get("/api/settings")
     assert unchanged.status == 200, unchanged.text()
@@ -154,8 +151,6 @@ def test_rejected_settings_patches_preserve_file_and_recover(
     )
     assert restored.status == 200, restored.text()
     assert restored.json() == before_settings
-    assert json.loads(settings_path.read_text(encoding="utf-8"))[
-        "jobs"]["polling_interval"] == before_settings["jobs"]["polling_interval"]
     _assert_healthy(api_context)
     print(f"VAL21 settings patches: rejected_statuses={statuses}, recovery=200")
 

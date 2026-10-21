@@ -311,7 +311,7 @@ def _assert_alembic_head(database_path: Path) -> None:
         revision = connection.execute(
             "SELECT version_num FROM alembic_version"
         ).fetchone()
-    assert revision == ("0002_rename_relative_preference",)
+    assert revision == ("0003_application_settings",)
 
 ###############################################################################
 def test_uploaded_dataset_survives_backend_restart_and_stays_deleted(

@@ -113,21 +113,49 @@ sequenceDiagram
     participant Client
     participant API
     participant Settings as SettingsService
-    participant File as runtime-settings.json
+    participant DB as application_settings row
     participant Training as TrainingService
 
     Client->>API: GET /api/settings
     API->>Settings: read current validated settings
-    Settings->>File: load canonical runtime document
+    Settings->>DB: read current validated settings
     API-->>Client: SettingsResponse
     Client->>API: PATCH /api/settings
     API->>Settings: validate and merge strict patch
-    Settings->>File: atomic replace
+    Settings->>DB: write merged settings transactionally
     Settings->>Training: apply runtime settings
     API-->>Client: SettingsResponse
 ```
 
-`SettingsService` is the only application service that writes the runtime settings file. Polling changes affect future parent status polling immediately. A new training worker receives a launch snapshot of polling and JIT values; an active worker keeps its captured snapshot. Enabling JIT, or changing its backend while enabled, passes a runtime capability preflight before persistence or training start, with the worker boundary retaining a defensive guard. A resumed checkpoint uses the current polling interval while preserving the checkpoint's model configuration.
+`SettingsService` reads and writes only the active database's settings row. Polling changes affect future parent status polling immediately. A new training worker receives a launch snapshot of polling and JIT values; an active worker keeps its captured snapshot. Enabling JIT, or changing its backend while enabled, passes a runtime capability preflight before persistence or training start, with the worker boundary retaining a defensive guard. A resumed checkpoint uses the current polling interval while preserving the checkpoint's model configuration.
+
+## Database Switch Flow
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API
+    participant Config as DatabaseConfigurationService
+    participant Candidate as Candidate database
+    participant Manager as RuntimeDatabaseManager
+    participant Services
+
+    Client->>API: POST /api/settings/database/test
+    API->>Config: test candidate connection
+    Config->>Candidate: SELECT 1
+    API-->>Client: test result (no activation)
+    Client->>API: PUT /api/settings/database
+    API->>Config: initialize and validate candidate
+    Config->>Candidate: run Alembic and load settings row
+    Config->>Manager: drain operations and acquire switch lock
+    Manager->>Services: publish target settings and connection
+    Config->>Config: atomically save connection configuration
+    API-->>Client: active backend and status
+    Client->>API: GET /api/settings
+    API-->>Client: target database settings
+```
+
+Switching is rejected while training or inference is active. If activation fails, the previous manager, services, and saved connection configuration remain active. Data and settings are never copied between databases.
 
 ## Inference Flow
 

@@ -1,6 +1,6 @@
 ## Architecture Findings And Remediation
 
-Last updated: 2026-09-26
+Last updated: 2026-10-21
 
 ## Audit Objective
 
@@ -17,8 +17,10 @@ The remediation intentionally removes compatibility aliases, hybrid old/new path
 | Training defaults | `TrainingConfig` |
 | Training semantic validation | `TrainingConfig`, exposed to the UI through `/api/training/validate` |
 | Per-training device/mixed precision | `TrainingConfig` |
-| Global JIT/compiler settings | `ServerSettings.device` |
-| Environment/database settings | typed environment configuration sourced from `settings/.env` |
+| Database connection settings | strict, versioned `<data-root>/database-config.json` managed by `DatabaseConfigurationStore` |
+| Settings UI preferences | singleton `application_settings` row in the active database, managed by `SettingsService` |
+| Active database connection | `RuntimeDatabaseManager` shared by repositories and services |
+| Environment settings | typed environment configuration sourced from `settings/.env`, excluding database connection values |
 | Relational schema | SQLAlchemy models at current Alembic head |
 | Relational migration | Alembic only |
 | Persisted checkpoint configuration | versioned `CheckpointConfiguration` |
@@ -106,7 +108,7 @@ These are current requirements, not legacy compatibility:
 
 ### Relational database
 
-Normal application initialization runs Alembic to current `head`. Revision `0002_rename_relative_preference` renames the persisted inference preference field and check constraint.
+Normal application initialization runs Alembic to current `head`. Revision `0002_rename_relative_preference` renames the persisted inference preference field and check constraint; revision `0003_application_settings` adds the singleton Settings UI row.
 
 ### Checkpoints
 

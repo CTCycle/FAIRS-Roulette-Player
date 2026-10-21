@@ -5,6 +5,47 @@ export type Body_upload_api_data_upload_post = {
     "file": string;
 };
 
+export type DatabaseConfigurationInput = {
+    "backend": "sqlite" | "postgresql";
+    "clear_password"?: boolean;
+    "connect_timeout"?: number;
+    "database_name"?: string | null;
+    "host"?: string | null;
+    "insert_batch_size"?: number;
+    "password"?: string | null;
+    "port"?: number;
+    "sqlite_path"?: string | null;
+    "ssl"?: boolean;
+    "ssl_ca"?: string | null;
+    "username"?: string | null;
+};
+
+export type DatabaseConfigurationResponse = {
+    "backend": "sqlite" | "postgresql";
+    "connect_timeout"?: number;
+    "database_name"?: string | null;
+    "host"?: string | null;
+    "insert_batch_size"?: number;
+    "password_configured"?: boolean;
+    "port"?: number | null;
+    "sqlite_path"?: string | null;
+    "ssl"?: boolean;
+    "ssl_ca"?: string | null;
+    "username"?: string | null;
+};
+
+export type DatabaseStatusResponse = {
+    "active_backend": "sqlite" | "postgresql" | null;
+    "configuration": DatabaseConfigurationResponse | null;
+    "message"?: string | null;
+    "status": "ready" | "recovery" | "testing";
+};
+
+export type DatabaseTestResponse = {
+    "message": string;
+    "success": boolean;
+};
+
 export type DatasetDeleteResponse = {
     "dataset_id": number;
     "status": string;
@@ -305,6 +346,8 @@ export type UploadResponse = {
 };
 
 export type ValidationError = {
+    "ctx"?: Record<string, never>;
+    "input"?: unknown;
     "loc": Array<string | number>;
     "msg": string;
     "type": string;

@@ -70,11 +70,22 @@ Router prefix: `/settings`
 
 The roulette settings contract exposes `minimum_number`, `maximum_number`, `exclude_zero`, `invert_colors`, and `show_number_labels`. Number limits are inclusive, bounded to `0..36`, and validated after partial patches are merged with the existing document. The combination `minimum_number=0`, `maximum_number=0`, and `exclude_zero=true` is rejected because it would create an empty outcome pool.
 
-The Settings endpoints persist to `runtime-settings.json` through `SettingsService`. Nested unknown fields, invalid roulette ranges, out-of-range polling values, empty JIT backend values, database configuration, environment values, and per-training `TrainingConfig` fields are rejected. Enabling JIT also requires runtime capability support; the supported Python 3.14 launcher runtime accepts it when `torch.compile` is available, while Windows rejects the `inductor` backend because Triton is unavailable. Existing runtime files without the roulette block remain valid and receive backend defaults. Job and device changes are propagated to the live `TrainingService`; roulette rules are read from the same persisted runtime authority when new training data is prepared and when live inference steps are validated.
+The Settings endpoints persist to the `application_settings` row in the active database through `SettingsService`. Nested unknown fields, invalid roulette ranges, out-of-range polling values, empty JIT backend values, database configuration, environment values, and per-training `TrainingConfig` fields are rejected. Enabling JIT also requires runtime capability support; the supported Python 3.14 launcher runtime accepts it when `torch.compile` is available, while Windows rejects the `inductor` backend because Triton is unavailable. Job and device changes are propagated to the live `TrainingService`; roulette rules are read from the same persisted row when new training data is prepared and when live inference steps are validated.
+
+## Database Configuration Endpoints
+
+Router prefix: `/settings/database`
+
+- `GET /api/settings/database` returns the saved connection configuration with the password redacted, active backend, lifecycle status, and a recovery message when applicable.
+- `POST /api/settings/database/test` tests a candidate connection without activating it or saving its settings.
+- `PUT /api/settings/database` validates connectivity and schema, drains in-flight database operations, loads the target database's Settings row, then activates the connection. It returns `409` while training or inference is active and `400` when the candidate cannot be initialized or activated. Failed activation restores the previous backend.
+
+Supported backends are SQLite and PostgreSQL through `postgresql+psycopg`. Blank PostgreSQL passwords retain the saved credential; the explicit clear flag removes it. Password values are never returned by API responses. Switching does not copy settings or application data between databases.
 
 ## System Endpoints
 
-- `GET /api/health` returns `HealthResponse` with `status`, `application`, and `version`.
+- `GET /api/health` returns `HealthResponse` with `status`, `application`, and `version`. `status` is `recovery` when database startup failed but the configuration recovery surface is available.
+- During recovery, database-backed API requests return `503` until a working database is applied; database configuration and health routes remain available.
 
 ## Non-API Routes
 

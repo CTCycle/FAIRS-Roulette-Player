@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import sqlite3
+import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -53,11 +54,14 @@ def build_sqlite_engine(
         else Path(shared_paths.DATABASE_PATH)
     )
     db_path.parent.mkdir(parents=True, exist_ok=True)
+    connect_args: dict[str, Any] = {"check_same_thread": False}
+    if sys.version_info >= (3, 12):
+        connect_args["autocommit"] = False
     engine = sqlalchemy.create_engine(
         f"sqlite:///{db_path}",
         echo=False,
         future=True,
-        connect_args={"autocommit": False, "check_same_thread": False},
+        connect_args=connect_args,
     )
     event.listen(engine, "connect", set_sqlite_pragma)
     return engine

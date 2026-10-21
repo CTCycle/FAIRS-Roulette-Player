@@ -5,14 +5,30 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from functools import lru_cache
+import os
 from pathlib import Path
 import shutil
 from threading import Lock
 
-from dotenv import load_dotenv
+from dotenv import dotenv_values
 
 from server.common import path as shared_paths
 from server.common.utils.logger import logger
+
+_DATABASE_ENV_KEYS = frozenset({
+    "DATABASE_URL",
+    "EMBEDDED_DATABASE",
+    "DATABASE_ENGINE",
+    "DATABASE_HOST",
+    "DATABASE_PORT",
+    "DATABASE_NAME",
+    "DATABASE_USERNAME",
+    "DATABASE_PASSWORD",
+    "DATABASE_SSL",
+    "DATABASE_SSL_CA",
+    "DATABASE_CONNECT_TIMEOUT",
+    "DATABASE_INSERT_BATCH_SIZE",
+})
 
 ###############################################################################
 @dataclass
@@ -56,7 +72,12 @@ def load_environment(*, force: bool = False) -> Path | None:
             return env_path if env_path.exists() else None
 
         ensure_environment_file()
-        load_dotenv(dotenv_path=env_path, override=True)
+        values = dotenv_values(env_path)
+        for key in _DATABASE_ENV_KEYS:
+            os.environ.pop(key, None)
+        for key, value in values.items():
+            if key and key not in _DATABASE_ENV_KEYS and value is not None:
+                os.environ[key] = value
 
         state.loaded = True
         return env_path

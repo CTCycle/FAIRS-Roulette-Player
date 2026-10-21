@@ -1,6 +1,6 @@
 ## Startup
 
-Last updated: 2026-10-15
+Last updated: 2026-10-21
 
 ## Local Application Startup
 
@@ -16,7 +16,7 @@ From repository root in PowerShell:
 
 - If `settings/.env` does not exist, the launcher copies `settings/.env.example` once.
 - An existing `.env` is never supplemented with a hidden compatibility/default map.
-- Launcher-critical values must be explicitly present in `.env`: `FASTAPI_HOST`, `FASTAPI_PORT`, `UI_HOST`, `UI_PORT`, `RELOAD`, and `EMBEDDED_DATABASE`.
+- Launcher-critical values must be explicitly present in `.env`: `FASTAPI_HOST`, `FASTAPI_PORT`, `UI_HOST`, `UI_PORT`, and `RELOAD`. Database selection and connection details come from `<data-root>/database-config.json`.
 - If one of those values is absent or blank, the launcher fails with an instruction to update `.env` from the current template.
 
 ## Runtime Preparation
@@ -64,7 +64,9 @@ FastAPI lifespan, the CLI, and the launcher use the same Alembic initializer.
 - Unknown/ahead revisions, multiple heads, and schema drift fail unchanged.
 - PostgreSQL and SQLite use the same schema and repositories.
 
-The current database head is `0002_rename_relative_preference`.
+The current database head is `0003_application_settings`. The Database section in Settings can switch between validated SQLite and PostgreSQL targets while the application is running, provided training and inference are idle. It drains in-flight database requests, reloads Settings from the target database, and leaves each database's data independent. Connection, schema, or activation failures preserve the previous backend. Startup-only changes such as `FAIRS_DATA_DIR` and listener addresses still require a restart.
+
+If the saved database configuration cannot be parsed, decrypted, connected, or initialized, the backend remains available in recovery mode. The frontend opens Database settings, `/api/health` reports `recovery`, and database-backed APIs return `503` until a valid target is applied.
 
 Checkpoint format migration is separate from database migration. Before using pre-v1 checkpoint configuration files, run the explicit one-time checkpoint migration preflight described in `../architecture/persistence.md`.
 
@@ -108,7 +110,7 @@ The first campaign tier is recorded in the project status ledger as `VAL-00` and
 - `VAL-00` records the exact revision, managed runtime, SQLite mode, health response, clean training/inference state, disposable dataset, short real CPU training job, and completed checkpoint identifiers. The checkpoint must be produced through the supported API/launcher path so later inference slices exercise real serialization and dataset lineage.
 - `VAL-01` uses the official launcher to verify that the frontend is reachable while backend lifespan startup is still pending, that the browser transitions only after `/api/health` is healthy, and that explicit launcher stop removes only repository-owned backend/frontend processes and leaves ports `8890` and `8051` clear.
 
-The current ledger records `VAL-00` and `VAL-01` as `PASSED`, and `application.startup` as `VALIDATED` for the supported warm/standard profile. `STARTUP-01` is `PASSED` for the supported Windows cold-launch profile, validated on a fresh GitHub-hosted Windows 2025 runner on 2026-10-15: [GitHub Actions run 38750350203](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/runs/38750350203) exercised the official cold Standard installation, required runtime/dependency/build artifacts, SQLite migration, idempotent reuse of an already-patched read-only `python314._pth`, and official launcher live backend/frontend HTTP 200 responses. The source fixes use .NET Framework-compatible SHA-256 hex formatting and avoid rewriting an already-patched `_pth` file. The original machine's protected cache residue and ACLs were not remediated on the hosted runner; that is a host-specific, non-gating environment issue rather than an incomplete `STARTUP-01` acceptance criterion.
+The ledger records `VAL-00` and `VAL-01` as `PASSED` and `STARTUP-01` as `PASSED` for their recorded revisions. The 2026-10-15 GitHub-hosted Windows run ([run 38750350203](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/runs/38750350203)) covered the official cold Standard installation, runtime/dependency/build artifacts, SQLite migration, prepared read-only `python314._pth` reuse, and launcher backend/frontend HTTP 200 responses. Those historical results do not validate the current database-config and recovery changes. The current `application.startup` component is `PARTIAL` until the updated launcher, recovery mode, readiness, and owned shutdown are exercised on the managed Windows runtime. The original machine's protected cache residue and ACLs remain a separate host-specific limitation.
 
 When capturing evidence, record browser-visible state, console/network failures, backend logs, process identity, and screenshots for failures. Keep runner output transient and record the durable result, tested revision, limitation, and follow-up in the project status ledger. Do not treat a source inspection, a test definition, or a successful response from an unrelated revision as current startup evidence.
 

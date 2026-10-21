@@ -377,6 +377,12 @@ function Initialize-EnvironmentFile {
 function Import-DotEnv {
     Initialize-EnvironmentFile
     $loadedKeys = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    $databaseEnvironmentKeys = @(
+        'DATABASE_URL', 'EMBEDDED_DATABASE', 'DATABASE_ENGINE', 'DATABASE_HOST',
+        'DATABASE_PORT', 'DATABASE_NAME', 'DATABASE_USERNAME', 'DATABASE_PASSWORD',
+        'DATABASE_SSL', 'DATABASE_SSL_CA', 'DATABASE_CONNECT_TIMEOUT',
+        'DATABASE_INSERT_BATCH_SIZE'
+    )
     foreach ($rawLine in Get-Content -LiteralPath $envFile) {
         $line = $rawLine.Trim()
         if (-not $line -or $line.StartsWith('#') -or $line.StartsWith(';') -or -not $line.Contains('=')) { continue }
@@ -387,6 +393,7 @@ function Import-DotEnv {
             $value = $value.Substring(1, $value.Length - 2)
         }
         if ($key) {
+            if ($databaseEnvironmentKeys -contains $key) { continue }
             [Environment]::SetEnvironmentVariable($key, $value, 'Process')
             [void]$loadedKeys.Add($key)
         }
@@ -397,8 +404,7 @@ function Import-DotEnv {
         'FASTAPI_PORT',
         'UI_HOST',
         'UI_PORT',
-        'RELOAD',
-        'EMBEDDED_DATABASE'
+        'RELOAD'
     )
     $missingVariables = @($requiredLauncherVariables | Where-Object {
         -not $loadedKeys.Contains($_) -or
@@ -779,7 +785,13 @@ function Build-Frontend {
 }
 
 function Get-PortProcessIds([int]$Port) {
-    $listeners = netstat.exe -ano | Select-String -Pattern ":$Port\s+.*LISTENING\s+(\d+)\s*$"
+    try {
+        $owners = @(Get-NetTCPConnection -State Listen -LocalPort $Port -ErrorAction Stop |
+            Select-Object -ExpandProperty OwningProcess | Sort-Object -Unique)
+        if ($owners.Count -gt 0) { return @($owners | ForEach-Object { [int]$_ }) }
+    } catch { }
+
+    $listeners = netstat.exe -ano | Select-String -Pattern ":$Port\s+.*(?:LISTENING|IN ASCOLTO)\s+(\d+)\s*$"
     return @($listeners | ForEach-Object {
         if ($_.Matches.Count) { [int]$_.Matches[0].Groups[1].Value }
     } | Sort-Object -Unique)
@@ -1278,16 +1290,40 @@ function Get-UserDataTargets {
         Join-Path $repoRoot 'data'
     }
     $logRoot = Join-Path $dataRoot 'logs'
+    $databaseFiles = @(
+        (Join-Path $dataRoot 'database.db'),
+        (Join-Path $dataRoot 'database.db-shm'),
+        (Join-Path $dataRoot 'database.db-wal')
+    )
+    $externalDatabase = $false
+    $databaseConfigPath = Join-Path $dataRoot 'database-config.json'
+    if (Test-Path -LiteralPath $databaseConfigPath -PathType Leaf) {
+        try {
+            $databaseConfig = Get-Content -LiteralPath $databaseConfigPath -Raw | ConvertFrom-Json
+            if (($databaseConfig.schema_version -isnot [int] -and $databaseConfig.schema_version -isnot [long]) -or
+                $databaseConfig.schema_version -ne 1) {
+                throw 'Unsupported database configuration schema version.'
+            }
+            if ($databaseConfig.backend -eq 'sqlite' -and $databaseConfig.sqlite.path) {
+                $sqlitePath = [IO.Path]::GetFullPath([string]$databaseConfig.sqlite.path)
+                $databaseFiles = @($sqlitePath, "$sqlitePath-shm", "$sqlitePath-wal")
+            } elseif ($databaseConfig.backend -eq 'postgresql' -and
+                $databaseConfig.postgresql.engine -eq 'postgresql+psycopg') {
+                $externalDatabase = $true
+                $databaseFiles = @()
+            } else {
+                throw 'Unknown database backend or missing SQLite path.'
+            }
+        } catch {
+            throw "Cannot determine the active database from '$databaseConfigPath'; refusing data removal."
+        }
+    }
 
     return [pscustomobject]@{
-        DatabaseFiles = @(
-            (Join-Path $dataRoot 'database.db'),
-            (Join-Path $dataRoot 'database.db-shm'),
-            (Join-Path $dataRoot 'database.db-wal')
-        )
+        DatabaseFiles = $databaseFiles
         CheckpointRoot = Join-Path $dataRoot 'checkpoints'
         LogRoot = $logRoot
-        ExternalDatabase = $env:EMBEDDED_DATABASE -eq 'false'
+        ExternalDatabase = $externalDatabase
     }
 }
 

@@ -13,6 +13,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    JSON,
     SmallInteger,
     String,
     UniqueConstraint,
@@ -184,4 +185,18 @@ class InferenceSessionSteps(Base):
             name="ck_inference_steps_relative_preference",
         ),
         Index("ix_inference_steps_session_recorded", "session_id", "recorded_at"),
+    )
+
+###############################################################################
+class ApplicationSettings(Base):
+    """The single Settings-page row owned by each selected database."""
+
+    __tablename__ = "application_settings"
+
+    settings_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    jobs: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    device: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    roulette: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    __table_args__ = (
+        CheckConstraint("settings_id = 1", name="ck_application_settings_singleton"),
     )

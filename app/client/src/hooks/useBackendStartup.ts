@@ -107,6 +107,10 @@ export const useBackendStartup = (): BackendStartupState & { retry: () => void }
                         }
                         return;
                     }
+                    if (health.status === 'recovery' && health.application === 'FAIRS') {
+                        if (mounted) setStatus('recovery');
+                        return;
+                    }
                 } catch (error) {
                     if (controller.signal.aborted || (isAbortError(error) && !mounted)) {
                         return;

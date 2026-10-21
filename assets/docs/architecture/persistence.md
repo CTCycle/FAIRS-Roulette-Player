@@ -1,6 +1,6 @@
 ## Persistence
 
-Last updated: 2026-09-28
+Last updated: 2026-10-21
 
 ## Canonical Persistence Model
 
@@ -10,6 +10,7 @@ The current migration chain is:
 
 1. `0001_initial_schema`, immutable baseline.
 2. `0002_rename_relative_preference`, renames the inference preference column and its check constraint without changing stored numeric values.
+3. `0003_application_settings`, creates the singleton row used by the Settings UI.
 
 ```mermaid
 erDiagram
@@ -52,6 +53,13 @@ erDiagram
         int capital_after
         datetime recorded_at
     }
+
+    APPLICATION_SETTINGS {
+        int settings_id PK "singleton id 1"
+        json jobs
+        json device
+        json roulette
+    }
 ```
 
 ## Tables and Relationships
@@ -84,17 +92,24 @@ erDiagram
 - `reward` is nullable until an outcome is supplied.
 - The old `predicted_confidence` column and `ck_inference_steps_confidence` constraint are migrated by Alembic revision `0002_rename_relative_preference`; runtime code does not carry aliases for them.
 
+### `application_settings`
+
+- `settings_id` is constrained to the singleton value `1`.
+- `jobs`, `device`, and `roulette` store the validated Settings UI contracts as JSON.
+- A new database is seeded with backend defaults. A one-time import from the legacy runtime settings file occurs only when this row does not exist; runtime database switching never copies the row or other data.
+
 ## Storage Surfaces
 
-- Embedded relational data: `data/database.db` by default, or `<FAIRS_DATA_DIR>/database.db` when a custom data root is configured.
-- External relational data: PostgreSQL through the same repository/schema model when explicitly selected in `settings/.env`.
+- Database connection configuration: `<data-root>/database-config.json`, independent of the selected database. It stores only the backend and connection details; PostgreSQL passwords are protected with Windows DPAPI for the current user.
+- Embedded relational data: `data/database.db` by default, or the configured SQLite file when a custom data root or path is selected.
+- External relational data: PostgreSQL through the same repository/schema model when selected in the Database section of Settings.
 - Checkpoints: `<data-root>/checkpoints/<checkpoint_id>/`.
 - Logs: `<data-root>/logs/*.log`.
-- Runtime settings: `<data-root>/runtime-settings.json`, where `<data-root>` is `FAIRS_DATA_DIR` or `data`.
+- Application settings: the `application_settings` row in the active database. `<data-root>/runtime-settings.json` is a legacy import source only and is removed after the database row is committed and validated.
 
-Runtime settings are local JSON state, not relational persistence. They contain only the validated application-wide polling and JIT/compiler fields exposed by the Settings API. They are written atomically and are never stored in the database or merged into checkpoint configuration.
+Application settings are relational data. The standalone JSON database configuration is not stored in or read from the database, avoiding a circular initialization dependency. The legacy settings file is never a fallback or a continuing source of truth.
 
-SQLite and PostgreSQL are both current supported persistence modes. They are not parallel application architectures: the same SQLAlchemy schema, repositories, Alembic chain, and service contracts are used for both.
+SQLite and PostgreSQL are both supported persistence modes. They use the same SQLAlchemy schema, repositories, Alembic chain, and service contracts. Live switching drains in-flight database operations and is rejected while training or inference is active; each target database remains an independent data store.
 
 ## Database Initialization Rules
 

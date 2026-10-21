@@ -101,6 +101,54 @@
     line-height: 1.5;
 }
 
+.database-settings-panel {
+    max-width: 980px;
+}
+
+.database-status-row {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    min-height: 2.5rem;
+    margin: var(--spacing-md) 0;
+    color: var(--text-primary);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+}
+
+.database-status-secondary {
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+
+.database-status-indicator {
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    background: var(--text-secondary);
+}
+
+.database-status-indicator--ready {
+    background: #22c55e;
+    box-shadow: 0 0 0.65rem rgba(34, 197, 94, 0.42);
+}
+
+.database-status-indicator--recovery {
+    background: #ef4444;
+    box-shadow: 0 0 0.65rem rgba(239, 68, 68, 0.35);
+}
+
+.database-field-pair {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(96px, 0.42fr);
+    gap: var(--spacing-sm);
+    min-width: 0;
+}
+
+.database-settings-actions {
+    margin-top: var(--spacing-lg);
+}
+
 .settings-field-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
@@ -315,7 +363,7 @@
     .settings-navigation {
         position: static;
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(5, minmax(0, 1fr));
         padding: 0 0 0.75rem;
         border-right: 0;
         border-bottom: 1px solid rgba(168, 184, 206, 0.22);
@@ -348,5 +396,9 @@
 
     .settings-field-control {
         max-width: 400px;
+    }
+
+    .database-field-pair {
+        grid-template-columns: minmax(0, 1fr) minmax(82px, 0.42fr);
     }
 }

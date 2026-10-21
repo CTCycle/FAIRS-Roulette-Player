@@ -18,7 +18,7 @@ if str(APP_ROOT) not in sys.path:
     sys.path.insert(0, str(APP_ROOT))
 
 from server.common import path as shared_paths  # noqa: E402
-from server.configurations.startup import get_server_settings  # noqa: E402
+from server.configurations.database_config import DatabaseConfigurationStore  # noqa: E402
 from server.repositories.database.initializer import build_postgres_url  # noqa: E402
 from server.repositories.schemas.models import Base  # noqa: E402
 
@@ -45,12 +45,17 @@ def _resolved_url() -> str:
     if configured:
         return configured
 
-    settings = get_server_settings().database
+    configured = DatabaseConfigurationStore().current()
+    settings = configured.settings
     if settings.embedded_database:
-        return f"sqlite:///{shared_paths.DATABASE_PATH}"
+        return URL.create(
+            "sqlite", database=str(configured.sqlite_path or shared_paths.DATABASE_PATH)
+        ).render_as_string(hide_password=False)
     if not settings.database_name:
-        raise RuntimeError("DATABASE_NAME is required for PostgreSQL Alembic commands.")
-    return str(build_postgres_url(settings, settings.database_name))
+        raise RuntimeError("PostgreSQL database name is required for Alembic commands.")
+    return build_postgres_url(settings, settings.database_name).render_as_string(
+        hide_password=False
+    )
 
 ###############################################################################
 def _configure_kwargs(connection: Any | None = None) -> dict[str, Any]:
@@ -87,9 +92,9 @@ def run_migrations_online() -> None:
     if connectable is None:
         url = _resolved_url()
         parsed_url = make_url(url)
-        connect_args = (
-            {"autocommit": False} if parsed_url.get_backend_name() == "sqlite" else {}
-        )
+        connect_args = {}
+        if parsed_url.get_backend_name() == "sqlite" and sys.version_info >= (3, 12):
+            connect_args["autocommit"] = False
         connectable = create_engine(
             url,
             future=True,

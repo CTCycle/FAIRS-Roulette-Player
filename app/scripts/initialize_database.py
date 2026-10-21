@@ -9,7 +9,10 @@ import time
 def main() -> int:
     from server.bootstrap import bootstrap_runtime
     from server.common.utils.logger import logger
-    from server.configurations.startup import get_server_settings
+    from server.configurations.database_config import (
+        DatabaseConfigurationError,
+        DatabaseConfigurationStore,
+    )
     from server.repositories.database.initializer import (
         DatabaseInitializationError,
         initialize_database,
@@ -17,11 +20,14 @@ def main() -> int:
 
     bootstrap_runtime()
     start = time.perf_counter()
-    server_settings = get_server_settings()
     logger.info("Starting database create/upgrade")
     try:
-        initialize_database(server_settings.database)
-    except DatabaseInitializationError as exc:
+        configured = DatabaseConfigurationStore().load_or_migrate()
+        initialize_database(
+            configured.settings,
+            database_path=configured.sqlite_path,
+        )
+    except (DatabaseConfigurationError, DatabaseInitializationError) as exc:
         logger.error("Database create/upgrade failed: %s", exc)
         return 1
     elapsed = time.perf_counter() - start
