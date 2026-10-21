@@ -268,6 +268,13 @@ def test_invalid_patch_is_rejected_before_service_update() -> None:
         SettingsPatchRequest(roulette={"minimum_number": 20, "maximum_number": 10})
     with pytest.raises(ValidationError):
         SettingsPatchRequest.model_validate({"database": {"host": "secret"}})
+    for runtime_key, value in (
+        ("api_base_url", "https://api.example.test"),
+        ("fastapi_port", 8890),
+        ("cors_origins", ["https://ui.example.test"]),
+    ):
+        with pytest.raises(ValidationError):
+            SettingsPatchRequest.model_validate({runtime_key: value})
 
 
 ###############################################################################

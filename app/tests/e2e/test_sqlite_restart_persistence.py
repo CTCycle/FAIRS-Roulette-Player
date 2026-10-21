@@ -201,6 +201,7 @@ def _running_frontend(
         {
             "FASTAPI_HOST": "127.0.0.1",
             "FASTAPI_PORT": str(backend_port),
+            "API_BASE_URL": f"http://127.0.0.1:{backend_port}",
             "UI_HOST": "127.0.0.1",
             "UI_PORT": str(ui_port),
         }

@@ -139,6 +139,28 @@ def test_environment_does_not_load_database_connection_variables(
 
 
 ###############################################################################
+def test_environment_loads_network_runtime_configuration(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    env_path = tmp_path / ".env"
+    _write_env(
+        env_path,
+        [
+            "API_BASE_URL=https://api.example.test",
+            "CORS_ORIGINS=https://console.example.test,https://admin.example.test",
+        ],
+    )
+    monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
+
+    environment.load_environment(force=True)
+
+    assert os.getenv("API_BASE_URL") == "https://api.example.test"
+    assert os.getenv("CORS_ORIGINS") == (
+        "https://console.example.test,https://admin.example.test"
+    )
+
+
+###############################################################################
 def test_server_package_import_does_not_load_environment(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

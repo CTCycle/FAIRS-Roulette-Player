@@ -19,6 +19,7 @@ from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.cors import CORSMiddleware
 
 from server.common.constants import (
     FASTAPI_API_PREFIX,
@@ -69,6 +70,39 @@ TabularFileLoader: Any = None
 InferenceService: Any = None
 TrainingService: Any = None
 TrainingRunManager: Any = None
+
+###############################################################################
+class RuntimeCORSMiddleware:
+    """Apply the current .env CORS allowlist after lifespan environment loading."""
+
+    def __init__(self, app: Any) -> None:
+        self.app = app
+        self._origins: tuple[str, ...] | None = None
+        self._configured_app: Any = app
+
+    async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        origins = tuple(
+            origin.strip()
+            for origin in os.getenv("CORS_ORIGINS", "").split(",")
+            if origin.strip()
+        )
+        if origins != self._origins:
+            self._origins = origins
+            self._configured_app = (
+                CORSMiddleware(
+                    self.app,
+                    allow_origins=list(origins),
+                    allow_methods=["*"],
+                    allow_headers=["*"],
+                )
+                if origins
+                else self.app
+            )
+        await self._configured_app(scope, receive, send)
 
 ###############################################################################
 def _activate_runtime_services(
@@ -398,6 +432,7 @@ def create_app() -> FastAPI:
         openapi_url="/openapi.json" if enable_api_docs else None,
         lifespan=app_lifespan,
     )
+    application.add_middleware(RuntimeCORSMiddleware)
 
     @application.middleware("http")
     async def database_runtime_guard(request: Request, call_next):

@@ -213,6 +213,40 @@ def test_root_returns_status_when_api_docs_are_disabled(monkeypatch) -> None:
     assert dispose_calls == [True]
 
 ###############################################################################
+def test_cors_allowlist_is_read_from_runtime_environment(monkeypatch) -> None:
+    from fastapi import FastAPI
+    from server.app import RuntimeCORSMiddleware
+
+    monkeypatch.setenv(
+        "CORS_ORIGINS",
+        " https://console.example.test,https://admin.example.test ",
+    )
+    application = FastAPI()
+    application.add_api_route("/health", lambda: {"status": "ok"}, methods=["GET"])
+    application.add_middleware(RuntimeCORSMiddleware)
+
+    with TestClient(application) as client:
+        allowed = client.options(
+            "/health",
+            headers={
+                "Origin": "https://console.example.test",
+                "Access-Control-Request-Method": "GET",
+            },
+        )
+        denied = client.options(
+            "/health",
+            headers={
+                "Origin": "https://unlisted.example.test",
+                "Access-Control-Request-Method": "GET",
+            },
+        )
+
+    assert allowed.status_code == 200
+    assert allowed.headers["access-control-allow-origin"] == "https://console.example.test"
+    assert denied.status_code == 400
+    assert "access-control-allow-origin" not in denied.headers
+
+###############################################################################
 def test_repeated_lifespan_entry_reinitializes_and_disposes_once_per_run(
     monkeypatch,
 ) -> None:

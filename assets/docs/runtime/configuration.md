@@ -6,7 +6,7 @@ Last updated: 2026-10-21
 
 FAIRS uses three distinct configuration surfaces:
 
-1. `settings/.env` contains process and deployment values such as host and port, data directory, API docs, reload behavior, and ML backend selection. It contains no database connection settings.
+1. `settings/.env` contains process and deployment values such as API target, listener hosts and ports, CORS origins, data directory, API docs, reload behavior, and ML backend selection. It contains no database connection settings or UI preferences.
 2. `<data-root>/database-config.json` contains only the selected database backend and its connection parameters. It is independent of the database so startup can locate the database before opening it.
 3. The active database's singleton `application_settings` row contains the Settings UI preferences: job polling, global JIT/compiler behavior, and roulette pool and display preferences. A missing row is seeded with current defaults; old settings files are ignored.
 
@@ -17,11 +17,14 @@ FAIRS uses three distinct configuration surfaces:
 The runtime consumes these environment keys:
 
 - `FASTAPI_HOST`, `FASTAPI_PORT`, `UI_HOST`, and `UI_PORT`
+- `API_BASE_URL` and `CORS_ORIGINS`
 - `ENABLE_API_DOCS`, `RELOAD`, and `FAIRS_DATA_DIR`
 - `MPLBACKEND` and `KERAS_BACKEND`
 - `WEB_CONCURRENCY`, `UVICORN_WORKERS`, and `FAIRS_WORKERS`
 
 `settings/.env.example` is the canonical template. The Windows launcher copies it only when `.env` does not exist. It does not overlay defaults on an existing file. The launcher requires `FASTAPI_HOST`, `FASTAPI_PORT`, `UI_HOST`, `UI_PORT`, and `RELOAD`; database selection is read from `database-config.json`, not `.env`.
+
+`API_BASE_URL` optionally selects the upstream origin used by Vite's `/api` proxy; when empty, the proxy target is composed from `FASTAPI_HOST` and `FASTAPI_PORT`. An explicit process environment value takes precedence over `.env`. Browser requests use the same-origin `/api` route, and endpoint paths remain part of the application API contract. `CORS_ORIGINS` is an optional comma-separated list of exact browser origins for direct cross-origin API clients; leave it empty for the default same-origin launcher flow. These network settings are process/deployment configuration and are not exposed through the Settings UI or persisted in `application_settings`.
 
 `FAIRS_DATA_DIR` may be empty, which selects the normal `data` directory. A configured path selects the persistent data root and must not overlap `runtimes/cache`.
 
@@ -36,13 +39,13 @@ The connection configuration is `<FAIRS_DATA_DIR>/database-config.json`, or `dat
 
 The file is written through a same-directory temporary file, flushed and synchronized, then atomically replaced. Unknown fields, unsupported versions, malformed JSON, or undecryptable credentials enter recovery mode; startup does not fall back to environment values or silently choose SQLite. PostgreSQL passwords are protected with Windows DPAPI for the current user and are never returned by the API or written to logs. A blank password retains the saved credential; the explicit clear action removes it. Moving the file to another Windows account or machine requires entering the password again.
 
-The Database section in Settings supports SQLite and PostgreSQL. `GET /api/settings/database` returns redacted status, `POST /api/settings/database/test` checks a candidate without activating it, and `PUT /api/settings/database` validates and applies it. The default SQLite path is `<data-root>/database.db`.
+The Database section in Settings supports SQLite and PostgreSQL. `GET /api/settings/database` returns redacted status, `POST /api/settings/database/test` checks a candidate without activating it, and `PUT /api/settings/database` validates and applies it. The default SQLite path is `<data-root>/database.db`. PostgreSQL connection ports remain in `database-config.json` because they select the active database, not the HTTP listener.
 
 If `database-config.json` is absent, startup writes the current default SQLite configuration. Database values in `settings/.env` and inherited process environment variables are not read. Obsolete database keys and secrets are removed from `settings/.env` while unrelated entries are preserved. A present but invalid `database-config.json` fails closed and remains available for correction.
 
 ## Database-Backed Application Settings
 
-The active database owns all Settings UI values in `application_settings` (singleton id `1`), with validated `jobs`, `device`, and `roulette` objects. Alembic baseline `0001_current_schema` creates this table. Empty databases receive backend defaults. A database without a row receives current defaults; switching to another database never copies settings or application data.
+The active database owns all user preferences exposed by Settings in `application_settings` (singleton id `1`), with validated `jobs`, `device`, and `roulette` objects. API target URLs, listener ports, and CORS origins belong to `.env`; they are rejected by the Settings API contract. Alembic baseline `0001_current_schema` creates this table. Empty databases receive backend defaults. A database without a row receives current defaults; switching to another database never copies settings or application data.
 
 `GET /api/settings`, `PATCH /api/settings`, and `POST /api/settings/reset` read and write only the active database. The Settings page automatically sends each valid change, debouncing numeric and text inputs. The minimum, maximum, and zero-inclusion controls are validated as one range; while that draft is invalid, its pending range patch is removed and no range request is sent. Partial updates merge with the current validated row and are applied to live services after persistence succeeds. A failed write or live propagation keeps the edited value visible with an error; a failed live propagation restores the previous row and service values.
 
