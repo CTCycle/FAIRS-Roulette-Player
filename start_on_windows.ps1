@@ -1179,12 +1179,18 @@ function Stop-OwnedApplicationProcessTree {
     }
     try { [void]$Process.WaitForExit(5000) } catch { }
     $remainingOwnedIds = [Collections.Generic.List[int]]::new()
-    foreach ($processId in @($depthById.Keys)) {
-        if ($rootExited -and [int]$processId -eq $RootProcessId) { continue }
-        if (Get-Process -Id ([int]$processId) -ErrorAction SilentlyContinue) {
-            [void]$remainingOwnedIds.Add([int]$processId)
+    $cleanupDeadline = (Get-Date).AddSeconds(5)
+    do {
+        $remainingOwnedIds.Clear()
+        foreach ($processId in @($depthById.Keys)) {
+            if ($rootExited -and [int]$processId -eq $RootProcessId) { continue }
+            if (Get-Process -Id ([int]$processId) -ErrorAction SilentlyContinue) {
+                [void]$remainingOwnedIds.Add([int]$processId)
+            }
         }
-    }
+        if ($remainingOwnedIds.Count -eq 0 -or (Get-Date) -ge $cleanupDeadline) { break }
+        Start-Sleep -Milliseconds 100
+    } while ($true)
     if ($remainingOwnedIds.Count -gt 0) {
         throw "Launcher-owned backend process tree did not stop after the bounded cleanup attempt. Remaining PIDs: $($remainingOwnedIds -join ', ')."
     }
