@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import sqlite3
-import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -30,9 +29,8 @@ def _enable_write_ahead_logging(cursor: Any) -> None:
 
 ###############################################################################
 def set_sqlite_pragma(dbapi_connection: Any, _connection_record: Any) -> None:
-    previous_autocommit = getattr(dbapi_connection, "autocommit", None)
-    if previous_autocommit is not None:
-        dbapi_connection.autocommit = True
+    previous_autocommit = dbapi_connection.autocommit
+    dbapi_connection.autocommit = True
     cursor = dbapi_connection.cursor()
     try:
         cursor.execute("PRAGMA foreign_keys=ON")
@@ -40,8 +38,7 @@ def set_sqlite_pragma(dbapi_connection: Any, _connection_record: Any) -> None:
         _enable_write_ahead_logging(cursor)
     finally:
         cursor.close()
-        if previous_autocommit is not None:
-            dbapi_connection.autocommit = previous_autocommit
+        dbapi_connection.autocommit = previous_autocommit
 
 ###############################################################################
 def build_sqlite_engine(
@@ -55,8 +52,7 @@ def build_sqlite_engine(
     )
     db_path.parent.mkdir(parents=True, exist_ok=True)
     connect_args: dict[str, Any] = {"check_same_thread": False}
-    if sys.version_info >= (3, 12):
-        connect_args["autocommit"] = False
+    connect_args["autocommit"] = False
     engine = sqlalchemy.create_engine(
         f"sqlite:///{db_path}",
         echo=False,

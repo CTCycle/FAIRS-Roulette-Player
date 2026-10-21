@@ -51,7 +51,7 @@ def test_default_config_is_database_only_and_atomic(tmp_path: Path, monkeypatch)
     monkeypatch.setattr(shared_paths, "DATABASE_PATH", tmp_path / "database.db")
     store = _store(tmp_path)
 
-    loaded = store.load_or_migrate()
+    loaded = store.load_or_initialize()
     document = json.loads(store.path.read_text(encoding="utf-8"))
 
     assert loaded.settings.embedded_database is True
@@ -63,8 +63,8 @@ def test_default_config_is_database_only_and_atomic(tmp_path: Path, monkeypatch)
 
 
 ###############################################################################
-def test_legacy_postgres_values_migrate_and_only_database_keys_are_removed(
-    tmp_path: Path,
+def test_database_environment_values_are_ignored_and_scrubbed(
+    tmp_path: Path, monkeypatch,
 ) -> None:
     env_path = tmp_path / ".env"
     env_path.write_text(
@@ -76,23 +76,19 @@ def test_legacy_postgres_values_migrate_and_only_database_keys_are_removed(
         "DATABASE_INSERT_BATCH_SIZE=250\n",
         encoding="utf-8",
     )
+    monkeypatch.setattr(shared_paths, "DATABASE_PATH", tmp_path / "database.db")
     store = _store(tmp_path)
 
-    loaded = store.load_or_migrate()
+    loaded = store.load_or_initialize()
     persisted = store.path.read_text(encoding="utf-8")
     public = store.to_public(loaded).model_dump(mode="json")
 
-    assert loaded.document.backend == "postgresql"
-    assert loaded.settings.engine == "postgresql+psycopg"
-    assert loaded.settings.host == "db.example"
-    assert loaded.settings.port == 5544
-    assert loaded.settings.password == "legacy-secret"
-    assert loaded.settings.ssl is True
-    assert loaded.settings.connect_timeout == 25
-    assert loaded.settings.insert_batch_size == 250
+    assert loaded.document.backend == "sqlite"
+    assert loaded.settings.embedded_database is True
+    assert loaded.sqlite_path == (tmp_path / "database.db").resolve()
     assert "legacy-secret" not in persisted
     assert "password_configured" not in persisted
-    assert public["password_configured"] is True
+    assert public["password_configured"] is False
     assert "legacy-secret" not in json.dumps(public)
     cleaned = env_path.read_text(encoding="utf-8")
     assert "FASTAPI_HOST=127.0.0.1" in cleaned
@@ -147,7 +143,7 @@ def test_invalid_and_corrupt_files_fail_closed_without_default_fallback(
 
     store.path.write_text("{broken", encoding="utf-8")
     with pytest.raises(DatabaseConfigurationError, match="invalid"):
-        store.load_or_migrate()
+        store.load_or_initialize()
     assert store.path.read_text(encoding="utf-8") == "{broken"
 
 
@@ -214,16 +210,20 @@ def test_atomic_replace_failure_preserves_previous_database_config(
 
 
 ###############################################################################
-def test_invalid_legacy_postgres_config_does_not_create_a_default(tmp_path: Path) -> None:
+def test_invalid_old_database_environment_values_do_not_block_default(
+    tmp_path: Path, monkeypatch,
+) -> None:
     env_path = tmp_path / ".env"
     env_path.write_text("EMBEDDED_DATABASE=false\nDATABASE_HOST=missing-parts\n", encoding="utf-8")
+    monkeypatch.setattr(shared_paths, "DATABASE_PATH", tmp_path / "database.db")
     store = _store(tmp_path)
 
-    with pytest.raises(DatabaseConfigurationError, match="incomplete or invalid"):
-        store.load_or_migrate()
+    loaded = store.load_or_initialize()
 
-    assert not store.path.exists()
-    assert "DATABASE_HOST" in env_path.read_text(encoding="utf-8")
+    assert loaded.document.backend == "sqlite"
+    assert loaded.sqlite_path == (tmp_path / "database.db").resolve()
+    assert store.path.is_file()
+    assert "DATABASE_HOST" not in env_path.read_text(encoding="utf-8")
 
 
 ###############################################################################

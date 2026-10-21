@@ -518,16 +518,12 @@ def _run_sqlite_migrations(
     with engine.connect() as connection:
         dbapi_connection = connection.connection.driver_connection
         try:
-            # Runtimes that expose sqlite3's autocommit attribute can open a
-            # deferred transaction when the connection is created. End that
-            # empty driver transaction just before taking the exclusive
-            # migration lock, then restore the requested mode inside the
+            # End the empty driver transaction before taking the exclusive
+            # migration lock, then restore the configured mode inside the
             # explicit BEGIN IMMEDIATE transaction.
-            if hasattr(dbapi_connection, "autocommit"):
-                dbapi_connection.autocommit = True
+            dbapi_connection.autocommit = True
             connection.exec_driver_sql("BEGIN IMMEDIATE")
-            if hasattr(dbapi_connection, "autocommit"):
-                dbapi_connection.autocommit = False
+            dbapi_connection.autocommit = False
             _run_locked_migrations(connection, config_path)
             connection.commit()
         except Exception:

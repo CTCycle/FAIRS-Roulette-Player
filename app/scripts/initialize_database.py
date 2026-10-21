@@ -22,7 +22,7 @@ def main() -> int:
     start = time.perf_counter()
     logger.info("Starting database create/upgrade")
     try:
-        configured = DatabaseConfigurationStore().load_or_migrate()
+        configured = DatabaseConfigurationStore().load_or_initialize()
         initialize_database(
             configured.settings,
             database_path=configured.sqlite_path,

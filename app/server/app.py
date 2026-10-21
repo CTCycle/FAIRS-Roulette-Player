@@ -132,9 +132,7 @@ def _activate_runtime_services(
     if checkpoint_service is None:
         checkpoint_service = resolved["CheckpointService"]()
         application.state.checkpoint_service = checkpoint_service
-        cleanup_workspaces = getattr(checkpoint_service, "cleanup_incomplete_workspaces", None)
-        if callable(cleanup_workspaces):
-            cleanup_workspaces()
+        checkpoint_service.cleanup_incomplete_workspaces()
 
     if application.state.dataset_service is None:
         dataset_service = resolved["DatasetService"](
@@ -155,15 +153,11 @@ def _activate_runtime_services(
         )
         application.state.training_service = training_service
     training_service.apply_runtime_settings(settings.jobs, settings.device)
-    apply_roulette = getattr(training_service, "apply_roulette_settings", None)
-    if callable(apply_roulette):
-        apply_roulette(settings.roulette)
-    apply_database = getattr(training_service, "apply_database_settings", None)
-    if callable(apply_database):
-        apply_database(database_configuration.settings, database_configuration.sqlite_path)
-    else:
-        training_service.database_settings = database_configuration.settings
-        training_service.database_path = database_configuration.sqlite_path
+    training_service.apply_roulette_settings(settings.roulette)
+    training_service.apply_database_settings(
+        database_configuration.settings,
+        database_configuration.sqlite_path,
+    )
 
     if inference_service is None:
         inference_service = resolved["InferenceService"](
@@ -272,11 +266,8 @@ async def app_lifespan(application: FastAPI) -> AsyncIterator[None]:
                 application, loaded, app_settings
             ),
         )
-        application.state.legacy_settings_pending = (
-            shared_paths.LEGACY_RUNTIME_SETTINGS_FILE.is_file()
-        )
         try:
-            loaded_database = database_configuration_store.load_or_migrate()
+            loaded_database = database_configuration_store.load_or_initialize()
             run_startup_validations(
                 JsonServerSettings().to_server_settings(loaded_database.settings)
             )
@@ -289,9 +280,7 @@ async def app_lifespan(application: FastAPI) -> AsyncIterator[None]:
                 database_path=loaded_database.sqlite_path,
             )
             app_settings = ApplicationSettingsRepository().ensure_row(
-                startup_database,
-                legacy_path=shared_paths.LEGACY_RUNTIME_SETTINGS_FILE,
-                allow_legacy_import=True,
+                startup_database
             )
             server_settings = app_settings.to_server_settings(loaded_database.settings)
             run_startup_validations(server_settings)
@@ -303,7 +292,6 @@ async def app_lifespan(application: FastAPI) -> AsyncIterator[None]:
                     runtime_database.activate(None)
                     raise
             startup_database = None
-            application.state.legacy_settings_pending = False
             application.state.lifecycle = "ready"
         except Exception as exc:  # noqa: BLE001
             if startup_database is not None:
@@ -326,24 +314,18 @@ async def app_lifespan(application: FastAPI) -> AsyncIterator[None]:
         training_run_manager = application.state.training_run_manager
         if inference_service is not None:
             try:
-                shutdown = getattr(inference_service, "shutdown", None)
-                if callable(shutdown):
-                    shutdown()
+                inference_service.shutdown()
             except Exception:  # noqa: BLE001
                 logger.exception("Inference service shutdown failed")
 
         if training_service is not None:
             try:
-                shutdown = getattr(training_service, "shutdown", None)
-                if callable(shutdown):
-                    shutdown()
+                training_service.shutdown()
             except Exception:  # noqa: BLE001
                 logger.exception("Training service shutdown failed")
         if training_run_manager is not None:
             try:
-                shutdown = getattr(training_run_manager, "shutdown", None)
-                if callable(shutdown):
-                    shutdown()
+                training_run_manager.shutdown()
             except Exception:  # noqa: BLE001
                 logger.exception("Training manager shutdown failed")
 

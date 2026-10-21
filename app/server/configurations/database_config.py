@@ -13,7 +13,6 @@ from pathlib import Path
 import tempfile
 from typing import Literal
 
-from dotenv import dotenv_values
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -188,7 +187,7 @@ def unprotect_password(encrypted: str) -> str:
 
 ###############################################################################
 class DatabaseConfigurationStore:
-    """Owns atomic, DB-independent database configuration and legacy migration."""
+    """Owns atomic, DB-independent database configuration."""
 
     # -------------------------------------------------------------------------
     def __init__(
@@ -277,50 +276,30 @@ class DatabaseConfigurationStore:
         return self._settings_from_document(self._read_document())
 
     # -------------------------------------------------------------------------
-    def load_or_migrate(self) -> LoadedDatabaseConfiguration:
-        if self.path.exists():
-            loaded = self.current()
-            self.remove_legacy_environment_keys()
-            return loaded
-
-        candidate = self._legacy_environment_input()
-        self.write(candidate, password=candidate.password)
-        self.remove_legacy_environment_keys()
+    def load_or_initialize(self) -> LoadedDatabaseConfiguration:
+        self.scrub_database_environment_keys()
+        if not self.path.exists():
+            self.write(self._default_input())
         return self.current()
 
     # -------------------------------------------------------------------------
-    def _legacy_environment_input(self) -> DatabaseConfigurationInput:
-        raw = dotenv_values(self.environment_file) if self.environment_file.exists() else {}
-        if raw.get("DATABASE_URL"):
-            raise DatabaseConfigurationError(
-                "Legacy DATABASE_URL cannot be migrated. Configure SQLite or postgresql+psycopg in Settings."
-            )
-        embedded = str(raw.get("EMBEDDED_DATABASE", "true")).strip().lower()
-        if embedded not in {"true", "false", "1", "0", "yes", "no", "on", "off"}:
-            raise DatabaseConfigurationError("Legacy EMBEDDED_DATABASE must be a boolean.")
-        if embedded in {"true", "1", "yes", "on"}:
-            return self._default_input()
-        engine = str(raw.get("DATABASE_ENGINE") or "postgresql+psycopg").strip().lower()
-        if engine != "postgresql+psycopg":
-            raise DatabaseConfigurationError("Only postgresql+psycopg can be migrated from settings/.env.")
-        try:
-            return DatabaseConfigurationInput(
-                backend="postgresql",
-                host=raw.get("DATABASE_HOST"),
-                port=raw.get("DATABASE_PORT") or 5432,
-                database_name=raw.get("DATABASE_NAME"),
-                username=raw.get("DATABASE_USERNAME"),
-                password=raw.get("DATABASE_PASSWORD"),
-                ssl=str(raw.get("DATABASE_SSL", "false")).strip().lower()
-                in {"true", "1", "yes", "on"},
-                ssl_ca=raw.get("DATABASE_SSL_CA"),
-                connect_timeout=raw.get("DATABASE_CONNECT_TIMEOUT") or 10,
-                insert_batch_size=raw.get("DATABASE_INSERT_BATCH_SIZE") or 1000,
-            )
-        except ValidationError as exc:
-            raise DatabaseConfigurationError(
-                "Legacy database values in settings/.env are incomplete or invalid."
-            ) from exc
+    def scrub_database_environment_keys(self) -> None:
+        """Remove obsolete plaintext database credentials from the env file."""
+        if not self.environment_file.is_file():
+            return
+        original = self.environment_file.read_text(encoding="utf-8").splitlines(keepends=True)
+        preserved = []
+        for line in original:
+            stripped = line.lstrip()
+            if not stripped or stripped.startswith(("#", ";")) or "=" not in stripped:
+                preserved.append(line)
+                continue
+            key = stripped.split("=", 1)[0].strip()
+            if key not in DATABASE_ENV_KEYS:
+                preserved.append(line)
+        if len(preserved) == len(original):
+            return
+        self._atomic_text_write(self.environment_file, "".join(preserved))
 
     # -------------------------------------------------------------------------
     def resolve_input(
@@ -423,24 +402,6 @@ class DatabaseConfigurationStore:
                 temporary_path.unlink(missing_ok=True)
 
     # -------------------------------------------------------------------------
-    def remove_legacy_environment_keys(self) -> None:
-        if not self.environment_file.is_file():
-            return
-        original = self.environment_file.read_text(encoding="utf-8").splitlines(keepends=True)
-        preserved = []
-        for line in original:
-            stripped = line.lstrip()
-            if not stripped or stripped.startswith(("#", ";")) or "=" not in stripped:
-                preserved.append(line)
-                continue
-            key = stripped.split("=", 1)[0].strip()
-            if key not in DATABASE_ENV_KEYS:
-                preserved.append(line)
-        if len(preserved) == len(original):
-            return
-        self._atomic_text_write(self.environment_file, "".join(preserved))
-
-    # -------------------------------------------------------------------------
     @staticmethod
     def _atomic_text_write(path: Path, content: str) -> None:
         temporary_path: Path | None = None
@@ -461,7 +422,7 @@ class DatabaseConfigurationStore:
             temporary_path = None
         except OSError as exc:
             raise DatabaseConfigurationError(
-                "Unable to remove legacy database values from settings/.env."
+                "Unable to remove obsolete database secrets from settings/.env."
             ) from exc
         finally:
             if temporary_path is not None:

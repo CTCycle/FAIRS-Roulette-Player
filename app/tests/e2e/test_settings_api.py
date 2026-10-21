@@ -13,7 +13,12 @@ from fastapi.testclient import TestClient
 import pytest
 
 from server.api.settings import router as settings_router
-from server.contracts.configuration import DatabaseSettings, DeviceSettings, JobsSettings
+from server.contracts.configuration import (
+    DatabaseSettings,
+    DeviceSettings,
+    JobsSettings,
+    RouletteSettings,
+)
 from server.repositories.application_settings import ApplicationSettingsRepository
 from server.repositories.database.backend import FAIRSDatabase
 from server.repositories.database.initializer import initialize_database
@@ -27,6 +32,7 @@ class TrainingSpy:
     def __init__(self) -> None:
         self.jobs = JobsSettings(polling_interval=1.0)
         self.device = DeviceSettings(jit_compile=False, jit_backend="eager")
+        self.roulette: RouletteSettings | None = None
 
     # -------------------------------------------------------------------------
     def get_runtime_settings(self) -> tuple[JobsSettings, DeviceSettings]:
@@ -40,6 +46,10 @@ class TrainingSpy:
     ) -> None:
         self.jobs = jobs
         self.device = device
+
+    # -------------------------------------------------------------------------
+    def apply_roulette_settings(self, settings: RouletteSettings) -> None:
+        self.roulette = settings
 
 ###############################################################################
 def _sqlite_settings() -> DatabaseSettings:

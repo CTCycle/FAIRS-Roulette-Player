@@ -140,7 +140,6 @@ def test_get_and_partial_update_persist_in_active_database(tmp_path: Path) -> No
     assert persisted.roulette.exclude_zero is True
     assert persisted.roulette.invert_colors is True
     assert persisted.roulette.show_number_labels is False
-    assert not (tmp_path / "runtime-settings.json").exists()
     assert database_path.exists()
 
 
@@ -168,24 +167,20 @@ def test_settings_survive_database_reopen(tmp_path: Path) -> None:
 
 
 ###############################################################################
-def test_validated_database_row_removes_legacy_settings_file(tmp_path: Path) -> None:
+def test_missing_settings_row_uses_defaults_and_ignores_old_file(tmp_path: Path) -> None:
     settings = _sqlite_settings()
     database_path = tmp_path / "authoritative.db"
     initialize_database(settings, database_path=database_path)
     database = FAIRSDatabase(settings, database_path=database_path)
     repository = ApplicationSettingsRepository()
-    repository.ensure_row(database)
     legacy_path = tmp_path / "runtime-settings.json"
-    legacy_path.write_text(json.dumps({"jobs": {"polling_interval": 8.0}}), encoding="utf-8")
+    legacy_payload = json.dumps({"jobs": {"polling_interval": 8.0}})
+    legacy_path.write_text(legacy_payload, encoding="utf-8")
     try:
-        current = repository.ensure_row(
-            database,
-            legacy_path=legacy_path,
-            allow_legacy_import=True,
-        )
+        current = repository.ensure_row(database)
 
         assert current.jobs.polling_interval == 1.0
-        assert not legacy_path.exists()
+        assert legacy_path.read_text(encoding="utf-8") == legacy_payload
     finally:
         database.dispose()
 

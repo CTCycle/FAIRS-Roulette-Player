@@ -8,7 +8,7 @@ FAIRS uses three distinct configuration surfaces:
 
 1. `settings/.env` contains process and deployment values such as host and port, data directory, API docs, reload behavior, and ML backend selection. It contains no database connection settings.
 2. `<data-root>/database-config.json` contains only the selected database backend and its connection parameters. It is independent of the database so startup can locate the database before opening it.
-3. The active database's singleton `application_settings` row contains the Settings UI preferences: job polling, global JIT/compiler behavior, and roulette pool and display preferences. The legacy `<data-root>/runtime-settings.json` is read only for a one-time import when this row is absent; it is removed after the database row is committed and validated.
+3. The active database's singleton `application_settings` row contains the Settings UI preferences: job polling, global JIT/compiler behavior, and roulette pool and display preferences. A missing row is seeded with current defaults; old settings files are ignored.
 
 `TrainingConfig` in `app/server/contracts/training.py` owns per-training defaults, semantic constraints, dataset choices, model parameters, device selection, and mixed precision. No setting is independently defaulted in more than one canonical surface.
 
@@ -38,11 +38,11 @@ The file is written through a same-directory temporary file, flushed and synchro
 
 The Database section in Settings supports SQLite and PostgreSQL. `GET /api/settings/database` returns redacted status, `POST /api/settings/database/test` checks a candidate without activating it, and `PUT /api/settings/database` validates and applies it. The default SQLite path is `<data-root>/database.db`.
 
-If `database-config.json` is absent, startup performs a one-time migration from legacy database values in `settings/.env`. It writes the new file first, then removes only database keys from `.env`, preserving unrelated entries. A malformed or incomplete legacy PostgreSQL configuration fails closed and remains available for correction. Database variables inherited from the process environment are ignored.
+If `database-config.json` is absent, startup writes the current default SQLite configuration. Database values in `settings/.env` and inherited process environment variables are not read. Obsolete database keys and secrets are removed from `settings/.env` while unrelated entries are preserved. A present but invalid `database-config.json` fails closed and remains available for correction.
 
 ## Database-Backed Application Settings
 
-The active database owns all Settings UI values in `application_settings` (singleton id `1`), with validated `jobs`, `device`, and `roulette` objects. Alembic revision `0003_application_settings` creates this row's table. Empty databases receive backend defaults. On first use only, a database without a row may import the legacy `runtime-settings.json`; switching to another database never copies settings or application data.
+The active database owns all Settings UI values in `application_settings` (singleton id `1`), with validated `jobs`, `device`, and `roulette` objects. Alembic baseline `0001_current_schema` creates this table. Empty databases receive backend defaults. A database without a row receives current defaults; switching to another database never copies settings or application data.
 
 `GET /api/settings`, `PATCH /api/settings`, and `POST /api/settings/reset` read and write only the active database. The Settings page automatically sends each valid change, debouncing numeric and text inputs. The minimum, maximum, and zero-inclusion controls are validated as one range; while that draft is invalid, its pending range patch is removed and no range request is sent. Partial updates merge with the current validated row and are applied to live services after persistence succeeds. A failed write or live propagation keeps the edited value visible with an error; a failed live propagation restores the previous row and service values.
 

@@ -67,6 +67,15 @@ def normalize_sheet_name(sheet_name: str | int) -> str | int:
 class DatasetService:
 
     # -------------------------------------------------------------------------
+    @staticmethod
+    def validate_upload_size(size: int | None) -> None:
+        if size is not None and size > MAX_UPLOAD_SIZE_BYTES:
+            raise ValueError(
+                "Uploaded file is too large. "
+                f"Maximum size is {MAX_UPLOAD_SIZE_BYTES // (1024 * 1024)} MB."
+            )
+
+    # -------------------------------------------------------------------------
     def __init__(
         self,
         dataset_repository: DatasetRepository,
@@ -92,11 +101,7 @@ class DatasetService:
 
         if not content:
             raise ValueError("Uploaded file is empty.")
-        if len(content) > MAX_UPLOAD_SIZE_BYTES:
-            raise ValueError(
-                "Uploaded file is too large. "
-                f"Maximum size is {MAX_UPLOAD_SIZE_BYTES // (1024 * 1024)} MB."
-            )
+        self.validate_upload_size(len(content))
 
         dataframe = self.loader.load_bytes(
             content,

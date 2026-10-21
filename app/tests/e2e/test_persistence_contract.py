@@ -24,8 +24,8 @@ from server.repositories.datasets import DatasetRepository
 from server.repositories.inference import InferenceRepository
 from server.repositories.schemas.models import Base
 
-CURRENT_REVISION = "0003_application_settings"
-TEST_REVISION = "0003_test_revision"
+CURRENT_REVISION = "0001_current_schema"
+TEST_REVISION = "0002_test_revision"
 
 ###############################################################################
 def _test_database_settings() -> DatabaseSettings:
