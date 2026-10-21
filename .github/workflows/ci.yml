@@ -164,3 +164,14 @@ jobs:
             assets/QA/frontend-viewport-1100-chromium.png
             assets/QA/frontend-viewport-1099-chromium.png
           if-no-files-found: warn
+
+  windows-launcher-maintenance:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify PowerShell launcher maintenance and owned-process cleanup
+        shell: powershell
+        run: |
+          powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File app\tests\unit\windows_launcher_maintenance.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
