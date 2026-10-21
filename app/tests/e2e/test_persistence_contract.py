@@ -24,7 +24,7 @@ from server.repositories.datasets import DatasetRepository
 from server.repositories.inference import InferenceRepository
 from server.repositories.schemas.models import Base
 
-CURRENT_REVISION = "0002_rename_relative_preference"
+CURRENT_REVISION = "0003_application_settings"
 TEST_REVISION = "0003_test_revision"
 
 ###############################################################################
@@ -113,7 +113,7 @@ def _reset_postgres(engine) -> None:
     with engine.begin() as connection:
         connection.exec_driver_sql(
             "DROP TABLE IF EXISTS inference_session_steps, inference_sessions, "
-            "dataset_outcomes, datasets, alembic_version CASCADE"
+            "application_settings, dataset_outcomes, datasets, alembic_version CASCADE"
         )
 
 ###############################################################################
