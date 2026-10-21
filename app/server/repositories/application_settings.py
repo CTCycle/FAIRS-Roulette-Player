@@ -14,11 +14,13 @@ from server.repositories.database.backend import FAIRSDatabase
 from server.repositories.schemas.models import ApplicationSettings
 
 
+###############################################################################
 class ApplicationSettingsRepository:
     """Read and update the one Settings-page row in the active database."""
 
     SETTINGS_ID = 1
 
+    # -------------------------------------------------------------------------
     @staticmethod
     def _from_row(row: ApplicationSettings) -> JsonServerSettings:
         try:
@@ -28,6 +30,7 @@ class ApplicationSettingsRepository:
         except ValidationError as exc:
             raise RuntimeError("Application settings stored in this database are invalid.") from exc
 
+    # -------------------------------------------------------------------------
     @staticmethod
     def _read_legacy(path: Path) -> JsonServerSettings:
         try:
@@ -36,6 +39,7 @@ class ApplicationSettingsRepository:
         except (OSError, json.JSONDecodeError, ValidationError, ValueError) as exc:
             raise RuntimeError("Legacy application settings could not be imported safely.") from exc
 
+    # -------------------------------------------------------------------------
     def ensure_row(
         self,
         database: FAIRSDatabase,
@@ -71,6 +75,7 @@ class ApplicationSettingsRepository:
                 pass
         return settings
 
+    # -------------------------------------------------------------------------
     def get(self, database: FAIRSDatabase) -> JsonServerSettings:
         with database.Session() as session:
             row = session.get(ApplicationSettings, self.SETTINGS_ID)
@@ -78,6 +83,7 @@ class ApplicationSettingsRepository:
                 raise RuntimeError("Application settings have not been initialized.")
             return self._from_row(row)
 
+    # -------------------------------------------------------------------------
     def replace(
         self, database: FAIRSDatabase, settings: JsonServerSettings
     ) -> JsonServerSettings:

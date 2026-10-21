@@ -13,15 +13,16 @@ from server.contracts.database_configuration import (
     DatabaseStatusResponse,
     DatabaseTestResponse,
 )
-from server.repositories.database.runtime import DatabaseSwitchConflict
 from server.services.database_configuration import (
     DatabaseConfigurationService,
+    DatabaseSwitchConflict,
     DatabaseSwitchError,
 )
 
 router = APIRouter(prefix="/settings/database", tags=["database settings"])
 
 
+###############################################################################
 @router.get("", response_model=DatabaseStatusResponse)
 def get_database_settings(
     service: DatabaseConfigurationService = Depends(get_database_configuration_service),
@@ -29,6 +30,7 @@ def get_database_settings(
     return service.get_status()
 
 
+###############################################################################
 @router.post("/test", response_model=DatabaseTestResponse)
 def test_database_connection(
     candidate: DatabaseConfigurationInput,
@@ -37,6 +39,7 @@ def test_database_connection(
     return service.test_connection(candidate)
 
 
+###############################################################################
 @router.put("", response_model=DatabaseStatusResponse)
 def update_database_settings(
     candidate: DatabaseConfigurationInput,

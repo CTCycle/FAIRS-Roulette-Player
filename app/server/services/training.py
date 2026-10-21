@@ -158,10 +158,12 @@ class TrainingService:
             self.jit_compile = bool(device.jit_compile)
             self.jit_backend = device.jit_backend
 
+    # -------------------------------------------------------------------------
     def apply_roulette_settings(self, settings: RouletteSettings) -> None:
         with self._runtime_settings_lock:
             self.roulette_settings = settings
 
+    # -------------------------------------------------------------------------
     def apply_database_settings(
         self, settings: DatabaseSettings, database_path: str | Path | None
     ) -> None:

@@ -248,6 +248,7 @@ def test_training_worker_receives_explicit_runtime_dependencies(monkeypatch) -> 
         "polling_interval_seconds": 2.5,
         "jit_compile": True,
         "jit_backend": "eager",
+        "roulette_settings": service.roulette_settings,
     }
     training_run_manager.update_training_stats.assert_called_once_with(
         "job123",

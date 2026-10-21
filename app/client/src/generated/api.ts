@@ -346,8 +346,6 @@ export type UploadResponse = {
 };
 
 export type ValidationError = {
-    "ctx"?: Record<string, never>;
-    "input"?: unknown;
     "loc": Array<string | number>;
     "msg": string;
     "type": string;

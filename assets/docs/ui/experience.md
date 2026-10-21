@@ -1,6 +1,6 @@
 ## Experience
 
-Last updated: 2026-09-22
+Last updated: 2026-10-21
 
 ## Page Composition
 
@@ -49,10 +49,10 @@ Composition rules:
 - Training configuration validates relationships between exploration settings, replay memory, batch size, and dynamic-betting options before submission; the backend remains authoritative for those constraints and rechecks selected datasets and output checkpoint names before job creation.
 - Keep error feedback local to the action that failed.
 - Preserve explicit loading states for long-running or multi-step actions.
-- Settings loads application preferences from the active database before showing editable controls and saves only changed fields. The Database section edits only the standalone connection configuration; process and per-training settings remain in their existing workflows.
-- Database settings show the active backend and recovery state, conditionally expose SQLite or PostgreSQL fields, and keep connection testing separate from applying a switch. Explain that databases keep independent data and preferences, confirm before discarding an unsaved Settings draft, then reload preferences after a successful switch.
+- Settings loads application preferences from the active database before showing editable controls. Every valid non-database change persists automatically; numeric and text inputs are debounced, while toggles save immediately. A compact status confirms persistence, and failures keep the edited value visible with a clear error.
+- Database settings show the active backend and recovery state, conditionally expose SQLite or PostgreSQL fields, and keep connection testing separate from applying a switch. Connection edits stay in the local draft until **Apply and switch**; pending application settings are saved before the switch, and preferences reload from the selected database after success.
 - Settings copy makes runtime scope explicit: polling changes affect future parent polling, while JIT changes apply to newly constructed models and do not rewrite active workers or checkpoint configuration.
-- Settings keeps the primary actions visible while the page scrolls. Enabling JIT or changing its backend while enabled is checked against runtime capability before the setting is persisted; the supported Python 3.14 runtime can use `eager`, while Windows rejects `inductor` because it requires Triton. Unsupported combinations receive an actionable error instead of a silent fallback.
+- Settings keeps Reset to defaults available while the page scrolls; ordinary preferences have no Save, Apply, or Cancel action. Enabling JIT or changing its backend while enabled is checked against runtime capability before the setting is persisted; the supported Python 3.14 runtime can use `eager`, while Windows rejects `inductor` because it requires Triton. Unsupported combinations receive an actionable error instead of a silent fallback.
 - Keep outcome and profit feedback immediate and visually distinct.
 - The training monitor calls the pre-learning replay-memory phase `Replay warm-up`; epsilon remains visible separately because epsilon-greedy exploration continues after learning begins.
 - Validation metrics are shown only when a fresh validation measurement exists rather than being visually carried forward across unsampled steps.
@@ -76,7 +76,7 @@ Desktop layouts should favor information density, horizontal space, and efficien
 - Keep navigation regions explicitly labeled.
 - Inputs and icon-only actions need explicit labels or `aria-label` values.
 - Error alerts should preserve live-region behavior where implemented.
-- Settings inputs retain explicit labels, described-by help/error text, disabled-state semantics, and status feedback for save/reset/database test/switch outcomes. Passwords are redacted from status responses; blank input retains the saved secret and an explicit control clears it.
+- Settings inputs retain explicit labels, described-by help/error text, disabled-state semantics, and status feedback for autosave/reset/database test/switch outcomes. Passwords are redacted from status responses; blank input retains the saved secret and an explicit control clears it.
 - Respect reduced motion preferences.
 - Dialogs should retain `role="dialog"`, `aria-modal`, and an accessible title; wizard steps expose current-step state.
 - Guidance dialogs and tours move focus to their first action, keep Tab navigation within the open surface, close with Escape, and restore focus to the invoking control. Tour targets are highlighted without replacing the underlying controls, and the animated demonstration becomes static when reduced motion is requested.

@@ -19,14 +19,17 @@ from server.configurations.database_config import (
 from server.contracts.database_configuration import DatabaseConfigurationInput
 
 
+###############################################################################
 def _protector(value: str) -> str:
     return base64.b64encode(value.encode("utf-8")).decode("ascii")
 
 
+###############################################################################
 def _unprotector(value: str) -> str:
     return base64.b64decode(value).decode("utf-8")
 
 
+###############################################################################
 def _store(
     tmp_path: Path,
     *,
@@ -41,6 +44,7 @@ def _store(
     )
 
 
+###############################################################################
 def test_default_config_is_database_only_and_atomic(tmp_path: Path, monkeypatch) -> None:
     env_path = tmp_path / ".env"
     env_path.write_text("APP_NAME=FAIRS\n", encoding="utf-8")
@@ -58,6 +62,7 @@ def test_default_config_is_database_only_and_atomic(tmp_path: Path, monkeypatch)
     assert env_path.read_text(encoding="utf-8") == "APP_NAME=FAIRS\n"
 
 
+###############################################################################
 def test_legacy_postgres_values_migrate_and_only_database_keys_are_removed(
     tmp_path: Path,
 ) -> None:
@@ -96,6 +101,7 @@ def test_legacy_postgres_values_migrate_and_only_database_keys_are_removed(
     assert "EMBEDDED_DATABASE" not in cleaned
 
 
+###############################################################################
 def test_blank_password_retains_saved_secret_and_explicit_clear_removes_it(
     tmp_path: Path,
 ) -> None:
@@ -127,6 +133,7 @@ def test_blank_password_retains_saved_secret_and_explicit_clear_removes_it(
     assert store.to_public(store.current()).password_configured is False
 
 
+###############################################################################
 def test_invalid_and_corrupt_files_fail_closed_without_default_fallback(
     tmp_path: Path,
 ) -> None:
@@ -144,6 +151,7 @@ def test_invalid_and_corrupt_files_fail_closed_without_default_fallback(
     assert store.path.read_text(encoding="utf-8") == "{broken"
 
 
+###############################################################################
 def test_unknown_database_config_keys_are_rejected(tmp_path: Path) -> None:
     store = _store(tmp_path)
     store.path.write_text(
@@ -162,6 +170,7 @@ def test_unknown_database_config_keys_are_rejected(tmp_path: Path) -> None:
         store.current()
 
 
+###############################################################################
 def test_blank_sqlite_path_in_config_is_rejected(tmp_path: Path) -> None:
     store = _store(tmp_path)
     store.path.write_text(
@@ -179,6 +188,7 @@ def test_blank_sqlite_path_in_config_is_rejected(tmp_path: Path) -> None:
         store.current()
 
 
+###############################################################################
 def test_atomic_replace_failure_preserves_previous_database_config(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -203,6 +213,7 @@ def test_atomic_replace_failure_preserves_previous_database_config(
     assert list(tmp_path.glob(".database-config.json.*.tmp")) == []
 
 
+###############################################################################
 def test_invalid_legacy_postgres_config_does_not_create_a_default(tmp_path: Path) -> None:
     env_path = tmp_path / ".env"
     env_path.write_text("EMBEDDED_DATABASE=false\nDATABASE_HOST=missing-parts\n", encoding="utf-8")
@@ -215,6 +226,7 @@ def test_invalid_legacy_postgres_config_does_not_create_a_default(tmp_path: Path
     assert "DATABASE_HOST" in env_path.read_text(encoding="utf-8")
 
 
+###############################################################################
 @pytest.mark.skipif(os.name != "nt", reason="DPAPI is available on Windows only")
 def test_windows_dpapi_protects_and_recovers_password() -> None:
     secret = "fairs-dpapi-test-value"

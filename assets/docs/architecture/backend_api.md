@@ -1,6 +1,6 @@
 ## Backend API
 
-Last updated: 2026-09-22
+Last updated: 2026-10-21
 
 ## Mounting Model
 
@@ -65,12 +65,12 @@ Prediction preference is exposed as `relative_preference`. This is the softmax-n
 Router prefix: `/settings`
 
 - `GET /api/settings` returns the current validated runtime settings.
-- `PATCH /api/settings` accepts a strict partial update for `jobs`, `device`, and `roulette` settings.
+- `PATCH /api/settings` accepts a strict partial update for `jobs`, `device`, and `roulette` settings. The Settings UI sends valid changes automatically; its continuous numeric and text inputs are debounced.
 - `POST /api/settings/reset` restores the validated backend defaults.
 
 The roulette settings contract exposes `minimum_number`, `maximum_number`, `exclude_zero`, `invert_colors`, and `show_number_labels`. Number limits are inclusive, bounded to `0..36`, and validated after partial patches are merged with the existing document. The combination `minimum_number=0`, `maximum_number=0`, and `exclude_zero=true` is rejected because it would create an empty outcome pool.
 
-The Settings endpoints persist to the `application_settings` row in the active database through `SettingsService`. Nested unknown fields, invalid roulette ranges, out-of-range polling values, empty JIT backend values, database configuration, environment values, and per-training `TrainingConfig` fields are rejected. Enabling JIT also requires runtime capability support; the supported Python 3.14 launcher runtime accepts it when `torch.compile` is available, while Windows rejects the `inductor` backend because Triton is unavailable. Job and device changes are propagated to the live `TrainingService`; roulette rules are read from the same persisted row when new training data is prepared and when live inference steps are validated.
+The Settings endpoints persist to the `application_settings` row in the active database through `SettingsService`. Each accepted partial update is committed before it is propagated to live services; a propagation failure restores the previous row and service values. Nested unknown fields, invalid roulette ranges, out-of-range polling values, empty JIT backend values, database configuration, environment values, and per-training `TrainingConfig` fields are rejected. Enabling JIT also requires runtime capability support; the supported Python 3.14 launcher runtime accepts it when `torch.compile` is available, while Windows rejects the `inductor` backend because Triton is unavailable. Job and device changes are propagated to the live `TrainingService`; roulette rules are read from the same persisted row when new training data is prepared and when live inference steps are validated.
 
 ## Database Configuration Endpoints
 

@@ -1,7 +1,7 @@
 // Copyright © 2023 Thomas Virdis
 // Licensed under the MIT License.
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SettingsPatchRequest, SettingsResponse } from '../../generated/api';
 import { isAbortError } from '../../utils/apiClient';
 import { fetchSettings, resetSettings, updateSettings } from '../../utils/settingsApi';
@@ -15,6 +15,53 @@ interface ValidationErrors {
     maximumNumber?: string;
     rouletteRange?: string;
 }
+
+interface SettingsDraft {
+    minimumNumber: string;
+    maximumNumber: string;
+    excludeZero: boolean;
+    invertColors: boolean;
+    showNumberLabels: boolean;
+    pollingInterval: string;
+    jitCompile: boolean;
+    jitBackend: string;
+}
+
+const EMPTY_DRAFT: SettingsDraft = {
+    minimumNumber: '',
+    maximumNumber: '',
+    excludeZero: false,
+    invertColors: false,
+    showNumberLabels: true,
+    pollingInterval: '',
+    jitCompile: false,
+    jitBackend: '',
+};
+
+const AUTOSAVE_DEBOUNCE_MS = 350;
+
+const mergeSettingsPatches = (
+    current: SettingsPatchRequest,
+    next: SettingsPatchRequest,
+): SettingsPatchRequest => ({
+    ...current,
+    ...next,
+    jobs: current.jobs || next.jobs
+        ? { ...(current.jobs ?? {}), ...(next.jobs ?? {}) }
+        : undefined,
+    device: current.device || next.device
+        ? { ...(current.device ?? {}), ...(next.device ?? {}) }
+        : undefined,
+    roulette: current.roulette || next.roulette
+        ? { ...(current.roulette ?? {}), ...(next.roulette ?? {}) }
+        : undefined,
+});
+
+const hasSettingsPatch = (patch: SettingsPatchRequest): boolean => (
+    Boolean(patch.jobs && Object.keys(patch.jobs).length)
+    || Boolean(patch.device && Object.keys(patch.device).length)
+    || Boolean(patch.roulette && Object.keys(patch.roulette).length)
+);
 
 type SettingsSection = 'roulette' | 'appearance' | 'runtime' | 'advanced' | 'database';
 
@@ -34,31 +81,216 @@ const SettingsPage: React.FC = () => {
             ? 'database'
             : 'roulette'
     ));
-    const [minimumNumber, setMinimumNumber] = useState('');
-    const [maximumNumber, setMaximumNumber] = useState('');
-    const [excludeZero, setExcludeZero] = useState(false);
-    const [invertColors, setInvertColors] = useState(false);
-    const [showNumberLabels, setShowNumberLabels] = useState(true);
-    const [pollingInterval, setPollingInterval] = useState('');
-    const [jitCompile, setJitCompile] = useState(false);
-    const [jitBackend, setJitBackend] = useState('');
+    const [draft, setDraft] = useState<SettingsDraft>(EMPTY_DRAFT);
     const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
     const [resetting, setResetting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+    const draftRef = useRef(draft);
+    const pendingPatchRef = useRef<SettingsPatchRequest>({});
+    const saveWorkerRef = useRef<Promise<boolean> | null>(null);
+    const debounceTimerRef = useRef<number | null>(null);
+    const {
+        minimumNumber,
+        maximumNumber,
+        excludeZero,
+        invertColors,
+        showNumberLabels,
+        pollingInterval,
+        jitCompile,
+        jitBackend,
+    } = draft;
+
+    const clearSaveTimer = () => {
+        if (debounceTimerRef.current !== null) {
+            window.clearTimeout(debounceTimerRef.current);
+            debounceTimerRef.current = null;
+        }
+    };
+
+    const removePendingRouletteRange = () => {
+        const pending = pendingPatchRef.current;
+        if (!pending.roulette) return;
+        const roulette = { ...pending.roulette };
+        delete roulette.minimum_number;
+        delete roulette.maximum_number;
+        delete roulette.exclude_zero;
+        pendingPatchRef.current = {
+            ...pending,
+            roulette: Object.keys(roulette).length > 0 ? roulette : undefined,
+        };
+    };
+
+    const removePendingField = (section: 'jobs' | 'device') => {
+        const pending = pendingPatchRef.current;
+        if (section === 'jobs') {
+            const jobs = { ...(pending.jobs ?? {}) };
+            delete jobs.polling_interval;
+            pendingPatchRef.current = {
+                ...pending,
+                jobs: Object.keys(jobs).length > 0 ? jobs : undefined,
+            };
+            return;
+        }
+        const device = { ...(pending.device ?? {}) };
+        delete device.jit_backend;
+        pendingPatchRef.current = {
+            ...pending,
+            device: Object.keys(device).length > 0 ? device : undefined,
+        };
+    };
+
+    const runSaveWorker = useCallback((): Promise<boolean> => {
+        if (saveWorkerRef.current) {
+            return saveWorkerRef.current;
+        }
+
+        const worker = (async () => {
+            let wroteSettings = false;
+            while (hasSettingsPatch(pendingPatchRef.current)) {
+                if (debounceTimerRef.current !== null) return true;
+                const patch = pendingPatchRef.current;
+                pendingPatchRef.current = {};
+                try {
+                    const settings = await updateSettings(patch);
+                    setSavedSettings(settings);
+                    wroteSettings = true;
+                } catch (requestError) {
+                    const retryNewerPending = hasSettingsPatch(pendingPatchRef.current)
+                        && debounceTimerRef.current === null;
+                    pendingPatchRef.current = mergeSettingsPatches(
+                        patch,
+                        pendingPatchRef.current,
+                    );
+                    setSuccessMessage(null);
+                    const detail = requestError instanceof Error
+                        ? requestError.message
+                        : 'Unable to save settings.';
+                    setError(`Change not saved. ${detail} The edited value is still shown here.`);
+                    if (retryNewerPending) continue;
+                    return false;
+                }
+            }
+            if (wroteSettings && debounceTimerRef.current === null && !hasSettingsPatch(pendingPatchRef.current)) {
+                setError(null);
+                setSuccessMessage('Changes saved.');
+            }
+            return true;
+        })();
+        saveWorkerRef.current = worker;
+        void worker.finally(() => {
+            if (saveWorkerRef.current === worker) saveWorkerRef.current = null;
+        });
+        return worker;
+    }, []);
+
+    const scheduleSettingsPatch = (
+        patch: SettingsPatchRequest,
+        debounce = false,
+    ) => {
+        pendingPatchRef.current = mergeSettingsPatches(pendingPatchRef.current, patch);
+        clearSaveTimer();
+        if (debounce) {
+            debounceTimerRef.current = window.setTimeout(() => {
+                debounceTimerRef.current = null;
+                void runSaveWorker();
+            }, AUTOSAVE_DEBOUNCE_MS);
+        } else {
+            void runSaveWorker();
+        }
+    };
+
+    const flushSettings = async (): Promise<boolean> => {
+        clearSaveTimer();
+        while (true) {
+            if (hasSettingsPatch(pendingPatchRef.current)) {
+                const saved = await runSaveWorker();
+                if (!saved) return false;
+                continue;
+            }
+            if (saveWorkerRef.current) {
+                const saved = await saveWorkerRef.current;
+                if (!saved) return false;
+                continue;
+            }
+            return true;
+        }
+    };
+
+    const updateDraft = (
+        update: (current: SettingsDraft) => SettingsDraft,
+    ): SettingsDraft => {
+        const next = update(draftRef.current);
+        draftRef.current = next;
+        setDraft(next);
+        return next;
+    };
+
+    const validateRouletteDraft = (current: SettingsDraft): ValidationErrors => {
+        const nextErrors: ValidationErrors = {};
+        const minimum = Number(current.minimumNumber);
+        const maximum = Number(current.maximumNumber);
+        if (!current.minimumNumber.trim()) {
+            nextErrors.minimumNumber = 'Enter a minimum number.';
+        } else if (!Number.isInteger(minimum) || minimum < 0 || minimum > 36) {
+            nextErrors.minimumNumber = 'Use a whole number from 0 to 36.';
+        }
+        if (!current.maximumNumber.trim()) {
+            nextErrors.maximumNumber = 'Enter a maximum number.';
+        } else if (!Number.isInteger(maximum) || maximum < 0 || maximum > 36) {
+            nextErrors.maximumNumber = 'Use a whole number from 0 to 36.';
+        }
+        if (!nextErrors.minimumNumber && !nextErrors.maximumNumber) {
+            if (minimum > maximum) {
+                nextErrors.rouletteRange = 'Minimum number cannot be greater than maximum number.';
+            } else if (current.excludeZero && minimum === 0 && maximum === 0) {
+                nextErrors.rouletteRange = 'Excluding zero would leave the roulette number pool empty.';
+            }
+        }
+        return nextErrors;
+    };
+
+    const updateRouletteRange = (
+        update: (current: SettingsDraft) => SettingsDraft,
+        debounce: boolean,
+    ) => {
+        const next = updateDraft(update);
+        const rangeErrors = validateRouletteDraft(next);
+        setValidationErrors((current) => ({
+            ...current,
+            minimumNumber: rangeErrors.minimumNumber,
+            maximumNumber: rangeErrors.maximumNumber,
+            rouletteRange: rangeErrors.rouletteRange,
+        }));
+        setSuccessMessage(null);
+        if (rangeErrors.minimumNumber || rangeErrors.maximumNumber || rangeErrors.rouletteRange) {
+            removePendingRouletteRange();
+            return;
+        }
+        scheduleSettingsPatch({
+            roulette: {
+                minimum_number: Number(next.minimumNumber),
+                maximum_number: Number(next.maximumNumber),
+                exclude_zero: next.excludeZero,
+            },
+        }, debounce);
+    };
 
     const synchronizeDraft = useCallback((settings: SettingsResponse) => {
         setSavedSettings(settings);
-        setMinimumNumber(String(settings.roulette.minimum_number));
-        setMaximumNumber(String(settings.roulette.maximum_number));
-        setExcludeZero(settings.roulette.exclude_zero);
-        setInvertColors(settings.roulette.invert_colors);
-        setShowNumberLabels(settings.roulette.show_number_labels);
-        setPollingInterval(String(settings.jobs.polling_interval));
-        setJitCompile(settings.device.jit_compile);
-        setJitBackend(settings.device.jit_backend);
+        const nextDraft: SettingsDraft = {
+            minimumNumber: String(settings.roulette.minimum_number),
+            maximumNumber: String(settings.roulette.maximum_number),
+            excludeZero: settings.roulette.exclude_zero,
+            invertColors: settings.roulette.invert_colors,
+            showNumberLabels: settings.roulette.show_number_labels,
+            pollingInterval: String(settings.jobs.polling_interval),
+            jitCompile: settings.device.jit_compile,
+            jitBackend: settings.device.jit_backend,
+        };
+        draftRef.current = nextDraft;
+        setDraft(nextDraft);
         setValidationErrors({});
     }, []);
 
@@ -106,176 +338,30 @@ const SettingsPage: React.FC = () => {
         return () => controller.abort();
     }, [synchronizeDraft]);
 
-    const dirtyFields = useMemo(() => {
-        if (!savedSettings) {
-            return {
-                minimumNumber: false,
-                maximumNumber: false,
-                excludeZero: false,
-                invertColors: false,
-                showNumberLabels: false,
-                polling: false,
-                jitCompile: false,
-                jitBackend: false,
-            };
-        }
-        return {
-            minimumNumber: minimumNumber !== String(savedSettings.roulette.minimum_number),
-            maximumNumber: maximumNumber !== String(savedSettings.roulette.maximum_number),
-            excludeZero: excludeZero !== savedSettings.roulette.exclude_zero,
-            invertColors: invertColors !== savedSettings.roulette.invert_colors,
-            showNumberLabels: showNumberLabels !== savedSettings.roulette.show_number_labels,
-            polling: Number(pollingInterval) !== savedSettings.jobs.polling_interval,
-            jitCompile: jitCompile !== savedSettings.device.jit_compile,
-            jitBackend: jitBackend.trim() !== savedSettings.device.jit_backend,
-        };
-    }, [
-        excludeZero,
-        invertColors,
-        jitBackend,
-        jitCompile,
-        maximumNumber,
-        minimumNumber,
-        pollingInterval,
-        savedSettings,
-        showNumberLabels,
-    ]);
-
-    const rouletteDirty = dirtyFields.minimumNumber
-        || dirtyFields.maximumNumber
-        || dirtyFields.excludeZero
-        || dirtyFields.invertColors
-        || dirtyFields.showNumberLabels;
-    const isDirty = rouletteDirty
-        || dirtyFields.polling
-        || dirtyFields.jitCompile
-        || dirtyFields.jitBackend;
-    const isBusy = loading || saving || resetting;
-
-    const validateDraft = (): ValidationErrors => {
-        const nextErrors: ValidationErrors = {};
-        const minimum = Number(minimumNumber);
-        const maximum = Number(maximumNumber);
-
-        if (!minimumNumber.trim()) {
-            nextErrors.minimumNumber = 'Enter a minimum number.';
-        } else if (!Number.isInteger(minimum) || minimum < 0 || minimum > 36) {
-            nextErrors.minimumNumber = 'Use a whole number from 0 to 36.';
-        }
-        if (!maximumNumber.trim()) {
-            nextErrors.maximumNumber = 'Enter a maximum number.';
-        } else if (!Number.isInteger(maximum) || maximum < 0 || maximum > 36) {
-            nextErrors.maximumNumber = 'Use a whole number from 0 to 36.';
-        }
-        if (!nextErrors.minimumNumber && !nextErrors.maximumNumber) {
-            if (minimum > maximum) {
-                nextErrors.rouletteRange = 'Minimum number cannot be greater than maximum number.';
-            } else if (excludeZero && minimum === 0 && maximum === 0) {
-                nextErrors.rouletteRange = 'Excluding zero would leave the roulette number pool empty.';
-            }
-        }
-
-        if (!pollingInterval.trim()) {
-            nextErrors.pollingInterval = 'Enter a polling interval.';
-        } else {
-            const value = Number(pollingInterval);
-            if (!Number.isFinite(value) || value < 0.1 || value > 10) {
-                nextErrors.pollingInterval = 'Use a value from 0.1 to 10 seconds.';
-            }
-        }
-        if (!jitBackend.trim()) {
-            nextErrors.jitBackend = 'Enter a JIT backend name.';
-        }
-        setValidationErrors(nextErrors);
-        if (nextErrors.minimumNumber || nextErrors.maximumNumber || nextErrors.rouletteRange) {
-            setActiveSection('roulette');
-        } else if (nextErrors.pollingInterval) {
-            setActiveSection('runtime');
-        } else if (nextErrors.jitBackend) {
-            setActiveSection('advanced');
-        }
-        return nextErrors;
-    };
-
-    const clearRangeValidation = () => {
-        setValidationErrors((current) => ({
-            ...current,
-            minimumNumber: undefined,
-            maximumNumber: undefined,
-            rouletteRange: undefined,
-        }));
-    };
-
-    const handleSave = async () => {
-        setError(null);
-        setSuccessMessage(null);
-        const nextErrors = validateDraft();
-        if (Object.keys(nextErrors).length > 0 || !savedSettings || !isDirty) {
-            return;
-        }
-
-        const patch: SettingsPatchRequest = {};
-        if (rouletteDirty) {
-            patch.roulette = {};
-            if (dirtyFields.minimumNumber) {
-                patch.roulette.minimum_number = Number(minimumNumber);
-            }
-            if (dirtyFields.maximumNumber) {
-                patch.roulette.maximum_number = Number(maximumNumber);
-            }
-            if (dirtyFields.excludeZero) {
-                patch.roulette.exclude_zero = excludeZero;
-            }
-            if (dirtyFields.invertColors) {
-                patch.roulette.invert_colors = invertColors;
-            }
-            if (dirtyFields.showNumberLabels) {
-                patch.roulette.show_number_labels = showNumberLabels;
-            }
-        }
-        if (dirtyFields.polling) {
-            patch.jobs = { polling_interval: Number(pollingInterval) };
-        }
-        if (dirtyFields.jitCompile || dirtyFields.jitBackend) {
-            patch.device = {};
-            if (dirtyFields.jitCompile) {
-                patch.device.jit_compile = jitCompile;
-            }
-            if (dirtyFields.jitBackend) {
-                patch.device.jit_backend = jitBackend.trim();
-            }
-        }
-
-        setSaving(true);
-        try {
-            const settings = await updateSettings(patch);
-            synchronizeDraft(settings);
-            setSuccessMessage('Settings saved.');
-        } catch (requestError) {
-            if (!isAbortError(requestError)) {
-                setError(requestError instanceof Error ? requestError.message : 'Unable to save settings.');
-            }
-        } finally {
-            setSaving(false);
-        }
-    };
-
     const handleReset = async () => {
+        clearSaveTimer();
         setError(null);
         setSuccessMessage(null);
         setResetting(true);
         try {
+            const pendingChangesSaved = await flushSettings();
+            if (!pendingChangesSaved) {
+                setError('Unable to reset settings until the pending change has been saved. The edited value is still shown here.');
+                return;
+            }
             const settings = await resetSettings();
             synchronizeDraft(settings);
             setSuccessMessage('Settings reset to defaults.');
         } catch (requestError) {
-            if (!isAbortError(requestError)) {
-                setError(requestError instanceof Error ? requestError.message : 'Unable to reset settings.');
-            }
+            setError(requestError instanceof Error
+                ? `Unable to reset settings. ${requestError.message}`
+                : 'Unable to reset settings.');
         } finally {
             setResetting(false);
         }
     };
+
+    const isBusy = loading || resetting;
 
     return (
         <div className="settings-page page-shell">
@@ -290,7 +376,7 @@ const SettingsPage: React.FC = () => {
                     )}
                 </div>
             )}
-            {successMessage && <div className="settings-feedback settings-feedback-success" role="status">{successMessage}</div>}
+            {successMessage && <div className="settings-feedback settings-feedback-success settings-feedback-compact" role="status">{successMessage}</div>}
 
             {!savedSettings && (
                 <div className="settings-layout">
@@ -308,7 +394,8 @@ const SettingsPage: React.FC = () => {
                     </nav>
                     <div className="settings-content">
                         <DatabaseSettingsSection
-                            hasUnsavedSettings={false}
+                            active
+                            onBeforeSwitch={flushSettings}
                             onSettingsReloaded={synchronizeDraft}
                         />
                     </div>
@@ -316,13 +403,7 @@ const SettingsPage: React.FC = () => {
             )}
 
             {savedSettings && (
-                <form
-                    className="settings-form"
-                    onSubmit={(event) => {
-                        event.preventDefault();
-                        void handleSave();
-                    }}
-                >
+                <div className="settings-form">
                     <div className="settings-layout">
                         <nav className="settings-navigation" aria-label="Settings categories">
                             {SETTINGS_SECTIONS.map((section) => (
@@ -374,8 +455,10 @@ const SettingsPage: React.FC = () => {
                                                 step="1"
                                                 value={minimumNumber}
                                                 onChange={(event) => {
-                                                    setMinimumNumber(event.target.value);
-                                                    clearRangeValidation();
+                                                    updateRouletteRange(
+                                                        (current) => ({ ...current, minimumNumber: event.target.value }),
+                                                        true,
+                                                    );
                                                 }}
                                                 aria-describedby="settings-range-help settings-minimum-error settings-range-error"
                                                 aria-invalid={Boolean(validationErrors.minimumNumber || validationErrors.rouletteRange)}
@@ -393,8 +476,10 @@ const SettingsPage: React.FC = () => {
                                                 step="1"
                                                 value={maximumNumber}
                                                 onChange={(event) => {
-                                                    setMaximumNumber(event.target.value);
-                                                    clearRangeValidation();
+                                                    updateRouletteRange(
+                                                        (current) => ({ ...current, maximumNumber: event.target.value }),
+                                                        true,
+                                                    );
                                                 }}
                                                 aria-describedby="settings-range-help settings-maximum-error settings-range-error"
                                                 aria-invalid={Boolean(validationErrors.maximumNumber || validationErrors.rouletteRange)}
@@ -426,8 +511,10 @@ const SettingsPage: React.FC = () => {
                                             type="checkbox"
                                             checked={!excludeZero}
                                             onChange={(event) => {
-                                                setExcludeZero(!event.target.checked);
-                                                setValidationErrors((current) => ({ ...current, rouletteRange: undefined }));
+                                                updateRouletteRange(
+                                                    (current) => ({ ...current, excludeZero: !event.target.checked }),
+                                                    false,
+                                                );
                                             }}
                                             aria-describedby="settings-exclude-zero-help"
                                             disabled={isBusy}
@@ -463,7 +550,11 @@ const SettingsPage: React.FC = () => {
                                             id="settings-invert-colors"
                                             type="checkbox"
                                             checked={invertColors}
-                                            onChange={(event) => setInvertColors(event.target.checked)}
+                                            onChange={(event) => {
+                                                const next = updateDraft((current) => ({ ...current, invertColors: event.target.checked }));
+                                                setSuccessMessage(null);
+                                                scheduleSettingsPatch({ roulette: { invert_colors: next.invertColors } });
+                                            }}
                                             aria-describedby="settings-invert-colors-help"
                                             disabled={isBusy}
                                         />
@@ -483,7 +574,11 @@ const SettingsPage: React.FC = () => {
                                             id="settings-show-number-labels"
                                             type="checkbox"
                                             checked={showNumberLabels}
-                                            onChange={(event) => setShowNumberLabels(event.target.checked)}
+                                            onChange={(event) => {
+                                                const next = updateDraft((current) => ({ ...current, showNumberLabels: event.target.checked }));
+                                                setSuccessMessage(null);
+                                                scheduleSettingsPatch({ roulette: { show_number_labels: next.showNumberLabels } });
+                                            }}
                                             aria-describedby="settings-show-number-labels-help"
                                             disabled={isBusy}
                                         />
@@ -521,9 +616,27 @@ const SettingsPage: React.FC = () => {
                                         step="0.1"
                                         value={pollingInterval}
                                         onChange={(event) => {
-                                            setPollingInterval(event.target.value);
-                                            setValidationErrors((current) => ({ ...current, pollingInterval: undefined }));
+                                            const value = event.target.value;
+                                            updateDraft((current) => ({ ...current, pollingInterval: value }));
+                                            setSuccessMessage(null);
+                                            const interval = Number(value);
+                                            const valid = Boolean(value.trim())
+                                                && Number.isFinite(interval)
+                                                && interval >= 0.1
+                                                && interval <= 10;
+                                            setValidationErrors((current) => ({
+                                                ...current,
+                                                pollingInterval: valid
+                                                    ? undefined
+                                                    : 'Use a value from 0.1 to 10 seconds.',
+                                            }));
+                                            if (valid) {
+                                                scheduleSettingsPatch({ jobs: { polling_interval: interval } }, true);
+                                            } else {
+                                                removePendingField('jobs');
+                                            }
                                         }}
+                                        onBlur={() => void flushSettings()}
                                         aria-describedby="settings-polling-help settings-polling-error"
                                         aria-invalid={Boolean(validationErrors.pollingInterval)}
                                         disabled={isBusy}
@@ -560,7 +673,11 @@ const SettingsPage: React.FC = () => {
                                             id="settings-jit-compile"
                                             type="checkbox"
                                             checked={jitCompile}
-                                            onChange={(event) => setJitCompile(event.target.checked)}
+                                            onChange={(event) => {
+                                                const next = updateDraft((current) => ({ ...current, jitCompile: event.target.checked }));
+                                                setSuccessMessage(null);
+                                                scheduleSettingsPatch({ device: { jit_compile: next.jitCompile } });
+                                            }}
                                             aria-describedby="settings-jit-compile-help"
                                             disabled={isBusy}
                                         />
@@ -580,9 +697,21 @@ const SettingsPage: React.FC = () => {
                                         type="text"
                                         value={jitBackend}
                                         onChange={(event) => {
-                                            setJitBackend(event.target.value);
-                                            setValidationErrors((current) => ({ ...current, jitBackend: undefined }));
+                                            const value = event.target.value;
+                                            updateDraft((current) => ({ ...current, jitBackend: value }));
+                                            setSuccessMessage(null);
+                                            if (value.trim()) {
+                                                setValidationErrors((current) => ({ ...current, jitBackend: undefined }));
+                                                scheduleSettingsPatch({ device: { jit_backend: value.trim() } }, true);
+                                            } else {
+                                                setValidationErrors((current) => ({
+                                                    ...current,
+                                                    jitBackend: 'Enter a JIT backend name.',
+                                                }));
+                                                removePendingField('device');
+                                            }
                                         }}
+                                        onBlur={() => void flushSettings()}
                                         aria-describedby="settings-jit-backend-help settings-jit-backend-error"
                                         aria-invalid={Boolean(validationErrors.jitBackend)}
                                         disabled={!jitCompile || isBusy}
@@ -595,12 +724,11 @@ const SettingsPage: React.FC = () => {
                         </section>
                     )}
 
-                    {activeSection === 'database' && (
-                        <DatabaseSettingsSection
-                            hasUnsavedSettings={isDirty}
-                            onSettingsReloaded={synchronizeDraft}
-                        />
-                    )}
+                    <DatabaseSettingsSection
+                        active={activeSection === 'database'}
+                        onBeforeSwitch={flushSettings}
+                        onSettingsReloaded={synchronizeDraft}
+                    />
 
                         </div>
                     </div>
@@ -609,11 +737,8 @@ const SettingsPage: React.FC = () => {
                         <button type="button" className="settings-button settings-button-secondary" onClick={() => void handleReset()} disabled={isBusy}>
                             {resetting ? 'Resetting…' : 'Reset to defaults'}
                         </button>
-                        <button type="submit" className="settings-button settings-button-primary" disabled={isBusy || !isDirty}>
-                            {saving ? 'Saving…' : 'Save settings'}
-                        </button>
                     </div>}
-                </form>
+                </div>
             )}
         </div>
     );

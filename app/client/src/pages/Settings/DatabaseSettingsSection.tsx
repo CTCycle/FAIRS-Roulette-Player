@@ -1,7 +1,7 @@
 // Copyright © 2026 Thomas Virdis
 // Licensed under the MIT License.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
     DatabaseConfigurationInput,
     DatabaseConfigurationResponse,
@@ -16,7 +16,8 @@ import {
 } from '../../utils/databaseSettingsApi';
 
 interface DatabaseSettingsSectionProps {
-    hasUnsavedSettings: boolean;
+    active: boolean;
+    onBeforeSwitch: () => Promise<boolean>;
     onSettingsReloaded: (settings: SettingsResponse) => void;
 }
 
@@ -53,7 +54,8 @@ const fromPublicConfiguration = (
 });
 
 const DatabaseSettingsSection: React.FC<DatabaseSettingsSectionProps> = ({
-    hasUnsavedSettings,
+    active,
+    onBeforeSwitch,
     onSettingsReloaded,
 }) => {
     const [status, setStatus] = useState<DatabaseStatusResponse | null>(null);
@@ -64,18 +66,22 @@ const DatabaseSettingsSection: React.FC<DatabaseSettingsSectionProps> = ({
     const [error, setError] = useState<string | null>(null);
     const [notice, setNotice] = useState<string | null>(null);
     const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+    const statusLoadedRef = useRef(false);
 
     const synchronizeStatus = useCallback((nextStatus: DatabaseStatusResponse) => {
         setStatus(nextStatus);
         setDraft(fromPublicConfiguration(nextStatus.configuration));
     }, []);
 
-    const loadStatus = useCallback(async (signal?: AbortSignal) => {
+    const loadStatus = useCallback(async (signal?: AbortSignal): Promise<boolean> => {
         setLoading(true);
         setError(null);
         try {
             const nextStatus = await fetchDatabaseStatus(signal);
-            if (!signal?.aborted) synchronizeStatus(nextStatus);
+            if (!signal?.aborted) {
+                synchronizeStatus(nextStatus);
+                return true;
+            }
         } catch (requestError) {
             if (!signal?.aborted) {
                 setError(requestError instanceof Error ? requestError.message : 'Unable to load database settings.');
@@ -83,13 +89,17 @@ const DatabaseSettingsSection: React.FC<DatabaseSettingsSectionProps> = ({
         } finally {
             if (!signal?.aborted) setLoading(false);
         }
+        return false;
     }, [synchronizeStatus]);
 
     useEffect(() => {
+        if (!active || statusLoadedRef.current) return undefined;
         const controller = new AbortController();
-        void loadStatus(controller.signal);
+        void loadStatus(controller.signal).then((loaded) => {
+            if (!controller.signal.aborted && loaded) statusLoadedRef.current = true;
+        });
         return () => controller.abort();
-    }, [loadStatus]);
+    }, [active, loadStatus]);
 
     const setField = <K extends keyof DatabaseConfigurationInput>(
         field: K,
@@ -128,18 +138,16 @@ const DatabaseSettingsSection: React.FC<DatabaseSettingsSectionProps> = ({
     };
 
     const applyDatabase = async () => {
-        if (hasUnsavedSettings) {
-            const confirmed = window.confirm(
-                'This database has its own application settings and data. Nothing will be copied. Continue and discard your unsaved Settings changes?',
-            );
-            if (!confirmed) return;
-        }
-
         setSaving(true);
         setError(null);
         setNotice(null);
         setTestResult(null);
         try {
+            const settingsSaved = await onBeforeSwitch();
+            if (!settingsSaved) {
+                setError('Pending application settings could not be saved. Resolve the save error before switching databases.');
+                return;
+            }
             const nextStatus = await updateDatabaseSettings(draft);
             synchronizeStatus(nextStatus);
             try {
@@ -165,6 +173,7 @@ const DatabaseSettingsSection: React.FC<DatabaseSettingsSectionProps> = ({
             id="settings-panel-database"
             className="settings-panel database-settings-panel"
             aria-labelledby="settings-nav-database"
+            hidden={!active}
         >
             <div className="settings-section-header">
                 <div>

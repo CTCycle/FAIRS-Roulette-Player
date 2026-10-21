@@ -48,16 +48,19 @@ DATABASE_ENV_KEYS = frozenset({
 })
 
 
+###############################################################################
 class DatabaseConfigurationError(RuntimeError):
     """Raised when the standalone connection configuration is unusable."""
 
 
+###############################################################################
 class SQLiteFileConfiguration(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
     path: str
     insert_batch_size: int = Field(ge=1, le=100000)
 
+    # -------------------------------------------------------------------------
     @field_validator("path")
     @classmethod
     def validate_path(cls, value: str) -> str:
@@ -67,6 +70,7 @@ class SQLiteFileConfiguration(BaseModel):
         return normalized
 
 
+###############################################################################
 class PostgreSQLFileConfiguration(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
@@ -81,6 +85,7 @@ class PostgreSQLFileConfiguration(BaseModel):
     connect_timeout: int = Field(ge=1, le=300)
     insert_batch_size: int = Field(ge=1, le=100000)
 
+    # -------------------------------------------------------------------------
     @field_validator("host", "database_name", "username")
     @classmethod
     def normalize_required_text(cls, value: str) -> str:
@@ -90,6 +95,7 @@ class PostgreSQLFileConfiguration(BaseModel):
         return normalized
 
 
+###############################################################################
 class DatabaseConfigurationFile(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
@@ -98,6 +104,7 @@ class DatabaseConfigurationFile(BaseModel):
     sqlite: SQLiteFileConfiguration | None = None
     postgresql: PostgreSQLFileConfiguration | None = None
 
+    # -------------------------------------------------------------------------
     @model_validator(mode="after")
     def validate_backend_shape(self) -> "DatabaseConfigurationFile":
         if self.backend == "sqlite" and (self.sqlite is None or self.postgresql is not None):
@@ -109,6 +116,7 @@ class DatabaseConfigurationFile(BaseModel):
         return self
 
 
+###############################################################################
 @dataclass(frozen=True)
 class LoadedDatabaseConfiguration:
     document: DatabaseConfigurationFile | None
@@ -116,10 +124,12 @@ class LoadedDatabaseConfiguration:
     sqlite_path: Path | None
 
 
+###############################################################################
 class _DataBlob(ctypes.Structure):
     _fields_ = [("cbData", wintypes.DWORD), ("pbData", ctypes.POINTER(ctypes.c_byte))]
 
 
+###############################################################################
 def _dpapi_transform(value: bytes, *, protect: bool) -> bytes:
     if os.name != "nt":
         raise DatabaseConfigurationError(
@@ -160,11 +170,13 @@ def _dpapi_transform(value: bytes, *, protect: bool) -> bytes:
         kernel32.LocalFree(result.pbData)
 
 
+###############################################################################
 def protect_password(password: str) -> str:
     encrypted = _dpapi_transform(password.encode("utf-8"), protect=True)
     return base64.b64encode(encrypted).decode("ascii")
 
 
+###############################################################################
 def unprotect_password(encrypted: str) -> str:
     try:
         raw = base64.b64decode(encrypted, validate=True)
@@ -175,9 +187,11 @@ def unprotect_password(encrypted: str) -> str:
         raise DatabaseConfigurationError("Unable to decrypt the saved password.") from exc
 
 
+###############################################################################
 class DatabaseConfigurationStore:
     """Owns atomic, DB-independent database configuration and legacy migration."""
 
+    # -------------------------------------------------------------------------
     def __init__(
         self,
         path: str | Path | None = None,
@@ -195,6 +209,7 @@ class DatabaseConfigurationStore:
         self._protect = password_protector
         self._unprotect = password_unprotector
 
+    # -------------------------------------------------------------------------
     @staticmethod
     def _default_input() -> DatabaseConfigurationInput:
         return DatabaseConfigurationInput(
@@ -202,6 +217,7 @@ class DatabaseConfigurationStore:
             sqlite_path=str(shared_paths.DATABASE_PATH.resolve()),
         )
 
+    # -------------------------------------------------------------------------
     def _read_document(self) -> DatabaseConfigurationFile:
         try:
             payload = json.loads(self.path.read_text(encoding="utf-8"))
@@ -213,6 +229,7 @@ class DatabaseConfigurationStore:
                 "The database configuration file is invalid. Review it or save a valid configuration in Settings."
             ) from exc
 
+    # -------------------------------------------------------------------------
     def _settings_from_document(
         self, document: DatabaseConfigurationFile
     ) -> LoadedDatabaseConfiguration:
@@ -256,9 +273,11 @@ class DatabaseConfigurationStore:
         )
         return LoadedDatabaseConfiguration(document, settings, None)
 
+    # -------------------------------------------------------------------------
     def current(self) -> LoadedDatabaseConfiguration:
         return self._settings_from_document(self._read_document())
 
+    # -------------------------------------------------------------------------
     def load_or_migrate(self) -> LoadedDatabaseConfiguration:
         if self.path.exists():
             loaded = self.current()
@@ -270,6 +289,7 @@ class DatabaseConfigurationStore:
         self.remove_legacy_environment_keys()
         return self.current()
 
+    # -------------------------------------------------------------------------
     def _legacy_environment_input(self) -> DatabaseConfigurationInput:
         raw = dotenv_values(self.environment_file) if self.environment_file.exists() else {}
         if raw.get("DATABASE_URL"):
@@ -303,6 +323,7 @@ class DatabaseConfigurationStore:
                 "Legacy database values in settings/.env are incomplete or invalid."
             ) from exc
 
+    # -------------------------------------------------------------------------
     def resolve_input(
         self, candidate: DatabaseConfigurationInput
     ) -> tuple[DatabaseConfigurationInput, str | None]:
@@ -327,6 +348,7 @@ class DatabaseConfigurationStore:
         )
         return normalized, None if candidate.clear_password else password
 
+    # -------------------------------------------------------------------------
     def write(
         self,
         candidate: DatabaseConfigurationInput,
@@ -363,6 +385,7 @@ class DatabaseConfigurationStore:
         self._atomic_write(document)
         return self._settings_from_document(document)
 
+    # -------------------------------------------------------------------------
     def _atomic_write(self, document: DatabaseConfigurationFile) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         temporary_path: Path | None = None
@@ -400,6 +423,7 @@ class DatabaseConfigurationStore:
             if temporary_path is not None:
                 temporary_path.unlink(missing_ok=True)
 
+    # -------------------------------------------------------------------------
     def remove_legacy_environment_keys(self) -> None:
         if not self.environment_file.is_file():
             return
@@ -417,6 +441,7 @@ class DatabaseConfigurationStore:
             return
         self._atomic_text_write(self.environment_file, "".join(preserved))
 
+    # -------------------------------------------------------------------------
     @staticmethod
     def _atomic_text_write(path: Path, content: str) -> None:
         temporary_path: Path | None = None
@@ -443,6 +468,7 @@ class DatabaseConfigurationStore:
             if temporary_path is not None:
                 temporary_path.unlink(missing_ok=True)
 
+    # -------------------------------------------------------------------------
     @staticmethod
     def to_public(
         loaded: LoadedDatabaseConfiguration | None,

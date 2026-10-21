@@ -32,11 +32,15 @@ from server.repositories.database.runtime import (
 from server.services.startup_validation import run_startup_validations
 
 
+###############################################################################
 class DatabaseSwitchError(RuntimeError):
     """A candidate database could not be safely activated."""
 
 
+###############################################################################
 class DatabaseConfigurationService:
+
+    # -------------------------------------------------------------------------
     def __init__(
         self,
         *,
@@ -54,6 +58,7 @@ class DatabaseConfigurationService:
         self.activate_services = activate_services
         self.settings_repository = settings_repository or ApplicationSettingsRepository()
 
+    # -------------------------------------------------------------------------
     @staticmethod
     def _active_backend(runtime_database: RuntimeDatabaseManager) -> str | None:
         database = runtime_database.active
@@ -61,6 +66,7 @@ class DatabaseConfigurationService:
             return None
         return "sqlite" if database.settings.embedded_database else "postgresql"
 
+    # -------------------------------------------------------------------------
     def get_status(self) -> DatabaseStatusResponse:
         try:
             loaded = self.store.current()
@@ -86,6 +92,7 @@ class DatabaseConfigurationService:
             message=message,
         )
 
+    # -------------------------------------------------------------------------
     @staticmethod
     def _settings_and_path(candidate: DatabaseConfigurationInput, password: str | None):
         normalized = candidate.model_copy(
@@ -103,6 +110,7 @@ class DatabaseConfigurationService:
         database_path = Path(normalized.sqlite_path) if normalized.backend == "sqlite" else None
         return normalized, settings, database_path
 
+    # -------------------------------------------------------------------------
     def test_connection(self, candidate: DatabaseConfigurationInput) -> DatabaseTestResponse:
         try:
             _, password = self.store.resolve_input(candidate)
@@ -126,6 +134,7 @@ class DatabaseConfigurationService:
             message=f"Connection to {normalized.backend} succeeded.",
         )
 
+    # -------------------------------------------------------------------------
     def _reject_active_work(self) -> None:
         training = getattr(self.application.state, "training_run_manager", None)
         if training is not None and training.is_job_running():
@@ -138,6 +147,7 @@ class DatabaseConfigurationService:
                 "Close active inference sessions before switching databases."
             )
 
+    # -------------------------------------------------------------------------
     def activate(
         self,
         candidate: DatabaseConfigurationInput,
@@ -237,4 +247,8 @@ class DatabaseConfigurationService:
             raise DatabaseSwitchError(message) from exc
 
 
-__all__ = ["DatabaseConfigurationService", "DatabaseSwitchError"]
+__all__ = [
+    "DatabaseConfigurationService",
+    "DatabaseSwitchConflict",
+    "DatabaseSwitchError",
+]

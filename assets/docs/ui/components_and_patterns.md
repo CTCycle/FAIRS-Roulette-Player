@@ -1,6 +1,6 @@
 ## Components And Patterns
 
-Last updated: 2026-09-17
+Last updated: 2026-10-21
 
 ## Navigation And Structure
 
@@ -43,11 +43,11 @@ Last updated: 2026-09-17
 - `Database` owns only backend selection and connection parameters. It shows active/recovery status and uses conditional SQLite or PostgreSQL fields.
 - The left navigation shows one flat settings panel at a time. Do not add nested settings cards, duplicated section titles, or repeated action rows.
 - Defaults and saved application preferences come from `GET /api/settings`; the client does not hardcode a second settings authority. Database connection details come from the redacted `GET /api/settings/database` response.
-- Save sends only changed fields through `PATCH /api/settings`. Reset uses the backend default contract through `POST /api/settings/reset`.
+- Valid non-database changes are sent automatically through `PATCH /api/settings`; numeric and text inputs are debounced, and the save queue keeps updates ordered. Reset uses the backend default contract through `POST /api/settings/reset`.
 - Database connection testing uses `POST /api/settings/database/test` without activating or saving the candidate. Applying a switch uses `PUT /api/settings/database`; after success, reload application preferences from the newly active database.
-- Explain that each database retains its own data and preferences. If the Settings form has an unsaved draft, confirm before discarding it during a switch. Never display or prefill the saved password; a blank value retains it and an explicit clear control removes it.
+- Database edits remain local across Settings tabs until the user selects the explicit switch action. Pending application preferences are flushed before switching, and each database retains its own data and preferences. Never display or prefill the saved password; a blank value retains it and an explicit clear control removes it.
 - Range validation occurs in the UI for immediate feedback and is repeated by the backend on the merged settings document.
-- The JIT backend field remains disabled while JIT is disabled but preserves its saved value. The supported Windows choice is `eager`; `inductor` requires Triton on another supported platform. Loading, saving, reset, success, and error feedback remain visible near the form actions.
+- The JIT backend field remains disabled while JIT is disabled but preserves its saved value. The supported Windows choice is `eager`; `inductor` requires Triton on another supported platform. Loading, autosave, reset, success, and error feedback remain near the settings content.
 
 ## Interaction States
 

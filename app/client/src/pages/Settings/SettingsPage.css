@@ -79,6 +79,10 @@
     padding: 0 0 var(--spacing-xl);
 }
 
+.settings-panel[hidden] {
+    display: none;
+}
+
 .settings-section-header {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
@@ -346,6 +350,14 @@
 .settings-feedback-success {
     color: #bbf7d0;
     border-color: rgba(34, 197, 94, 0.42);
+}
+
+.settings-feedback-compact {
+    width: fit-content;
+    margin-bottom: var(--spacing-sm);
+    padding: 0.35rem 0.65rem;
+    border-color: transparent;
+    background: transparent;
 }
 
 .settings-link-button {
