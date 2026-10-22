@@ -3,27 +3,100 @@
 
 from __future__ import annotations
 
+import sys
+import pytest
+from playwright.sync_api import APIRequestContext
 from contextlib import contextmanager
 from pathlib import Path
-import sys
 from collections.abc import Iterator
-
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-import pytest
-
 from server.api.settings import router as settings_router
-from server.contracts.configuration import (
-    DatabaseSettings,
-    DeviceSettings,
-    JobsSettings,
-    RouletteSettings,
-)
+from server.contracts.configuration import DatabaseSettings, DeviceSettings, JobsSettings, RouletteSettings
 from server.repositories.application_settings import ApplicationSettingsRepository
 from server.repositories.database.backend import FAIRSDatabase
 from server.repositories.database.initializer import initialize_database
 from server.repositories.database.runtime import RuntimeDatabaseManager
 from server.services.settings import SettingsService
+
+"""
+E2E tests for dataset listing APIs under /datasets/training.
+"""
+
+
+
+DATASET_NAME = "e2e_dataset_for_listing"
+
+###############################################################################
+def ensure_dataset_for_listing(api_context: APIRequestContext) -> None:
+    summary_response = api_context.get("/api/datasets/training/summary")
+    assert summary_response.ok
+    summary_payload = summary_response.json()
+    datasets = summary_payload.get("datasets", [])
+    existing = next(
+        (item for item in datasets if item.get("dataset_name") == DATASET_NAME),
+        None,
+    )
+    if existing is not None:
+        return
+
+    csv_content = b"idx,outcome\n0,0\n1,14\n2,28\n3,7\n4,22"
+    upload_response = api_context.post(
+        "/api/data/upload?dataset_kind=training&csv_separator=%2C",
+        multipart={
+            "file": {
+                "name": f"{DATASET_NAME}.csv",
+                "mimeType": "text/csv",
+                "buffer": csv_content,
+            }
+        },
+    )
+    assert upload_response.ok, (
+        f"Expected 200, got {upload_response.status}: {upload_response.text()}"
+    )
+
+###############################################################################
+class TestRouletteDatasetsEndpoints:
+    """Tests for /datasets/training endpoints."""
+
+    # -------------------------------------------------------------------------
+    def test_list_roulette_datasets(self, api_context: APIRequestContext):
+        ensure_dataset_for_listing(api_context)
+        response = api_context.get("/api/datasets/training")
+        assert response.ok, f"Expected 200, got {response.status}"
+
+        data = response.json()
+        assert "datasets" in data
+        assert isinstance(data["datasets"], list)
+        assert data["datasets"], "Expected at least one dataset after setup."
+        sample = data["datasets"][0]
+        assert "dataset_id" in sample
+        assert "dataset_name" in sample
+        assert isinstance(sample["dataset_id"], int)
+        assert isinstance(sample["dataset_name"], str)
+        assert sample["dataset_name"]
+
+    # -------------------------------------------------------------------------
+    def test_list_roulette_datasets_summary(self, api_context: APIRequestContext):
+        ensure_dataset_for_listing(api_context)
+        response = api_context.get("/api/datasets/training/summary")
+        assert response.ok, f"Expected 200, got {response.status}"
+
+        data = response.json()
+        assert "datasets" in data
+        assert isinstance(data["datasets"], list)
+        assert data["datasets"], "Expected at least one dataset after setup."
+        sample = data["datasets"][0]
+        assert "dataset_id" in sample
+        assert "dataset_name" in sample
+        assert "row_count" in sample
+        assert isinstance(sample["dataset_id"], int)
+        assert isinstance(sample["row_count"], int)
+        assert sample["row_count"] >= 0
+
+
+
+
 
 ###############################################################################
 class TrainingSpy:

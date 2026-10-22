@@ -3,22 +3,17 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 import time
+import pytest
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
-
 from fastapi.testclient import TestClient
 from server.repositories.database.initializer import DatabaseInitializationError
-
-from server.contracts.configuration import (
-    DatabaseSettings,
-    DeviceSettings,
-    JobsSettings,
-    JsonServerSettings,
-    ServerSettings,
-)
+from server.contracts.configuration import DatabaseSettings, DeviceSettings, JobsSettings, JsonServerSettings, ServerSettings
 from server.configurations.database_config import LoadedDatabaseConfiguration
+from server.services import startup_validation
+from server.common import runtime_capabilities
 
 ###############################################################################
 class CheckpointServiceStub:
@@ -660,3 +655,101 @@ def test_lifespan_rolls_back_partial_initialization(monkeypatch) -> None:
     assert events.count("training-service") == 1
     assert events.count("training-manager") == 1
     assert events.count("logging") == 1
+
+
+
+
+
+###############################################################################
+def _embedded_settings() -> ServerSettings:
+    return ServerSettings(
+        database=DatabaseSettings(
+            embedded_database=True,
+            engine=None,
+            host=None,
+            port=None,
+            database_name=None,
+            username=None,
+            password=None,
+            ssl=False,
+            ssl_ca=None,
+            connect_timeout=10,
+            insert_batch_size=1000,
+        ),
+        jobs=JobsSettings(polling_interval=1.0),
+        device=DeviceSettings(
+            jit_compile=False,
+            jit_backend="inductor",
+        ),
+    )
+
+###############################################################################
+def _external_settings(engine: str) -> ServerSettings:
+    return ServerSettings(
+        database=DatabaseSettings(
+            embedded_database=False,
+            engine=engine,
+            host="db-host",
+            port=5432,
+            database_name="fairs",
+            username="user",
+            password="secret",
+            ssl=False,
+            ssl_ca=None,
+            connect_timeout=10,
+            insert_batch_size=1000,
+        ),
+        jobs=JobsSettings(polling_interval=1.0),
+        device=DeviceSettings(
+            jit_compile=False,
+            jit_backend="inductor",
+        ),
+    )
+
+###############################################################################
+def test_startup_validations_create_runtime_directories(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    data_dir = tmp_path / "data"
+    logs_dir = data_dir / "logs"
+    checkpoints_dir = data_dir / "checkpoints"
+
+    monkeypatch.setattr(startup_validation.shared_paths, "DATA_ROOT", data_dir)
+    monkeypatch.setattr(startup_validation.shared_paths, "LOGS_PATH", logs_dir)
+    monkeypatch.setattr(
+        startup_validation.shared_paths,
+        "CHECKPOINT_PATH",
+        checkpoints_dir,
+    )
+
+    startup_validation.run_startup_validations(_embedded_settings())
+
+    assert data_dir.is_dir()
+    assert logs_dir.is_dir()
+    assert checkpoints_dir.is_dir()
+
+###############################################################################
+def test_external_database_validation_rejects_unsupported_engine() -> None:
+    with pytest.raises(RuntimeError, match="Unsupported database engine"):
+        startup_validation.run_startup_validations(_external_settings("mysql"))
+
+###############################################################################
+@pytest.mark.parametrize("engine", ["postgres", "postgresql", "postgresql+psycopg2"])
+def test_external_database_validation_rejects_legacy_postgres_aliases(
+    engine: str,
+) -> None:
+    with pytest.raises(RuntimeError, match="Unsupported database engine"):
+        startup_validation.run_startup_validations(_external_settings(engine))
+
+
+
+
+###############################################################################
+def test_windows_inductor_is_rejected_before_torch_probe(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(runtime_capabilities.sys, "platform", "win32")
+
+    with pytest.raises(ValueError, match="Triton"):
+        runtime_capabilities.validate_jit_runtime(True, "inductor")

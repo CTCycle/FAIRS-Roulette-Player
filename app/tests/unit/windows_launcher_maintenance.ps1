@@ -451,6 +451,7 @@ Wait-Process -Id `$child.Id
     foreach ($processId in $script:OtherProcessIds) {
         Assert-Condition ($null -ne (Get-Process -Id $processId -ErrorAction SilentlyContinue)) "Confirmed stop terminated unrelated PID $processId."
     }
+    Cleanup-TestProcesses
 }
 
 function Test-LauncherOwnedProcessTreeCleanup {
@@ -489,6 +490,7 @@ Wait-Process -Id `$child.Id
         Assert-Condition ($null -eq (Get-Process -Id $processId -ErrorAction SilentlyContinue)) "Launcher cleanup left owned PID $processId running."
     }
     Assert-Condition ($null -ne (Get-Process -Id $ordinary.Id -ErrorAction SilentlyContinue)) 'Launcher cleanup stopped an unrelated process in the same fixture folder.'
+    Cleanup-TestProcesses
 }
 
 function Test-ExitedLauncherParentCleanup {
@@ -527,6 +529,7 @@ exit 0
 
     Assert-Condition ($null -eq (Get-Process -Id $childId -ErrorAction SilentlyContinue)) 'Cleanup of an exited launcher parent left its child alive.'
     Assert-Condition ($null -ne (Get-Process -Id $ordinary.Id -ErrorAction SilentlyContinue)) 'Cleanup of an exited launcher parent stopped an unrelated process.'
+    Cleanup-TestProcesses
 }
 
 function Cleanup-TestProcesses {
