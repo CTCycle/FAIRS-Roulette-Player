@@ -491,6 +491,44 @@ Wait-Process -Id `$child.Id
     Assert-Condition ($null -ne (Get-Process -Id $ordinary.Id -ErrorAction SilentlyContinue)) 'Launcher cleanup stopped an unrelated process in the same fixture folder.'
 }
 
+function Test-ExitedLauncherParentCleanup {
+    Reset-Fixture
+    $qaRoot = Join-Path $script:RepositoryRoot 'assets\QA'
+    Remove-SafeQaTree $script:ProcessFixtureRoot '.scratch-val19-launch-'
+    $script:ProcessFixtureRoot = Join-Path $qaRoot ".scratch-val19-launch-$PID-$([Guid]::NewGuid().ToString('N'))"
+    $childScript = Join-Path $script:ProcessFixtureRoot 'orphaned-child-sleeper.ps1'
+    $childPidPath = Join-Path $script:ProcessFixtureRoot 'orphaned-child.pid'
+    $parentScript = Join-Path $script:ProcessFixtureRoot 'exiting-parent.ps1'
+    $ordinaryScript = Join-Path $script:ProcessFixtureRoot 'ordinary-sleeper.ps1'
+    New-FixtureFile $childScript 'Start-Sleep -Seconds 300'
+    New-FixtureFile $ordinaryScript 'Start-Sleep -Seconds 300'
+    $quotedChild = $childScript.Replace("'", "''")
+    $quotedChildPid = $childPidPath.Replace("'", "''")
+    $parentContents = @"
+`$child = Start-Process -FilePath '$script:PowerShellExecutable' -ArgumentList '-NoLogo -NoProfile -File `"$quotedChild`"' -PassThru -WindowStyle Hidden
+Set-Content -LiteralPath '$quotedChildPid' -Value `$child.Id
+exit 0
+"@
+    New-FixtureFile $parentScript $parentContents
+
+    $parent = New-SleeperProcess $parentScript
+    $script:OwnedProcessIds.Add($parent.Id)
+    $deadline = (Get-Date).AddSeconds(10)
+    while (-not (Test-Path -LiteralPath $childPidPath) -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 100 }
+    Assert-Condition (Test-Path -LiteralPath $childPidPath) 'The exiting launcher parent did not start its child.'
+    $childId = [int](Get-Content -LiteralPath $childPidPath -Raw)
+    $script:OwnedProcessIds.Add($childId)
+    Assert-Condition ($parent.WaitForExit(5000)) 'The launcher parent did not exit as expected.'
+    Assert-Condition ($null -ne (Get-Process -Id $childId -ErrorAction SilentlyContinue)) 'The child did not survive long enough to test orphan cleanup.'
+
+    $ordinary = New-SleeperProcess $ordinaryScript
+    $script:OtherProcessIds.Add($ordinary.Id)
+    Stop-OwnedApplicationProcessTree -RootProcessId $parent.Id -Process $parent -GraceSeconds 0
+
+    Assert-Condition ($null -eq (Get-Process -Id $childId -ErrorAction SilentlyContinue)) 'Cleanup of an exited launcher parent left its child alive.'
+    Assert-Condition ($null -ne (Get-Process -Id $ordinary.Id -ErrorAction SilentlyContinue)) 'Cleanup of an exited launcher parent stopped an unrelated process.'
+}
+
 function Cleanup-TestProcesses {
     foreach ($processId in @($script:OwnedProcessIds) + @($script:OtherProcessIds)) {
         if (Get-Process -Id $processId -ErrorAction SilentlyContinue) {
@@ -521,6 +559,7 @@ try {
     Test-Uninstall
     Test-StopApplicationProcesses
     Test-LauncherOwnedProcessTreeCleanup
+    Test-ExitedLauncherParentCleanup
     Write-Output 'VAL-19 maintenance behavior passed in isolated fixtures.'
 } finally {
     Cleanup-TestProcesses

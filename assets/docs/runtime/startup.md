@@ -1,6 +1,6 @@
 ## Startup
 
-Last updated: 2026-10-21
+Last updated: 2026-10-22
 
 ## Local Application Startup
 
@@ -29,7 +29,7 @@ The launcher prepares or validates:
 - `app/server/.venv`
 - frontend dependencies and built `app/client/dist`
 
-`UV_PROJECT_ENVIRONMENT` targets the single server virtual environment. A failed `uv sync` is reported as a failure; the launcher no longer assumes that failure means a legacy environment path and does not delete/recreate the environment as an automatic compatibility retry.
+`UV_PROJECT_ENVIRONMENT` targets the single server virtual environment. Backend dependency installation uses `uv sync --locked` so a stale lockfile fails instead of being rewritten during startup. A failed `uv sync` is reported as a failure; the launcher no longer assumes that failure means a legacy environment path and does not delete/recreate the environment as an automatic compatibility retry.
 
 Production launch checks `FASTAPI_PORT` before runtime, dependency, or build work. If it is occupied, the launcher lists each PID, process name, port, and executable path when Windows provides it, then asks once whether those exact processes may be terminated. Declining returns to the menu; `-Launch` fails closed without terminating unconfirmed processes. After confirmation, the port is re-queried for a bounded period, and any remaining or replacement listener aborts startup. `UI_HOST` and `UI_PORT` are used by the manual development server; maintenance actions still check both configured ports when present.
 
