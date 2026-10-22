@@ -1,11 +1,21 @@
-# FAIRS: Fabulous Automated Intelligent Roulette System
+<p align="center"><img src="app/client/public/roulette_wheel.png" alt="FAIRS roulette wheel mark" width="96"></p>
 
-<p align="center"><img src='app/client/public/roulette_wheel.png' alt='FAIRS roulette wheel mark' width="112"></p>
+<h1 align="center">FAIRS Roulette Player</h1>
 
-**A local research workspace for roulette training experiments and step-by-step inference sessions.**
+<p align="center">A local research workspace for roulette training experiments and step-by-step inference sessions.</p>
 
+<p align="center">
+  <a href="https://github.com/CTCycle/FAIRS-Roulette-Player/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/CTCycle/FAIRS-Roulette-Player?style=flat-square"></a>
+  <a href="https://github.com/CTCycle/FAIRS-Roulette-Player/commits"><img alt="Last commit" src="https://img.shields.io/github/last-commit/CTCycle/FAIRS-Roulette-Player?style=flat-square"></a>
+  <a href="https://github.com/CTCycle/FAIRS-Roulette-Player/releases"><img alt="Release" src="https://img.shields.io/github/v/release/CTCycle/FAIRS-Roulette-Player?display_name=tag&style=flat-square"></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/CTCycle/FAIRS-Roulette-Player?style=flat-square"></a>
+</p>
 
-[![License](https://img.shields.io/github/license/CTCycle/FAIRS-Roulette-Player?style=flat-square)](LICENSE) [![Release](https://img.shields.io/github/v/release/CTCycle/FAIRS-Roulette-Player?display_name=tag&style=flat-square)](https://github.com/CTCycle/FAIRS-Roulette-Player/releases) [![CI](https://img.shields.io/github/actions/workflow/status/CTCycle/FAIRS-Roulette-Player/ci.yml?branch=develop&label=CI&style=flat-square)](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml?query=branch%3Adevelop) [![Python](https://img.shields.io/badge/Python-3.14.7-3776AB?logo=python&logoColor=white&style=flat-square)](https://www.python.org/) [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black&style=flat-square)](https://react.dev/) [![Platform](https://img.shields.io/badge/Platform-Windows-0078D4?logo=windows&logoColor=white&style=flat-square)](https://www.microsoft.com/windows)
+<p align="center">
+  <a href="https://www.python.org/"><img alt="Python 3.14.7" src="https://img.shields.io/badge/Python-3.14.7-3776AB?logo=python&logoColor=white&style=flat-square"></a>
+  <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black&style=flat-square"></a>
+  <a href="https://www.microsoft.com/windows"><img alt="Platform: Windows" src="https://img.shields.io/badge/Platform-Windows-0078D4?logo=windows&logoColor=white&style=flat-square"></a>
+</p>
 
 > FAIRS is an experimental research tool. Its suggestions are not guaranteed predictions or gambling advice. Roulette outcomes remain uncertain, and results from a simulation may not generalize to new data or future play.
 
@@ -23,18 +33,22 @@ FAIRS is a local browser-based workspace for preparing roulette data, training a
 
 ## Screenshots
 
-![Training workspace](assets/figures/training-page.png)
-
-![Inference session](assets/figures/inference-page.png)
-
-The screenshots show example interface states. Results and charts depend on the selected data, checkpoint, and run settings.
+<p align="center">
+  <kbd><img src="assets/figures/training-page.png" alt="Training workspace" width="49%"></kbd>
+  <kbd><img src="assets/figures/inference-page.png" alt="Inference session" width="49%"></kbd>
+</p>
+<p align="center"><em>Training workspace and inference session. Example interface states; results and charts depend on the selected data, checkpoint, and run settings.</em></p>
 
 ## Technology Stack
 
-- Python 3.14.7 and FastAPI backend.
-- React 19, TypeScript, and Vite web client; the launcher provisions Node.js 22.13.0.
-- SQLite by default, with PostgreSQL available for advanced setups.
-- Windows launcher with portable Python, uv, and Node.js runtimes.
+| Layer | Technology |
+|---|---|
+| Backend | Python 3.14.7, FastAPI 0.128.0 |
+| Web client | React 19, TypeScript 5.9, Vite 7 |
+| Build tooling | Node.js 22.13.0 |
+| Database | SQLite (default), PostgreSQL |
+| Minimum browser width | 1100 pixels |
+| Launcher | Windows PowerShell with portable Python, uv, and Node.js |
 
 ## Installation and Usage
 
@@ -46,7 +60,32 @@ Windows is the supported launch environment. Extract the repository into a writa
 
 Choose **Launch application**. On first use, the launcher prepares the local runtimes, dependencies, and database. Internet access is required to download missing runtimes and packages. The interface is designed for desktop browser windows at least 1100 pixels wide; mobile layouts are not supported.
 
+Manual (from source):
+
+```powershell
+cd app/server
+uv sync
+cd ../client
+npm install
+```
+
+Then start the backend and client following [Runtime startup](assets/docs/runtime/startup.md).
+
 ## Configuration
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `FASTAPI_HOST` | `127.0.0.1` | Backend host |
+| `FASTAPI_PORT` | `8890` | Backend port |
+| `UI_HOST` | `127.0.0.1` | Frontend host |
+| `UI_PORT` | `8051` | Frontend port |
+| `API_BASE_URL` | empty | Vite proxy target |
+| `CORS_ORIGINS` | empty | Comma-separated allowed browser origins |
+| `ENABLE_API_DOCS` | `true` | Enable API docs |
+| `RELOAD` | `false` | Enable backend reload |
+| `FAIRS_DATA_DIR` | empty | Data root for database, logs, and checkpoints |
+| `MPLBACKEND` | `Agg` | Matplotlib backend |
+| `KERAS_BACKEND` | `torch` | Keras backend |
 
 The launcher creates `settings/.env` from `settings/.env.example` when needed. Set the API proxy target, listener hosts and ports, or optional CORS origins there before launch; these deployment values are separate from the user preferences saved by the Settings page. FAIRS stores local datasets, checkpoints, and logs under `data` by default; set `FAIRS_DATA_DIR` to choose another persistent data root. Training and inference preferences are available in the application.
 
@@ -57,6 +96,17 @@ The launcher creates `settings/.env` from `settings/.env.example` when needed. S
 - [Runtime startup](assets/docs/runtime/startup.md)
 - [Runtime configuration](assets/docs/runtime/configuration.md)
 - [Troubleshooting](assets/docs/operations/troubleshooting.md)
+
+## Limitations
+
+- Experimental research tool; suggestions are not guaranteed predictions or gambling advice.
+- Roulette outcomes remain uncertain, and simulation results may not generalize to new data or future play.
+- Single-zero wheel with outcomes from 0 through 36 only.
+- Desktop browser windows at least 1100 pixels wide; no mobile layout.
+
+## Contributing
+
+Contributions are welcome. Open an issue or pull request with a clear description of the change and its motivation.
 
 ## License
 
