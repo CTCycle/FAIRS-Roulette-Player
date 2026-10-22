@@ -28,14 +28,30 @@ Last updated: 2026-10-22
 Primary automated test surfaces live under `app/tests`:
 
 - `app/tests/unit`
-  - unit and service-level validation
+  - 10 cohesive suites for startup/configuration, persistence/settings, data/checkpoint/security, training, inference/roulette, API contracts, architecture/cache, and Windows maintenance
 - `app/tests/e2e`
-  - API and workflow coverage
+  - 9 suites for browser workflows, API behavior, persistence, and validation campaigns
+- `app/client/tests/unit/clientBehavior.test.ts`
+  - client payload, parser, and inference-session persistence behavior
+- `app/client/tests/e2e/frontend.spec.ts`
+  - mocked client workflows and the supported desktop-width boundary
 - `app/tests/run_tests.bat`
   - repository-standard Windows test entry point; synchronizes the test extra and ensures Playwright Chromium is installed below `runtimes/cache/playwright-browsers` before collection
 - `app/tests/unit/test_windows_launcher_maintenance.py` invokes the Windows PowerShell harness and skips on non-Windows even when `pwsh` is installed
 - `pytest.ini`
   - keeps pytest's cache and basetemp under `runtimes/cache/pytest` and `runtimes/cache/pytest-tmp`, limits collection to `app/tests/unit` and `app/tests/e2e`, and excludes generated/cache directories; Ruff and other test tooling use sibling paths below `runtimes/cache`
+- `app/tests/e2e/test_validation_campaigns.py`
+  - combines VAL-16/17 visuals and VAL-21/22 resilience with independent `val16_17`, `val21`, and `val22` marks; VAL-18 remains in the separate hardware-only suite
+
+Select an individual campaign with `pytest app/tests/e2e/test_validation_campaigns.py -m val21`; run the consolidated campaigns with `-m "val16_17 or val21 or val22"`. Pytest's default selection still includes all three.
+
+The repository now has 21 test modules across the backend and frontend. Tests were grouped by behavior; the two overlapping desktop-boundary and checkpoint-deletion checks were combined while their unique assertions remain covered.
+
+### Consolidation Record (2026-10-22)
+
+The suite moved from 48 test modules and 279 cases to 21 modules and 277 cases. The two removed cases duplicated behavior now asserted by broader desktop-width and checkpoint-lifecycle tests. The two support scripts remain active, as do both frontend test commands; no test dependency or CI command was removed because each remains in use.
+
+The seeded Windows standard runner passed 253 Python cases and skipped 6 of 259 collected in 235.80 seconds. Five skips require PostgreSQL service coverage, and one optional strategy case had no suggestion to assert. Vitest passed 11/11 in 0.288 seconds, Playwright passed 7/7 in 10.1 seconds, the production build passed in 2.59 seconds, and Ruff passed. The disposable data/checkpoint root was removed and settings/.env was restored byte-for-byte.
 - Set `STANDARD_TEST_CACHE_ROOT` before invoking `app/tests/run_tests.bat` to place all runner caches, including pytest basetemp and Playwright browser storage, under an isolated root. Without it, the runner uses `runtimes/cache`.
 - `.github/workflows/ci.yml`
   - Linux CI runs the backend Ruff/unit/Alembic/OpenAPI/PostgreSQL checks and a separate frontend lint/build job. Python dependencies resolve from `app/server/pyproject.toml` when `uv.lock` is absent, while the repository-root `ruff.toml` owns Ruff’s canonical cache path; generated QA assets are excluded from lint traversal.

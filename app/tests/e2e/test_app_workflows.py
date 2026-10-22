@@ -1,20 +1,21 @@
 # Copyright © 2023 Thomas Virdis
 # Licensed under the MIT License.
 
+import json
+import re
+import sqlite3
+import pytest
+from pathlib import Path
+from playwright.sync_api import APIRequestContext, Page, expect
+from server.common import path as shared_paths
+
 """
 E2E tests for UI navigation and page rendering.
 Tests basic UI functionality using Playwright browser automation.
 """
 
-import json
-import re
-import sqlite3
-from pathlib import Path
 
-import pytest
-from playwright.sync_api import APIRequestContext, Page, expect
 
-from server.common import path as shared_paths
 
 ###############################################################################
 class TestStartupFlow:
@@ -1251,92 +1252,308 @@ class TestInferencePage:
                 )
 
 ###############################################################################
-class TestDesktopWindowBoundary:
-    """The shared shell keeps its desktop geometry below the supported width."""
+
+
+"""Focused browser coverage for the optional in-app guidance system."""
+
+
+
+GUIDANCE_KEY = "fairs.guidance"
+
+###############################################################################
+def _assert_tour_keyboard_dismissal(page: Page, title: str) -> None:
+    tour = page.get_by_role("dialog", name=title)
+    expect(tour).to_be_visible()
+    expect(tour).to_have_attribute("aria-modal", "true")
+    expect(tour).to_have_attribute("aria-labelledby", "guidance-tour-title")
+    expect(tour).to_have_attribute("aria-describedby", "guidance-tour-body")
+
+    close_button = tour.get_by_role("button", name="Close walkthrough")
+    next_button = tour.get_by_role("button", name="Next")
+    expect(close_button).to_be_focused()
+
+    page.keyboard.press("Shift+Tab")
+    expect(next_button).to_be_focused()
+    page.keyboard.press("Tab")
+    expect(close_button).to_be_focused()
+    page.keyboard.press("Tab")
+    expect(next_button).to_be_focused()
+
+    page.keyboard.press("Escape")
+    expect(tour).not_to_be_visible()
+    expect(page.get_by_role("button", name="Help")).to_be_focused()
+
+###############################################################################
+def _prepare_training_guidance(page: Page, base_url: str) -> None:
+    page.goto(f"{base_url}/training")
+    page.wait_for_load_state("domcontentloaded")
+    page.evaluate(f"localStorage.removeItem('{GUIDANCE_KEY}')")
+    page.reload()
+    page.wait_for_timeout(300)
+
+###############################################################################
+class TestGuidance:
+    """The guidance layer should help once, then stay out of the way."""
 
     # -------------------------------------------------------------------------
-    def test_main_layout_respects_desktop_minimum(
+    def test_training_walkthrough_is_manual_and_persisted(
         self, page: Page, base_url: str
-    ) -> None:
-        page_errors: list[str] = []
-        console_errors: list[str] = []
-        failed_requests: list[str] = []
-        failed_responses: list[str] = []
-
-        page.on("pageerror", lambda error: page_errors.append(str(error)))
-        page.on(
-            "console",
-            lambda message: console_errors.append(message.text)
-            if message.type == "error"
-            else None,
-        )
-        page.on(
-            "requestfailed",
-            lambda request: failed_requests.append(
-                f"{request.method} {request.url}: {request.failure}"
-            ),
-        )
-        page.on(
-            "response",
-            lambda response: failed_responses.append(
-                f"{response.status} {response.url}"
-            )
-            if response.status >= 400
-            else None,
+    ):
+        page.emulate_media(reduced_motion="reduce")
+        _prepare_training_guidance(page, base_url)
+        assert page.evaluate(
+            "window.matchMedia('(prefers-reduced-motion: reduce)').matches"
         )
 
-        page.set_viewport_size({"width": 1100, "height": 800})
-        page.goto(f"{base_url}/training")
-        page.wait_for_load_state("networkidle")
+        expect(page.get_by_role("dialog")).not_to_be_visible()
 
+        page.get_by_role("button", name="Help").click()
+        tips = page.get_by_role("dialog", name="Tips & Tricks")
+        expect(tips).to_be_visible()
+        media_track = tips.locator(".guidance-media-track")
+        expect(media_track).to_be_visible()
+        assert media_track.evaluate(
+            "element => getComputedStyle(element).animationName"
+        ) == "none"
+        launch_button = tips.get_by_role("button", name="Show the Training walkthrough")
         expect(
-            page.get_by_role("heading", name="Training Monitor", exact=True)
+            tips.locator(".guidance-tour-heading").get_by_role("button")
         ).to_be_visible()
-        expect(page.locator(".desktop-size-notice")).to_be_hidden()
-        supported_metrics = page.evaluate(
-            """() => ({
-                viewportWidth: window.innerWidth,
-                mainWidth: document.querySelector('.main-layout').getBoundingClientRect().width,
-                horizontalOverflow: document.documentElement.scrollWidth > window.innerWidth,
-            })"""
-        )
-        assert supported_metrics["viewportWidth"] == 1100
-        assert abs(supported_metrics["mainWidth"] - 1100) < 1
-        assert supported_metrics["horizontalOverflow"] is False
+        expect(tips.get_by_role("button", name="Replay")).to_have_count(0)
+        expect(tips.get_by_role("button", name="Reset guidance")).to_have_count(0)
+        launch_button.click()
 
-        page.set_viewport_size({"width": 1099, "height": 800})
-        page.goto(f"{base_url}/inference")
-        page.wait_for_load_state("networkidle")
+        tour = page.get_by_role("dialog", name="Start with data")
+        expect(tour).to_be_visible()
+        expect(tour.get_by_role("button", name="Close walkthrough")).to_be_focused()
+        expect(page.get_by_text("Step 1 of 3", exact=True)).to_be_visible()
+        expect(tour.get_by_role("button", name="Skip walkthrough")).to_have_count(0)
 
-        expect(
-            page.get_by_role("heading", name="Session History", exact=True)
-        ).to_be_visible()
-        notice = page.locator(".desktop-size-notice")
-        expect(notice).to_be_visible()
-        expect(notice).to_contain_text("at least 1100px wide")
-        below_minimum_metrics = page.locator(
-            ".inference-workspace > div"
-        ).evaluate(
-            """root => {
-                const panels = Array.from(root.children).map((panel) => {
-                    const rect = panel.getBoundingClientRect();
-                    return { left: rect.left, top: rect.top };
-                });
-                return {
-                    viewportWidth: window.innerWidth,
-                    mainWidth: document.querySelector('.main-layout').getBoundingClientRect().width,
-                    noticeDisplay: getComputedStyle(document.querySelector('.desktop-size-notice')).display,
-                    gridColumns: getComputedStyle(root).gridTemplateColumns.trim().split(/\\s+/).length,
-                    panelTopDelta: Math.abs(panels[0].top - panels[1].top),
-                };
+        page.get_by_role("button", name="Next").click()
+        expect(page.get_by_role("dialog", name="Configure a run")).to_be_visible()
+        page.get_by_role("button", name="Back").click()
+        expect(page.get_by_role("dialog", name="Start with data")).to_be_visible()
+        _assert_tour_keyboard_dismissal(page, "Start with data")
+        page.wait_for_function(
+            """() => {
+                const state = JSON.parse(localStorage.getItem('fairs.guidance') || '{}');
+                return state.entries?.['training-introduction']?.status === 'dismissed';
             }"""
         )
-        assert below_minimum_metrics["viewportWidth"] == 1099
-        assert abs(below_minimum_metrics["mainWidth"] - 1100) < 1
-        assert below_minimum_metrics["noticeDisplay"] == "flex"
-        assert below_minimum_metrics["gridColumns"] == 2
-        assert below_minimum_metrics["panelTopDelta"] < 1
-        assert page_errors == []
-        assert console_errors == []
-        assert failed_requests == []
-        assert failed_responses == []
+
+        page.reload()
+        expect(page.get_by_role("dialog")).not_to_be_visible()
+
+        help_button = page.get_by_role("button", name="Help")
+        help_button.click()
+        tips = page.get_by_role("dialog", name="Tips & Tricks")
+        expect(tips).to_be_visible()
+        expect(tips.get_by_text("Start with the generator", exact=True)).to_be_visible()
+
+        page.keyboard.press("Escape")
+        expect(tips).not_to_be_visible()
+        expect(help_button).to_be_focused()
+
+    # -------------------------------------------------------------------------
+    def test_inference_walkthrough_is_manual_and_supports_back_navigation(
+        self, page: Page, base_url: str
+    ):
+        page.emulate_media(reduced_motion="reduce")
+        page.goto(f"{base_url}/inference")
+        page.wait_for_load_state("domcontentloaded")
+        page.wait_for_timeout(300)
+        assert page.evaluate(
+            "window.matchMedia('(prefers-reduced-motion: reduce)').matches"
+        )
+
+        expect(page.get_by_role("dialog")).not_to_be_visible()
+        checkpoint_tip = page.get_by_role(
+            "button", name="Dismiss Train a checkpoint first"
+        )
+        if checkpoint_tip.count() > 0:
+            checkpoint_tip.click()
+            page.reload()
+            page.wait_for_timeout(300)
+            expect(checkpoint_tip).not_to_be_visible()
+
+        page.get_by_role("button", name="Help").click()
+        tips = page.get_by_role("dialog", name="Tips & Tricks")
+        expect(tips).to_be_visible()
+        expect(tips).to_have_attribute("aria-modal", "true")
+        expect(tips.get_by_role("button", name="Close Tips & Tricks")).to_be_focused()
+        media_track = tips.locator(".guidance-media-track")
+        expect(media_track).to_be_visible()
+        assert media_track.evaluate(
+            "element => getComputedStyle(element).animationName"
+        ) == "none"
+
+        tips.get_by_role("button", name="Show the Inference loop").click()
+        tour = page.get_by_role("dialog", name="Set up a session")
+        expect(tour).to_be_visible()
+        expect(tour.get_by_role("button", name="Close walkthrough")).to_be_focused()
+        expect(page.get_by_text("Step 1 of 3", exact=True)).to_be_visible()
+
+        page.get_by_role("button", name="Next").click()
+        expect(page.get_by_role("dialog", name="Get a prediction")).to_be_visible()
+        expect(page.get_by_text("Step 2 of 3", exact=True)).to_be_visible()
+
+        page.get_by_role("button", name="Back").click()
+        expect(page.get_by_role("dialog", name="Set up a session")).to_be_visible()
+        _assert_tour_keyboard_dismissal(page, "Set up a session")
+        page.wait_for_function(
+            """() => {
+                const state = JSON.parse(localStorage.getItem('fairs.guidance') || '{}');
+                return state.entries?.['inference-loop']?.status === 'dismissed';
+            }"""
+        )
+        page.reload()
+        expect(page.get_by_role("dialog")).not_to_be_visible()
+
+
+"""Browser coverage for the runtime Settings screen."""
+
+
+###############################################################################
+class TestSettingsPage:
+    """The Settings screen should persist only its supported runtime fields."""
+
+    # -------------------------------------------------------------------------
+    def test_settings_edit_reload_reset_and_navigation(
+        self, page: Page, base_url: str
+    ):
+        page.goto(f"{base_url}/settings")
+        page.wait_for_load_state("networkidle")
+
+        expect(page.get_by_role("button", name="Roulette", exact=True)).to_have_attribute(
+            "aria-current", "page"
+        )
+        expect(page.get_by_role("heading", name="Roulette numbers", exact=True)).to_be_visible()
+        expect(page.get_by_role("link", name="Settings", exact=True)).to_have_attribute(
+            "aria-current", "page"
+        )
+
+        minimum = page.get_by_label("Minimum", exact=True)
+        maximum = page.get_by_label("Maximum", exact=True)
+        include_zero = page.get_by_label("Include zero", exact=True)
+        minimum.fill("1")
+        maximum.fill("12")
+        include_zero.uncheck()
+        expect(page.get_by_role("status")).to_have_text("Changes saved.")
+
+        page.reload()
+        page.wait_for_load_state("networkidle")
+        expect(minimum).to_have_value("1")
+        expect(maximum).to_have_value("12")
+        expect(include_zero).not_to_be_checked()
+
+        page.get_by_role("button", name="Appearance", exact=True).click()
+        expect(page.get_by_role("heading", name="Roulette appearance", exact=True)).to_be_visible()
+        invert_colors = page.get_by_label("Invert colors", exact=True)
+        show_number_labels = page.get_by_label("Show number labels", exact=True)
+        expect(invert_colors).to_be_visible()
+        expect(show_number_labels).to_be_visible()
+        invert_colors.check()
+        expect(page.get_by_role("status")).to_have_text("Changes saved.")
+        show_number_labels.uncheck()
+        expect(page.get_by_role("status")).to_have_text("Changes saved.")
+
+        page.get_by_role("button", name="Runtime", exact=True).click()
+        expect(page.get_by_role("heading", name="Training polling", exact=True)).to_be_visible()
+        polling = page.get_by_label("Polling interval", exact=True)
+        expect(polling).to_be_visible()
+        polling.fill("2.5")
+        expect(page.get_by_role("status")).to_have_text("Changes saved.")
+
+        page.reload()
+        page.wait_for_load_state("networkidle")
+        page.get_by_role("button", name="Appearance", exact=True).click()
+        expect(invert_colors).to_be_checked()
+        expect(show_number_labels).not_to_be_checked()
+        page.get_by_role("button", name="Runtime", exact=True).click()
+        expect(polling).to_have_value("2.5")
+
+        page.get_by_role("button", name="Advanced", exact=True).click()
+        expect(page.get_by_role("heading", name="JIT model construction", exact=True)).to_be_visible()
+        jit_compile = page.get_by_label("Enable JIT compilation", exact=True)
+        jit_backend = page.get_by_label("JIT backend", exact=True)
+        expect(jit_compile).to_be_visible()
+        expect(jit_backend).to_be_disabled()
+
+        jit_compile.check()
+        expect(jit_backend).to_be_enabled()
+        expect(page.get_by_role("status")).to_have_text("Changes saved.")
+        jit_backend.fill(" eager ")
+        expect(page.get_by_role("status")).to_have_text("Changes saved.")
+        page.reload()
+        page.wait_for_load_state("networkidle")
+        page.get_by_role("button", name="Advanced", exact=True).click()
+        expect(jit_compile).to_be_checked()
+        expect(jit_backend).to_have_value("eager")
+
+        page.get_by_role("button", name="Reset to defaults", exact=True).click()
+        expect(page.get_by_text("Settings reset to defaults.", exact=True)).to_be_visible()
+        page.get_by_role("button", name="Runtime", exact=True).click()
+        expect(polling).to_have_value("1")
+        page.get_by_role("button", name="Roulette", exact=True).click()
+        expect(minimum).to_have_value("0")
+        expect(maximum).to_have_value("36")
+        expect(include_zero).to_be_checked()
+        page.get_by_role("button", name="Advanced", exact=True).click()
+        expect(jit_compile).not_to_be_checked()
+        expect(jit_backend).to_have_value("eager")
+        expect(jit_backend).to_be_disabled()
+
+        page.get_by_role("button", name="Help", exact=True).click()
+        expect(page.get_by_role("dialog", name="Tips & Tricks")).to_be_visible()
+        page.keyboard.press("Escape")
+        expect(page.get_by_role("dialog", name="Tips & Tricks")).not_to_be_visible()
+
+        page.get_by_role("link", name="Training", exact=True).click()
+        expect(page).to_have_url(f"{base_url}/training")
+        page.get_by_role("link", name="Settings", exact=True).click()
+        expect(page).to_have_url(f"{base_url}/settings")
+
+        assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
+
+    # -------------------------------------------------------------------------
+    def test_roulette_range_validation_prevents_persistence(
+        self, page: Page, base_url: str
+    ) -> None:
+        settings_patches: list[str] = []
+
+        def capture_settings_patch(request) -> None:
+            if request.method == "PATCH" and request.url.endswith("/api/settings"):
+                settings_patches.append(request.url)
+
+        page.on("request", capture_settings_patch)
+        page.goto(f"{base_url}/settings")
+        page.wait_for_load_state("networkidle")
+
+        minimum = page.get_by_label("Minimum", exact=True)
+        maximum = page.get_by_label("Maximum", exact=True)
+        include_zero = page.get_by_label("Include zero", exact=True)
+        minimum.fill("12")
+        maximum.fill("1")
+        expect(
+            page.get_by_text(
+                "Minimum number cannot be greater than maximum number.", exact=True
+            )
+        ).to_be_visible()
+
+        minimum.fill("0")
+        maximum.fill("0")
+        include_zero.uncheck()
+        expect(
+            page.get_by_text(
+                "Excluding zero would leave the roulette number pool empty.",
+                exact=True,
+            )
+        ).to_be_visible()
+        page.wait_for_timeout(450)
+        assert settings_patches == []
+
+        page.reload()
+        page.wait_for_load_state("networkidle")
+        expect(minimum).to_have_value("0")
+        expect(maximum).to_have_value("36")
+        expect(include_zero).to_be_checked()
