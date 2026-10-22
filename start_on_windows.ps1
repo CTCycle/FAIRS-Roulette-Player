@@ -701,7 +701,7 @@ function Sync-BackendDependencies {
     )
     Remove-Item -LiteralPath $backendInstallStatePath -Force -ErrorAction SilentlyContinue
     Write-Step 'Installing Python dependencies with uv.'
-    $syncArguments = @('sync', '--python', $pythonExe)
+    $syncArguments = @('sync', '--locked', '--python', $pythonExe)
     if ($InstallationType -eq 'Development') { $syncArguments += '--all-extras' }
     Push-Location $serverDir
     try {
@@ -1133,14 +1133,24 @@ function Stop-OwnedApplicationProcessTree {
         [Parameter(Mandatory)][System.Diagnostics.Process]$Process,
         [int]$GraceSeconds = 15
     )
-    if ($Process.HasExited) { return }
+    if (-not $Process.HasExited) {
+        Write-Info "Requesting the backend process to close and allowing up to $GraceSeconds seconds for shutdown."
+        try { [void]$Process.CloseMainWindow() } catch { }
+        try { [void]$Process.WaitForExit($GraceSeconds * 1000) } catch { }
+    }
 
-    Write-Info "Requesting the backend process to close and allowing up to $GraceSeconds seconds for shutdown."
-    try { [void]$Process.CloseMainWindow() } catch { }
-    try { [void]$Process.WaitForExit($GraceSeconds * 1000) } catch { }
-    if ($Process.HasExited) { return }
-
-    $processes = @(Get-CimInstance -ClassName Win32_Process -ErrorAction Stop)
+    # Uvicorn or a training worker can outlive an unexpectedly exited parent.
+    # Inspect the original process tree even when the root has already exited.
+    $rootExited = $Process.HasExited
+    try {
+        $processes = @(Get-CimInstance -ClassName Win32_Process -ErrorAction Stop)
+    } catch {
+        if ($rootExited) {
+            Write-Info "Could not inspect descendants of exited backend PID $RootProcessId ($($_.Exception.Message)). Use the confirmed Stop all app processes action if anything remains."
+            return
+        }
+        throw
+    }
     $depthById = @{ $RootProcessId = 0 }
     do {
         $addedProcess = $false
@@ -1154,7 +1164,11 @@ function Stop-OwnedApplicationProcessTree {
         }
     } while ($addedProcess)
 
-    $ownedProcesses = @($processes | Where-Object { $depthById.ContainsKey([int]$_.ProcessId) } | Sort-Object { $depthById[[int]$_.ProcessId] } -Descending)
+    $ownedProcesses = @($processes | Where-Object {
+            $depthById.ContainsKey([int]$_.ProcessId) -and
+            (([int]$_.ProcessId -ne $RootProcessId) -or -not $rootExited)
+        } | Sort-Object { $depthById[[int]$_.ProcessId] } -Descending)
+    if ($ownedProcesses.Count -eq 0) { return }
     foreach ($ownedRecord in $ownedProcesses) {
         $processId = [int]$ownedRecord.ProcessId
         try { Stop-Process -Id $processId -Force -ErrorAction Stop } catch {
@@ -1165,11 +1179,18 @@ function Stop-OwnedApplicationProcessTree {
     }
     try { [void]$Process.WaitForExit(5000) } catch { }
     $remainingOwnedIds = [Collections.Generic.List[int]]::new()
-    foreach ($processId in @($depthById.Keys)) {
-        if (Get-Process -Id ([int]$processId) -ErrorAction SilentlyContinue) {
-            [void]$remainingOwnedIds.Add([int]$processId)
+    $cleanupDeadline = (Get-Date).AddSeconds(5)
+    do {
+        $remainingOwnedIds.Clear()
+        foreach ($processId in @($depthById.Keys)) {
+            if ($rootExited -and [int]$processId -eq $RootProcessId) { continue }
+            if (Get-Process -Id ([int]$processId) -ErrorAction SilentlyContinue) {
+                [void]$remainingOwnedIds.Add([int]$processId)
+            }
         }
-    }
+        if ($remainingOwnedIds.Count -eq 0 -or (Get-Date) -ge $cleanupDeadline) { break }
+        Start-Sleep -Milliseconds 100
+    } while ($true)
     if ($remainingOwnedIds.Count -gt 0) {
         throw "Launcher-owned backend process tree did not stop after the bounded cleanup attempt. Remaining PIDs: $($remainingOwnedIds -join ', ')."
     }

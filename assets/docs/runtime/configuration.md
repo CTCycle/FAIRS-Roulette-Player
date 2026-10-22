@@ -1,6 +1,6 @@
 ## Configuration
 
-Last updated: 2026-10-21
+Last updated: 2026-10-22
 
 ## Configuration Ownership
 
@@ -24,7 +24,7 @@ The runtime consumes these environment keys:
 
 `settings/.env.example` is the canonical template. The Windows launcher copies it only when `.env` does not exist. It does not overlay defaults on an existing file. The launcher requires `FASTAPI_HOST`, `FASTAPI_PORT`, and `RELOAD`; `UI_HOST` and `UI_PORT` are only needed when manually running Vite. Database selection is read from `database-config.json`, not `.env`.
 
-`API_BASE_URL` optionally selects the upstream origin used by Vite's `/api` proxy; when empty, the proxy target is composed from `FASTAPI_HOST` and `FASTAPI_PORT`. An explicit process environment value takes precedence over `.env`. Browser requests use the same-origin `/api` route, and endpoint paths remain part of the application API contract. `CORS_ORIGINS` is an optional comma-separated list of exact browser origins for direct cross-origin API clients; leave it empty for the default same-origin launcher flow. These network settings are process/deployment configuration and are not exposed through the Settings UI or persisted in `application_settings`.
+`API_BASE_URL` optionally selects the upstream origin used by Vite's `/api` proxy; when empty, the proxy target is composed from `FASTAPI_HOST` and `FASTAPI_PORT`. In the supported Windows launcher, `settings/.env` is authoritative and overwrites inherited process values. For an isolated Windows validation run, point `FAIRS_DATA_DIR` at a disposable location in a temporary copy of `settings/.env`; setting only the parent process variable is insufficient. When Vite is run directly for development, its `API_BASE_URL` process variable takes precedence over the file value. Browser requests use the same-origin `/api` route, and endpoint paths remain part of the application API contract. `CORS_ORIGINS` is an optional comma-separated list of exact browser origins for direct cross-origin API clients; leave it empty for the default same-origin launcher flow. These network settings are process/deployment configuration and are not exposed through the Settings UI or persisted in `application_settings`.
 
 `FAIRS_DATA_DIR` may be empty, which selects the normal `data` directory. A configured path selects the persistent data root and must not overlap `runtimes/cache`.
 
