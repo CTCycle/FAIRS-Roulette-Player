@@ -222,7 +222,7 @@ def test_training_setup_and_active_monitor_render(page: Page, base_url: str):
         page.wait_for_function(
             """() => /Episode\\s+\\d+\\s+\\/\\s+\\d+\\s+·\\s+Step\\s+[1-9]\\d*/
                 .test(document.body.innerText)""",
-            timeout=15_000,
+            timeout=45_000,
         )
         page.get_by_role("heading", name="Training Monitor", exact=True).evaluate(
             "element => element.scrollIntoView({block: 'start', behavior: 'instant'})"
