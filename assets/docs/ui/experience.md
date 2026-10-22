@@ -1,6 +1,6 @@
 ## Experience
 
-Last updated: 2026-10-21
+Last updated: 2026-10-22
 
 ## Page Composition
 
@@ -74,7 +74,7 @@ Desktop layouts should favor information density, horizontal space, and efficien
 
 - Preserve global `:focus-visible` outline and offset styling.
 - Keep navigation regions explicitly labeled.
-- Inputs and icon-only actions need explicit labels or `aria-label` values.
+- Inputs and icon-only actions need explicit labels or `aria-label` values. Visible `<label>` text must be bound with `htmlFor`/`id`; the Training and Resume wizards follow this (`wizard-<field>`, `resume-wizard-<field>`), and the bet-unit/max-bet inputs next to their toggles use `aria-label`.
 - Error alerts should preserve live-region behavior where implemented.
 - Settings inputs retain explicit labels, described-by help/error text, disabled-state semantics, and status feedback for autosave/reset/database test/switch outcomes. Passwords are redacted from status responses; blank input retains the saved secret and an explicit control clears it.
 - Respect reduced motion preferences.

@@ -10,6 +10,13 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+# Windows PowerShell 5.1 started from PowerShell 7 inherits PowerShell 7 module paths,
+# which hides built-in cmdlets such as Get-FileHash; keep only 5.1-compatible entries.
+if ($PSVersionTable.PSEdition -eq 'Desktop' -and $env:PSModulePath) {
+    $env:PSModulePath = (($env:PSModulePath -split ';') | Where-Object {
+        $_ -and $_ -notmatch '[\\/]PowerShell[\\/]'
+    }) -join ';'
+}
 $repoRoot = $PSScriptRoot
 $runtimeRoot = Join-Path $repoRoot 'runtimes'
 $pythonDir = Join-Path $runtimeRoot 'python'

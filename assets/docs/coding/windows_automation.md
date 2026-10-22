@@ -14,6 +14,8 @@ This file defines repository-specific rules for the PowerShell launcher and Wind
 - `settings/.env.example` is the canonical launcher environment template. The launcher may create a missing `.env` from it once, but must not supply a separate hardcoded defaults map for stale existing files.
 - Existing `.env` files missing launcher-critical keys (`FASTAPI_HOST`, `FASTAPI_PORT`, or `RELOAD`) must fail clearly rather than inherit obsolete behavior. `UI_HOST` and `UI_PORT` belong to the manual Vite development workflow.
 
+- On Windows PowerShell 5.1 the launcher drops inherited PowerShell 7 `PSModulePath` entries at startup. Without this, `powershell -File start_on_windows.ps1` from a PowerShell 7 session cannot resolve built-in cmdlets such as `Get-FileHash` and fails during dependency fingerprinting.
+
 ## Runtime Layout
 
 Current launcher-owned runtime locations are:
