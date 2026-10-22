@@ -604,10 +604,10 @@ export const CheckpointPreview: React.FC<CheckpointPreviewProps> = ({
                             {resumeWizardStep === 0 && (
                                 <div className="wizard-stack">
                                     <div className="form-group">
-                                        <label className="form-label">Additional number of epochs</label>
+                                        <label className="form-label" htmlFor="resume-wizard-numAdditionalEpisodes">Additional number of epochs</label>
                                         <input
                                             type="number"
-                                            name="numAdditionalEpisodes"
+                                            name="numAdditionalEpisodes" id="resume-wizard-numAdditionalEpisodes"
                                             value={resumeConfig.numAdditionalEpisodes}
                                             onChange={handleResumeChange}
                                             className="form-input"

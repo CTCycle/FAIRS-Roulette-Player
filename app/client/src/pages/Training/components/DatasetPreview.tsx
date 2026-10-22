@@ -451,36 +451,36 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                             {wizardStep === 0 && (
                                 <div className="wizard-grid wizard-grid-2x4">
                                     <div className="form-group">
-                                        <label className="form-label">Perceptive Field</label>
-                                        <input type="number" name="perceptiveField" value={newConfig.perceptiveField} onChange={handleInputChange} className="form-input" max="1024" />
+                                        <label className="form-label" htmlFor="wizard-perceptiveField">Perceptive Field</label>
+                                        <input type="number" name="perceptiveField" id="wizard-perceptiveField" value={newConfig.perceptiveField} onChange={handleInputChange} className="form-input" max="1024" />
                                     </div>
                                     <div className="form-group">
-                                        <label className="form-label">QNet Neurons</label>
-                                        <input type="number" name="numNeurons" value={newConfig.numNeurons} onChange={handleInputChange} className="form-input" max="10000" />
+                                        <label className="form-label" htmlFor="wizard-numNeurons">QNet Neurons</label>
+                                        <input type="number" name="numNeurons" id="wizard-numNeurons" value={newConfig.numNeurons} onChange={handleInputChange} className="form-input" max="10000" />
                                     </div>
                                     <div className="form-group">
-                                        <label className="form-label">Embedding Dims</label>
-                                        <input type="number" name="embeddingDims" value={newConfig.embeddingDims} onChange={handleInputChange} className="form-input" step="8" max="9999" />
+                                        <label className="form-label" htmlFor="wizard-embeddingDims">Embedding Dims</label>
+                                        <input type="number" name="embeddingDims" id="wizard-embeddingDims" value={newConfig.embeddingDims} onChange={handleInputChange} className="form-input" step="8" max="9999" />
                                     </div>
                                     <div className="form-group">
-                                        <label className="form-label">Update Freq</label>
-                                        <input type="number" name="modelUpdateFreq" value={newConfig.modelUpdateFreq} onChange={handleInputChange} className="form-input" max="1000" />
+                                        <label className="form-label" htmlFor="wizard-modelUpdateFreq">Update Freq</label>
+                                        <input type="number" name="modelUpdateFreq" id="wizard-modelUpdateFreq" value={newConfig.modelUpdateFreq} onChange={handleInputChange} className="form-input" max="1000" />
                                     </div>
                                     <div className="form-group">
-                                        <label className="form-label">Explore Rate</label>
-                                        <input type="number" name="explorationRate" value={newConfig.explorationRate} onChange={handleInputChange} className="form-input" step="0.01" max="1.0" />
+                                        <label className="form-label" htmlFor="wizard-explorationRate">Explore Rate</label>
+                                        <input type="number" name="explorationRate" id="wizard-explorationRate" value={newConfig.explorationRate} onChange={handleInputChange} className="form-input" step="0.01" max="1.0" />
                                     </div>
                                     <div className="form-group">
-                                        <label className="form-label">Decay</label>
-                                        <input type="number" name="explorationRateDecay" value={newConfig.explorationRateDecay} onChange={handleInputChange} className="form-input" step="0.001" max="1.0" />
+                                        <label className="form-label" htmlFor="wizard-explorationRateDecay">Decay</label>
+                                        <input type="number" name="explorationRateDecay" id="wizard-explorationRateDecay" value={newConfig.explorationRateDecay} onChange={handleInputChange} className="form-input" step="0.001" max="1.0" />
                                     </div>
                                     <div className="form-group">
-                                        <label className="form-label">Min Explore Rate</label>
-                                        <input type="number" name="minExplorationRate" value={newConfig.minExplorationRate} onChange={handleInputChange} className="form-input" step="0.01" max="1.0" />
+                                        <label className="form-label" htmlFor="wizard-minExplorationRate">Min Explore Rate</label>
+                                        <input type="number" name="minExplorationRate" id="wizard-minExplorationRate" value={newConfig.minExplorationRate} onChange={handleInputChange} className="form-input" step="0.01" max="1.0" />
                                     </div>
                                     <div className="form-group">
-                                        <label className="form-label">Discount Rate</label>
-                                        <input type="number" name="discountRate" value={newConfig.discountRate} onChange={handleInputChange} className="form-input" step="0.01" max="1.0" />
+                                        <label className="form-label" htmlFor="wizard-discountRate">Discount Rate</label>
+                                        <input type="number" name="discountRate" id="wizard-discountRate" value={newConfig.discountRate} onChange={handleInputChange} className="form-input" step="0.01" max="1.0" />
                                     </div>
                                 </div>
                             )}
@@ -488,20 +488,20 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                             {wizardStep === 1 && (
                                 <div className="wizard-grid wizard-grid-2x2">
                                     <div className="form-group">
-                                        <label className="form-label">Bet Amount</label>
-                                        <input type="number" name="betAmount" value={newConfig.betAmount} onChange={handleInputChange} className="form-input" min="1" />
+                                        <label className="form-label" htmlFor="wizard-betAmount">Bet Amount</label>
+                                        <input type="number" name="betAmount" id="wizard-betAmount" value={newConfig.betAmount} onChange={handleInputChange} className="form-input" min="1" />
                                     </div>
                                     <div className="form-group">
-                                        <label className="form-label">Initial Capital</label>
-                                        <input type="number" name="initialCapital" value={newConfig.initialCapital} onChange={handleInputChange} className="form-input" min="1" />
+                                        <label className="form-label" htmlFor="wizard-initialCapital">Initial Capital</label>
+                                        <input type="number" name="initialCapital" id="wizard-initialCapital" value={newConfig.initialCapital} onChange={handleInputChange} className="form-input" min="1" />
                                     </div>
                                     <div className="form-group">
-                                        <label className="form-label">Max Memory</label>
-                                        <input type="number" name="maxMemorySize" value={newConfig.maxMemorySize} onChange={handleInputChange} className="form-input" min="100" />
+                                        <label className="form-label" htmlFor="wizard-maxMemorySize">Max Memory</label>
+                                        <input type="number" name="maxMemorySize" id="wizard-maxMemorySize" value={newConfig.maxMemorySize} onChange={handleInputChange} className="form-input" min="100" />
                                     </div>
                                     <div className="form-group">
-                                        <label className="form-label">Replay Buffer</label>
-                                        <input type="number" name="replayBufferSize" value={newConfig.replayBufferSize} onChange={handleInputChange} className="form-input" min="100" />
+                                        <label className="form-label" htmlFor="wizard-replayBufferSize">Replay Buffer</label>
+                                        <input type="number" name="replayBufferSize" id="wizard-replayBufferSize" value={newConfig.replayBufferSize} onChange={handleInputChange} className="form-input" min="100" />
                                     </div>
                                 </div>
                             )}
@@ -531,10 +531,10 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                                                 <span>Use strategy model (5 actions)</span>
                                             </label>
                                             <div className="form-group">
-                                                <label className="form-label">Fixed Strategy</label>
+                                                <label className="form-label" htmlFor="wizard-betStrategyFixedId">Fixed Strategy</label>
                                                 <div className="wizard-select-wrap">
                                                     <select
-                                                        name="betStrategyFixedId"
+                                                        name="betStrategyFixedId" id="wizard-betStrategyFixedId"
                                                         value={newConfig.betStrategyFixedId}
                                                         onChange={(event) => handleNumberChange('betStrategyFixedId', Number(event.target.value))}
                                                         className="form-select"
@@ -550,10 +550,10 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                                                 </div>
                                             </div>
                                             <div className="form-group">
-                                                <label className="form-label">Strategy Hold Steps</label>
+                                                <label className="form-label" htmlFor="wizard-strategyHoldSteps">Strategy Hold Steps</label>
                                                 <input
                                                     type="number"
-                                                    name="strategyHoldSteps"
+                                                    name="strategyHoldSteps" id="wizard-strategyHoldSteps"
                                                     value={newConfig.strategyHoldSteps}
                                                     onChange={(event) => handleNumberChange('strategyHoldSteps', Number(event.target.value))}
                                                     className="form-input"
@@ -590,6 +590,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                                                 <input
                                                     type="number"
                                                     name="betUnit"
+                                                    aria-label="Bet unit"
                                                     value={newConfig.betUnit}
                                                     onChange={(event) => handleNumberChange('betUnit', Number(event.target.value))}
                                                     className="form-input"
@@ -611,6 +612,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                                                 <input
                                                     type="number"
                                                     name="betMax"
+                                                    aria-label="Max bet"
                                                     value={newConfig.betMax}
                                                     onChange={(event) => handleNumberChange('betMax', Number(event.target.value))}
                                                     className="form-input"
@@ -631,9 +633,10 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                                     {!newConfig.useDataGen ? (
                                         <>
                                             <div className="form-group">
-                                                <label className="form-label">Sample Size</label>
+                                                <label className="form-label" htmlFor="wizard-sample-size">Sample Size</label>
                                                 <div className="wizard-slider">
                                                     <input
+                                                        id="wizard-sample-size"
                                                         type="range"
                                                         min="0.01"
                                                         max="1"
@@ -645,9 +648,10 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                                                 </div>
                                             </div>
                                             <div className="form-group">
-                                                <label className="form-label">Validation Split</label>
+                                                <label className="form-label" htmlFor="wizard-validation-split">Validation Split</label>
                                                 <div className="wizard-slider">
                                                     <input
+                                                        id="wizard-validation-split"
                                                         type="range"
                                                         min="0"
                                                         max="0.99"
@@ -659,16 +663,16 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                                                 </div>
                                             </div>
                                             <div className="form-group">
-                                                <label className="form-label">Split Seed</label>
-                                                <input type="number" name="splitSeed" value={newConfig.splitSeed} onChange={handleInputChange} className="form-input" />
+                                                <label className="form-label" htmlFor="wizard-splitSeed">Split Seed</label>
+                                                <input type="number" name="splitSeed" id="wizard-splitSeed" value={newConfig.splitSeed} onChange={handleInputChange} className="form-input" />
                                             </div>
                                         </>
                                     ) : (
                                         <div className="form-group">
-                                            <label className="form-label">Number of elements to be generated</label>
+                                            <label className="form-label" htmlFor="wizard-numGeneratedSamples">Number of elements to be generated</label>
                                             <input
                                                 type="number"
-                                                name="numGeneratedSamples"
+                                                name="numGeneratedSamples" id="wizard-numGeneratedSamples"
                                                 value={newConfig.numGeneratedSamples}
                                                 onChange={handleInputChange}
                                                 className="form-input"
@@ -686,25 +690,25 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                                 <div className="wizard-session-compute">
                                     <div className="wizard-grid wizard-grid-2x2">
                                         <div className="form-group">
-                                            <label className="form-label">Episodes</label>
-                                            <input type="number" name="episodes" value={newConfig.episodes} onChange={handleInputChange} className="form-input" min="1" />
+                                            <label className="form-label" htmlFor="wizard-episodes">Episodes</label>
+                                            <input type="number" name="episodes" id="wizard-episodes" value={newConfig.episodes} onChange={handleInputChange} className="form-input" min="1" />
                                         </div>
                                         <div className="form-group">
-                                            <label className="form-label">Max Steps</label>
-                                            <input type="number" name="maxStepsEpisode" value={newConfig.maxStepsEpisode} onChange={handleInputChange} className="form-input" min="100" />
+                                            <label className="form-label" htmlFor="wizard-maxStepsEpisode">Max Steps</label>
+                                            <input type="number" name="maxStepsEpisode" id="wizard-maxStepsEpisode" value={newConfig.maxStepsEpisode} onChange={handleInputChange} className="form-input" min="100" />
                                         </div>
                                         <div className="form-group">
-                                            <label className="form-label">Batch Size</label>
-                                            <input type="number" name="batchSize" value={newConfig.batchSize} onChange={handleInputChange} className="form-input" min="1" />
+                                            <label className="form-label" htmlFor="wizard-batchSize">Batch Size</label>
+                                            <input type="number" name="batchSize" id="wizard-batchSize" value={newConfig.batchSize} onChange={handleInputChange} className="form-input" min="1" />
                                         </div>
                                         <div className="form-group">
-                                            <label className="form-label">Learning Rate</label>
-                                            <input type="number" name="learningRate" value={newConfig.learningRate} onChange={handleInputChange} className="form-input" step="0.0001" min="0" />
+                                            <label className="form-label" htmlFor="wizard-learningRate">Learning Rate</label>
+                                            <input type="number" name="learningRate" id="wizard-learningRate" value={newConfig.learningRate} onChange={handleInputChange} className="form-input" step="0.0001" min="0" />
                                         </div>
                                     </div>
                                     <div className="form-group">
-                                        <label className="form-label">Training Seed</label>
-                                        <input type="number" name="trainingSeed" value={newConfig.trainingSeed} onChange={handleInputChange} className="form-input" />
+                                        <label className="form-label" htmlFor="wizard-trainingSeed">Training Seed</label>
+                                        <input type="number" name="trainingSeed" id="wizard-trainingSeed" value={newConfig.trainingSeed} onChange={handleInputChange} className="form-input" />
                                     </div>
                                     <div className="wizard-checkboxes">
                                         <label className="checkbox-visual">
@@ -722,10 +726,10 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                             {wizardStep === 5 && (
                                 <div className="wizard-stack">
                                     <div className="form-group">
-                                        <label className="form-label">Checkpoint name</label>
+                                        <label className="form-label" htmlFor="wizard-checkpointName">Checkpoint name</label>
                                         <input
                                             type="text"
-                                            name="checkpointName"
+                                            name="checkpointName" id="wizard-checkpointName"
                                             value={newConfig.checkpointName}
                                             onChange={handleInputChange}
                                             className="form-input"
