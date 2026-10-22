@@ -21,7 +21,7 @@
 
 ## Overview
 
-FAIRS is a local browser-based workspace for preparing roulette data, training an agent, saving checkpoints, and reviewing model suggestions against observed outcomes. It models a single-zero wheel with outcomes from 0 through 36.
+FAIRS is a local browser-based research workspace for preparing roulette data, training an agent, saving checkpoints, and reviewing model suggestions against observed outcomes. It models a single-zero wheel with outcomes from 0 through 36 and supports both imported CSV or XLSX datasets and synthetic data for repeatable experiments. Training runs can be configured and monitored with metrics, checkpoints can be saved or resumed, and inference can be stepped through one round at a time. Each inference session records observed outcomes, predictions, bets, capital, results, and session history for later review. The application uses SQLite by default and can be configured for an external PostgreSQL database. FAIRS is an experimental research tool, and its suggestions are not guaranteed predictions or gambling advice.
 
 ## Key Features
 
@@ -29,6 +29,8 @@ FAIRS is a local browser-based workspace for preparing roulette data, training a
 - Configure and monitor training runs, review their metrics, and save or resume checkpoints.
 - Pair a checkpoint with a dataset and step through inference one round at a time.
 - Record observed outcomes and review predictions, bets, capital, results, and session history.
+- Configure roulette, appearance, runtime, and advanced settings from a dedicated settings page.
+- Review agent suggestions alongside live session history in a desktop-optimized workspace.
 - Use SQLite by default or configure an external PostgreSQL database.
 
 ## Screenshots
