@@ -255,7 +255,12 @@ def _running_frontend(
 
 ###############################################################################
 def _copy_inference_restart_fixture(data_root: Path) -> Path:
-    source_data = PROJECT_ROOT / "data"
+    configured_data_dir = os.getenv("FAIRS_DATA_DIR", "").strip()
+    source_data = (
+        Path(configured_data_dir).expanduser().resolve()
+        if configured_data_dir
+        else PROJECT_ROOT / "data"
+    )
     database_path = data_root / "database.db"
     data_root.mkdir(parents=True)
 
