@@ -18,20 +18,21 @@ from server.common import runtime_capabilities
 ###############################################################################
 class CheckpointServiceStub:
 
+    # -------------------------------------------------------------------------
     def cleanup_incomplete_workspaces(self) -> None:
         return None
-
 
 ###############################################################################
 class InferenceServiceStub:
 
+    # -------------------------------------------------------------------------
     def shutdown(self) -> None:
         return None
-
 
 ###############################################################################
 class TrainingRunManagerStub:
 
+    # -------------------------------------------------------------------------
     def shutdown(self) -> bool:
         return True
 
@@ -656,10 +657,6 @@ def test_lifespan_rolls_back_partial_initialization(monkeypatch) -> None:
     assert events.count("training-manager") == 1
     assert events.count("logging") == 1
 
-
-
-
-
 ###############################################################################
 def _embedded_settings() -> ServerSettings:
     return ServerSettings(
@@ -741,9 +738,6 @@ def test_external_database_validation_rejects_legacy_postgres_aliases(
 ) -> None:
     with pytest.raises(RuntimeError, match="Unsupported database engine"):
         startup_validation.run_startup_validations(_external_settings(engine))
-
-
-
 
 ###############################################################################
 def test_windows_inductor_is_rejected_before_torch_probe(

@@ -32,9 +32,6 @@ def test_dataset_delete_route_maps_checkpoint_reference_to_conflict() -> None:
     assert error.value.status_code == 409
     assert error.value.detail == "dataset is referenced by FAIRS_20260820"
 
-
-
-
 ###############################################################################
 def test_generated_frontend_contract_matches_runtime_backend_contract() -> None:
     expected_path = (

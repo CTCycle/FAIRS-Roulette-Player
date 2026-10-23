@@ -45,11 +45,9 @@ DATABASE_ENV_KEYS = frozenset({
     "DATABASE_INSERT_BATCH_SIZE",
 })
 
-
 ###############################################################################
 class DatabaseConfigurationError(RuntimeError):
     """Raised when the standalone connection configuration is unusable."""
-
 
 ###############################################################################
 class SQLiteFileConfiguration(BaseModel):
@@ -66,7 +64,6 @@ class SQLiteFileConfiguration(BaseModel):
         if not normalized:
             raise ValueError("SQLite database path must not be blank.")
         return normalized
-
 
 ###############################################################################
 class PostgreSQLFileConfiguration(BaseModel):
@@ -92,7 +89,6 @@ class PostgreSQLFileConfiguration(BaseModel):
             raise ValueError("PostgreSQL connection values must not be blank.")
         return normalized
 
-
 ###############################################################################
 class DatabaseConfigurationFile(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
@@ -113,7 +109,6 @@ class DatabaseConfigurationFile(BaseModel):
             raise ValueError("PostgreSQL configuration must contain only the postgresql block.")
         return self
 
-
 ###############################################################################
 @dataclass(frozen=True)
 class LoadedDatabaseConfiguration:
@@ -121,11 +116,9 @@ class LoadedDatabaseConfiguration:
     settings: DatabaseSettings
     sqlite_path: Path | None
 
-
 ###############################################################################
 class _DataBlob(ctypes.Structure):
     _fields_ = [("cbData", wintypes.DWORD), ("pbData", ctypes.POINTER(ctypes.c_byte))]
-
 
 ###############################################################################
 def _dpapi_transform(value: bytes, *, protect: bool) -> bytes:
@@ -167,12 +160,10 @@ def _dpapi_transform(value: bytes, *, protect: bool) -> bytes:
     finally:
         kernel32.LocalFree(result.pbData)
 
-
 ###############################################################################
 def protect_password(password: str) -> str:
     encrypted = _dpapi_transform(password.encode("utf-8"), protect=True)
     return base64.b64encode(encrypted).decode("ascii")
-
 
 ###############################################################################
 def unprotect_password(encrypted: str) -> str:
@@ -183,7 +174,6 @@ def unprotect_password(encrypted: str) -> str:
         raise
     except Exception as exc:  # noqa: BLE001
         raise DatabaseConfigurationError("Unable to decrypt the saved password.") from exc
-
 
 ###############################################################################
 class DatabaseConfigurationStore:

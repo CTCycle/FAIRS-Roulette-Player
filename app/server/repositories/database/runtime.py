@@ -11,16 +11,13 @@ import time
 
 from server.repositories.database.backend import FAIRSDatabase
 
-
 ###############################################################################
 class DatabaseUnavailableError(RuntimeError):
     """Raised when database-backed routes are unavailable during recovery."""
 
-
 ###############################################################################
 class DatabaseSwitchConflict(RuntimeError):
     """Raised when a switch conflicts with active work or database operations."""
-
 
 ###############################################################################
 class _ManagedSessionFactory:
@@ -36,7 +33,6 @@ class _ManagedSessionFactory:
     # -------------------------------------------------------------------------
     def begin(self):
         return self.owner.session_transaction()
-
 
 ###############################################################################
 class RuntimeDatabaseManager:

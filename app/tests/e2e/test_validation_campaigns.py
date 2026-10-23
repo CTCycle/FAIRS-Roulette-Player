@@ -336,9 +336,6 @@ def test_inference_active_session_render(page: Page, base_url: str):
 
 """Tier 5 VAL-21 malformed-input and fail-closed recovery coverage."""
 
-
-
-
 ###############################################################################
 def _assert_client_error(response) -> None:  # noqa: ANN001
     assert 400 <= response.status < 500, (
@@ -770,9 +767,6 @@ def test_inference_rejections_preserve_live_session_and_recover(
 
 
 """Tier 5 VAL-22 repetition, bounded execution, and state-leak coverage."""
-
-
-
 
 ###############################################################################
 def _active_sessions() -> tuple[str, ...]:

@@ -81,10 +81,6 @@ def test_latest_stats_does_not_carry_sparse_validation_metrics_forward() -> None
     assert latest_stats["val_rmse"] is None
     assert latest_stats["val_reward"] is None
 
-
-
-
-
 ###############################################################################
 def build_service(
     polling_interval_seconds: float = 1.0,
@@ -354,10 +350,6 @@ def test_training_process_bootstraps_runtime_before_running_target(monkeypatch) 
         ("target", (worker, "isolated")),
     ]
 
-
-
-
-
 ###############################################################################
 def test_default_training_stats_match_the_frontend_status_contract() -> None:
     stats = default_training_stats()
@@ -584,9 +576,6 @@ def test_terminal_jobs_release_thread_and_worker_references() -> None:
         f"max={max(cycle_durations):.4f}s, timeout=worker join 2s; shutdown 1s"
     )
 
-
-
-
 ###############################################################################
 def test_generated_training_series_matches_environment_contract() -> None:
     service = TrainingDataService(database_settings=None)
@@ -662,9 +651,6 @@ def test_training_subsample_preserves_contiguous_sequence_order() -> None:
     assert len(sampled) == 10
     assert sampled["outcome"].diff().dropna().eq(1).all()
     pd.testing.assert_frame_equal(sampled, repeated)
-
-
-
 
 ###############################################################################
 @pytest.mark.parametrize(

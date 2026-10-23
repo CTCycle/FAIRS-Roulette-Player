@@ -103,10 +103,6 @@ def test_dataset_delete_blocks_checkpoint_references() -> None:
 
     dataset_repository.delete.assert_not_called()
 
-
-
-
-
 ###############################################################################
 class DummyCheckpointRepository:
 
@@ -259,7 +255,6 @@ def test_incomplete_checkpoint_workspaces_are_cleaned_on_startup(
 
 
 os.environ.setdefault("KERAS_BACKEND", "torch")
-
 
 ###############################################################################
 def test_checkpoint_name_validation_rejects_path_traversal_patterns() -> None:
