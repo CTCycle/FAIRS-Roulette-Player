@@ -12,7 +12,10 @@ from server.common.api_errors import (
     http_exception_for_exception,
 )
 from server.common.roulette import validate_roulette_outcome
-from server.configurations.dependencies import get_inference_service, get_settings_service
+from server.configurations.dependencies import (
+    get_inference_service,
+    get_settings_service,
+)
 from server.contracts.configuration import RouletteSettings
 from server.contracts.inference import (
     InferenceBetUpdateRequest,
@@ -27,6 +30,7 @@ from server.contracts.inference import (
     InferenceStepRequest,
     InferenceStepResponse,
 )
+
 router = APIRouter(prefix="/inference", tags=["inference"])
 
 INFERENCE_EXCEPTION_STATUS: ExceptionStatusMap = (
@@ -36,6 +40,7 @@ INFERENCE_EXCEPTION_STATUS: ExceptionStatusMap = (
     (KeyError, status.HTTP_404_NOT_FOUND),
 )
 
+
 ###############################################################################
 def _map_inference_exception(exc: Exception) -> HTTPException:
     return http_exception_for_exception(
@@ -43,6 +48,7 @@ def _map_inference_exception(exc: Exception) -> HTTPException:
         INFERENCE_EXCEPTION_STATUS,
         default_detail="Unable to process inference request.",
     )
+
 
 ###############################################################################
 def _roulette_settings(settings_service: Any) -> RouletteSettings:
@@ -54,6 +60,7 @@ def _roulette_settings(settings_service: Any) -> RouletteSettings:
         invert_colors=settings.invert_colors,
         show_number_labels=settings.show_number_labels,
     )
+
 
 ###############################################################################
 @router.post(
@@ -83,11 +90,10 @@ def start_session(
                 preserve_session_id=preserve_session_id,
                 roulette_settings=roulette_settings,
             )
-        return InferenceStartResponse.model_validate(
-            result
-        )
+        return InferenceStartResponse.model_validate(result)
     except Exception as exc:
         raise _map_inference_exception(exc) from exc
+
 
 ###############################################################################
 @router.get(
@@ -106,6 +112,7 @@ def get_session(
     except Exception as exc:
         raise _map_inference_exception(exc) from exc
 
+
 ###############################################################################
 @router.post(
     "/sessions/{session_id}/next",
@@ -120,6 +127,7 @@ def next_prediction(
         return InferenceNextResponse.model_validate(service.next_prediction(session_id))
     except Exception as exc:
         raise _map_inference_exception(exc) from exc
+
 
 ###############################################################################
 @router.post(
@@ -147,6 +155,7 @@ def submit_step(
     except Exception as exc:
         raise _map_inference_exception(exc) from exc
 
+
 ###############################################################################
 @router.post(
     "/sessions/{session_id}/shutdown",
@@ -163,6 +172,7 @@ def shutdown(
         )
     except Exception as exc:
         raise _map_inference_exception(exc) from exc
+
 
 ###############################################################################
 @router.post(
@@ -182,6 +192,7 @@ def update_bet_amount(
     except Exception as exc:
         raise _map_inference_exception(exc) from exc
 
+
 ###############################################################################
 @router.post(
     "/sessions/{session_id}/rows/clear",
@@ -198,6 +209,7 @@ def clear_session_rows(
         )
     except Exception as exc:
         raise _map_inference_exception(exc) from exc
+
 
 ###############################################################################
 @router.post(

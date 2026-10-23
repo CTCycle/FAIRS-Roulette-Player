@@ -30,6 +30,7 @@ TRAINING_STATUSES = {
 ACTIVE_RUN_STATUSES = {"pending", "running", "stopping"}
 HISTORY_POINTS_PER_EPISODE = 20
 
+
 ###############################################################################
 def default_training_stats(
     total_epochs: int = 0,
@@ -57,6 +58,7 @@ def default_training_stats(
         "replay_buffer_size": 0,
         "status": status,
     }
+
 
 ###############################################################################
 @dataclass
@@ -195,6 +197,7 @@ class TrainingRun:
                 "completed_at": self.completed_at,
             }
 
+
 ###############################################################################
 class TrainingRunManager:
     """Own training jobs, process handles, progress, and the status projection."""
@@ -226,7 +229,10 @@ class TrainingRunManager:
         with self.lock:
             if self._shutdown_started:
                 raise RuntimeError("Training manager is shutting down.")
-            if any(existing.status in ACTIVE_RUN_STATUSES for existing in self.runs.values()):
+            if any(
+                existing.status in ACTIVE_RUN_STATUSES
+                for existing in self.runs.values()
+            ):
                 raise RuntimeError("Training is already in progress.")
             self.runs[job_id] = run
             self.last_training_run = run
@@ -534,7 +540,9 @@ class TrainingRunManager:
                 thread.join(timeout=remaining)
 
         with self.lock:
-            alive_threads = [thread.name for thread in self.threads.values() if thread.is_alive()]
+            alive_threads = [
+                thread.name for thread in self.threads.values() if thread.is_alive()
+            ]
             alive_workers = []
             for run in self.runs.values():
                 worker = run.worker

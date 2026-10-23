@@ -11,10 +11,12 @@ from starlette.concurrency import run_in_threadpool
 from server.common.api_errors import ExceptionStatusMap, http_exception_for_exception
 from server.configurations.dependencies import get_dataset_service
 from server.contracts.upload import DatasetKind, UploadRequest, UploadResponse
+
 router = APIRouter(prefix="/data", tags=["data"])
 UPLOAD_EXCEPTION_STATUS: ExceptionStatusMap = (
     (ValueError, status.HTTP_400_BAD_REQUEST),
 )
+
 
 ###############################################################################
 @router.post(
@@ -31,7 +33,9 @@ async def upload(
 ) -> UploadResponse:
     normalized_sheet_name = (
         int(sheet_name)
-        if isinstance(sheet_name, str) and sheet_name.isascii() and sheet_name.isdecimal()
+        if isinstance(sheet_name, str)
+        and sheet_name.isascii()
+        and sheet_name.isdecimal()
         else sheet_name
     )
     request = UploadRequest(

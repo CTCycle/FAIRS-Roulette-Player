@@ -24,6 +24,7 @@ from sqlalchemy.types import TypeDecorator
 from server.common.checkpoints import MAX_CHECKPOINT_NAME_LENGTH
 from server.common.session import MAX_SESSION_ID_LENGTH
 
+
 ###############################################################################
 class UTCDateTime(TypeDecorator[datetime]):
     impl = DateTime(timezone=True)
@@ -49,9 +50,11 @@ class UTCDateTime(TypeDecorator[datetime]):
             value if value.tzinfo else value.replace(tzinfo=timezone.utc)
         ).astimezone(timezone.utc)
 
+
 ###############################################################################
 class Base(DeclarativeBase):
     pass
+
 
 ###############################################################################
 class Datasets(Base):
@@ -95,6 +98,7 @@ class Datasets(Base):
         ),
     )
 
+
 ###############################################################################
 class DatasetOutcomes(Base):
     __tablename__ = "dataset_outcomes"
@@ -112,6 +116,7 @@ class DatasetOutcomes(Base):
         ),
         Index("ix_dataset_outcomes_dataset_outcome", "dataset_id", "outcome_id"),
     )
+
 
 ###############################################################################
 class InferenceSessions(Base):
@@ -146,6 +151,7 @@ class InferenceSessions(Base):
         ),
         Index("ix_inference_sessions_dataset_started", "dataset_id", "started_at"),
     )
+
 
 ###############################################################################
 class InferenceSessionSteps(Base):
@@ -186,6 +192,7 @@ class InferenceSessionSteps(Base):
         ),
         Index("ix_inference_steps_session_recorded", "session_id", "recorded_at"),
     )
+
 
 ###############################################################################
 class ApplicationSettings(Base):

@@ -13,6 +13,7 @@ from server.common.constants import (
 
 ROULETTE_RUNTIME_ATTR = "fairs_roulette_runtime_settings"
 
+
 ###############################################################################
 def build_roulette_number_pool(
     minimum_number: int = 0,
@@ -33,6 +34,7 @@ def build_roulette_number_pool(
     if not pool:
         raise ValueError("Roulette number pool must contain at least one number.")
     return pool
+
 
 ###############################################################################
 def filter_roulette_series(
@@ -56,6 +58,7 @@ def filter_roulette_series(
     numeric = pd.to_numeric(dataframe[column], errors="coerce")
     return dataframe.loc[numeric.isin(pool)].reset_index(drop=True)
 
+
 ###############################################################################
 def validate_roulette_outcome(
     outcome: int,
@@ -72,6 +75,7 @@ def validate_roulette_outcome(
     ):
         raise ValueError("Roulette outcome is outside the configured number pool.")
     return outcome
+
 
 ###############################################################################
 def encode_roulette_series(dataframe: pd.DataFrame) -> pd.DataFrame:

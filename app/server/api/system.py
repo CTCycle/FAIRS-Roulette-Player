@@ -10,6 +10,7 @@ from server.contracts.system import HealthResponse
 
 router = APIRouter(tags=["system"])
 
+
 ###############################################################################
 @router.get(
     "/health",

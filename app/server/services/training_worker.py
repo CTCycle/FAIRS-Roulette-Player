@@ -26,9 +26,9 @@ from server.learning.training.device import DeviceConfig
 from server.learning.training.fitting import DQNTraining
 from server.repositories.checkpoints import CheckpointRepository
 
+
 ###############################################################################
 class QueueProgressReporter:
-
     # -------------------------------------------------------------------------
     def __init__(self, target_queue: Any) -> None:
         self.target_queue = target_queue
@@ -54,9 +54,9 @@ class QueueProgressReporter:
         except Exception as exc:  # noqa: BLE001
             logger.debug("Failed to push training update: %s", exc)
 
+
 ###############################################################################
 class WorkerChannels:
-
     # -------------------------------------------------------------------------
     def __init__(
         self,
@@ -72,9 +72,9 @@ class WorkerChannels:
     def is_interrupted(self) -> bool:
         return bool(self.stop_event.is_set())
 
+
 ###############################################################################
 class ProcessWorker:
-
     # -------------------------------------------------------------------------
     def __init__(
         self,
@@ -233,6 +233,7 @@ class ProcessWorker:
             return None
         return self.process.exitcode
 
+
 ###############################################################################
 class TrainingCancelled(Exception):
     """Internal signal used to stop before publishing training artifacts."""
@@ -242,10 +243,12 @@ class TrainingCancelled(Exception):
         super().__init__("Training cancelled")
         self.checkpoint_path = checkpoint_path
 
+
 ###############################################################################
 def _raise_if_stopped(stop_event: Any, checkpoint_path: str | None = None) -> None:
     if stop_event.is_set():
         raise TrainingCancelled(checkpoint_path)
+
 
 ###############################################################################
 def _remove_incomplete_checkpoint(checkpoint_path: str | None) -> None:
@@ -260,6 +263,7 @@ def _remove_incomplete_checkpoint(checkpoint_path: str | None) -> None:
     except OSError:
         logger.exception("Failed to remove incomplete checkpoint folder %s", path)
 
+
 ###############################################################################
 def process_target(
     target: Callable[..., None],
@@ -273,6 +277,7 @@ def process_target(
     bootstrap_runtime()
     target(worker=worker, **kwargs)
 
+
 ###############################################################################
 def queue_training_update(
     stats: dict[str, Any],
@@ -280,6 +285,7 @@ def queue_training_update(
 ) -> None:
     payload = {"type": "training_update", **stats}
     reporter(payload)
+
 
 ###############################################################################
 async def run_training_async(
@@ -314,7 +320,9 @@ async def run_training_async(
                 "Synthetic roulette series generated (%s extractions)", len(dataset)
             )
         else:
-            logger.info("Roulette series has been loaded (%s extractions)", len(dataset))
+            logger.info(
+                "Roulette series has been loaded (%s extractions)", len(dataset)
+            )
 
         logger.info("Setting device for training operations")
         DeviceConfig(configuration).set_device()
@@ -368,6 +376,7 @@ async def run_training_async(
         checkpoint_repository.remove_staging_workspace(staging_path)
         raise
 
+
 ###############################################################################
 async def run_resume_training_async(
     checkpoint: str,
@@ -413,7 +422,9 @@ async def run_resume_training_async(
                 "Synthetic roulette series generated (%s extractions)", len(dataset)
             )
         else:
-            logger.info("Roulette series has been loaded (%s extractions)", len(dataset))
+            logger.info(
+                "Roulette series has been loaded (%s extractions)", len(dataset)
+            )
 
         logger.info("Setting device for training operations")
         DeviceConfig(train_config).set_device()
@@ -440,10 +451,18 @@ async def run_resume_training_async(
         )
         _raise_if_stopped(stop_event, staging_path)
 
-        return model, strategy_model, history, train_config, checkpoint_path, staging_path
+        return (
+            model,
+            strategy_model,
+            history,
+            train_config,
+            checkpoint_path,
+            staging_path,
+        )
     except Exception:
         checkpoint_repository.remove_staging_workspace(staging_path)
         raise
+
 
 ###############################################################################
 def run_training_process(
@@ -525,6 +544,7 @@ def run_training_process(
     except Exception as exc:  # noqa: BLE001
         _remove_incomplete_checkpoint(staging_path)
         result_queue.put({"error": str(exc)})
+
 
 ###############################################################################
 def run_resume_training_process(

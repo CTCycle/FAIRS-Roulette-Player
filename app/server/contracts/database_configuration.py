@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from server.contracts.configuration import DatabaseSettings
 
+
 ###############################################################################
 class DatabaseConfigurationInput(BaseModel):
     """Editable database connection details accepted by the Settings UI."""
@@ -45,12 +46,11 @@ class DatabaseConfigurationInput(BaseModel):
                 if not value or not value.strip()
             ]
             if missing:
-                raise ValueError(
-                    "PostgreSQL requires " + ", ".join(missing) + "."
-                )
+                raise ValueError("PostgreSQL requires " + ", ".join(missing) + ".")
             if self.clear_password and self.password:
                 raise ValueError("Provide a password or clear it, not both.")
         return self
+
 
 ###############################################################################
 class DatabaseConfigurationResponse(BaseModel):
@@ -68,6 +68,7 @@ class DatabaseConfigurationResponse(BaseModel):
     connect_timeout: int = 10
     insert_batch_size: int = 1000
 
+
 ###############################################################################
 class DatabaseStatusResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -77,12 +78,14 @@ class DatabaseStatusResponse(BaseModel):
     status: Literal["ready", "recovery", "testing"]
     message: str | None = None
 
+
 ###############################################################################
 class DatabaseTestResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     success: bool
     message: str
+
 
 ###############################################################################
 def database_settings_from_input(
@@ -108,7 +111,9 @@ def database_settings_from_input(
         engine="postgresql+psycopg",
         host=candidate.host.strip() if candidate.host else None,
         port=candidate.port,
-        database_name=candidate.database_name.strip() if candidate.database_name else None,
+        database_name=candidate.database_name.strip()
+        if candidate.database_name
+        else None,
         username=candidate.username.strip() if candidate.username else None,
         password=password,
         ssl=candidate.ssl,
@@ -116,6 +121,7 @@ def database_settings_from_input(
         connect_timeout=candidate.connect_timeout,
         insert_batch_size=candidate.insert_batch_size,
     )
+
 
 ###############################################################################
 def public_configuration(

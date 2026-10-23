@@ -5,9 +5,9 @@ from __future__ import annotations
 
 from server.learning.betting.types import require_strategy_id
 
+
 ###############################################################################
 class StrategyHold:
-
     # -------------------------------------------------------------------------
     def __init__(self, hold_steps: int = 1) -> None:
         self.hold_steps = max(1, int(hold_steps))

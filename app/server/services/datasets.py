@@ -22,6 +22,7 @@ MAX_UPLOAD_SIZE_BYTES = 25 * 1024 * 1024
 MAX_FILENAME_LENGTH = 255
 MAX_EXCEL_SHEET_NAME_LENGTH = 128
 
+
 ###############################################################################
 def normalize_filename(filename: str | None) -> str:
     if filename is None:
@@ -36,6 +37,7 @@ def normalize_filename(filename: str | None) -> str:
         raise ValueError("Filename contains invalid control characters.")
     return cleaned
 
+
 ###############################################################################
 def normalize_csv_separator(separator: str) -> str:
     # A tab is a supported delimiter and is also whitespace, so stripping it
@@ -45,6 +47,7 @@ def normalize_csv_separator(separator: str) -> str:
         supported = ", ".join(sorted(repr(value) for value in ALLOWED_CSV_SEPARATORS))
         raise ValueError(f"Unsupported csv_separator. Allowed values: {supported}.")
     return cleaned
+
 
 ###############################################################################
 def normalize_sheet_name(sheet_name: str | int) -> str | int:
@@ -63,9 +66,9 @@ def normalize_sheet_name(sheet_name: str | int) -> str | int:
         raise ValueError("sheet_name contains invalid control characters.")
     return cleaned
 
+
 ###############################################################################
 class DatasetService:
-
     # -------------------------------------------------------------------------
     @staticmethod
     def validate_upload_size(size: int | None) -> None:

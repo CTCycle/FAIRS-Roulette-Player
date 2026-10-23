@@ -71,6 +71,7 @@ InferenceService: Any = None
 TrainingService: Any = None
 TrainingRunManager: Any = None
 
+
 ###############################################################################
 class RuntimeCORSMiddleware:
     """Apply the current .env CORS allowlist after lifespan environment loading."""
@@ -105,6 +106,7 @@ class RuntimeCORSMiddleware:
                 else self.app
             )
         await self._configured_app(scope, receive, send)
+
 
 ###############################################################################
 def _activate_runtime_services(
@@ -173,7 +175,9 @@ def _activate_runtime_services(
     if application.state.dataset_service is None:
         dataset_service = resolved["DatasetService"](
             dataset_repository=dataset_repository,
-            importer=resolved["DatasetImportService"](dataset_repository=dataset_repository),
+            importer=resolved["DatasetImportService"](
+                dataset_repository=dataset_repository
+            ),
             loader=resolved["TabularFileLoader"](),
             checkpoint_service=checkpoint_service,
         )
@@ -208,10 +212,12 @@ def _activate_runtime_services(
     application.state.training_service = training_service
     application.state.inference_service = inference_service
 
+
 ###############################################################################
 def is_api_docs_enabled() -> bool:
     value = os.getenv("ENABLE_API_DOCS", "true").strip().lower()
     return value in {"1", "true", "yes", "on"}
+
 
 ###############################################################################
 def ensure_single_process_runtime() -> None:
@@ -232,9 +238,11 @@ def ensure_single_process_runtime() -> None:
                 "training jobs and inference models are process-local."
             )
 
+
 ###############################################################################
 def _client_build_available() -> bool:
     return shared_paths.CLIENT_INDEX_FILE_PATH.is_file()
+
 
 ###############################################################################
 def _resolve_client_file(full_path: str) -> Path | None:
@@ -249,9 +257,11 @@ def _resolve_client_file(full_path: str) -> Path | None:
 
     return None
 
+
 ###############################################################################
 def serve_client_root() -> FileResponse:
     return FileResponse(shared_paths.CLIENT_INDEX_FILE_PATH)
+
 
 ###############################################################################
 def serve_client_path(full_path: str) -> FileResponse:
@@ -265,11 +275,13 @@ def serve_client_path(full_path: str) -> FileResponse:
         return FileResponse(client_file)
     return FileResponse(shared_paths.CLIENT_INDEX_FILE_PATH)
 
+
 ###############################################################################
 def redirect_root_to_docs() -> RedirectResponse | RootStatusResponse:
     if is_api_docs_enabled():
         return RedirectResponse(FASTAPI_DOCS_ENDPOINT)
     return RootStatusResponse(status="ok")
+
 
 ###############################################################################
 @asynccontextmanager
@@ -320,15 +332,15 @@ async def app_lifespan(application: FastAPI) -> AsyncIterator[None]:
                 loaded_database.settings,
                 database_path=loaded_database.sqlite_path,
             )
-            app_settings = ApplicationSettingsRepository().ensure_row(
-                startup_database
-            )
+            app_settings = ApplicationSettingsRepository().ensure_row(startup_database)
             server_settings = app_settings.to_server_settings(loaded_database.settings)
             run_startup_validations(server_settings)
             with runtime_database.switching():
                 runtime_database.activate(startup_database)
                 try:
-                    _activate_runtime_services(application, loaded_database, app_settings)
+                    _activate_runtime_services(
+                        application, loaded_database, app_settings
+                    )
                 except Exception:
                     runtime_database.activate(None)
                     raise
@@ -338,9 +350,7 @@ async def app_lifespan(application: FastAPI) -> AsyncIterator[None]:
             if startup_database is not None:
                 startup_database.dispose()
                 startup_database = None
-            application.state.recovery_message = (
-                "The saved database could not be opened or initialized. Review the Database settings and try again."
-            )
+            application.state.recovery_message = "The saved database could not be opened or initialized. Review the Database settings and try again."
             application.state.lifecycle = "recovery"
             logger.error(
                 "Database startup entered recovery mode (%s).",
@@ -382,6 +392,7 @@ async def app_lifespan(application: FastAPI) -> AsyncIterator[None]:
         except Exception:  # noqa: BLE001
             logger.exception("Application logging shutdown failed")
 
+
 ###############################################################################
 def include_api_routers(application: FastAPI) -> None:
     for router in (
@@ -394,6 +405,7 @@ def include_api_routers(application: FastAPI) -> None:
         system_router,
     ):
         application.include_router(router, prefix=FASTAPI_API_PREFIX)
+
 
 ###############################################################################
 def configure_client_routes(application: FastAPI) -> None:
@@ -427,6 +439,7 @@ def configure_client_routes(application: FastAPI) -> None:
         response_model=RootStatusResponse,
     )
 
+
 ###############################################################################
 def create_app() -> FastAPI:
     enable_api_docs = is_api_docs_enabled()
@@ -452,7 +465,9 @@ def create_app() -> FastAPI:
             if getattr(request.app.state, "lifecycle", "starting") == "recovery":
                 return JSONResponse(
                     status_code=503,
-                    content={"detail": "Database services are unavailable. Configure a working database."},
+                    content={
+                        "detail": "Database services are unavailable. Configure a working database."
+                    },
                 )
             database_manager = getattr(request.app.state, "runtime_database", None)
             if database_manager is not None:
@@ -472,7 +487,9 @@ def create_app() -> FastAPI:
         if "/settings/database" in request.url.path:
             return JSONResponse(
                 status_code=422,
-                content={"detail": "Invalid database configuration. Review the required fields and options."},
+                content={
+                    "detail": "Invalid database configuration. Review the required fields and options."
+                },
             )
         return await request_validation_exception_handler(request, _exc)
 

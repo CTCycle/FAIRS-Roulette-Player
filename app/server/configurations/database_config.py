@@ -30,24 +30,28 @@ from server.contracts.database_configuration import (
     public_configuration,
 )
 
-DATABASE_ENV_KEYS = frozenset({
-    "DATABASE_URL",
-    "EMBEDDED_DATABASE",
-    "DATABASE_ENGINE",
-    "DATABASE_HOST",
-    "DATABASE_PORT",
-    "DATABASE_NAME",
-    "DATABASE_USERNAME",
-    "DATABASE_PASSWORD",
-    "DATABASE_SSL",
-    "DATABASE_SSL_CA",
-    "DATABASE_CONNECT_TIMEOUT",
-    "DATABASE_INSERT_BATCH_SIZE",
-})
+DATABASE_ENV_KEYS = frozenset(
+    {
+        "DATABASE_URL",
+        "EMBEDDED_DATABASE",
+        "DATABASE_ENGINE",
+        "DATABASE_HOST",
+        "DATABASE_PORT",
+        "DATABASE_NAME",
+        "DATABASE_USERNAME",
+        "DATABASE_PASSWORD",
+        "DATABASE_SSL",
+        "DATABASE_SSL_CA",
+        "DATABASE_CONNECT_TIMEOUT",
+        "DATABASE_INSERT_BATCH_SIZE",
+    }
+)
+
 
 ###############################################################################
 class DatabaseConfigurationError(RuntimeError):
     """Raised when the standalone connection configuration is unusable."""
+
 
 ###############################################################################
 class SQLiteFileConfiguration(BaseModel):
@@ -64,6 +68,7 @@ class SQLiteFileConfiguration(BaseModel):
         if not normalized:
             raise ValueError("SQLite database path must not be blank.")
         return normalized
+
 
 ###############################################################################
 class PostgreSQLFileConfiguration(BaseModel):
@@ -89,6 +94,7 @@ class PostgreSQLFileConfiguration(BaseModel):
             raise ValueError("PostgreSQL connection values must not be blank.")
         return normalized
 
+
 ###############################################################################
 class DatabaseConfigurationFile(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
@@ -101,13 +107,18 @@ class DatabaseConfigurationFile(BaseModel):
     # -------------------------------------------------------------------------
     @model_validator(mode="after")
     def validate_backend_shape(self) -> "DatabaseConfigurationFile":
-        if self.backend == "sqlite" and (self.sqlite is None or self.postgresql is not None):
+        if self.backend == "sqlite" and (
+            self.sqlite is None or self.postgresql is not None
+        ):
             raise ValueError("SQLite configuration must contain only the sqlite block.")
         if self.backend == "postgresql" and (
             self.postgresql is None or self.sqlite is not None
         ):
-            raise ValueError("PostgreSQL configuration must contain only the postgresql block.")
+            raise ValueError(
+                "PostgreSQL configuration must contain only the postgresql block."
+            )
         return self
+
 
 ###############################################################################
 @dataclass(frozen=True)
@@ -116,9 +127,11 @@ class LoadedDatabaseConfiguration:
     settings: DatabaseSettings
     sqlite_path: Path | None
 
+
 ###############################################################################
 class _DataBlob(ctypes.Structure):
     _fields_ = [("cbData", wintypes.DWORD), ("pbData", ctypes.POINTER(ctypes.c_byte))]
+
 
 ###############################################################################
 def _dpapi_transform(value: bytes, *, protect: bool) -> bytes:
@@ -154,16 +167,20 @@ def _dpapi_transform(value: bytes, *, protect: bool) -> bytes:
             ctypes.byref(result),
         )
     if not ok:
-        raise DatabaseConfigurationError("Unable to protect or decrypt the saved password.")
+        raise DatabaseConfigurationError(
+            "Unable to protect or decrypt the saved password."
+        )
     try:
         return ctypes.string_at(result.pbData, result.cbData)
     finally:
         kernel32.LocalFree(result.pbData)
 
+
 ###############################################################################
 def protect_password(password: str) -> str:
     encrypted = _dpapi_transform(password.encode("utf-8"), protect=True)
     return base64.b64encode(encrypted).decode("ascii")
+
 
 ###############################################################################
 def unprotect_password(encrypted: str) -> str:
@@ -173,7 +190,10 @@ def unprotect_password(encrypted: str) -> str:
     except DatabaseConfigurationError:
         raise
     except Exception as exc:  # noqa: BLE001
-        raise DatabaseConfigurationError("Unable to decrypt the saved password.") from exc
+        raise DatabaseConfigurationError(
+            "Unable to decrypt the saved password."
+        ) from exc
+
 
 ###############################################################################
 class DatabaseConfigurationStore:
@@ -188,7 +208,9 @@ class DatabaseConfigurationStore:
         password_protector=protect_password,
         password_unprotector=unprotect_password,
     ) -> None:
-        self.path = Path(path) if path is not None else shared_paths.DATABASE_CONFIG_FILE
+        self.path = (
+            Path(path) if path is not None else shared_paths.DATABASE_CONFIG_FILE
+        )
         self.environment_file = (
             Path(environment_file)
             if environment_file is not None
@@ -277,7 +299,9 @@ class DatabaseConfigurationStore:
         """Remove obsolete plaintext database credentials from the env file."""
         if not self.environment_file.is_file():
             return
-        original = self.environment_file.read_text(encoding="utf-8").splitlines(keepends=True)
+        original = self.environment_file.read_text(encoding="utf-8").splitlines(
+            keepends=True
+        )
         preserved = []
         for line in original:
             stripped = line.lstrip()
@@ -296,7 +320,11 @@ class DatabaseConfigurationStore:
         self, candidate: DatabaseConfigurationInput
     ) -> tuple[DatabaseConfigurationInput, str | None]:
         password = candidate.password or None
-        if candidate.backend == "postgresql" and not password and not candidate.clear_password:
+        if (
+            candidate.backend == "postgresql"
+            and not password
+            and not candidate.clear_password
+        ):
             try:
                 current = self.current()
             except DatabaseConfigurationError:

@@ -17,6 +17,7 @@ JIT_INDUCTOR_WINDOWS_MESSAGE = (
     "with Triton support."
 )
 
+
 ###############################################################################
 def get_jit_runtime_error(
     jit_compile: bool,
@@ -35,6 +36,7 @@ def get_jit_runtime_error(
     if not callable(getattr(torch, "compile", None)):
         return JIT_UNAVAILABLE_MESSAGE
     return None
+
 
 ###############################################################################
 def validate_jit_runtime(jit_compile: bool, jit_backend: str = "eager") -> None:

@@ -22,6 +22,7 @@ from server.common.checkpoints import (
 
 CHECKPOINT_FORMAT_VERSION = 1
 
+
 ###############################################################################
 class TrainingConfig(BaseModel):
     """Canonical configuration for starting a new training session."""
@@ -91,9 +92,7 @@ class TrainingConfig(BaseModel):
                 "minimum_exploration_rate must not exceed exploration_rate."
             )
         if self.replay_buffer_size > self.max_memory_size:
-            raise ValueError(
-                "replay_buffer_size must not exceed max_memory_size."
-            )
+            raise ValueError("replay_buffer_size must not exceed max_memory_size.")
         if self.batch_size > self.replay_buffer_size:
             raise ValueError("batch_size must not exceed replay_buffer_size.")
         if self.bet_strategy_model_enabled and not self.dynamic_betting_enabled:
@@ -108,10 +107,9 @@ class TrainingConfig(BaseModel):
         ):
             raise ValueError("bet_max must be greater than or equal to bet_unit.")
         if not self.use_data_generator and self.dataset_id is None:
-            raise ValueError(
-                "dataset_id is required when use_data_generator is false."
-            )
+            raise ValueError("dataset_id is required when use_data_generator is false.")
         return self
+
 
 ###############################################################################
 class ResumeConfig(BaseModel):
@@ -130,6 +128,7 @@ class ResumeConfig(BaseModel):
     @classmethod
     def validate_checkpoint(cls, value: str) -> str:
         return normalize_checkpoint_identifier(value)
+
 
 ###############################################################################
 class CheckpointConfiguration(BaseModel):
@@ -157,6 +156,7 @@ class CheckpointConfiguration(BaseModel):
             )
         return value
 
+
 ###############################################################################
 class TrainingStatusResponse(BaseModel):
     job_id: str | None
@@ -166,14 +166,17 @@ class TrainingStatusResponse(BaseModel):
     latest_env: dict[str, object]
     poll_interval: float
 
+
 ###############################################################################
 class TrainingStopResponse(BaseModel):
     status: str
     message: str
 
+
 ###############################################################################
 class TrainingCheckpointListResponse(RootModel[list[str]]):
     pass
+
 
 ###############################################################################
 class TrainingCheckpointSummary(BaseModel):
@@ -201,10 +204,12 @@ class TrainingCheckpointSummary(BaseModel):
     final_val_loss: float | None
     final_val_rmse: float | None
 
+
 ###############################################################################
 class TrainingCheckpointMetadataResponse(BaseModel):
     checkpoint: str
     summary: TrainingCheckpointSummary
+
 
 ###############################################################################
 class TrainingCheckpointDeleteResponse(BaseModel):

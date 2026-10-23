@@ -24,6 +24,7 @@ BET_OUTCOME_WIN = "win"
 BET_OUTCOME_LOSS = "loss"
 BET_OUTCOME_NEUTRAL = "neutral"
 
+
 ###############################################################################
 def is_valid_strategy(strategy_id: object) -> bool:
     return (
@@ -32,6 +33,7 @@ def is_valid_strategy(strategy_id: object) -> bool:
         and 0 <= int(strategy_id) < STRATEGY_COUNT
     )
 
+
 ###############################################################################
 def require_strategy_id(strategy_id: object) -> int:
     if not is_valid_strategy(strategy_id):
@@ -39,6 +41,7 @@ def require_strategy_id(strategy_id: object) -> int:
             f"Invalid betting strategy id {strategy_id!r}; expected 0-{STRATEGY_COUNT - 1}."
         )
     return int(strategy_id)
+
 
 ###############################################################################
 def strategy_name(strategy_id: int) -> str:

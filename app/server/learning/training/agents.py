@@ -15,9 +15,9 @@ from server.common.constants import PAD_VALUE, STATES
 from server.learning.betting.types import STRATEGY_COUNT
 from server.learning.training.environment import RouletteEnvironment
 
+
 ###############################################################################
 class DQNAgent:
-
     # -------------------------------------------------------------------------
     def __init__(
         self,
@@ -195,9 +195,9 @@ class DQNAgent:
             return_dict=True,  # type: ignore
         )
 
+
 ###############################################################################
 class StrategyAgent(DQNAgent):
-
     # -------------------------------------------------------------------------
     def __init__(
         self, configuration: dict[str, Any], memory: Any | None = None

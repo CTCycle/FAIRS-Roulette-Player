@@ -9,6 +9,7 @@ from server.contracts.configuration import JsonServerSettings
 from server.repositories.database.backend import FAIRSDatabase
 from server.repositories.schemas.models import ApplicationSettings
 
+
 ###############################################################################
 class ApplicationSettingsRepository:
     """Read and update the one Settings-page row in the active database."""
@@ -23,7 +24,9 @@ class ApplicationSettingsRepository:
                 {"jobs": row.jobs, "device": row.device, "roulette": row.roulette}
             )
         except ValidationError as exc:
-            raise RuntimeError("Application settings stored in this database are invalid.") from exc
+            raise RuntimeError(
+                "Application settings stored in this database are invalid."
+            ) from exc
 
     # -------------------------------------------------------------------------
     def ensure_row(

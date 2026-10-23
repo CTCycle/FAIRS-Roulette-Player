@@ -13,6 +13,7 @@ JIT_BACKEND_MAX_LENGTH = 64
 JIT_BACKEND_PATTERN = r"^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
 _JIT_BACKEND_PATTERN = re.compile(JIT_BACKEND_PATTERN)
 
+
 ###############################################################################
 def normalize_jit_backend(value: Any) -> str:
     if not isinstance(value, str):
@@ -32,6 +33,7 @@ def normalize_jit_backend(value: Any) -> str:
         raise ValueError("jit_backend must be either 'eager' or 'inductor'.")
     return text
 
+
 ###############################################################################
 @dataclass(frozen=True)
 class DatabaseSettings:
@@ -47,16 +49,19 @@ class DatabaseSettings:
     connect_timeout: int
     insert_batch_size: int
 
+
 ###############################################################################
 @dataclass(frozen=True)
 class JobsSettings:
     polling_interval: float
+
 
 ###############################################################################
 @dataclass(frozen=True)
 class DeviceSettings:
     jit_compile: bool
     jit_backend: str
+
 
 ###############################################################################
 @dataclass(frozen=True)
@@ -67,6 +72,7 @@ class RouletteSettings:
     invert_colors: bool = False
     show_number_labels: bool = True
 
+
 ###############################################################################
 @dataclass(frozen=True)
 class ServerSettings:
@@ -75,11 +81,13 @@ class ServerSettings:
     device: DeviceSettings
     roulette: RouletteSettings = RouletteSettings()
 
+
 ###############################################################################
 class JsonJobsSettings(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     polling_interval: float = Field(default=1.0, ge=0.1, le=10.0)
+
 
 ###############################################################################
 class JsonDeviceSettings(BaseModel):
@@ -100,6 +108,7 @@ class JsonDeviceSettings(BaseModel):
     def normalize_backend(cls, value: Any) -> str:
         return normalize_jit_backend(value)
 
+
 ###############################################################################
 class JsonRouletteSettings(BaseModel):
     """Application-wide roulette outcome and visualization settings."""
@@ -116,7 +125,9 @@ class JsonRouletteSettings(BaseModel):
     @model_validator(mode="after")
     def validate_number_pool(self) -> "JsonRouletteSettings":
         if self.minimum_number > self.maximum_number:
-            raise ValueError("minimum_number must be less than or equal to maximum_number.")
+            raise ValueError(
+                "minimum_number must be less than or equal to maximum_number."
+            )
         if self.exclude_zero and self.minimum_number == 0 and self.maximum_number == 0:
             raise ValueError("Roulette number pool must contain at least one number.")
         return self
@@ -130,6 +141,7 @@ class JsonRouletteSettings(BaseModel):
             invert_colors=self.invert_colors,
             show_number_labels=self.show_number_labels,
         )
+
 
 ###############################################################################
 class JsonServerSettings(BaseModel):

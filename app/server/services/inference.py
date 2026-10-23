@@ -23,9 +23,9 @@ from server.repositories.datasets import DatasetRepository
 from server.repositories.inference import InferenceRepository
 from server.services.checkpoints import CheckpointService
 
+
 ###############################################################################
 class InferenceSession:
-
     # -------------------------------------------------------------------------
     def __init__(
         self,
@@ -111,9 +111,9 @@ class InferenceSession:
         self.last_prediction = None
         self.player = None
 
+
 ###############################################################################
 class InferenceState:
-
     # -------------------------------------------------------------------------
     def __init__(self) -> None:
         self.sessions: dict[str, InferenceSession] = {}
@@ -174,9 +174,9 @@ class InferenceState:
         with self.lock:
             return bool(self.sessions)
 
+
 ###############################################################################
 class InferenceService:
-
     # -------------------------------------------------------------------------
     def __init__(
         self,
@@ -369,9 +369,10 @@ class InferenceService:
 
                 DeviceConfig(configuration).set_device()
 
-                if configuration["dynamic_betting_enabled"] and configuration[
-                    "bet_strategy_model_enabled"
-                ]:
+                if (
+                    configuration["dynamic_betting_enabled"]
+                    and configuration["bet_strategy_model_enabled"]
+                ):
                     strategy_model = self.checkpoint_service.load_strategy_model(
                         checkpoint_path, required=True
                     )

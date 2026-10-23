@@ -29,6 +29,7 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 VERSION_TABLE = "alembic_version"
 
+
 ###############################################################################
 def _include_object(
     _object: Any,
@@ -38,6 +39,7 @@ def _include_object(
     _compare_to: Any,
 ) -> bool:
     return not (object_type == "table" and name == VERSION_TABLE)
+
 
 ###############################################################################
 def _resolved_url() -> str:
@@ -57,6 +59,7 @@ def _resolved_url() -> str:
         hide_password=False
     )
 
+
 ###############################################################################
 def _configure_kwargs(connection: Any | None = None) -> dict[str, Any]:
     dialect_name = (
@@ -74,6 +77,7 @@ def _configure_kwargs(connection: Any | None = None) -> dict[str, Any]:
         "transaction_per_migration": False,
     }
 
+
 ###############################################################################
 def run_migrations_offline() -> None:
     context.configure(
@@ -84,6 +88,7 @@ def run_migrations_offline() -> None:
     )
     with context.begin_transaction():
         context.run_migrations()
+
 
 ###############################################################################
 def run_migrations_online() -> None:
