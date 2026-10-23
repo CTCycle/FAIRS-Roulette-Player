@@ -1,6 +1,6 @@
 ## Testing And Quality
 
-Last updated: 2026-10-22
+Last updated: 2026-10-23
 
 ## Quality Baseline
 
@@ -52,6 +52,10 @@ The repository now has 21 test modules across the backend and frontend. Tests we
 The suite moved from 48 test modules and 279 cases to 21 modules and 277 cases. The two removed cases duplicated behavior now asserted by broader desktop-width and checkpoint-lifecycle tests. The two support scripts remain active, as do both frontend test commands; no test dependency or CI command was removed because each remains in use.
 
 The seeded Windows standard runner passed 253 Python cases and skipped 6 of 259 collected in 235.80 seconds. Five skips require PostgreSQL service coverage, and one optional strategy case had no suggestion to assert. Vitest passed 11/11 in 0.288 seconds, Playwright passed 7/7 in 10.1 seconds, the production build passed in 2.59 seconds, and Ruff passed. The disposable data/checkpoint root was removed and settings/.env was restored byte-for-byte.
+
+### Current standard-suite revalidation (2026-10-23)
+
+At `bcf8f00` on Windows with Python 3.14.7, the seeded repository-standard runner exited 0: 259 Python cases collected, 254 passed and 5 skipped in 256.79 seconds. The five skips require a local PostgreSQL service; the optional strategy-suggestion case passed with the seeded checkpoint. The production build passed in 3.81 seconds, Vitest passed 11/11 in 0.372 seconds, Playwright passed 7/7 in 11.0 seconds, and Ruff passed. Dataset 5 used the expected `val00_training_lineage` name and 120 rows, with the required checkpoints trained through the local API. The temporary data/cache root was removed, the temporary `FAIRS_DATA_DIR` override was cleared, and test ports 8890/8051 were clear.
 - Set `STANDARD_TEST_CACHE_ROOT` before invoking `app/tests/run_tests.bat` to place all runner caches, including pytest basetemp and Playwright browser storage, under an isolated root. Without it, the runner uses `runtimes/cache`.
 - `.github/workflows/ci.yml`
   - Linux CI runs the backend Ruff/unit/Alembic/OpenAPI/PostgreSQL checks and a separate frontend lint/build job. Python dependencies resolve from `app/server/pyproject.toml` when `uv.lock` is absent, while the repository-root `ruff.toml` owns Ruff’s canonical cache path; generated QA assets are excluded from lint traversal.
