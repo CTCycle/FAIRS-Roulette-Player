@@ -29,9 +29,9 @@ from server.learning.betting.types import (
     strategy_name,
 )
 
+
 ###############################################################################
 class BetsAndRewards:
-
     # -------------------------------------------------------------------------
     def __init__(self, configuration: dict[str, Any]) -> None:
         self.seed = int(configuration["training_seed"])
@@ -180,9 +180,9 @@ class BetsAndRewards:
         capital += reward
         return reward, capital, done
 
+
 ###############################################################################
 class RouletteWheelRenderer:
-
     # -------------------------------------------------------------------------
     def __init__(
         self,
@@ -273,9 +273,7 @@ class RouletteWheelRenderer:
                 label_x = center_x + label_radius * math.cos(angle_rad)
                 label_y = center_y + label_radius * math.sin(angle_rad)
                 label = str(number)
-                left, top, right, bottom = draw.textbbox(
-                    (0, 0), label, font=self.font
-                )
+                left, top, right, bottom = draw.textbbox((0, 0), label, font=self.font)
                 text_width = right - left
                 text_height = bottom - top
                 draw.text(
@@ -340,9 +338,9 @@ class RouletteWheelRenderer:
             return set(self.third_dozen_numbers)
         raise ValueError(f"Invalid roulette action: {action}")
 
+
 ###############################################################################
 class RouletteEnvironment(gym.Env):
-
     # -------------------------------------------------------------------------
     def __init__(
         self,
@@ -391,7 +389,9 @@ class RouletteEnvironment(gym.Env):
             runtime_metadata = data.attrs.get(ROULETTE_RUNTIME_ATTR)
             if runtime_metadata is not None:
                 if not isinstance(runtime_metadata, dict):
-                    raise ValueError("Invalid roulette runtime metadata on training data.")
+                    raise ValueError(
+                        "Invalid roulette runtime metadata on training data."
+                    )
                 resolved_roulette = RouletteSettings(**runtime_metadata)
 
         self.black_numbers = self.player.black_numbers

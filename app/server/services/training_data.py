@@ -22,6 +22,7 @@ from server.learning.training.generator import RouletteSyntheticGenerator
 from server.repositories.database.backend import FAIRSDatabase
 from server.repositories.datasets import DatasetRepository
 
+
 ###############################################################################
 class TrainingDataService:
     """Load or generate training series outside the learning core."""
@@ -151,6 +152,7 @@ class TrainingDataService:
                 )
             raise ValueError("No roulette dataset available for training.")
         return self._attach_runtime_metadata(dataset, resolved_roulette), False
+
 
 ###############################################################################
 def load_training_series(

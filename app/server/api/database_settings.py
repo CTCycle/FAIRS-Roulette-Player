@@ -20,12 +20,14 @@ from server.services.database_configuration import (
 
 router = APIRouter(prefix="/settings/database", tags=["database settings"])
 
+
 ###############################################################################
 @router.get("", response_model=DatabaseStatusResponse)
 def get_database_settings(
     service: DatabaseConfigurationService = Depends(get_database_configuration_service),
 ) -> DatabaseStatusResponse:
     return service.get_status()
+
 
 ###############################################################################
 @router.post("/test", response_model=DatabaseTestResponse)
@@ -34,6 +36,7 @@ def test_database_connection(
     service: DatabaseConfigurationService = Depends(get_database_configuration_service),
 ) -> DatabaseTestResponse:
     return service.test_connection(candidate)
+
 
 ###############################################################################
 @router.put("", response_model=DatabaseStatusResponse)

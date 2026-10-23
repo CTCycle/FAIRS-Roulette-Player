@@ -32,9 +32,11 @@ CHECKPOINT_SAVED_MODEL_FILE_NAME = "saved_model.keras"
 CHECKPOINT_STRATEGY_MODEL_FILE_NAME = "strategy.keras"
 CHECKPOINT_COMPLETE_FILE_NAME = ".complete"
 
+
 ###############################################################################
 def _paths_overlap(left: Path, right: Path) -> bool:
     return left == right or left.is_relative_to(right) or right.is_relative_to(left)
+
 
 ###############################################################################
 def configure_runtime_paths(data_dir: str | Path | None = None) -> None:
@@ -43,8 +45,12 @@ def configure_runtime_paths(data_dir: str | Path | None = None) -> None:
     global DATABASE_CONFIG_FILE
 
     configured = str(data_dir).strip() if data_dir is not None else ""
-    configured_data_dir = Path(configured).expanduser().resolve() if configured else None
-    if configured_data_dir is not None and _paths_overlap(configured_data_dir, CACHE_PATH):
+    configured_data_dir = (
+        Path(configured).expanduser().resolve() if configured else None
+    )
+    if configured_data_dir is not None and _paths_overlap(
+        configured_data_dir, CACHE_PATH
+    ):
         raise ValueError(
             "FAIRS_DATA_DIR must not overlap the canonical disposable cache root "
             f"'{CACHE_PATH}'. Choose a persistent data directory outside runtimes/cache."
@@ -57,17 +63,21 @@ def configure_runtime_paths(data_dir: str | Path | None = None) -> None:
     DATABASE_CONFIG_FILE = DATA_ROOT / "database-config.json"
     DATABASE_PATH = DATA_ROOT / "database.db"
 
+
 ###############################################################################
 def as_path(value: str | Path) -> Path:
     return value if isinstance(value, Path) else Path(value)
+
 
 ###############################################################################
 def checkpoint_directory(checkpoint_name: str) -> Path:
     return CHECKPOINT_PATH / checkpoint_name
 
+
 ###############################################################################
 def checkpoint_configuration_dir(checkpoint_path: str | Path) -> Path:
     return as_path(checkpoint_path) / CHECKPOINT_CONFIGURATION_DIRNAME
+
 
 ###############################################################################
 def checkpoint_configuration_file(checkpoint_path: str | Path) -> Path:
@@ -76,12 +86,14 @@ def checkpoint_configuration_file(checkpoint_path: str | Path) -> Path:
         / CHECKPOINT_CONFIGURATION_FILE_NAME
     )
 
+
 ###############################################################################
 def checkpoint_session_history_file(checkpoint_path: str | Path) -> Path:
     return (
         checkpoint_configuration_dir(checkpoint_path)
         / CHECKPOINT_SESSION_HISTORY_FILE_NAME
     )
+
 
 ###############################################################################
 def checkpoint_replay_memory_file(checkpoint_path: str | Path) -> Path:
@@ -90,9 +102,11 @@ def checkpoint_replay_memory_file(checkpoint_path: str | Path) -> Path:
         / CHECKPOINT_REPLAY_MEMORY_FILE_NAME
     )
 
+
 ###############################################################################
 def checkpoint_saved_model_file(checkpoint_path: str | Path) -> Path:
     return as_path(checkpoint_path) / CHECKPOINT_SAVED_MODEL_FILE_NAME
+
 
 ###############################################################################
 def checkpoint_strategy_model_file(

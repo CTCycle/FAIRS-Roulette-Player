@@ -20,13 +20,14 @@ from server.repositories.database.runtime import RuntimeDatabaseManager
 if TYPE_CHECKING:
     from server.services.training import TrainingService
 
+
 ###############################################################################
 class SettingsPersistenceError(RuntimeError):
     """Raised when runtime settings cannot be safely published or restored."""
 
+
 ###############################################################################
 class SettingsService:
-
     # -------------------------------------------------------------------------
     def __init__(
         self,
@@ -75,7 +76,9 @@ class SettingsService:
         try:
             self.repository.replace(self.database, previous_json)
         except Exception:  # noqa: BLE001
-            logger.exception("Failed to restore runtime settings after propagation failure")
+            logger.exception(
+                "Failed to restore runtime settings after propagation failure"
+            )
         try:
             self.training_service.apply_runtime_settings(*previous_training)
             self.training_service.apply_roulette_settings(

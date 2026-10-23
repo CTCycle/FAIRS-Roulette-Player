@@ -19,6 +19,7 @@ down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
+
 ###############################################################################
 def upgrade() -> None:
     op.create_table(
@@ -155,6 +156,7 @@ def upgrade() -> None:
         sa.CheckConstraint("settings_id = 1", name="ck_application_settings_singleton"),
         sa.PrimaryKeyConstraint("settings_id"),
     )
+
 
 ###############################################################################
 def downgrade() -> None:

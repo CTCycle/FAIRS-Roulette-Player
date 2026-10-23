@@ -16,6 +16,7 @@ from server.common.exceptions import CheckpointReferenceError
 from server.contracts.training import TrainingCheckpointSummary
 from server.repositories.checkpoints import CheckpointRepository
 
+
 ###############################################################################
 def get_last_history_value(values: Any) -> float | None:
     if isinstance(values, list):
@@ -27,9 +28,9 @@ def get_last_history_value(values: Any) -> float | None:
                 return numeric_value
     return None
 
+
 ###############################################################################
 class CheckpointService:
-
     # -------------------------------------------------------------------------
     def __init__(
         self,
@@ -99,7 +100,9 @@ class CheckpointService:
                     )
                 )
                 if not isinstance(configuration, dict):
-                    raise TypeError("Checkpoint training configuration must be an object.")
+                    raise TypeError(
+                        "Checkpoint training configuration must be an object."
+                    )
                 referenced_dataset_id = configuration["dataset_id"]
             except (KeyError, OSError, TypeError, ValueError) as exc:
                 raise CheckpointReferenceError(

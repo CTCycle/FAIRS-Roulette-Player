@@ -11,9 +11,9 @@ import pandas as pd
 from server.common.roulette import build_roulette_number_pool
 from server.contracts.configuration import RouletteSettings
 
+
 ###############################################################################
 class RouletteSyntheticGenerator:
-
     # -------------------------------------------------------------------------
     def __init__(
         self,

@@ -11,17 +11,19 @@ import time
 
 from server.repositories.database.backend import FAIRSDatabase
 
+
 ###############################################################################
 class DatabaseUnavailableError(RuntimeError):
     """Raised when database-backed routes are unavailable during recovery."""
+
 
 ###############################################################################
 class DatabaseSwitchConflict(RuntimeError):
     """Raised when a switch conflicts with active work or database operations."""
 
+
 ###############################################################################
 class _ManagedSessionFactory:
-
     # -------------------------------------------------------------------------
     def __init__(self, owner: "RuntimeDatabaseManager") -> None:
         self.owner = owner
@@ -33,6 +35,7 @@ class _ManagedSessionFactory:
     # -------------------------------------------------------------------------
     def begin(self):
         return self.owner.session_transaction()
+
 
 ###############################################################################
 class RuntimeDatabaseManager:
@@ -89,7 +92,9 @@ class RuntimeDatabaseManager:
                     "Database switching is in progress. Retry the request shortly."
                 )
             if self._database is None:
-                raise DatabaseUnavailableError("Database services are in recovery mode.")
+                raise DatabaseUnavailableError(
+                    "Database services are in recovery mode."
+                )
             self._in_flight += 1
         try:
             yield
@@ -128,7 +133,9 @@ class RuntimeDatabaseManager:
         deadline = time.monotonic() + timeout_seconds
         with self._condition:
             if self._switching:
-                raise DatabaseSwitchConflict("Another database switch is already in progress.")
+                raise DatabaseSwitchConflict(
+                    "Another database switch is already in progress."
+                )
             self._switching = True
             while self._in_flight:
                 remaining = deadline - time.monotonic()

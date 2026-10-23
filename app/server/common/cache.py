@@ -51,6 +51,7 @@ CACHE_ENVIRONMENT = {
     "CUDA_CACHE_PATH": CACHE_DIRECTORIES["cuda"],
 }
 
+
 ###############################################################################
 def configure_cache_environment() -> None:
     """Create and export every disposable application cache below CACHE_PATH."""

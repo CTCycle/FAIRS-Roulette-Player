@@ -8,6 +8,7 @@ from typing import Any
 import keras
 from keras import activations, layers
 
+
 ###############################################################################
 @keras.saving.register_keras_serializable(package="CustomLayers", name="AddNorm")
 class AddNorm(keras.layers.Layer):
@@ -47,6 +48,7 @@ class AddNorm(keras.layers.Layer):
         config: dict[str, Any],
     ) -> AddNorm:
         return cls(**config)
+
 
 ###############################################################################
 @keras.saving.register_keras_serializable(package="CustomLayers", name="QScoreNet")
@@ -106,6 +108,7 @@ class QScoreNet(keras.layers.Layer):
         config: dict[str, Any],
     ) -> QScoreNet:
         return cls(**config)
+
 
 ###############################################################################
 @keras.saving.register_keras_serializable(package="CustomLayers", name="BatchNormDense")

@@ -28,6 +28,7 @@ from server.learning.training.environment import RouletteEnvironment
 
 HISTORY_POINTS_PER_EPISODE = 20
 
+
 ###############################################################################
 def has_non_finite_numbers(stats: dict[str, Any], keys: list[str]) -> bool:
     for key in keys:
@@ -42,9 +43,9 @@ def has_non_finite_numbers(stats: dict[str, Any], keys: list[str]) -> bool:
             return True
     return False
 
+
 ###############################################################################
 class DQNTraining:
-
     # -------------------------------------------------------------------------
     def __init__(
         self,
@@ -236,7 +237,9 @@ class DQNTraining:
         common_stats = {
             "epsilon": coerce_finite_float(self.agent.epsilon, 0.0),
             "experience_count": coerce_finite_int(experience_count, 0, minimum=0),
-            "replay_buffer_size": coerce_finite_int(self.agent.replay_size, 0, minimum=0),
+            "replay_buffer_size": coerce_finite_int(
+                self.agent.replay_size, 0, minimum=0
+            ),
         }
         if not self.session_stats["loss"] and not training_ready:
             raw_stats = {
@@ -682,7 +685,11 @@ class DQNTraining:
             len(train_data),
             len(val_data),
         )
-        return environment, val_environment, int(environment.observation_window.shape[0])
+        return (
+            environment,
+            val_environment,
+            int(environment.observation_window.shape[0]),
+        )
 
     # -------------------------------------------------------------------------
     async def train_with_reinforcement_learning(

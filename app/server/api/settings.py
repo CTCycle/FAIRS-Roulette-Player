@@ -14,10 +14,14 @@ from server.services.settings import SettingsPersistenceError
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
+
 ###############################################################################
 def _settings_failure(detail: str, exc: Exception) -> HTTPException:
     logger.exception("%s", detail, exc_info=exc)
-    return HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=detail)
+    return HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=detail
+    )
+
 
 ###############################################################################
 @router.get(
@@ -32,6 +36,7 @@ def get_settings(
         return service.get_settings()
     except Exception as exc:  # noqa: BLE001
         raise _settings_failure("Unable to load settings.", exc) from exc
+
 
 ###############################################################################
 @router.patch(
@@ -54,6 +59,7 @@ def update_settings(
         ) from exc
     except Exception as exc:  # noqa: BLE001
         raise _settings_failure("Unable to save settings.", exc) from exc
+
 
 ###############################################################################
 @router.post(

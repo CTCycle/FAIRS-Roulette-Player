@@ -30,13 +30,14 @@ from server.repositories.database.runtime import (
 )
 from server.services.startup_validation import run_startup_validations
 
+
 ###############################################################################
 class DatabaseSwitchError(RuntimeError):
     """A candidate database could not be safely activated."""
 
+
 ###############################################################################
 class DatabaseConfigurationService:
-
     # -------------------------------------------------------------------------
     def __init__(
         self,
@@ -53,7 +54,9 @@ class DatabaseConfigurationService:
         self.runtime_database = runtime_database
         self.application = application
         self.activate_services = activate_services
-        self.settings_repository = settings_repository or ApplicationSettingsRepository()
+        self.settings_repository = (
+            settings_repository or ApplicationSettingsRepository()
+        )
 
     # -------------------------------------------------------------------------
     @staticmethod
@@ -75,11 +78,7 @@ class DatabaseConfigurationService:
         lifecycle = getattr(self.application.state, "lifecycle", "recovery")
         switching = self.runtime_database.is_switching
         status = (
-            "testing"
-            if switching
-            else "ready"
-            if lifecycle == "ready"
-            else "recovery"
+            "testing" if switching else "ready" if lifecycle == "ready" else "recovery"
         )
         active_backend = self._active_backend(self.runtime_database)
         return DatabaseStatusResponse(
@@ -104,14 +103,20 @@ class DatabaseConfigurationService:
             }
         )
         settings = database_settings_from_input(normalized, password)
-        database_path = Path(normalized.sqlite_path) if normalized.backend == "sqlite" else None
+        database_path = (
+            Path(normalized.sqlite_path) if normalized.backend == "sqlite" else None
+        )
         return normalized, settings, database_path
 
     # -------------------------------------------------------------------------
-    def test_connection(self, candidate: DatabaseConfigurationInput) -> DatabaseTestResponse:
+    def test_connection(
+        self, candidate: DatabaseConfigurationInput
+    ) -> DatabaseTestResponse:
         try:
             _, password = self.store.resolve_input(candidate)
-            normalized, settings, database_path = self._settings_and_path(candidate, password)
+            normalized, settings, database_path = self._settings_and_path(
+                candidate, password
+            )
             database = FAIRSDatabase(settings, database_path=database_path)
             try:
                 with database.engine.connect() as connection:
@@ -150,7 +155,9 @@ class DatabaseConfigurationService:
         candidate: DatabaseConfigurationInput,
     ) -> DatabaseStatusResponse:
         normalized, password = self.store.resolve_input(candidate)
-        normalized, settings, database_path = self._settings_and_path(normalized, password)
+        normalized, settings, database_path = self._settings_and_path(
+            normalized, password
+        )
         candidate_database: FAIRSDatabase | None = None
         try:
             with self.runtime_database.switching():
@@ -159,7 +166,9 @@ class DatabaseConfigurationService:
                 # the active database before inspecting or initializing a target
                 # that may be the same physical database.
                 initialize_database(settings, database_path=database_path)
-                candidate_database = FAIRSDatabase(settings, database_path=database_path)
+                candidate_database = FAIRSDatabase(
+                    settings, database_path=database_path
+                )
                 with candidate_database.engine.connect() as connection:
                     connection.execute(text("SELECT 1"))
                 application_settings = self.settings_repository.ensure_row(
@@ -196,7 +205,9 @@ class DatabaseConfigurationService:
                 except Exception as exc:  # noqa: BLE001
                     self.runtime_database.activate(previous_database)
                     try:
-                        self.activate_services(previous_configuration, previous_settings)
+                        self.activate_services(
+                            previous_configuration, previous_settings
+                        )
                     except Exception:  # noqa: BLE001
                         self.application.state.lifecycle = "recovery"
                     if candidate_database is not previous_database:
@@ -208,7 +219,10 @@ class DatabaseConfigurationService:
 
                 self.application.state.recovery_message = None
                 self.application.state.lifecycle = "ready"
-                if previous_database is not None and previous_database is not candidate_database:
+                if (
+                    previous_database is not None
+                    and previous_database is not candidate_database
+                ):
                     try:
                         previous_database.dispose()
                     except Exception:  # noqa: BLE001

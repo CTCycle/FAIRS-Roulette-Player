@@ -30,6 +30,7 @@ from server.services.training_worker import (
     run_training_process,
 )
 
+
 ###############################################################################
 def calculate_progress(stats: dict[str, Any]) -> float:
     epoch = stats.get("epoch", 0)
@@ -42,6 +43,7 @@ def calculate_progress(stats: dict[str, Any]) -> float:
         return 0.0
     progress = (float(epoch) / float(total_epochs)) * 100.0
     return min(100.0, max(0.0, progress))
+
 
 ###############################################################################
 def build_history_points(
@@ -107,6 +109,7 @@ def build_history_points(
         if isinstance(epoch, int) and epoch > 0:
             results.append(point)
     return results
+
 
 ###############################################################################
 class TrainingService:
@@ -427,12 +430,16 @@ class TrainingService:
                     worker.terminate()
                     worker.join(timeout=5)
             except Exception:  # noqa: BLE001
-                logger.exception("Failed to terminate resumed training worker %s", job_id)
+                logger.exception(
+                    "Failed to terminate resumed training worker %s", job_id
+                )
             finally:
                 try:
                     worker.cleanup()
                 except Exception:  # noqa: BLE001
-                    logger.exception("Failed to clean up resumed training worker %s", job_id)
+                    logger.exception(
+                        "Failed to clean up resumed training worker %s", job_id
+                    )
                 self.training_run_manager.set_worker(job_id, None)
 
     # -------------------------------------------------------------------------

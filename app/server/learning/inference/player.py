@@ -21,9 +21,9 @@ from server.learning.betting.types import (
 )
 from server.learning.training.environment import BetsAndRewards
 
+
 ###############################################################################
 class RoulettePlayer:
-
     # -------------------------------------------------------------------------
     def __init__(
         self,

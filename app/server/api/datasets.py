@@ -15,11 +15,13 @@ from server.contracts.datasets import (
     DatasetListResponse,
     DatasetSummaryResponse,
 )
+
 router = APIRouter(prefix="/datasets", tags=["datasets"])
 DATASET_EXCEPTION_STATUS: ExceptionStatusMap = (
     (CheckpointReferenceError, status.HTTP_409_CONFLICT),
     (ValueError, status.HTTP_400_BAD_REQUEST),
 )
+
 
 ###############################################################################
 @router.get(
@@ -32,6 +34,7 @@ def list_roulette_datasets(
 ) -> DatasetListResponse:
     return service.list_training_datasets()
 
+
 ###############################################################################
 @router.get(
     "/training/summary",
@@ -42,6 +45,7 @@ def list_roulette_datasets_summary(
     service: Any = Depends(get_dataset_service),
 ) -> DatasetSummaryResponse:
     return service.list_training_dataset_summaries()
+
 
 ###############################################################################
 @router.delete(

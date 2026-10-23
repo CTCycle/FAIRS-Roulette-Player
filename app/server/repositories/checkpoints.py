@@ -25,6 +25,7 @@ from server.contracts.training import (
 )
 from server.learning import models as custom_layers_registry  # noqa: F401
 
+
 ###############################################################################
 class CheckpointRepository:
     """Own the checkpoint filesystem and validate its current file contract."""
@@ -91,9 +92,7 @@ class CheckpointRepository:
             shutil.copytree(
                 source,
                 staging_path,
-                ignore=shutil.ignore_patterns(
-                    ".staging-*", ".backup-*", ".publish-*"
-                ),
+                ignore=shutil.ignore_patterns(".staging-*", ".backup-*", ".publish-*"),
             )
         except Exception:
             if staging_path.exists():
@@ -135,7 +134,9 @@ class CheckpointRepository:
             try:
                 shutil.rmtree(entry)
             except OSError:
-                logger.exception("Failed to remove incomplete checkpoint workspace %s", entry)
+                logger.exception(
+                    "Failed to remove incomplete checkpoint workspace %s", entry
+                )
 
     # -------------------------------------------------------------------------
     def publish_checkpoint(self, staging_path: str, final_path: str) -> None:
@@ -181,7 +182,9 @@ class CheckpointRepository:
                 try:
                     temporary_path.unlink()
                 except OSError:
-                    logger.exception("Failed to remove temporary checkpoint file %s", temporary_path)
+                    logger.exception(
+                        "Failed to remove temporary checkpoint file %s", temporary_path
+                    )
 
     # -------------------------------------------------------------------------
     def save_pretrained_model(self, model: Model, path: str) -> None:
@@ -198,7 +201,9 @@ class CheckpointRepository:
                 try:
                     temporary_path.unlink()
                 except OSError:
-                    logger.exception("Failed to remove temporary checkpoint model %s", temporary_path)
+                    logger.exception(
+                        "Failed to remove temporary checkpoint model %s", temporary_path
+                    )
         logger.info(
             "Training session is over. Model %s has been saved",
             checkpoint_path.name,
@@ -222,7 +227,9 @@ class CheckpointRepository:
                 try:
                     temporary_path.unlink()
                 except OSError:
-                    logger.exception("Failed to remove temporary strategy model %s", temporary_path)
+                    logger.exception(
+                        "Failed to remove temporary strategy model %s", temporary_path
+                    )
         logger.info(
             "Training session is over. Strategy model %s has been saved",
             checkpoint_path.name,
