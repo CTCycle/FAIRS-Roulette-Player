@@ -49,10 +49,6 @@ def test_alembic_check_and_model_metadata_match_head(tmp_path: Path) -> None:
     finally:
         engine.dispose()
 
-
-
-
-
 ###############################################################################
 def _sqlite_settings() -> DatabaseSettings:
     return DatabaseSettings(
@@ -425,14 +421,9 @@ def test_concurrent_sqlite_initializers_serialize_and_finish_at_head(
 # Copyright © 2026 Thomas Virdis
 # Licensed under the MIT License.
 
-
-
-
-
 ###############################################################################
 def _runtime_sqlite_settings() -> DatabaseSettings:
     return DatabaseSettings(True, None, None, None, None, None, None, False, None, 10, 1000)
-
 
 ###############################################################################
 def _initialized_database(path: Path, polling_interval: float) -> FAIRSDatabase:
@@ -451,7 +442,6 @@ def _initialized_database(path: Path, polling_interval: float) -> FAIRSDatabase:
         ),
     )
     return database
-
 
 ###############################################################################
 @pytest.fixture
@@ -496,7 +486,6 @@ def api_runtime(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     finally:
         runtime_database.dispose()
 
-
 ###############################################################################
 def test_database_status_redacts_saved_password(api_runtime) -> None:
     service, runtime_database, store, _old_path, _fail, _application = api_runtime
@@ -517,7 +506,6 @@ def test_database_status_redacts_saved_password(api_runtime) -> None:
     assert response.active_backend == "sqlite"
     assert runtime_database.active.settings.embedded_database is True
 
-
 ###############################################################################
 def test_connection_test_does_not_activate_or_persist_candidate(api_runtime, tmp_path: Path) -> None:
     service, runtime_database, store, old_path, _fail, _application = api_runtime
@@ -531,7 +519,6 @@ def test_connection_test_does_not_activate_or_persist_candidate(api_runtime, tmp
     assert candidate_path.exists()
     assert runtime_database.active.db_path == old_path
     assert store.current().sqlite_path == old_path
-
 
 ###############################################################################
 def test_switch_loads_target_settings_without_copying_settings(
@@ -568,7 +555,6 @@ def test_switch_loads_target_settings_without_copying_settings(
         old_database.dispose()
     assert application.state.loaded_settings.jobs.polling_interval == 3.5
 
-
 ###############################################################################
 def test_connection_and_unknown_schema_fail_without_changing_active_config(api_runtime, tmp_path: Path) -> None:
     service, runtime_database, store, old_path, _fail, _application = api_runtime
@@ -591,7 +577,6 @@ def test_connection_and_unknown_schema_fail_without_changing_active_config(api_r
     assert runtime_database.active.db_path == old_path
     assert store.current().sqlite_path == old_path
 
-
 ###############################################################################
 def test_activation_failure_rolls_back_to_previous_database(api_runtime, tmp_path: Path) -> None:
     service, runtime_database, store, old_path, fail_candidate, _application = api_runtime
@@ -608,7 +593,6 @@ def test_activation_failure_rolls_back_to_previous_database(api_runtime, tmp_pat
 
     assert runtime_database.active.db_path == old_path
     assert store.current().sqlite_path == old_path
-
 
 ###############################################################################
 def test_switch_conflicts_with_active_training_and_inference(api_runtime, tmp_path: Path) -> None:
@@ -627,7 +611,6 @@ def test_switch_conflicts_with_active_training_and_inference(api_runtime, tmp_pa
     application.state.inference_service.state.has_sessions = lambda: True
     with pytest.raises(DatabaseSwitchConflict, match="inference"):
         service.activate(target)
-
 
 ###############################################################################
 def test_runtime_manager_drains_operations_before_switch(tmp_path: Path) -> None:

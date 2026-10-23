@@ -94,10 +94,6 @@ class TestRouletteDatasetsEndpoints:
         assert isinstance(sample["row_count"], int)
         assert sample["row_count"] >= 0
 
-
-
-
-
 ###############################################################################
 class TrainingSpy:
 
@@ -140,7 +136,6 @@ def _build_client(tmp_path: Path) -> tuple[TestClient, RuntimeDatabaseManager]:
     application.state.settings_service = service
     application.include_router(settings_router, prefix="/api")
     return TestClient(application), manager
-
 
 ###############################################################################
 @contextmanager

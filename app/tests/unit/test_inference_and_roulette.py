@@ -64,10 +64,6 @@ def test_hold_steps_is_clamped_to_minimum_one() -> None:
     assert selector.resolve(4) == 4
     assert selector.resolve(2) == 2
 
-
-
-
-
 ###############################################################################
 class RouletteSettingsFakePlayer:
 
@@ -199,10 +195,6 @@ def test_api_passes_current_roulette_settings_to_session_start() -> None:
         invert_colors=True,
         show_number_labels=False,
     )
-
-
-
-
 
 ###############################################################################
 class FakePlayer:
@@ -570,10 +562,6 @@ def test_shutdown_is_failure_isolated_and_idempotent(monkeypatch) -> None:
     assert service.inference_repository.end_session.call_count == 2
     assert first["session_id"] != second["session_id"]
 
-
-
-
-
 ###############################################################################
 class DummyModel:
 
@@ -749,9 +737,6 @@ def test_update_with_true_extraction_validates_input() -> None:
     with pytest.raises(ValueError, match="between 0 and 36"):
         player.update_with_true_extraction(37)
 
-
-
-
 ###############################################################################
 def test_number_pool_applies_range_and_zero_exclusion() -> None:
     assert build_roulette_number_pool(5, 8) == (5, 6, 7, 8)
@@ -815,8 +800,6 @@ def test_renderer_inverts_visual_colors_without_changing_zero() -> None:
     assert inverted.get_number_color(black_number) == inverted.base_red
     assert inverted.get_number_color(0) == inverted.base_green
     assert inverted.show_number_labels is False
-
-
 
 ###############################################################################
 def build_sizer_configuration(**overrides: object) -> dict[str, object]:

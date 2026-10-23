@@ -30,11 +30,9 @@ from server.repositories.database.runtime import (
 )
 from server.services.startup_validation import run_startup_validations
 
-
 ###############################################################################
 class DatabaseSwitchError(RuntimeError):
     """A candidate database could not be safely activated."""
-
 
 ###############################################################################
 class DatabaseConfigurationService:

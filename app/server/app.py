@@ -75,11 +75,13 @@ TrainingRunManager: Any = None
 class RuntimeCORSMiddleware:
     """Apply the current .env CORS allowlist after lifespan environment loading."""
 
+    # -------------------------------------------------------------------------
     def __init__(self, app: Any) -> None:
         self.app = app
         self._origins: tuple[str, ...] | None = None
         self._configured_app: Any = app
 
+    # -------------------------------------------------------------------------
     async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
         if scope["type"] != "http":
             await self.app(scope, receive, send)

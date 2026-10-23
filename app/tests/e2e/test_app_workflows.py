@@ -14,9 +14,6 @@ E2E tests for UI navigation and page rendering.
 Tests basic UI functionality using Playwright browser automation.
 """
 
-
-
-
 ###############################################################################
 class TestStartupFlow:
     """Tests the frontend-owned backend startup experience."""
@@ -1411,7 +1408,6 @@ class TestGuidance:
 
 
 """Browser coverage for the runtime Settings screen."""
-
 
 ###############################################################################
 class TestSettingsPage:

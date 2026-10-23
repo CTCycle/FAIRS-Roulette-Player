@@ -9,7 +9,6 @@ from server.contracts.configuration import JsonServerSettings
 from server.repositories.database.backend import FAIRSDatabase
 from server.repositories.schemas.models import ApplicationSettings
 
-
 ###############################################################################
 class ApplicationSettingsRepository:
     """Read and update the one Settings-page row in the active database."""

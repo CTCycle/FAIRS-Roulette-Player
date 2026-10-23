@@ -12,9 +12,6 @@ E2E tests for Data Upload API endpoint.
 Tests: POST /data/upload
 """
 
-
-
-
 ###############################################################################
 def load_dataset_summary_entry(
     api_context: APIRequestContext, dataset_id: int
