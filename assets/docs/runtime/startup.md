@@ -45,6 +45,7 @@ Frontend freshness is content-based rather than timestamp-based. The launcher ha
 
 - The launcher builds `app/client/dist` and starts one Uvicorn worker. FastAPI serves the built HTML, assets, and client-side routes on the same origin as `/api`; Vite preview is not used in production.
 - The launcher waits up to 60 seconds for `/api/health` to return `application=FAIRS` with `status=ok` or `status=recovery`, then opens `http://<FASTAPI_HOST>:<FASTAPI_PORT>/`. Wildcard bind addresses open through loopback.
+- During launch, `[TIME]` lines report the elapsed milliseconds for environment/port preflight, runtime and dependency setup, frontend build validation, backend startup, readiness, and total time to application readiness. The timings are informational.
 - `.\start_on_windows.ps1 -Launch` starts the production app directly and keeps that console open as lifecycle supervisor until the backend stops. The menu's Launch action also waits in the launcher console, then returns to the menu.
 - Press Ctrl+C in the launcher console to stop the app through Uvicorn and FastAPI lifespan shutdown. If startup or shutdown fails, the launcher reports the issue and only terminates the backend process tree it started after a bounded wait.
 - Closing the browser does not stop the backend or live inference session. If the launcher console is unavailable, use the confirmed `Stop all app processes` maintenance action to clean up orphaned FAIRS backend processes and any older Vite preview process tree.

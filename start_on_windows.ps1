@@ -86,6 +86,13 @@ function Write-Step([string]$Message) { Clear-LauncherProgress; Write-Host "[STE
 function Write-Ok([string]$Message) { Clear-LauncherProgress; Write-Host "[OK] $Message" -ForegroundColor Green }
 function Write-Info([string]$Message) { Clear-LauncherProgress; Write-Host "[INFO] $Message" -ForegroundColor DarkCyan }
 function Write-Fatal([string]$Message) { Clear-LauncherProgress; Write-Host "[FATAL] $Message" -ForegroundColor Red }
+function Write-LaunchTiming {
+    param(
+        [Parameter(Mandatory)][string]$Phase,
+        [Parameter(Mandatory)][long]$ElapsedMilliseconds
+    )
+    Write-Host ('[TIME] {0,-42} {1,8} ms' -f "$($Phase):", $ElapsedMilliseconds) -ForegroundColor Gray
+}
 function Test-InteractiveConsole {
     return $script:LauncherInteractive
 }
@@ -1012,95 +1019,143 @@ function Assert-SingleWorkerConfiguration {
 # Application lifecycle
 # -----------------------------------------------------------------------------
 function Start-Application {
-    Import-DotEnv
-    $fastApiPort = [int]$env:FASTAPI_PORT
-    if (-not (Resolve-LaunchPortConflicts -BackendPort $fastApiPort)) {
-        return $false
-    }
-    Assert-SingleWorkerConfiguration
-    Ensure-PortableRuntimes
-    Set-CacheEnvironment
-    $env:UV_PROJECT_ENVIRONMENT = $venvDir
-    $env:UV_LINK_MODE = 'copy'
-    Remove-Item Env:PYTHONHOME, Env:PYTHONPATH, Env:PYTHONNOUSERSITE -ErrorAction SilentlyContinue
-    if (-not (Test-BackendDependenciesCurrent)) {
-        Write-Step 'Backend dependency state is missing or stale; synchronizing backend dependencies.'
-        Sync-BackendDependencies -InstallationType 'Standard'
-    } else {
-        Write-Ok 'Backend dependencies are current; skipped backend synchronization.'
-    }
-    if (-not (Test-FrontendDependenciesCurrent)) {
-        Write-Step 'Frontend dependency state is missing or stale; synchronizing frontend dependencies.'
-        Sync-FrontendDependencies
-    } else {
-        Write-Ok 'Frontend dependencies are current; skipped frontend dependency synchronization.'
-    }
-    if (-not (Test-FrontendBuildCurrent)) {
-        Write-Step 'Frontend source or build inputs changed; rebuilding frontend.'
-        Invoke-FrontendBuild
-    } else {
-        Write-Ok 'Frontend build is current; skipped frontend build.'
-    }
-
-    if ($env:RELOAD -eq 'true') {
-        Write-Info 'RELOAD=true is development-only; reloads discard in-memory training jobs and inference sessions.'
-    }
-    $browserHost = ([string]$env:FASTAPI_HOST).Trim()
-    if ($browserHost -in @('0.0.0.0', '::', '[::]')) { $browserHost = '127.0.0.1' }
-    if ($browserHost.Contains(':') -and -not $browserHost.StartsWith('[')) { $browserHost = "[$browserHost]" }
-    $appUrl = 'http://{0}:{1}/' -f $browserHost, $fastApiPort
-    $healthUrl = 'http://{0}:{1}/api/health' -f $browserHost, $fastApiPort
-    $backendProcess = $null
+    $launchStopwatch = [Diagnostics.Stopwatch]::StartNew()
+    $portPreflightStarted = $launchStopwatch.ElapsedMilliseconds
     try {
-        Write-Step 'Starting FastAPI with the built frontend.'
-        $appDirArgument = '"{0}"' -f (Join-Path $repoRoot 'app')
-        $backendArguments = '-m uvicorn server.app:app --app-dir {0} --host {1} --port {2} --workers 1' -f $appDirArgument, $env:FASTAPI_HOST, $fastApiPort
-        if ($env:RELOAD -eq 'true') { $backendArguments += ' --reload' }
-        $backendArguments += ' --log-level info'
-        $startParameters = @{
-            FilePath = $venvPython
-            ArgumentList = $backendArguments
-            WorkingDirectory = $repoRoot
-            NoNewWindow = $true
-            PassThru = $true
-            ErrorAction = 'Stop'
-        }
-        $backendProcess = Start-Process @startParameters
+        Import-DotEnv
+        $fastApiPort = [int]$env:FASTAPI_PORT
+        $portPreflightReady = Resolve-LaunchPortConflicts -BackendPort $fastApiPort
+        if ($portPreflightReady) { Assert-SingleWorkerConfiguration }
+    } finally {
+        Write-LaunchTiming -Phase 'Environment and port preflight' -ElapsedMilliseconds ($launchStopwatch.ElapsedMilliseconds - $portPreflightStarted)
+    }
+    if (-not $portPreflightReady) { return $false }
 
-        Write-Info "Waiting up to 60 seconds for $healthUrl to report healthy API readiness."
-        $ready = $false
-        $lastReadinessError = 'health response was not ready'
-        $readinessDeadline = (Get-Date).AddSeconds(60)
-        while ((Get-Date) -lt $readinessDeadline) {
-            $backendProcess.Refresh()
-            if ($backendProcess.HasExited) {
-                throw "Backend exited before readiness (exit code $($backendProcess.ExitCode))."
-            }
-            try {
-                $health = Invoke-RestMethod -Uri $healthUrl -TimeoutSec 3 -ErrorAction Stop
-                if ($health.application -eq 'FAIRS' -and $health.status -in @('ok', 'recovery')) {
-                    $ready = $true
-                    break
-                }
-                $lastReadinessError = "unexpected health response (application=$($health.application), status=$($health.status))"
-            } catch {
-                $lastReadinessError = $_.Exception.Message
-            }
-            Start-Sleep -Milliseconds 750
-        }
-        if (-not $ready) {
-            throw "Backend did not become ready within 60 seconds at $healthUrl ($lastReadinessError)."
-        }
+    $runtimeSetupStarted = $launchStopwatch.ElapsedMilliseconds
+    try {
+        Ensure-PortableRuntimes
+        Set-CacheEnvironment
+        $env:UV_PROJECT_ENVIRONMENT = $venvDir
+        $env:UV_LINK_MODE = 'copy'
+        Remove-Item Env:PYTHONHOME, Env:PYTHONPATH, Env:PYTHONNOUSERSITE -ErrorAction SilentlyContinue
+    } finally {
+        Write-LaunchTiming -Phase 'Portable runtime and environment setup' -ElapsedMilliseconds ($launchStopwatch.ElapsedMilliseconds - $runtimeSetupStarted)
+    }
 
+    $backendDependenciesStarted = $launchStopwatch.ElapsedMilliseconds
+    try {
+        if (-not (Test-BackendDependenciesCurrent)) {
+            Write-Step 'Backend dependency state is missing or stale; synchronizing backend dependencies.'
+            Sync-BackendDependencies -InstallationType 'Standard'
+        } else {
+            Write-Ok 'Backend dependencies are current; skipped backend synchronization.'
+        }
+    } finally {
+        Write-LaunchTiming -Phase 'Backend dependency check and setup' -ElapsedMilliseconds ($launchStopwatch.ElapsedMilliseconds - $backendDependenciesStarted)
+    }
+
+    $frontendDependenciesStarted = $launchStopwatch.ElapsedMilliseconds
+    try {
+        if (-not (Test-FrontendDependenciesCurrent)) {
+            Write-Step 'Frontend dependency state is missing or stale; synchronizing frontend dependencies.'
+            Sync-FrontendDependencies
+        } else {
+            Write-Ok 'Frontend dependencies are current; skipped frontend dependency synchronization.'
+        }
+    } finally {
+        Write-LaunchTiming -Phase 'Frontend dependency check and setup' -ElapsedMilliseconds ($launchStopwatch.ElapsedMilliseconds - $frontendDependenciesStarted)
+    }
+
+    $frontendBuildStarted = $launchStopwatch.ElapsedMilliseconds
+    try {
+        if (-not (Test-FrontendBuildCurrent)) {
+            Write-Step 'Frontend source or build inputs changed; rebuilding frontend.'
+            Invoke-FrontendBuild
+        } else {
+            Write-Ok 'Frontend build is current; skipped frontend build.'
+        }
+    } finally {
+        Write-LaunchTiming -Phase 'Frontend production build check' -ElapsedMilliseconds ($launchStopwatch.ElapsedMilliseconds - $frontendBuildStarted)
+    }
+
+    $launchPreparationStarted = $launchStopwatch.ElapsedMilliseconds
+    try {
+        if ($env:RELOAD -eq 'true') {
+            Write-Info 'RELOAD=true is development-only; reloads discard in-memory training jobs and inference sessions.'
+        }
+        $browserHost = ([string]$env:FASTAPI_HOST).Trim()
+        if ($browserHost -in @('0.0.0.0', '::', '[::]')) { $browserHost = '127.0.0.1' }
+        if ($browserHost.Contains(':') -and -not $browserHost.StartsWith('[')) { $browserHost = "[$browserHost]" }
+        $appUrl = 'http://{0}:{1}/' -f $browserHost, $fastApiPort
+        $healthUrl = 'http://{0}:{1}/api/health' -f $browserHost, $fastApiPort
+        $backendProcess = $null
+    } finally {
+        Write-LaunchTiming -Phase 'Backend launch preparation' -ElapsedMilliseconds ($launchStopwatch.ElapsedMilliseconds - $launchPreparationStarted)
+    }
+    try {
+        $backendProcessStartStarted = $launchStopwatch.ElapsedMilliseconds
         try {
-            Start-Process -FilePath $appUrl -ErrorAction Stop | Out-Null
-        } catch {
-            Write-Info "The browser could not be opened automatically ($($_.Exception.Message)). Open $appUrl manually."
+            Write-Step 'Starting FastAPI with the built frontend.'
+            $appDirArgument = '"{0}"' -f (Join-Path $repoRoot 'app')
+            $backendArguments = '-m uvicorn server.app:app --app-dir {0} --host {1} --port {2} --workers 1' -f $appDirArgument, $env:FASTAPI_HOST, $fastApiPort
+            if ($env:RELOAD -eq 'true') { $backendArguments += ' --reload' }
+            $backendArguments += ' --log-level info'
+            $startParameters = @{
+                FilePath = $venvPython
+                ArgumentList = $backendArguments
+                WorkingDirectory = $repoRoot
+                NoNewWindow = $true
+                PassThru = $true
+                ErrorAction = 'Stop'
+            }
+            $backendProcess = Start-Process @startParameters
+            if (-not $backendProcess) { throw 'FastAPI process could not be started.' }
+        } finally {
+            Write-LaunchTiming -Phase 'Backend process start' -ElapsedMilliseconds ($launchStopwatch.ElapsedMilliseconds - $backendProcessStartStarted)
         }
-        Write-Host ''
-        Write-Ok 'FAIRS is ready.'
-        Write-Host "Application: $appUrl"
-        Write-Info 'This launcher console owns the running app. Press Ctrl+C here to stop FAIRS; closing the browser leaves it running.'
+
+        $readinessStarted = $launchStopwatch.ElapsedMilliseconds
+        try {
+            Write-Info "Waiting up to 60 seconds for $healthUrl to report healthy API readiness."
+            $ready = $false
+            $lastReadinessError = 'health response was not ready'
+            $readinessDeadline = (Get-Date).AddSeconds(60)
+            while ((Get-Date) -lt $readinessDeadline) {
+                $backendProcess.Refresh()
+                if ($backendProcess.HasExited) {
+                    throw "Backend exited before readiness (exit code $($backendProcess.ExitCode))."
+                }
+                try {
+                    $health = Invoke-RestMethod -Uri $healthUrl -TimeoutSec 3 -ErrorAction Stop
+                    if ($health.application -eq 'FAIRS' -and $health.status -in @('ok', 'recovery')) {
+                        $ready = $true
+                        break
+                    }
+                    $lastReadinessError = "unexpected health response (application=$($health.application), status=$($health.status))"
+                } catch {
+                    $lastReadinessError = $_.Exception.Message
+                }
+                Start-Sleep -Milliseconds 750
+            }
+            if (-not $ready) {
+                throw "Backend did not become ready within 60 seconds at $healthUrl ($lastReadinessError)."
+            }
+
+            $launchStopwatch.Stop()
+            Write-LaunchTiming -Phase 'Total time to application readiness' -ElapsedMilliseconds $launchStopwatch.ElapsedMilliseconds
+
+            try {
+                Start-Process -FilePath $appUrl -ErrorAction Stop | Out-Null
+            } catch {
+                Write-Info "The browser could not be opened automatically ($($_.Exception.Message)). Open $appUrl manually."
+            }
+            Write-Host ''
+            Write-Ok 'FAIRS is ready.'
+            Write-Host "Application: $appUrl"
+            Write-Info 'This launcher console owns the running app. Press Ctrl+C here to stop FAIRS; closing the browser leaves it running.'
+        } finally {
+            Write-LaunchTiming -Phase 'API and frontend readiness checks' -ElapsedMilliseconds ($launchStopwatch.ElapsedMilliseconds - $readinessStarted)
+        }
 
         $ctrlCRequested = $false
         try {

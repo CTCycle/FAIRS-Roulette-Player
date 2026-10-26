@@ -15,6 +15,7 @@ This file defines repository-specific rules for the PowerShell launcher and Wind
 - Existing `.env` files missing launcher-critical keys (`FASTAPI_HOST`, `FASTAPI_PORT`, or `RELOAD`) must fail clearly rather than inherit obsolete behavior. `UI_HOST` and `UI_PORT` belong to the manual Vite development workflow.
 
 - On Windows PowerShell 5.1 the launcher drops inherited PowerShell 7 `PSModulePath` entries at startup. Without this, `powershell -File start_on_windows.ps1` from a PowerShell 7 session cannot resolve built-in cmdlets such as `Get-FileHash` and fails during dependency fingerprinting.
+- Production launch prints aligned `[TIME]` durations in milliseconds for its startup phases and total time to application readiness. These timings are informational and do not affect setup or launch decisions.
 
 ## Runtime Layout
 

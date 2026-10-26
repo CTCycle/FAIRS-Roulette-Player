@@ -1,6 +1,6 @@
 ## Project Status Ledger
 
-Last updated: 2026-10-25
+Last updated: 2026-10-26
 
 ## Purpose and authority
 
@@ -64,6 +64,8 @@ Future coding agents must:
 | `DEPRECATED` | None current. |
 
 ## Current component ledger
+
+2026-10-26: The Windows launcher now reports elapsed milliseconds for its major startup phases and total time to application readiness. This informational output change has not been runtime-validated independently.
 
 | Component | Status | Scope | Current evidence and limitation | Last validated | Validation level | Related docs | Next action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
