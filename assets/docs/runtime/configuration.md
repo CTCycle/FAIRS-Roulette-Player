@@ -30,6 +30,10 @@ The runtime consumes these environment keys:
 
 The launcher sets execution-scoped cache paths below `runtimes/cache`, including `FAIRS_CACHE_DIR`, `UV_CACHE_DIR`, `NPM_CONFIG_CACHE`, `PIP_CACHE_DIR`, `PYTHONPYCACHEPREFIX`, `PYTEST_CACHE_DIR`, `PYTEST_BASETEMP_DIR`, `RUFF_CACHE_DIR`, `MYPY_CACHE_DIR`, `COVERAGE_FILE`, `PLAYWRIGHT_BROWSERS_PATH`, `KERAS_HOME`, `TORCH_HOME`, `TORCHINDUCTOR_CACHE_DIR`, `TRITON_CACHE_DIR`, `MPLCONFIGDIR`, `XDG_CACHE_HOME`, and `CUDA_CACHE_PATH`.
 
+## Logging
+
+Logging is configured once in `app/server/common/utils/logger.py` during lifespan bootstrap. The default level is `INFO`; set the process environment variable `FAIRS_LOG_LEVEL=DEBUG` for detailed diagnostics (the log file handler already accepts `DEBUG`). The `uvicorn.access` logger drops successful `OPTIONS` preflights, `/api/health`, `/api/training/status`, `/api/training/jobs/*`, and `/assets/*` requests; all requests with status 400 or above and all non-polling requests (for example `POST /api/data/upload`) are still logged. Noisy third-party loggers are held at `WARNING`.
+
 ## Database Configuration File
 
 The connection configuration is `<FAIRS_DATA_DIR>/database-config.json`, or `data/database-config.json` when `FAIRS_DATA_DIR` is empty. Its versioned, strict schema stores only:

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import logging
 import logging.config
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -12,9 +13,43 @@ from typing import Any
 from server.common import path as shared_paths
 
 
+# Successful requests to these routes are polled or probed continuously and carry
+# no diagnostic value; failures (status >= 400) are always logged.
+QUIET_ACCESS_PATHS = frozenset(
+    {
+        "/api/health",
+        "/api/training/status",
+    }
+)
+QUIET_ACCESS_PREFIXES = ("/api/training/jobs/", "/assets/")
+NOISY_LIBRARY_LOGGERS = ("matplotlib", "asyncio", "PIL", "python_multipart", "h5py")
+
+
+###############################################################################
+class QuietAccessFilter(logging.Filter):
+    """Drop successful polling, preflight, and static-asset access records."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        try:
+            _client, method, target, _version, status = record.args  # type: ignore[misc]
+            path = str(target).split("?", 1)[0]
+            if int(status) >= 400:
+                return True
+        except (TypeError, ValueError):
+            return True
+        if method == "OPTIONS":
+            return False
+        if method != "GET":
+            return True
+        return path not in QUIET_ACCESS_PATHS and not path.startswith(
+            QUIET_ACCESS_PREFIXES
+        )
+
+
 ###############################################################################
 def _build_log_config(log_directory: Path) -> dict[str, Any]:
     current_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    root_level = os.environ.get("FAIRS_LOG_LEVEL", "INFO").upper()
     log_filename = log_directory / f"FAIRS_{current_timestamp}.log"
     return {
         "version": 1,
@@ -28,6 +63,7 @@ def _build_log_config(log_directory: Path) -> dict[str, Any]:
                 "format": "[%(levelname)s] %(message)s",
             },
         },
+        "filters": {"quiet_access": {"()": QuietAccessFilter}},
         "handlers": {
             "console": {
                 "class": "logging.StreamHandler",
@@ -44,19 +80,23 @@ def _build_log_config(log_directory: Path) -> dict[str, Any]:
             },
         },
         "loggers": {
-            "uvicorn.access": {
+            "uvicorn": {
                 "level": "INFO",
                 "handlers": ["console", "file"],
                 "propagate": False,
             },
-            "matplotlib": {
-                "level": "WARNING",
+            "uvicorn.access": {
+                "level": "INFO",
                 "handlers": ["console", "file"],
+                "filters": ["quiet_access"],
                 "propagate": False,
+            },
+            **{
+                name: {"level": "WARNING"} for name in NOISY_LIBRARY_LOGGERS
             },
         },
         "root": {
-            "level": "DEBUG",
+            "level": root_level,
             "handlers": ["console", "file"],
         },
     }
