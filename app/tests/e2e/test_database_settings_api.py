@@ -27,6 +27,7 @@ E2E tests for dataset listing APIs under /datasets/training.
 
 DATASET_NAME = "e2e_dataset_for_listing"
 
+
 ###############################################################################
 def ensure_dataset_for_listing(api_context: APIRequestContext) -> None:
     summary_response = api_context.get("/api/datasets/training/summary")
@@ -54,6 +55,7 @@ def ensure_dataset_for_listing(api_context: APIRequestContext) -> None:
     assert upload_response.ok, (
         f"Expected 200, got {upload_response.status}: {upload_response.text()}"
     )
+
 
 ###############################################################################
 class TestRouletteDatasetsEndpoints:
@@ -94,6 +96,7 @@ class TestRouletteDatasetsEndpoints:
         assert isinstance(sample["row_count"], int)
         assert sample["row_count"] >= 0
 
+
 ###############################################################################
 class TrainingSpy:
 
@@ -120,9 +123,11 @@ class TrainingSpy:
     def apply_roulette_settings(self, settings: RouletteSettings) -> None:
         self.roulette = settings
 
+
 ###############################################################################
 def _sqlite_settings() -> DatabaseSettings:
     return DatabaseSettings(True, None, None, None, None, None, None, False, None, 10, 1000)
+
 
 ###############################################################################
 def _build_client(tmp_path: Path) -> tuple[TestClient, RuntimeDatabaseManager]:
@@ -137,6 +142,7 @@ def _build_client(tmp_path: Path) -> tuple[TestClient, RuntimeDatabaseManager]:
     application.include_router(settings_router, prefix="/api")
     return TestClient(application), manager
 
+
 ###############################################################################
 @contextmanager
 def _client_session(tmp_path: Path) -> Iterator[tuple[TestClient, RuntimeDatabaseManager]]:
@@ -146,6 +152,7 @@ def _client_session(tmp_path: Path) -> Iterator[tuple[TestClient, RuntimeDatabas
             yield client, manager
     finally:
         manager.dispose()
+
 
 ###############################################################################
 def test_settings_api_returns_only_structured_settings(tmp_path: Path) -> None:
@@ -164,6 +171,7 @@ def test_settings_api_returns_only_structured_settings(tmp_path: Path) -> None:
             "show_number_labels": True,
         },
     }
+
 
 ###############################################################################
 def test_settings_api_supports_partial_update_and_reload(tmp_path: Path) -> None:
@@ -214,6 +222,7 @@ def test_settings_api_supports_partial_update_and_reload(tmp_path: Path) -> None
     assert persisted.roulette.invert_colors is True
     assert persisted.roulette.show_number_labels is False
 
+
 ###############################################################################
 def test_settings_api_accepts_jit_on_supported_python_runtime(tmp_path: Path) -> None:
     with _client_session(tmp_path) as (client, manager):
@@ -229,6 +238,7 @@ def test_settings_api_accepts_jit_on_supported_python_runtime(tmp_path: Path) ->
         "jit_backend": "eager",
     }
     assert ApplicationSettingsRepository().get(manager).device.jit_compile is True
+
 
 ###############################################################################
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows backend capability")
@@ -255,6 +265,7 @@ def test_settings_api_rejects_windows_inductor_while_jit_is_enabled(
     }
     assert ApplicationSettingsRepository().get(manager).device.jit_backend == "eager"
 
+
 ###############################################################################
 def test_settings_api_rejects_unknown_and_invalid_values(tmp_path: Path) -> None:
     with _client_session(tmp_path) as (client, _manager):
@@ -269,6 +280,7 @@ def test_settings_api_rejects_unknown_and_invalid_values(tmp_path: Path) -> None
     assert low.status_code == 422
     assert blank.status_code == 422
     assert unknown_backend.status_code == 422
+
 
 ###############################################################################
 def test_settings_api_reset_restores_defaults(tmp_path: Path) -> None:

@@ -14,6 +14,7 @@ from server.contracts.configuration import RouletteSettings
 
 ###############################################################################
 class RouletteSyntheticGenerator:
+
     # -------------------------------------------------------------------------
     def __init__(
         self,

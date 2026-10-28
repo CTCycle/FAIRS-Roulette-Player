@@ -18,6 +18,7 @@ from server.learning.training.environment import RouletteEnvironment
 
 ###############################################################################
 class DQNAgent:
+
     # -------------------------------------------------------------------------
     def __init__(
         self,
@@ -198,6 +199,7 @@ class DQNAgent:
 
 ###############################################################################
 class StrategyAgent(DQNAgent):
+
     # -------------------------------------------------------------------------
     def __init__(
         self, configuration: dict[str, Any], memory: Any | None = None

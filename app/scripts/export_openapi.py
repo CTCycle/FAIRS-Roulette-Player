@@ -8,6 +8,7 @@ import json
 from collections.abc import Sequence
 from pathlib import Path
 
+
 ###############################################################################
 def render_openapi() -> str:
     """Render the canonical runtime FastAPI contract as stable JSON."""
@@ -16,6 +17,7 @@ def render_openapi() -> str:
 
     app.version = get_application_version()
     return json.dumps(app.openapi(), indent=2) + "\n"
+
 
 ###############################################################################
 def main(arguments: Sequence[str] | None = None) -> int:

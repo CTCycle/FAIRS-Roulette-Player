@@ -27,6 +27,7 @@ from server.learning.betting.types import (
 
 ###############################################################################
 class BetSizer:
+
     # -------------------------------------------------------------------------
     def __init__(self, configuration: dict[str, Any]) -> None:
         self.base_bet = max(1, int(configuration["bet_amount"]))

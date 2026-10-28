@@ -24,6 +24,7 @@ class DatabaseSwitchConflict(RuntimeError):
 
 ###############################################################################
 class _ManagedSessionFactory:
+
     # -------------------------------------------------------------------------
     def __init__(self, owner: "RuntimeDatabaseManager") -> None:
         self.owner = owner

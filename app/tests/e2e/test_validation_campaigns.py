@@ -23,10 +23,12 @@ from test_training_api import MINIMAL_TRAINING_CONFIG, VAL08_STORED_CPU_CONFIG, 
 
 QA_ROOT = Path(__file__).resolve().parents[3] / "assets" / "QA"
 
+
 ###############################################################################
 def _capture(page: Page, name: str) -> None:
     QA_ROOT.mkdir(parents=True, exist_ok=True)
     page.screenshot(path=str(QA_ROOT / name), full_page=False)
+
 
 ###############################################################################
 def _assert_supported_desktop(page: Page, width: int, height: int) -> None:
@@ -43,6 +45,7 @@ def _assert_supported_desktop(page: Page, width: int, height: int) -> None:
         "horizontalOverflow": False,
     }
     expect(page.locator(".desktop-size-notice")).to_be_hidden()
+
 
 ###############################################################################
 @pytest.mark.val16_17
@@ -147,6 +150,7 @@ def test_desktop_page_views_and_minimum_width_boundary(page: Page, base_url: str
     assert console_errors == []
     assert failed_requests == []
     assert failed_responses == []
+
 
 ###############################################################################
 @pytest.mark.val16_17
@@ -259,6 +263,7 @@ def test_training_setup_and_active_monitor_render(page: Page, base_url: str):
     assert failed_requests == []
     assert failed_responses == []
 
+
 ###############################################################################
 @pytest.mark.val16_17
 def test_inference_active_session_render(page: Page, base_url: str):
@@ -336,21 +341,25 @@ def test_inference_active_session_render(page: Page, base_url: str):
 
 """Tier 5 VAL-21 malformed-input and fail-closed recovery coverage."""
 
+
 ###############################################################################
 def _assert_client_error(response) -> None:  # noqa: ANN001
     assert 400 <= response.status < 500, (
         f"Expected a deterministic 4xx, got {response.status}: {response.text()}"
     )
 
+
 ###############################################################################
 def _assert_healthy(api_context: APIRequestContext) -> None:
     response = api_context.get("/api/health")
     assert response.status == 200, response.text()
 
+
 ###############################################################################
 def _database_rows(query: str, parameters: tuple = ()) -> list[tuple]:
     with sqlite3.connect(shared_paths.DATABASE_PATH, timeout=5.0) as connection:
         return connection.execute(query, parameters).fetchall()
+
 
 ###############################################################################
 def _dataset_state() -> tuple[list[tuple], list[tuple]]:
@@ -364,6 +373,7 @@ def _dataset_state() -> tuple[list[tuple], list[tuple]]:
     )
     return datasets, outcomes
 
+
 ###############################################################################
 def _inference_persistence_state() -> tuple[list[tuple], list[tuple]]:
     sessions = _database_rows(
@@ -376,6 +386,7 @@ def _inference_persistence_state() -> tuple[list[tuple], list[tuple]]:
         "FROM inference_session_steps ORDER BY session_id, step_number"
     )
     return sessions, steps
+
 
 ###############################################################################
 def _checkpoint_state(api_context: APIRequestContext) -> dict[str, dict[str, str]]:
@@ -393,6 +404,7 @@ def _checkpoint_state(api_context: APIRequestContext) -> dict[str, dict[str, str
             if path.is_file()
         }
     return state
+
 
 ###############################################################################
 @pytest.mark.val21
@@ -423,6 +435,7 @@ def test_malformed_requests_are_4xx_and_leave_api_healthy(
         statuses.append(response.status)
         _assert_healthy(api_context)
     print(f"VAL21 malformed requests: responses={statuses}, health=200 after each")
+
 
 ###############################################################################
 @pytest.mark.val21
@@ -470,6 +483,7 @@ def test_rejected_settings_patches_preserve_file_and_recover(
     assert restored.json() == before_settings
     _assert_healthy(api_context)
     print(f"VAL21 settings patches: rejected_statuses={statuses}, recovery=200")
+
 
 ###############################################################################
 @pytest.mark.val21
@@ -531,6 +545,7 @@ def test_rejected_training_requests_create_no_jobs_or_checkpoints(
         f"statuses={statuses}, job_id=None, checkpoint={rejected_checkpoint} absent, "
         "staging=empty, valid_validation=200"
     )
+
 
 ###############################################################################
 @pytest.mark.val21
@@ -650,6 +665,7 @@ def test_failed_uploads_are_transactional_and_valid_upload_recovers(
         f"name={dataset_name}, rows_imported=2, cleanup=complete"
     )
 
+
 ###############################################################################
 @pytest.mark.val21
 def test_inference_rejections_preserve_live_session_and_recover(
@@ -768,6 +784,7 @@ def test_inference_rejections_preserve_live_session_and_recover(
 
 """Tier 5 VAL-22 repetition, bounded execution, and state-leak coverage."""
 
+
 ###############################################################################
 def _active_sessions() -> tuple[str, ...]:
     with sqlite3.connect(shared_paths.DATABASE_PATH, timeout=5.0) as connection:
@@ -777,6 +794,7 @@ def _active_sessions() -> tuple[str, ...]:
         ).fetchall()
     return tuple(row[0] for row in rows)
 
+
 ###############################################################################
 def _ended_session(session_id: str) -> tuple | None:
     with sqlite3.connect(shared_paths.DATABASE_PATH, timeout=5.0) as connection:
@@ -785,6 +803,7 @@ def _ended_session(session_id: str) -> tuple | None:
             "WHERE session_id = ?",
             (session_id,),
         ).fetchone()
+
 
 ###############################################################################
 def _start_replacement_session(
@@ -808,6 +827,7 @@ def _start_replacement_session(
     assert response.status == 200, response.text()
     return response.json()
 
+
 ###############################################################################
 def _training_staging_directories() -> tuple[str, ...]:
     root = shared_paths.CHECKPOINT_PATH
@@ -821,6 +841,7 @@ def _training_staging_directories() -> tuple[str, ...]:
             if entry.is_dir() and any(marker in entry.name for marker in markers)
         )
     )
+
 
 ###############################################################################
 @pytest.mark.val22
@@ -1006,6 +1027,7 @@ def test_repeated_inference_cycles_do_not_leak_session_state(
         f"active_after={_active_sessions()}"
     )
 
+
 ###############################################################################
 @pytest.mark.val22
 def test_repeated_settings_writes_remain_parseable_and_leave_no_temp_files(
@@ -1076,6 +1098,7 @@ def test_repeated_settings_writes_remain_parseable_and_leave_no_temp_files(
         f"reset_count={len(cycle_durations)}, "
         f"final_polling_interval={final.json()['jobs']['polling_interval']}, database_row=active"
     )
+
 
 ###############################################################################
 @pytest.mark.val22

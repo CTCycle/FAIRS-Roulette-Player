@@ -29,6 +29,7 @@ from server.repositories.checkpoints import CheckpointRepository
 
 ###############################################################################
 class QueueProgressReporter:
+
     # -------------------------------------------------------------------------
     def __init__(self, target_queue: Any) -> None:
         self.target_queue = target_queue
@@ -57,6 +58,7 @@ class QueueProgressReporter:
 
 ###############################################################################
 class WorkerChannels:
+
     # -------------------------------------------------------------------------
     def __init__(
         self,
@@ -75,6 +77,7 @@ class WorkerChannels:
 
 ###############################################################################
 class ProcessWorker:
+
     # -------------------------------------------------------------------------
     def __init__(
         self,

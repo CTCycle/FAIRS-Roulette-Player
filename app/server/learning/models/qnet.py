@@ -16,6 +16,7 @@ from server.learning.models.logits import AddNorm, BatchNormDense, QScoreNet
 
 ###############################################################################
 class FAIRSnet:
+
     # -------------------------------------------------------------------------
     def __init__(
         self,

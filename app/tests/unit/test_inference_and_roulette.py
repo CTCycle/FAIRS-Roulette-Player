@@ -29,6 +29,7 @@ from server.learning.training.environment import RouletteWheelRenderer
 from server.learning.betting.sizer import BetSizer
 from server.learning.betting.types import STRATEGY_DALEMBERT, STRATEGY_FIBONACCI, STRATEGY_KEEP, STRATEGY_MARTINGALE, STRATEGY_REVERSE
 
+
 ###############################################################################
 def test_hold_persists_strategy_for_configured_steps() -> None:
     selector = StrategyHold(hold_steps=3)
@@ -38,12 +39,14 @@ def test_hold_persists_strategy_for_configured_steps() -> None:
     assert selector.resolve(4) == 2
     assert selector.resolve(1) == 1
 
+
 ###############################################################################
 def test_hold_requires_explicit_selection_when_uninitialized() -> None:
     selector = StrategyHold(hold_steps=2)
 
     with pytest.raises((TypeError, ValueError)):
         selector.resolve(None)  # type: ignore[arg-type]
+
 
 ###############################################################################
 def test_hold_reset_clears_previous_strategy_state() -> None:
@@ -58,11 +61,13 @@ def test_hold_reset_clears_previous_strategy_state() -> None:
     assert selector.resolve(1) == 3
     assert selector.resolve(1) == 1
 
+
 ###############################################################################
 def test_hold_steps_is_clamped_to_minimum_one() -> None:
     selector = StrategyHold(hold_steps=0)
     assert selector.resolve(4) == 4
     assert selector.resolve(2) == 2
+
 
 ###############################################################################
 class RouletteSettingsFakePlayer:
@@ -86,6 +91,7 @@ class RouletteSettingsFakePlayer:
     def release(self) -> None:
         self.context = None
 
+
 ###############################################################################
 class RouletteSettingsFakeDeviceConfig:
 
@@ -96,6 +102,7 @@ class RouletteSettingsFakeDeviceConfig:
     # -------------------------------------------------------------------------
     def set_device(self) -> None:
         return None
+
 
 ###############################################################################
 def build_roulette_settings_service(monkeypatch, outcomes: list[int]) -> InferenceService:
@@ -124,6 +131,7 @@ def build_roulette_settings_service(monkeypatch, outcomes: list[int]) -> Inferen
         checkpoint_service=checkpoint_service,
     )
 
+
 ###############################################################################
 def test_session_start_filters_initial_context_to_runtime_pool(monkeypatch) -> None:
     service = build_roulette_settings_service(monkeypatch, [0, 4, 5, 6, 12])
@@ -141,6 +149,7 @@ def test_session_start_filters_initial_context_to_runtime_pool(monkeypatch) -> N
     assert session.player is not None
     assert session.player.context["outcome"].tolist() == [5, 6]
 
+
 ###############################################################################
 def test_session_start_rejects_context_emptied_by_runtime_pool(monkeypatch) -> None:
     service = build_roulette_settings_service(monkeypatch, [0, 1, 2])
@@ -156,6 +165,7 @@ def test_session_start_rejects_context_emptied_by_runtime_pool(monkeypatch) -> N
         )
 
     service.inference_repository.create_session_with_initial_step.assert_not_called()
+
 
 ###############################################################################
 def test_api_passes_current_roulette_settings_to_session_start() -> None:
@@ -196,6 +206,7 @@ def test_api_passes_current_roulette_settings_to_session_start() -> None:
         show_number_labels=False,
     )
 
+
 ###############################################################################
 class FakePlayer:
 
@@ -221,6 +232,7 @@ class FakePlayer:
     def update_bet_amount(self, bet_amount: int) -> None:
         self.bet_amount = bet_amount
 
+
 ###############################################################################
 class FakeDeviceConfig:
 
@@ -231,6 +243,7 @@ class FakeDeviceConfig:
     # -------------------------------------------------------------------------
     def set_device(self) -> None:
         return None
+
 
 ###############################################################################
 def build_service(monkeypatch) -> tuple[InferenceService, Mock]:
@@ -259,6 +272,7 @@ def build_service(monkeypatch) -> tuple[InferenceService, Mock]:
     )
     return service, dataset_repository
 
+
 ###############################################################################
 def test_session_lifecycle_and_prediction_flow(monkeypatch) -> None:
     service, dataset_repository = build_service(monkeypatch)
@@ -283,6 +297,7 @@ def test_session_lifecycle_and_prediction_flow(monkeypatch) -> None:
     assert shutdown["status"] == "closed"
     service.inference_repository.end_session.assert_called_once_with(session_id)
 
+
 ###############################################################################
 def test_clear_rows_preserves_session_header(monkeypatch) -> None:
     service, _ = build_service(monkeypatch)
@@ -290,6 +305,7 @@ def test_clear_rows_preserves_session_header(monkeypatch) -> None:
     assert response == {"session_id": "session_1", "status": "cleared"}
     service.inference_repository.clear_steps.assert_called_once_with("session_1")
     service.inference_repository.delete_session.assert_not_called()
+
 
 ###############################################################################
 def test_capacity_bound_evicts_oldest_and_releases_models(monkeypatch) -> None:
@@ -314,6 +330,7 @@ def test_capacity_bound_evicts_oldest_and_releases_models(monkeypatch) -> None:
     service.dataset_repository = dataset_repository
     service.inference_repository = InferenceRepository(database)
     created_players: list[FakePlayer] = []
+
 
     ###############################################################################
     class TrackingPlayer(FakePlayer):
@@ -384,6 +401,7 @@ def test_capacity_bound_evicts_oldest_and_releases_models(monkeypatch) -> None:
         f"evicted={session_ids[:2]}, persistence=ended"
     )
 
+
 ###############################################################################
 def test_clear_context_rejects_active_session(monkeypatch) -> None:
     service, dataset_repository = build_service(monkeypatch)
@@ -394,6 +412,7 @@ def test_clear_context_rejects_active_session(monkeypatch) -> None:
 
     dataset_repository.clear.assert_not_called()
 
+
 ###############################################################################
 def test_clear_context_succeeds_after_session_shutdown(monkeypatch) -> None:
     service, dataset_repository = build_service(monkeypatch)
@@ -402,6 +421,7 @@ def test_clear_context_succeeds_after_session_shutdown(monkeypatch) -> None:
 
     assert service.clear_context() == {"status": "cleared"}
     dataset_repository.clear.assert_called_once_with("inference")
+
 
 ###############################################################################
 def test_shutdown_session_keeps_live_state_when_persistence_close_fails(monkeypatch) -> None:
@@ -417,12 +437,14 @@ def test_shutdown_session_keeps_live_state_when_persistence_close_fails(monkeypa
     assert service.state.get_optional(start["session_id"]) is not None
     assert service.state.get_session(start["session_id"]).player is not None
 
+
 ###############################################################################
 def test_session_start_rolls_back_persistence_and_model_on_registration_failure(
     monkeypatch,
 ) -> None:
     service, _ = build_service(monkeypatch)
     released_players: list[FakePlayer] = []
+
 
     ###############################################################################
     class TrackingPlayer(FakePlayer):
@@ -445,6 +467,7 @@ def test_session_start_rolls_back_persistence_and_model_on_registration_failure(
     assert not service.state.has_sessions()
     assert released_players[0].model is None
 
+
 ###############################################################################
 def test_replacement_start_failure_preserves_existing_session_and_releases_candidate(
     monkeypatch,
@@ -458,6 +481,7 @@ def test_replacement_start_failure_preserves_existing_session_and_releases_candi
     service.inference_repository.list_steps.return_value = []
     existing_snapshot = service.get_session_snapshot(existing_id)
     candidate_players: list[FakePlayer] = []
+
 
     ###############################################################################
     class TrackingPlayer(FakePlayer):
@@ -489,6 +513,7 @@ def test_replacement_start_failure_preserves_existing_session_and_releases_candi
         failed_candidate_id
     )
     assert candidate_players[0].model is None
+
 
 ###############################################################################
 def test_session_snapshot_returns_authoritative_persisted_steps(monkeypatch) -> None:
@@ -525,6 +550,7 @@ def test_session_snapshot_returns_authoritative_persisted_steps(monkeypatch) -> 
         }
     ]
 
+
 ###############################################################################
 def test_capacity_eviction_failure_keeps_existing_session_live(monkeypatch) -> None:
     service, _ = build_service(monkeypatch)
@@ -542,6 +568,7 @@ def test_capacity_eviction_failure_keeps_existing_session_live(monkeypatch) -> N
     assert service.state.get_optional(first["session_id"]) is not None
     assert len(service.state.session_ids()) == 1
     service.inference_repository.delete_session.assert_called()
+
 
 ###############################################################################
 def test_shutdown_is_failure_isolated_and_idempotent(monkeypatch) -> None:
@@ -562,6 +589,7 @@ def test_shutdown_is_failure_isolated_and_idempotent(monkeypatch) -> None:
     assert service.inference_repository.end_session.call_count == 2
     assert first["session_id"] != second["session_id"]
 
+
 ###############################################################################
 class DummyModel:
 
@@ -571,12 +599,14 @@ class DummyModel:
         logits[0, 12] = 1.0
         return logits
 
+
 ###############################################################################
 class EmptyLogitsModel:
 
     # -------------------------------------------------------------------------
     def predict(self, inputs: dict[str, Any], verbose: int = 0) -> np.ndarray:  # noqa: ARG002
         return np.zeros((1, 0), dtype=np.float32)
+
 
 ###############################################################################
 class StrategyLogitsModel:
@@ -595,6 +625,7 @@ class StrategyLogitsModel:
         logits[0, self.strategy_id] = 1.0
         return logits
 
+
 ###############################################################################
 def build_configuration(**overrides: object) -> dict[str, object]:
     configuration = TrainingConfig(use_data_generator=True).model_dump()
@@ -606,6 +637,7 @@ def build_configuration(**overrides: object) -> dict[str, object]:
     )
     configuration.update(overrides)
     return configuration
+
 
 ###############################################################################
 def test_fixed_strategy_is_deterministic_when_strategy_model_disabled() -> None:
@@ -635,6 +667,7 @@ def test_fixed_strategy_is_deterministic_when_strategy_model_disabled() -> None:
     assert prediction["bet_strategy_name"] == "DAlembert"
     assert prediction["suggested_bet_amount"] == 10
     assert prediction["current_bet_amount"] == 10
+
 
 ###############################################################################
 def test_strategy_model_selects_canonical_strategy_and_suggests_bet() -> None:
@@ -669,6 +702,7 @@ def test_strategy_model_selects_canonical_strategy_and_suggests_bet() -> None:
     assert strategy_model.inputs["timeseries"].shape == (1, 4)
     assert strategy_model.inputs["gain"].shape == (1, 1)
 
+
 ###############################################################################
 def test_predict_next_rejects_wrong_action_output_size() -> None:
     os.environ.setdefault("KERAS_BACKEND", "torch")
@@ -690,6 +724,7 @@ def test_predict_next_rejects_wrong_action_output_size() -> None:
     with pytest.raises(ValueError, match="canonical roulette action count"):
         player.predict_next()
 
+
 ###############################################################################
 def test_predict_next_requires_minimum_context_length() -> None:
     os.environ.setdefault("KERAS_BACKEND", "torch")
@@ -710,6 +745,7 @@ def test_predict_next_requires_minimum_context_length() -> None:
     )
     with pytest.raises(ValueError, match="at least the perceptive field size"):
         player.predict_next()
+
 
 ###############################################################################
 def test_update_with_true_extraction_validates_input() -> None:
@@ -737,10 +773,12 @@ def test_update_with_true_extraction_validates_input() -> None:
     with pytest.raises(ValueError, match="between 0 and 36"):
         player.update_with_true_extraction(37)
 
+
 ###############################################################################
 def test_number_pool_applies_range_and_zero_exclusion() -> None:
     assert build_roulette_number_pool(5, 8) == (5, 6, 7, 8)
     assert build_roulette_number_pool(0, 3, exclude_zero=True) == (1, 2, 3)
+
 
 ###############################################################################
 def test_invalid_or_empty_number_pool_is_rejected() -> None:
@@ -754,6 +792,7 @@ def test_invalid_or_empty_number_pool_is_rejected() -> None:
             maximum_number=0,
             exclude_zero=True,
         )
+
 
 ###############################################################################
 def test_series_filter_and_single_outcome_validation_use_same_pool() -> None:
@@ -781,6 +820,7 @@ def test_series_filter_and_single_outcome_validation_use_same_pool() -> None:
             exclude_zero=True,
         )
 
+
 ###############################################################################
 def test_renderer_inverts_visual_colors_without_changing_zero() -> None:
     red_numbers = ROULETTE_COLOR_MAP["red"]
@@ -801,11 +841,13 @@ def test_renderer_inverts_visual_colors_without_changing_zero() -> None:
     assert inverted.get_number_color(0) == inverted.base_green
     assert inverted.show_number_labels is False
 
+
 ###############################################################################
 def build_sizer_configuration(**overrides: object) -> dict[str, object]:
     configuration = TrainingConfig(use_data_generator=True).model_dump()
     configuration.update(overrides)
     return configuration
+
 
 ###############################################################################
 def test_keep_strategy_preserves_bet() -> None:
@@ -814,6 +856,7 @@ def test_keep_strategy_preserves_bet() -> None:
     sizer.set_last_outcome_from_reward(-10)
     assert sizer.apply(STRATEGY_KEEP, capital=1000) == 10
 
+
 ###############################################################################
 def test_martingale_strategy_updates_deterministically() -> None:
     sizer = BetSizer(build_sizer_configuration(bet_amount=10, initial_capital=1000))
@@ -821,6 +864,7 @@ def test_martingale_strategy_updates_deterministically() -> None:
     assert sizer.apply(STRATEGY_MARTINGALE, capital=1000) == 20
     sizer.set_last_outcome_from_reward(10)
     assert sizer.apply(STRATEGY_MARTINGALE, capital=1000) == 10
+
 
 ###############################################################################
 def test_reverse_strategy_updates_deterministically() -> None:
@@ -831,6 +875,7 @@ def test_reverse_strategy_updates_deterministically() -> None:
     assert sizer.apply(STRATEGY_REVERSE, capital=1000) == 40
     sizer.set_last_outcome_from_reward(-10)
     assert sizer.apply(STRATEGY_REVERSE, capital=1000) == 10
+
 
 ###############################################################################
 def test_dalembert_strategy_updates_deterministically() -> None:
@@ -846,6 +891,7 @@ def test_dalembert_strategy_updates_deterministically() -> None:
     sizer.set_last_outcome_from_reward(10)
     assert sizer.apply(STRATEGY_DALEMBERT, capital=1000) == 10
 
+
 ###############################################################################
 def test_fibonacci_strategy_updates_deterministically() -> None:
     sizer = BetSizer(build_sizer_configuration(bet_amount=10, initial_capital=1000))
@@ -857,6 +903,7 @@ def test_fibonacci_strategy_updates_deterministically() -> None:
     assert sizer.apply(STRATEGY_FIBONACCI, capital=1000) == 30
     sizer.set_last_outcome_from_reward(10)
     assert sizer.apply(STRATEGY_FIBONACCI, capital=1000) == 10
+
 
 ###############################################################################
 def test_bounds_with_bet_max_and_capital_limit() -> None:
@@ -875,6 +922,7 @@ def test_bounds_with_bet_max_and_capital_limit() -> None:
     sizer.set_last_outcome_from_reward(-10)
     assert sizer.apply(STRATEGY_MARTINGALE, capital=12) == 12
 
+
 ###############################################################################
 def test_neutral_outcome_does_not_progress_sequences() -> None:
     sizer = BetSizer(build_sizer_configuration(bet_amount=10, initial_capital=1000))
@@ -883,12 +931,14 @@ def test_neutral_outcome_does_not_progress_sequences() -> None:
     sizer.set_last_outcome_from_reward(0)
     assert sizer.apply(STRATEGY_FIBONACCI, capital=1000) == 10
 
+
 ###############################################################################
 def test_none_bet_unit_falls_back_to_base_bet() -> None:
     sizer = BetSizer(
         build_sizer_configuration(bet_amount=10, bet_unit=None, initial_capital=1000)
     )
     assert sizer.unit == 10
+
 
 ###############################################################################
 def test_preview_does_not_mutate_sizer_state() -> None:
@@ -902,6 +952,7 @@ def test_preview_does_not_mutate_sizer_state() -> None:
     assert preview == 20
     assert sizer.current_bet == before_bet
     assert sizer.fib_index == before_index
+
 
 ###############################################################################
 def test_set_base_and_current_bet_respect_bounds() -> None:

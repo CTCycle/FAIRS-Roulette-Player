@@ -29,6 +29,7 @@ NOISY_LIBRARY_LOGGERS = ("matplotlib", "asyncio", "PIL", "python_multipart", "h5
 class QuietAccessFilter(logging.Filter):
     """Drop successful polling, preflight, and static-asset access records."""
 
+    # -------------------------------------------------------------------------
     def filter(self, record: logging.LogRecord) -> bool:
         try:
             _client, method, target, _version, status = record.args  # type: ignore[misc]

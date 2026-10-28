@@ -93,6 +93,7 @@ TRAINING_TIMEOUT = float(os.getenv("E2E_TRAINING_TIMEOUT", "90"))
 # Worker shutdown is asynchronous and may include process termination on Windows.
 TRAINING_STATUS_TIMEOUT = float(os.getenv("E2E_TRAINING_STATUS_TIMEOUT", "10.0"))
 
+
 ###############################################################################
 def wait_for_training_running(
     api_context: APIRequestContext,
@@ -113,6 +114,7 @@ def wait_for_training_running(
         time.sleep(interval)
     return False
 
+
 ###############################################################################
 def wait_for_training_stopped(
     api_context: APIRequestContext,
@@ -126,6 +128,7 @@ def wait_for_training_stopped(
             return True
         time.sleep(interval)
     return False
+
 
 ###############################################################################
 def wait_for_job_completion(
@@ -147,6 +150,7 @@ def wait_for_job_completion(
         time.sleep(interval)
     return last_payload
 
+
 ###############################################################################
 def assert_training_idle(api_context: APIRequestContext) -> dict:
     status = api_context.get("/api/training/status").json()
@@ -154,12 +158,14 @@ def assert_training_idle(api_context: APIRequestContext) -> dict:
     assert status["job_id"] is None, status
     return status
 
+
 ###############################################################################
 def checkpoint_root() -> Path:
     configured_data_dir = os.getenv("FAIRS_DATA_DIR", "").strip()
     if configured_data_dir:
         return Path(configured_data_dir).expanduser().resolve() / "checkpoints"
     return Path(__file__).resolve().parents[3] / "data" / "checkpoints"
+
 
 ###############################################################################
 def checkpoint_file_signatures(checkpoint: str) -> dict[str, str]:
@@ -169,6 +175,7 @@ def checkpoint_file_signatures(checkpoint: str) -> dict[str, str]:
         for path in sorted(root.rglob("*"))
         if path.is_file()
     }
+
 
 ###############################################################################
 def incomplete_checkpoint_workspaces(checkpoint: str) -> list[str]:
@@ -185,6 +192,7 @@ def incomplete_checkpoint_workspaces(checkpoint: str) -> list[str]:
         )
     )
 
+
 ###############################################################################
 def wait_for_resume_workspace(
     checkpoint: str,
@@ -198,10 +206,12 @@ def wait_for_resume_workspace(
         time.sleep(interval)
     return False
 
+
 ###############################################################################
 def assert_finite_number(value: object) -> None:
     assert isinstance(value, (int, float)) and not isinstance(value, bool)
     assert math.isfinite(float(value))
+
 
 ###############################################################################
 @pytest.fixture(scope="module")
@@ -247,6 +257,7 @@ def val10_checkpoint(playwright, api_base_url: str):
             delete_response = context.delete(f"/api/training/checkpoints/{checkpoint}")
             assert delete_response.ok, delete_response.text()
         context.dispose()
+
 
 ###############################################################################
 @pytest.mark.parametrize(
@@ -295,6 +306,7 @@ def test_validate_rejects_invalid_training_relationships(
     assert response.status == 422, response.text()
     assert expected_fragment in response.text()
 
+
 ###############################################################################
 def test_validate_accepts_stored_cpu_configuration(
     api_context: APIRequestContext,
@@ -313,6 +325,7 @@ def test_validate_accepts_stored_cpu_configuration(
     assert normalized["max_memory_size"] == 100
     assert normalized["use_device_gpu"] is False
     assert normalized["use_mixed_precision"] is False
+
 
 ###############################################################################
 def test_stale_dataset_is_rejected_deterministically_without_side_effects(
@@ -344,6 +357,7 @@ def test_stale_dataset_is_rejected_deterministically_without_side_effects(
     assert after_status["job_id"] is None
     assert after_checkpoints == before_checkpoints
     assert checkpoint_name not in after_checkpoints
+
 
 ###############################################################################
 def test_dataset_deleted_after_validation_is_rejected_before_start(
@@ -397,6 +411,7 @@ def test_dataset_deleted_after_validation_is_rejected_before_start(
         # Keep the test safe if validation or deletion fails before cleanup.
         api_context.delete(f"/api/datasets/training/{dataset_id}")
 
+
 ###############################################################################
 def test_start_rejects_invalid_semantics_when_validation_is_bypassed(
     api_context: APIRequestContext,
@@ -422,6 +437,7 @@ def test_start_rejects_invalid_semantics_when_validation_is_bypassed(
     assert after_status["job_id"] is None
     assert after_checkpoints == before_checkpoints
     assert checkpoint_name not in after_checkpoints
+
 
 ###############################################################################
 class TestTrainingCheckpointPublication:
@@ -512,6 +528,7 @@ class TestTrainingCheckpointPublication:
                     f"/api/training/checkpoints/{checkpoint}"
                 )
                 assert delete_response.ok
+
 
 ###############################################################################
 class TestTrainingEndpoints:
@@ -657,6 +674,7 @@ class TestTrainingEndpoints:
         payload = response.json()
         assert "detail" in payload
 
+
 ###############################################################################
 class TestTrainingLifecycle:
     """Integration tests for training start/stop lifecycle."""
@@ -737,6 +755,7 @@ class TestTrainingLifecycle:
                         f"/api/training/checkpoints/{disposable}"
                     )
                     assert delete_response.ok, delete_response.text()
+
 
 ###############################################################################
 class TestTrainingResume:

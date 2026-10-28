@@ -18,13 +18,16 @@ from server.configurations import environment
 # Copyright © 2026 Thomas Virdis
 # Licensed under the MIT License.
 
+
 ###############################################################################
 def _protector(value: str) -> str:
     return base64.b64encode(value.encode("utf-8")).decode("ascii")
 
+
 ###############################################################################
 def _unprotector(value: str) -> str:
     return base64.b64decode(value).decode("utf-8")
+
 
 ###############################################################################
 def _store(
@@ -39,6 +42,7 @@ def _store(
         password_protector=protector,
         password_unprotector=unprotector,
     )
+
 
 ###############################################################################
 def test_default_config_is_database_only_and_atomic(tmp_path: Path, monkeypatch) -> None:
@@ -56,6 +60,7 @@ def test_default_config_is_database_only_and_atomic(tmp_path: Path, monkeypatch)
     assert document["backend"] == "sqlite"
     assert document["sqlite"]["path"] == str((tmp_path / "database.db").resolve())
     assert env_path.read_text(encoding="utf-8") == "APP_NAME=FAIRS\n"
+
 
 ###############################################################################
 def test_database_environment_values_are_ignored_and_scrubbed(
@@ -91,6 +96,7 @@ def test_database_environment_values_are_ignored_and_scrubbed(
     assert "DATABASE_" not in cleaned
     assert "EMBEDDED_DATABASE" not in cleaned
 
+
 ###############################################################################
 def test_blank_password_retains_saved_secret_and_explicit_clear_removes_it(
     tmp_path: Path,
@@ -122,6 +128,7 @@ def test_blank_password_retains_saved_secret_and_explicit_clear_removes_it(
     assert store.current().settings.password is None
     assert store.to_public(store.current()).password_configured is False
 
+
 ###############################################################################
 def test_invalid_and_corrupt_files_fail_closed_without_default_fallback(
     tmp_path: Path,
@@ -138,6 +145,7 @@ def test_invalid_and_corrupt_files_fail_closed_without_default_fallback(
     with pytest.raises(DatabaseConfigurationError, match="invalid"):
         store.load_or_initialize()
     assert store.path.read_text(encoding="utf-8") == "{broken"
+
 
 ###############################################################################
 def test_unknown_database_config_keys_are_rejected(tmp_path: Path) -> None:
@@ -157,6 +165,7 @@ def test_unknown_database_config_keys_are_rejected(tmp_path: Path) -> None:
     with pytest.raises(DatabaseConfigurationError):
         store.current()
 
+
 ###############################################################################
 def test_blank_sqlite_path_in_config_is_rejected(tmp_path: Path) -> None:
     store = _store(tmp_path)
@@ -173,6 +182,7 @@ def test_blank_sqlite_path_in_config_is_rejected(tmp_path: Path) -> None:
 
     with pytest.raises(DatabaseConfigurationError, match="invalid"):
         store.current()
+
 
 ###############################################################################
 def test_atomic_replace_failure_preserves_previous_database_config(
@@ -198,6 +208,7 @@ def test_atomic_replace_failure_preserves_previous_database_config(
     assert store.path.read_bytes() == before
     assert list(tmp_path.glob(".database-config.json.*.tmp")) == []
 
+
 ###############################################################################
 def test_invalid_old_database_environment_values_do_not_block_default(
     tmp_path: Path, monkeypatch,
@@ -214,6 +225,7 @@ def test_invalid_old_database_environment_values_do_not_block_default(
     assert store.path.is_file()
     assert "DATABASE_HOST" not in env_path.read_text(encoding="utf-8")
 
+
 ###############################################################################
 @pytest.mark.skipif(os.name != "nt", reason="DPAPI is available on Windows only")
 def test_windows_dpapi_protects_and_recovers_password() -> None:
@@ -221,6 +233,7 @@ def test_windows_dpapi_protects_and_recovers_password() -> None:
     encrypted = database_config.protect_password(secret)
     assert encrypted != secret
     assert database_config.unprotect_password(encrypted) == secret
+
 
 ###############################################################################
 @pytest.fixture(autouse=True)
@@ -231,9 +244,11 @@ def reset_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     yield
     environment.reset_environment_for_tests()
 
+
 ###############################################################################
 def _write_env(path: Path, lines: list[str]) -> None:
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
 
 ###############################################################################
 def test_environment_overrides_existing_process_values(
@@ -247,6 +262,7 @@ def test_environment_overrides_existing_process_values(
     environment.load_environment()
 
     assert os.getenv("FASTAPI_HOST") == "from_dotenv"
+
 
 ###############################################################################
 def test_environment_creates_missing_env_from_example(
@@ -263,6 +279,7 @@ def test_environment_creates_missing_env_from_example(
     assert env_path.read_text(encoding="utf-8") == example_contents
     assert os.getenv("FASTAPI_HOST") == "from-example"
     assert "EMBEDDED_DATABASE" not in os.environ
+
 
 ###############################################################################
 def test_environment_preserves_existing_env(
@@ -281,6 +298,7 @@ def test_environment_preserves_existing_env(
     assert env_path.read_text(encoding="utf-8") == existing_contents
     assert os.getenv("FASTAPI_HOST") == "from-existing"
 
+
 ###############################################################################
 def test_environment_requires_template_when_env_is_missing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -292,6 +310,7 @@ def test_environment_requires_template_when_env_is_missing(
 
     with pytest.raises(RuntimeError, match="template was not found"):
         environment.load_environment(force=True)
+
 
 ###############################################################################
 def test_environment_load_is_idempotent_without_force(
@@ -306,6 +325,7 @@ def test_environment_load_is_idempotent_without_force(
 
     assert os.getenv("FASTAPI_HOST") == "first"
 
+
 ###############################################################################
 def test_environment_force_reload_applies_updated_dotenv(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -318,6 +338,7 @@ def test_environment_force_reload_applies_updated_dotenv(
     environment.load_environment(force=True)
 
     assert os.getenv("FASTAPI_HOST") == "second"
+
 
 ###############################################################################
 def test_environment_does_not_load_database_connection_variables(
@@ -339,6 +360,7 @@ def test_environment_does_not_load_database_connection_variables(
     assert "DATABASE_PASSWORD" not in os.environ
     assert "DATABASE_PASSWORD=legacy-secret" in env_path.read_text(encoding="utf-8")
 
+
 ###############################################################################
 def test_environment_loads_network_runtime_configuration(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -359,6 +381,7 @@ def test_environment_loads_network_runtime_configuration(
     assert os.getenv("CORS_ORIGINS") == (
         "https://console.example.test,https://admin.example.test"
     )
+
 
 ###############################################################################
 def test_server_package_import_does_not_load_environment(

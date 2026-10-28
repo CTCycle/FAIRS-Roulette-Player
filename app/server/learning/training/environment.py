@@ -32,6 +32,7 @@ from server.learning.betting.types import (
 
 ###############################################################################
 class BetsAndRewards:
+
     # -------------------------------------------------------------------------
     def __init__(self, configuration: dict[str, Any]) -> None:
         self.seed = int(configuration["training_seed"])
@@ -183,6 +184,7 @@ class BetsAndRewards:
 
 ###############################################################################
 class RouletteWheelRenderer:
+
     # -------------------------------------------------------------------------
     def __init__(
         self,
@@ -341,6 +343,7 @@ class RouletteWheelRenderer:
 
 ###############################################################################
 class RouletteEnvironment(gym.Env):
+
     # -------------------------------------------------------------------------
     def __init__(
         self,

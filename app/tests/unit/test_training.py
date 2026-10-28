@@ -20,6 +20,7 @@ from server.common.roulette import ROULETTE_RUNTIME_ATTR, encode_roulette_series
 from server.services.training_data import TrainingDataService
 from pydantic import ValidationError
 
+
 ###############################################################################
 def build_configuration(**overrides: object) -> dict[str, object]:
     configuration = TrainingConfig(use_data_generator=True).model_dump()
@@ -40,6 +41,7 @@ def build_configuration(**overrides: object) -> dict[str, object]:
     configuration.update(overrides)
     return configuration
 
+
 ###############################################################################
 def test_training_and_resume_share_validation_environment_builder() -> None:
     trainer = DQNTraining(build_configuration())
@@ -55,6 +57,7 @@ def test_training_and_resume_share_validation_environment_builder() -> None:
     assert validation_environment is not None
     assert len(validation_environment.extractions) == 20
 
+
 ###############################################################################
 def test_validation_partition_must_support_perceptive_window() -> None:
     trainer = DQNTraining(
@@ -64,6 +67,7 @@ def test_validation_partition_must_support_perceptive_window() -> None:
 
     with pytest.raises(ValueError, match="Validation partition"):
         trainer._build_environments(data, "checkpoint")
+
 
 ###############################################################################
 def test_latest_stats_does_not_carry_sparse_validation_metrics_forward() -> None:
@@ -80,6 +84,7 @@ def test_latest_stats_does_not_carry_sparse_validation_metrics_forward() -> None
     assert latest_stats["val_loss"] is None
     assert latest_stats["val_rmse"] is None
     assert latest_stats["val_reward"] is None
+
 
 ###############################################################################
 def build_service(
@@ -113,6 +118,7 @@ def build_service(
     )
     return service, training_run_manager, checkpoint_service
 
+
 ###############################################################################
 def test_start_training_starts_job_and_returns_contract() -> None:
     service, training_run_manager, _ = build_service()
@@ -121,6 +127,7 @@ def test_start_training_starts_job_and_returns_contract() -> None:
     assert payload["job_id"] == "job123"
     training_run_manager.start_job.assert_called_once()
 
+
 ###############################################################################
 def test_start_training_requires_dataset_without_generator() -> None:
     service, _, _ = build_service()
@@ -128,6 +135,7 @@ def test_start_training_requires_dataset_without_generator() -> None:
         service.start_training(
             TrainingConfig(use_data_generator=False, dataset_id=None)
         )
+
 
 ###############################################################################
 def test_start_training_rejects_missing_dataset_before_creating_job() -> None:
@@ -142,6 +150,7 @@ def test_start_training_rejects_missing_dataset_before_creating_job() -> None:
     service.dataset_repository.get.assert_called_once_with(987654321)
     training_run_manager.start_job.assert_not_called()
 
+
 ###############################################################################
 def test_start_training_rejects_non_training_dataset_before_creating_job() -> None:
     service, training_run_manager, _ = build_service()
@@ -154,6 +163,7 @@ def test_start_training_rejects_non_training_dataset_before_creating_job() -> No
 
     service.dataset_repository.get.assert_called_once_with(987654321)
     training_run_manager.start_job.assert_not_called()
+
 
 ###############################################################################
 def test_validation_rejects_existing_checkpoint_before_creating_job() -> None:
@@ -172,6 +182,7 @@ def test_validation_rejects_existing_checkpoint_before_creating_job() -> None:
 
     training_run_manager.start_job.assert_not_called()
 
+
 ###############################################################################
 def test_training_responses_use_injected_polling_interval() -> None:
     service, _, _ = build_service(polling_interval_seconds=2.5)
@@ -180,6 +191,7 @@ def test_training_responses_use_injected_polling_interval() -> None:
 
     assert started["poll_interval"] == 2.5
     assert service.get_status()["poll_interval"] == 2.5
+
 
 ###############################################################################
 def test_start_training_preflights_runtime_jit(monkeypatch) -> None:
@@ -197,6 +209,7 @@ def test_start_training_preflights_runtime_jit(monkeypatch) -> None:
     validator.assert_called_once_with(True, "eager")
     training_run_manager.start_job.assert_not_called()
 
+
 ###############################################################################
 def test_resume_training_starts_resume_job() -> None:
     service, training_run_manager, _ = build_service()
@@ -206,6 +219,7 @@ def test_resume_training_starts_resume_job() -> None:
     assert payload["status"] == "started"
     assert payload["job_type"] == "training"
     training_run_manager.start_job.assert_called_once()
+
 
 ###############################################################################
 def test_resume_training_rejects_an_active_training_job_before_checkpoint_load() -> None:
@@ -220,12 +234,14 @@ def test_resume_training_rejects_an_active_training_job_before_checkpoint_load()
     checkpoint_service.resolve_existing_checkpoint.assert_not_called()
     training_run_manager.start_job.assert_not_called()
 
+
 ###############################################################################
 def test_stop_sets_cancellation_on_current_job() -> None:
     service, training_run_manager, _ = build_service()
     payload = service.stop()
     assert payload["status"] == "stopping"
     training_run_manager.cancel_job.assert_called_once_with("job123")
+
 
 ###############################################################################
 def test_get_and_delete_job_contracts() -> None:
@@ -245,9 +261,11 @@ def test_get_and_delete_job_contracts() -> None:
     assert job["job_id"] == "job123"
     assert cancel["job_id"] == "job123"
 
+
 ###############################################################################
 def test_training_worker_receives_explicit_runtime_dependencies(monkeypatch) -> None:
     started: dict[str, object] = {}
+
 
     ###############################################################################
     class FakeWorker:
@@ -328,6 +346,7 @@ def test_training_worker_receives_explicit_runtime_dependencies(monkeypatch) -> 
         },
     )
 
+
 ###############################################################################
 def test_training_process_bootstraps_runtime_before_running_target(monkeypatch) -> None:
     from server import bootstrap as bootstrap_module
@@ -350,6 +369,7 @@ def test_training_process_bootstraps_runtime_before_running_target(monkeypatch) 
         ("target", (worker, "isolated")),
     ]
 
+
 ###############################################################################
 def test_default_training_stats_match_the_frontend_status_contract() -> None:
     stats = default_training_stats()
@@ -360,6 +380,7 @@ def test_default_training_stats_match_the_frontend_status_contract() -> None:
     assert stats["epsilon"] is None
     assert stats["experience_count"] == 0
     assert stats["replay_buffer_size"] == 0
+
 
 ###############################################################################
 def test_training_run_projects_dqn_warmup_telemetry_into_history() -> None:
@@ -389,6 +410,7 @@ def test_training_run_projects_dqn_warmup_telemetry_into_history() -> None:
     assert run.latest_stats["epsilon"] == 0.75
     assert run.history_points[-1]["experience_count"] == 13
     assert run.history_points[-1]["replay_buffer_size"] == 100
+
 
 ###############################################################################
 def test_training_history_stays_bounded_and_keeps_newest_observations() -> None:
@@ -421,6 +443,7 @@ def test_training_history_stays_bounded_and_keeps_newest_observations() -> None:
         f"max={max(update_durations):.6f}s, timeout=none (unit in-process path)"
     )
 
+
 ###############################################################################
 def test_training_run_manager_owns_the_completed_run_projection() -> None:
     manager = TrainingRunManager()
@@ -447,6 +470,7 @@ def test_training_run_manager_owns_the_completed_run_projection() -> None:
     assert status["latest_stats"]["total_epochs"] == 2
     assert status["latest_stats"]["max_steps"] == 100
 
+
 ###############################################################################
 def test_manager_rejects_a_second_start_while_the_first_run_is_stopping() -> None:
     manager = TrainingRunManager()
@@ -472,10 +496,12 @@ def test_manager_rejects_a_second_start_while_the_first_run_is_stopping() -> Non
     assert manager.get_job_status(job_id)["status"] == "cancelled"
     assert manager.shutdown(timeout_seconds=1.0) is True
 
+
 ###############################################################################
 def test_manager_shutdown_force_terminates_an_unresponsive_worker() -> None:
     manager = TrainingRunManager()
     runner_started = Event()
+
 
     ###############################################################################
     class FakeWorker:
@@ -516,9 +542,11 @@ def test_manager_shutdown_force_terminates_an_unresponsive_worker() -> None:
     assert worker.terminate_calls == 1
     assert manager.get_job_status(job_id)["status"] == "cancelled"
 
+
 ###############################################################################
 def test_terminal_jobs_release_thread_and_worker_references() -> None:
     manager = TrainingRunManager()
+
 
     ###############################################################################
     class Worker:
@@ -576,6 +604,7 @@ def test_terminal_jobs_release_thread_and_worker_references() -> None:
         f"max={max(cycle_durations):.4f}s, timeout=worker join 2s; shutdown 1s"
     )
 
+
 ###############################################################################
 def test_generated_training_series_matches_environment_contract() -> None:
     service = TrainingDataService(database_settings=None)
@@ -597,6 +626,7 @@ def test_generated_training_series_matches_environment_contract() -> None:
     assert "color_code" in dataset.columns
     assert "outcome" not in dataset.columns
     assert dataset["extraction"].between(0, 36).all()
+
 
 ###############################################################################
 def test_generated_training_series_respects_runtime_number_pool() -> None:
@@ -631,6 +661,7 @@ def test_generated_training_series_respects_runtime_number_pool() -> None:
         "show_number_labels": False,
     }
 
+
 ###############################################################################
 def test_roulette_encoding_isolated_from_input_frame() -> None:
     source = pd.DataFrame({"outcome": [0, 1, 32]})
@@ -640,6 +671,7 @@ def test_roulette_encoding_isolated_from_input_frame() -> None:
     assert list(source.columns) == ["outcome"]
     assert encoded["color_code"].notna().all()
     assert encoded["wheel_position"].notna().all()
+
 
 ###############################################################################
 def test_training_subsample_preserves_contiguous_sequence_order() -> None:
@@ -651,6 +683,7 @@ def test_training_subsample_preserves_contiguous_sequence_order() -> None:
     assert len(sampled) == 10
     assert sampled["outcome"].diff().dropna().eq(1).all()
     pd.testing.assert_frame_equal(sampled, repeated)
+
 
 ###############################################################################
 @pytest.mark.parametrize(

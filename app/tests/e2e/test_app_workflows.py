@@ -14,6 +14,7 @@ E2E tests for UI navigation and page rendering.
 Tests basic UI functionality using Playwright browser automation.
 """
 
+
 ###############################################################################
 class TestStartupFlow:
     """Tests the frontend-owned backend startup experience."""
@@ -215,6 +216,7 @@ class TestStartupFlow:
                 full_page=True,
             )
 
+
 ###############################################################################
 class TestNavigationFlow:
     """Tests for navigating between the primary application pages."""
@@ -235,6 +237,7 @@ class TestNavigationFlow:
 
         page.wait_for_load_state("networkidle")
         expect(page).to_have_url(re.compile(f".*{route}.*", re.IGNORECASE))
+
 
 ###############################################################################
 class TestCheckpointHandoff:
@@ -334,6 +337,7 @@ class TestCheckpointHandoff:
             "choose a dataset explicitly instead of substituting one automatically"
         )
 
+
 ###############################################################################
 def _open_stored_training_wizard(page: Page, base_url: str):
     page.goto(f"{base_url}/training")
@@ -346,6 +350,7 @@ def _open_stored_training_wizard(page: Page, base_url: str):
     modal = page.get_by_role("dialog")
     expect(modal).to_be_visible()
     return modal
+
 
 ###############################################################################
 class TestTrainingWizardFlow:
@@ -604,6 +609,7 @@ class TestTrainingWizardFlow:
         assert validation_payload == start_payload
         assert start_payload["dataset_id"] == 5
         assert start_payload["use_data_generator"] is False
+
 
 ###############################################################################
 class TestInferencePage:
@@ -1257,6 +1263,7 @@ class TestInferencePage:
 
 GUIDANCE_KEY = "fairs.guidance"
 
+
 ###############################################################################
 def _assert_tour_keyboard_dismissal(page: Page, title: str) -> None:
     tour = page.get_by_role("dialog", name=title)
@@ -1280,6 +1287,7 @@ def _assert_tour_keyboard_dismissal(page: Page, title: str) -> None:
     expect(tour).not_to_be_visible()
     expect(page.get_by_role("button", name="Help")).to_be_focused()
 
+
 ###############################################################################
 def _prepare_training_guidance(page: Page, base_url: str) -> None:
     page.goto(f"{base_url}/training")
@@ -1287,6 +1295,7 @@ def _prepare_training_guidance(page: Page, base_url: str) -> None:
     page.evaluate(f"localStorage.removeItem('{GUIDANCE_KEY}')")
     page.reload()
     page.wait_for_timeout(300)
+
 
 ###############################################################################
 class TestGuidance:
@@ -1408,6 +1417,7 @@ class TestGuidance:
 
 
 """Browser coverage for the runtime Settings screen."""
+
 
 ###############################################################################
 class TestSettingsPage:

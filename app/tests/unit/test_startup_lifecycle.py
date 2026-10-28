@@ -15,12 +15,14 @@ from server.configurations.database_config import LoadedDatabaseConfiguration
 from server.services import startup_validation
 from server.common import runtime_capabilities
 
+
 ###############################################################################
 class CheckpointServiceStub:
 
     # -------------------------------------------------------------------------
     def cleanup_incomplete_workspaces(self) -> None:
         return None
+
 
 ###############################################################################
 class InferenceServiceStub:
@@ -29,12 +31,14 @@ class InferenceServiceStub:
     def shutdown(self) -> None:
         return None
 
+
 ###############################################################################
 class TrainingRunManagerStub:
 
     # -------------------------------------------------------------------------
     def shutdown(self) -> bool:
         return True
+
 
 ###############################################################################
 def _build_settings() -> ServerSettings:
@@ -59,6 +63,7 @@ def _build_settings() -> ServerSettings:
         ),
     )
 
+
 ###############################################################################
 def _build_external_settings() -> ServerSettings:
     settings = _build_settings()
@@ -80,6 +85,7 @@ def _build_external_settings() -> ServerSettings:
         device=settings.device,
     )
 
+
 ###############################################################################
 def _stub_lifespan_dependencies(
     monkeypatch,
@@ -95,6 +101,7 @@ def _stub_lifespan_dependencies(
         settings=settings.database,
         sqlite_path=Path("configured-test.db") if settings.database.embedded_database else None,
     )
+
 
     ###############################################################################
     class StoreStub:
@@ -120,6 +127,7 @@ def _stub_lifespan_dependencies(
     )
     monkeypatch.setattr(app_module, "run_startup_validations", lambda settings: None)
 
+
     ###############################################################################
     class DatabaseStub:
 
@@ -139,6 +147,7 @@ def _stub_lifespan_dependencies(
     monkeypatch.setattr(app_module, "DatasetImportService", lambda **kwargs: object())
     monkeypatch.setattr(app_module, "TabularFileLoader", lambda: object())
     monkeypatch.setattr(app_module, "DatasetService", lambda **kwargs: object())
+
 
     ###############################################################################
     class TrainingServiceStub:
@@ -168,6 +177,7 @@ def _stub_lifespan_dependencies(
 
     return initialize_calls, dispose_calls
 
+
 ###############################################################################
 def test_root_redirects_to_docs_when_client_build_is_missing(monkeypatch) -> None:
     import server.app as app_module
@@ -188,6 +198,7 @@ def test_root_redirects_to_docs_when_client_build_is_missing(monkeypatch) -> Non
     assert len(initialize_calls) == 1
     assert dispose_calls == [True]
 
+
 ###############################################################################
 def test_root_returns_status_when_api_docs_are_disabled(monkeypatch) -> None:
     import server.app as app_module
@@ -207,6 +218,7 @@ def test_root_returns_status_when_api_docs_are_disabled(monkeypatch) -> None:
     assert response.json() == {"status": "ok"}
     assert len(initialize_calls) == 1
     assert dispose_calls == [True]
+
 
 ###############################################################################
 def test_cors_allowlist_is_read_from_runtime_environment(monkeypatch) -> None:
@@ -242,6 +254,7 @@ def test_cors_allowlist_is_read_from_runtime_environment(monkeypatch) -> None:
     assert denied.status_code == 400
     assert "access-control-allow-origin" not in denied.headers
 
+
 ###############################################################################
 def test_repeated_lifespan_entry_reinitializes_and_disposes_once_per_run(
     monkeypatch,
@@ -253,6 +266,7 @@ def test_repeated_lifespan_entry_reinitializes_and_disposes_once_per_run(
     )
     monkeypatch.setenv("ENABLE_API_DOCS", "false")
     monkeypatch.setattr(app_module, "_client_build_available", lambda: False)
+
 
     ###############################################################################
     class ShutdownSpy:
@@ -276,6 +290,7 @@ def test_repeated_lifespan_entry_reinitializes_and_disposes_once_per_run(
         # -------------------------------------------------------------------------
         def apply_database_settings(self, *_args) -> None:
             return None
+
 
     ###############################################################################
     class DatabaseSpy:
@@ -345,6 +360,7 @@ def test_repeated_lifespan_entry_reinitializes_and_disposes_once_per_run(
         f"max={max(cycle_durations):.4f}s, timeout=none (unit TestClient path)"
     )
 
+
 ###############################################################################
 def test_root_and_nested_routes_serve_built_client_when_available(
     tmp_path: Path,
@@ -389,6 +405,7 @@ def test_root_and_nested_routes_serve_built_client_when_available(
     assert len(initialize_calls) == 1
     assert dispose_calls == [True]
 
+
 ###############################################################################
 def test_postgresql_startup_runs_the_shared_initializer(monkeypatch) -> None:
     import server.app as app_module
@@ -408,6 +425,7 @@ def test_postgresql_startup_runs_the_shared_initializer(monkeypatch) -> None:
     assert response.status_code == 307
     assert initialize_calls == [_build_external_settings().database]
     assert dispose_calls == [True]
+
 
 ###############################################################################
 def test_postgresql_startup_reports_connection_failure(monkeypatch) -> None:
@@ -434,6 +452,7 @@ def test_postgresql_startup_reports_connection_failure(monkeypatch) -> None:
     assert health.status_code == 200
     assert health.json()["status"] == "recovery"
 
+
 ###############################################################################
 def test_app_factory_defers_runtime_bootstrap_until_lifespan(monkeypatch) -> None:
     import server.app as app_module
@@ -444,6 +463,7 @@ def test_app_factory_defers_runtime_bootstrap_until_lifespan(monkeypatch) -> Non
     app_module.create_app()
 
     bootstrap.assert_not_called()
+
 
 ###############################################################################
 def test_lifespan_has_explicit_order_and_reverse_cleanup(monkeypatch) -> None:
@@ -480,12 +500,14 @@ def test_lifespan_has_explicit_order_and_reverse_cleanup(monkeypatch) -> None:
     monkeypatch.setattr(app_module, "_client_build_available", lambda: False)
     monkeypatch.setattr(app_module, "close_application_logging", lambda: events.append("logging"))
 
+
     ###############################################################################
     class Database:
 
         # -------------------------------------------------------------------------
         def dispose(self) -> None:
             events.append("database")
+
 
     ###############################################################################
     class TrainingManager:
@@ -498,6 +520,7 @@ def test_lifespan_has_explicit_order_and_reverse_cleanup(monkeypatch) -> None:
         def shutdown(self) -> bool:
             events.append("training-manager")
             return True
+
 
     ###############################################################################
     class Training:
@@ -522,6 +545,7 @@ def test_lifespan_has_explicit_order_and_reverse_cleanup(monkeypatch) -> None:
         # -------------------------------------------------------------------------
         def apply_database_settings(self, *_args) -> None:
             return None
+
 
     ###############################################################################
     class Inference:
@@ -571,6 +595,7 @@ def test_lifespan_has_explicit_order_and_reverse_cleanup(monkeypatch) -> None:
         "logging",
     ]
 
+
 ###############################################################################
 def test_lifespan_rolls_back_partial_initialization(monkeypatch) -> None:
     import server.app as app_module
@@ -584,12 +609,14 @@ def test_lifespan_rolls_back_partial_initialization(monkeypatch) -> None:
     monkeypatch.setattr(app_module, "_client_build_available", lambda: False)
     monkeypatch.setattr(app_module, "close_application_logging", lambda: events.append("logging"))
 
+
     ###############################################################################
     class Database:
 
         # -------------------------------------------------------------------------
         def dispose(self) -> None:
             events.append("database")
+
 
     ###############################################################################
     class TrainingManager:
@@ -602,6 +629,7 @@ def test_lifespan_rolls_back_partial_initialization(monkeypatch) -> None:
         def shutdown(self) -> bool:
             events.append("training-manager")
             return True
+
 
     ###############################################################################
     class Training:
@@ -657,6 +685,7 @@ def test_lifespan_rolls_back_partial_initialization(monkeypatch) -> None:
     assert events.count("training-manager") == 1
     assert events.count("logging") == 1
 
+
 ###############################################################################
 def _embedded_settings() -> ServerSettings:
     return ServerSettings(
@@ -679,6 +708,7 @@ def _embedded_settings() -> ServerSettings:
             jit_backend="inductor",
         ),
     )
+
 
 ###############################################################################
 def _external_settings(engine: str) -> ServerSettings:
@@ -703,6 +733,7 @@ def _external_settings(engine: str) -> ServerSettings:
         ),
     )
 
+
 ###############################################################################
 def test_startup_validations_create_runtime_directories(
     tmp_path: Path,
@@ -726,10 +757,12 @@ def test_startup_validations_create_runtime_directories(
     assert logs_dir.is_dir()
     assert checkpoints_dir.is_dir()
 
+
 ###############################################################################
 def test_external_database_validation_rejects_unsupported_engine() -> None:
     with pytest.raises(RuntimeError, match="Unsupported database engine"):
         startup_validation.run_startup_validations(_external_settings("mysql"))
+
 
 ###############################################################################
 @pytest.mark.parametrize("engine", ["postgres", "postgresql", "postgresql+psycopg2"])
@@ -738,6 +771,7 @@ def test_external_database_validation_rejects_legacy_postgres_aliases(
 ) -> None:
     with pytest.raises(RuntimeError, match="Unsupported database engine"):
         startup_validation.run_startup_validations(_external_settings(engine))
+
 
 ###############################################################################
 def test_windows_inductor_is_rejected_before_torch_probe(

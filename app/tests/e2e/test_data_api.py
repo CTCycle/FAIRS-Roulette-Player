@@ -12,6 +12,7 @@ E2E tests for Data Upload API endpoint.
 Tests: POST /data/upload
 """
 
+
 ###############################################################################
 def load_dataset_summary_entry(
     api_context: APIRequestContext, dataset_id: int
@@ -24,6 +25,7 @@ def load_dataset_summary_entry(
         None,
     )
 
+
 ###############################################################################
 def delete_uploaded_dataset(
     api_context: APIRequestContext, dataset_id: int
@@ -31,6 +33,7 @@ def delete_uploaded_dataset(
     response = api_context.delete(f"/api/datasets/training/{dataset_id}")
     assert response.ok, f"Expected 200, got {response.status}: {response.text()}"
     assert load_dataset_summary_entry(api_context, dataset_id) is None
+
 
 ###############################################################################
 class TestDataUploadEndpoint:
@@ -110,6 +113,7 @@ class TestDataUploadEndpoint:
         )
         # Empty file should fail parsing
         assert response.status == 400
+
 
 ###############################################################################
 class TestDataUploadEdgeCases:
@@ -378,6 +382,7 @@ E2E tests for dataset removal via database endpoints.
 
 
 DATASET_NAME = "e2e_dataset_delete"
+
 
 ###############################################################################
 class TestDatasetRemoval:

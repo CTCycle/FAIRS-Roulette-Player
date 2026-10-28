@@ -23,9 +23,11 @@ OUTPUT_PATH = (
     / "api.ts"
 )
 
+
 ###############################################################################
 def _reference_name(reference: str) -> str:
     return reference.rsplit("/", 1)[-1]
+
 
 ###############################################################################
 def _literal(value: Any) -> str:
@@ -36,6 +38,7 @@ def _literal(value: Any) -> str:
     if value is False:
         return "false"
     return json.dumps(value, ensure_ascii=False)
+
 
 ###############################################################################
 def _schema_to_typescript(schema: Mapping[str, Any]) -> str:
@@ -96,6 +99,7 @@ def _schema_to_typescript(schema: Mapping[str, Any]) -> str:
 
     return "unknown"
 
+
 ###############################################################################
 def _render_model_defaults(
     constant_name: str,
@@ -117,6 +121,7 @@ def _render_model_defaults(
         ]
     )
     return lines
+
 
 ###############################################################################
 def render_typescript() -> str:
@@ -160,6 +165,7 @@ def render_typescript() -> str:
         )
     )
     return "\n".join(lines)
+
 
 ###############################################################################
 def main(arguments: Sequence[str] | None = None) -> int:

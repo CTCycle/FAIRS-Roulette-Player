@@ -17,6 +17,7 @@ from server.common.checkpoints import normalize_checkpoint_identifier, resolve_c
 from server.common.path import CHECKPOINT_PATH
 from server.repositories.datasets import normalize_dataset_name
 
+
 ###############################################################################
 def build_dataset_service() -> tuple[DatasetService, Mock, Mock, Mock]:
     dataset_repository = Mock()
@@ -28,6 +29,7 @@ def build_dataset_service() -> tuple[DatasetService, Mock, Mock, Mock]:
         loader=loader,
     )
     return service, dataset_repository, importer, loader
+
 
 ###############################################################################
 def test_import_upload_normalizes_filename_separator_and_sheet_name() -> None:
@@ -51,6 +53,7 @@ def test_import_upload_normalizes_filename_separator_and_sheet_name() -> None:
     loader.load_bytes.assert_called_once()
     importer.import_dataframe.assert_called_once()
 
+
 ###############################################################################
 def test_import_upload_rejects_oversized_payload() -> None:
     service, _, _, _ = build_dataset_service()
@@ -60,6 +63,7 @@ def test_import_upload_rejects_oversized_payload() -> None:
             filename="big.csv",
             request=UploadRequest(dataset_kind="training"),
         )
+
 
 ###############################################################################
 def test_dataset_list_and_delete_delegate_to_repository() -> None:
@@ -91,6 +95,7 @@ def test_dataset_list_and_delete_delegate_to_repository() -> None:
     assert delete_response.status == "deleted"
     dataset_repository.delete.assert_called_once_with(1)
 
+
 ###############################################################################
 def test_dataset_delete_blocks_checkpoint_references() -> None:
     service, dataset_repository, _, _ = build_dataset_service()
@@ -102,6 +107,7 @@ def test_dataset_delete_blocks_checkpoint_references() -> None:
         service.delete_training_dataset(1)
 
     dataset_repository.delete.assert_not_called()
+
 
 ###############################################################################
 class DummyCheckpointRepository:
@@ -150,6 +156,7 @@ class DummyCheckpointRepository:
     def delete_checkpoint(self, path: str) -> None:
         self.deleted_paths.append(path)
 
+
 ###############################################################################
 class InvalidCheckpointRepository(DummyCheckpointRepository):
 
@@ -157,12 +164,14 @@ class InvalidCheckpointRepository(DummyCheckpointRepository):
     def load_training_configuration(self, path: str) -> tuple[list, dict]:  # noqa: ARG002
         return [], {}
 
+
 ###############################################################################
 def test_resolve_existing_checkpoint_rejects_missing(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(checkpoint_common.shared_paths, "CHECKPOINT_PATH", tmp_path)
     service = CheckpointService(checkpoint_repository=DummyCheckpointRepository())
     with pytest.raises(FileNotFoundError):
         service.resolve_existing_checkpoint("missing")
+
 
 ###############################################################################
 def test_get_metadata_returns_summary_shape(tmp_path, monkeypatch) -> None:
@@ -177,6 +186,7 @@ def test_get_metadata_returns_summary_shape(tmp_path, monkeypatch) -> None:
     assert metadata["summary"]["final_val_loss"] == 0.4
     assert metadata["summary"]["final_val_rmse"] == 0.5
 
+
 ###############################################################################
 def test_find_dataset_references_reads_checkpoint_configuration(
     tmp_path, monkeypatch
@@ -188,6 +198,7 @@ def test_find_dataset_references_reads_checkpoint_configuration(
     assert service.find_dataset_references(7) == ["cp1"]
     assert service.find_dataset_references(8) == []
 
+
 ###############################################################################
 def test_find_dataset_references_blocks_malformed_configuration(
     tmp_path, monkeypatch
@@ -198,6 +209,7 @@ def test_find_dataset_references_blocks_malformed_configuration(
 
     with pytest.raises(CheckpointReferenceError, match="Unable to inspect checkpoint"):
         service.find_dataset_references(7)
+
 
 ###############################################################################
 def test_delete_checkpoint_removes_folder_through_service(tmp_path, monkeypatch) -> None:
@@ -214,6 +226,7 @@ def test_delete_checkpoint_removes_folder_through_service(tmp_path, monkeypatch)
     service.delete_checkpoint("cp1")
 
     assert not checkpoint_path.exists()
+
 
 ###############################################################################
 def test_checkpoint_staging_is_not_visible_until_complete_publish(
@@ -237,6 +250,7 @@ def test_checkpoint_staging_is_not_visible_until_complete_publish(
     assert Path(final_path, ".complete").is_file()
     assert repository.scan_checkpoints_folder() == ["cp1"]
 
+
 ###############################################################################
 def test_incomplete_checkpoint_workspaces_are_cleaned_on_startup(
     tmp_path: Path,
@@ -256,6 +270,7 @@ def test_incomplete_checkpoint_workspaces_are_cleaned_on_startup(
 
 os.environ.setdefault("KERAS_BACKEND", "torch")
 
+
 ###############################################################################
 def test_checkpoint_name_validation_rejects_path_traversal_patterns() -> None:
     for candidate in ("", ".", "..", "../x", "..\\x", "x/y", "C:temp", "bad\x00name"):
@@ -264,6 +279,7 @@ def test_checkpoint_name_validation_rejects_path_traversal_patterns() -> None:
 
     assert normalize_checkpoint_identifier("checkpoint_01") == "checkpoint_01"
 
+
 ###############################################################################
 def test_checkpoint_path_builder_stays_under_checkpoint_root() -> None:
     checkpoint_root = CHECKPOINT_PATH.resolve()
@@ -271,6 +287,7 @@ def test_checkpoint_path_builder_stays_under_checkpoint_root() -> None:
 
     assert checkpoint_root in resolved.parents
     assert resolved == checkpoint_root / "safe-checkpoint"
+
 
 ###############################################################################
 def test_upload_parameter_normalizers_apply_bounds() -> None:
@@ -290,6 +307,7 @@ def test_upload_parameter_normalizers_apply_bounds() -> None:
         normalize_filename(None)
     with pytest.raises(ValueError):
         normalize_filename("bad\x00.csv")
+
 
 ###############################################################################
 def test_dataset_name_normalization_rejects_invalid_values() -> None:

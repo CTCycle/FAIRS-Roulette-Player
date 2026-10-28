@@ -27,6 +27,7 @@ from server.repositories.database.runtime import DatabaseSwitchConflict, Runtime
 from server.services import database_configuration as database_configuration_module
 from server.services.database_configuration import DatabaseConfigurationService, DatabaseSwitchError
 
+
 ###############################################################################
 def test_alembic_history_has_one_current_schema_baseline() -> None:
     config = Config(str(ALEMBIC_CONFIG_PATH))
@@ -34,6 +35,7 @@ def test_alembic_history_has_one_current_schema_baseline() -> None:
 
     assert script.get_heads() == ["0001_current_schema"]
     assert script.get_revision("0001_current_schema").down_revision is None
+
 
 ###############################################################################
 def test_alembic_check_and_model_metadata_match_head(tmp_path: Path) -> None:
@@ -48,6 +50,7 @@ def test_alembic_check_and_model_metadata_match_head(tmp_path: Path) -> None:
             command.check(config)
     finally:
         engine.dispose()
+
 
 ###############################################################################
 def _sqlite_settings() -> DatabaseSettings:
@@ -65,12 +68,14 @@ def _sqlite_settings() -> DatabaseSettings:
         insert_batch_size=1000,
     )
 
+
 ###############################################################################
 def _engine(database_path: Path):
     return create_engine(
         f"sqlite:///{database_path}",
         connect_args={"check_same_thread": False},
     )
+
 
 ###############################################################################
 def _table_names(database_path: Path) -> set[str]:
@@ -79,6 +84,7 @@ def _table_names(database_path: Path) -> set[str]:
         return set(inspect(engine).get_table_names())
     finally:
         engine.dispose()
+
 
 ###############################################################################
 def _copy_test_alembic_environment(
@@ -98,6 +104,7 @@ def _copy_test_alembic_environment(
     )
     return fixture_root / "alembic.ini"
 
+
 ###############################################################################
 def _set_revision(database_path: Path, revision: str) -> None:
     engine = _engine(database_path)
@@ -109,6 +116,7 @@ def _set_revision(database_path: Path, revision: str) -> None:
             )
     finally:
         engine.dispose()
+
 
 ###############################################################################
 def test_clean_sqlite_initialization_creates_exact_alembic_schema(
@@ -138,6 +146,7 @@ def test_clean_sqlite_initialization_creates_exact_alembic_schema(
             initializer.validate_database_metadata(connection)
     finally:
         engine.dispose()
+
 
 ###############################################################################
 def test_at_head_rerun_is_idempotent_and_preserves_rows(tmp_path: Path) -> None:
@@ -169,6 +178,7 @@ def test_at_head_rerun_is_idempotent_and_preserves_rows(tmp_path: Path) -> None:
             )
     finally:
         engine.dispose()
+
 
 ###############################################################################
 def test_populated_unversioned_database_is_rejected_without_mutation(
@@ -206,6 +216,7 @@ def test_populated_unversioned_database_is_rejected_without_mutation(
     finally:
         engine.dispose()
 
+
 ###############################################################################
 def test_partial_unversioned_schema_is_rejected_unchanged(tmp_path: Path) -> None:
     database_path = tmp_path / "partial.db"
@@ -222,6 +233,7 @@ def test_partial_unversioned_schema_is_rejected_unchanged(tmp_path: Path) -> Non
         initialize_database(_sqlite_settings(), database_path=database_path)
 
     assert _table_names(database_path) == {"datasets"}
+
 
 ###############################################################################
 def test_unknown_or_ahead_revision_is_rejected_before_schema_changes(
@@ -244,6 +256,7 @@ def test_unknown_or_ahead_revision_is_rejected_before_schema_changes(
         initialize_database(_sqlite_settings(), database_path=database_path)
 
     assert _table_names(database_path) == {"alembic_version"}
+
 
 ###############################################################################
 def test_previous_database_head_is_rejected_without_mutation(tmp_path: Path) -> None:
@@ -268,6 +281,7 @@ def test_previous_database_head_is_rejected_without_mutation(tmp_path: Path) -> 
 
     assert _table_names(database_path) == {"alembic_version"}
 
+
 ###############################################################################
 def test_multiple_database_heads_are_rejected(tmp_path: Path) -> None:
     database_path = tmp_path / "multiple-heads.db"
@@ -290,6 +304,7 @@ def test_multiple_database_heads_are_rejected(tmp_path: Path) -> None:
 
     with pytest.raises(DatabaseRevisionError, match="multiple Alembic heads"):
         initialize_database(_sqlite_settings(), database_path=database_path)
+
 
 ###############################################################################
 def test_metadata_drift_at_head_is_rejected_without_repair(tmp_path: Path) -> None:
@@ -315,6 +330,7 @@ def test_metadata_drift_at_head_is_rejected_without_repair(tmp_path: Path) -> No
         }
     finally:
         engine.dispose()
+
 
 ###############################################################################
 def test_failed_migration_rolls_back_schema_and_revision(tmp_path: Path) -> None:
@@ -356,6 +372,7 @@ def downgrade() -> None:
     finally:
         engine.dispose()
 
+
 ###############################################################################
 def test_known_behind_revision_upgrades_in_order(tmp_path: Path) -> None:
     database_path = tmp_path / "behind.db"
@@ -391,6 +408,7 @@ def downgrade() -> None:
     finally:
         engine.dispose()
 
+
 ###############################################################################
 def test_concurrent_sqlite_initializers_serialize_and_finish_at_head(
     tmp_path: Path,
@@ -421,9 +439,11 @@ def test_concurrent_sqlite_initializers_serialize_and_finish_at_head(
 # Copyright © 2026 Thomas Virdis
 # Licensed under the MIT License.
 
+
 ###############################################################################
 def _runtime_sqlite_settings() -> DatabaseSettings:
     return DatabaseSettings(True, None, None, None, None, None, None, False, None, 10, 1000)
+
 
 ###############################################################################
 def _initialized_database(path: Path, polling_interval: float) -> FAIRSDatabase:
@@ -442,6 +462,7 @@ def _initialized_database(path: Path, polling_interval: float) -> FAIRSDatabase:
         ),
     )
     return database
+
 
 ###############################################################################
 @pytest.fixture
@@ -486,6 +507,7 @@ def api_runtime(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     finally:
         runtime_database.dispose()
 
+
 ###############################################################################
 def test_database_status_redacts_saved_password(api_runtime) -> None:
     service, runtime_database, store, _old_path, _fail, _application = api_runtime
@@ -506,6 +528,7 @@ def test_database_status_redacts_saved_password(api_runtime) -> None:
     assert response.active_backend == "sqlite"
     assert runtime_database.active.settings.embedded_database is True
 
+
 ###############################################################################
 def test_connection_test_does_not_activate_or_persist_candidate(api_runtime, tmp_path: Path) -> None:
     service, runtime_database, store, old_path, _fail, _application = api_runtime
@@ -519,6 +542,7 @@ def test_connection_test_does_not_activate_or_persist_candidate(api_runtime, tmp
     assert candidate_path.exists()
     assert runtime_database.active.db_path == old_path
     assert store.current().sqlite_path == old_path
+
 
 ###############################################################################
 def test_switch_loads_target_settings_without_copying_settings(
@@ -555,6 +579,7 @@ def test_switch_loads_target_settings_without_copying_settings(
         old_database.dispose()
     assert application.state.loaded_settings.jobs.polling_interval == 3.5
 
+
 ###############################################################################
 def test_connection_and_unknown_schema_fail_without_changing_active_config(api_runtime, tmp_path: Path) -> None:
     service, runtime_database, store, old_path, _fail, _application = api_runtime
@@ -577,6 +602,7 @@ def test_connection_and_unknown_schema_fail_without_changing_active_config(api_r
     assert runtime_database.active.db_path == old_path
     assert store.current().sqlite_path == old_path
 
+
 ###############################################################################
 def test_activation_failure_rolls_back_to_previous_database(api_runtime, tmp_path: Path) -> None:
     service, runtime_database, store, old_path, fail_candidate, _application = api_runtime
@@ -593,6 +619,7 @@ def test_activation_failure_rolls_back_to_previous_database(api_runtime, tmp_pat
 
     assert runtime_database.active.db_path == old_path
     assert store.current().sqlite_path == old_path
+
 
 ###############################################################################
 def test_switch_conflicts_with_active_training_and_inference(api_runtime, tmp_path: Path) -> None:
@@ -611,6 +638,7 @@ def test_switch_conflicts_with_active_training_and_inference(api_runtime, tmp_pa
     application.state.inference_service.state.has_sessions = lambda: True
     with pytest.raises(DatabaseSwitchConflict, match="inference"):
         service.activate(target)
+
 
 ###############################################################################
 def test_runtime_manager_drains_operations_before_switch(tmp_path: Path) -> None:

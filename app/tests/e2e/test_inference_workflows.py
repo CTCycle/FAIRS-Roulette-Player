@@ -20,6 +20,7 @@ Tests: /inference/sessions/start, /inference/sessions/{id}/next,
 VAL11_CHECKPOINT = "val00_lineage_20260921"
 VAL11_DATASET_ID = 5
 
+
 ###############################################################################
 def require_checkpoint(api_context: APIRequestContext) -> str:
     response = api_context.get("/api/training/checkpoints")
@@ -28,6 +29,7 @@ def require_checkpoint(api_context: APIRequestContext) -> str:
     if VAL11_CHECKPOINT not in checkpoints:
         pytest.skip(f"VAL-11 checkpoint {VAL11_CHECKPOINT!r} is not available.")
     return VAL11_CHECKPOINT
+
 
 ###############################################################################
 def require_dataset_id(api_context: APIRequestContext) -> int:
@@ -45,6 +47,7 @@ def require_dataset_id(api_context: APIRequestContext) -> int:
     if dataset is None:
         pytest.skip(f"VAL-11 training dataset {VAL11_DATASET_ID} is not available.")
     return VAL11_DATASET_ID
+
 
 ###############################################################################
 def start_inference_session(
@@ -79,6 +82,7 @@ def start_inference_session(
         )
     return response.json()
 
+
 ###############################################################################
 def get_session_snapshot(
     api_context: APIRequestContext, session_id: str
@@ -86,6 +90,7 @@ def get_session_snapshot(
     response = api_context.get(f"/api/inference/sessions/{session_id}")
     assert response.ok, f"Expected 200, got {response.status}: {response.text()}"
     return response.json()
+
 
 ###############################################################################
 class TestInferenceEndpoints:
@@ -172,6 +177,7 @@ class TestInferenceEndpoints:
         data = response.json()
         assert data.get("status") == "cleared"
         assert data.get("session_id") == "non_existent"
+
 
 ###############################################################################
 class TestInferenceSessionFlow:
@@ -416,12 +422,14 @@ STRATEGY_NAMES = {
     4: "Fibonacci",
 }
 
+
 ###############################################################################
 def _data_root() -> Path:
     configured = os.getenv("FAIRS_DATA_DIR", "").strip()
     if configured:
         return Path(configured).resolve()
     return Path(__file__).resolve().parents[3] / "data"
+
 
 ###############################################################################
 def _persisted_steps(session_id: str) -> list[tuple[object, ...]]:
@@ -439,6 +447,7 @@ def _persisted_steps(session_id: str) -> list[tuple[object, ...]]:
             """,
             (session_id,),
         ).fetchall()
+
 
 ###############################################################################
 def _require_val15_fixture(api_context: APIRequestContext) -> str:
@@ -468,6 +477,7 @@ def _require_val15_fixture(api_context: APIRequestContext) -> str:
     assert training["dynamic_betting_enabled"] is True
     assert training["bet_strategy_model_enabled"] is True
     return VAL15_CHECKPOINT
+
 
 ###############################################################################
 def test_learned_strategy_suggestion_applies_without_advancing_pending_step(

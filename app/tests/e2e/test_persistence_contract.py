@@ -27,6 +27,7 @@ from server.repositories.schemas.models import Base
 CURRENT_REVISION = "0001_current_schema"
 TEST_REVISION = "0002_test_revision"
 
+
 ###############################################################################
 def _test_database_settings() -> DatabaseSettings:
     return DatabaseSettings(
@@ -42,6 +43,7 @@ def _test_database_settings() -> DatabaseSettings:
         connect_timeout=10,
         insert_batch_size=1000,
     )
+
 
 ###############################################################################
 def exercise_contract(database: FAIRSDatabase) -> None:
@@ -93,6 +95,7 @@ def exercise_contract(database: FAIRSDatabase) -> None:
             == 0
         )
 
+
 ###############################################################################
 def test_sqlite_contract() -> None:
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
@@ -108,6 +111,7 @@ def test_sqlite_contract() -> None:
     finally:
         engine.dispose()
 
+
 ###############################################################################
 def _reset_postgres(engine) -> None:
     with engine.begin() as connection:
@@ -115,6 +119,7 @@ def _reset_postgres(engine) -> None:
             "DROP TABLE IF EXISTS inference_session_steps, inference_sessions, "
             "application_settings, dataset_outcomes, datasets, alembic_version CASCADE"
         )
+
 
 ###############################################################################
 @pytest.fixture
@@ -129,6 +134,7 @@ def postgres_engine():
     finally:
         _reset_postgres(engine)
         engine.dispose()
+
 
 ###############################################################################
 def _copy_test_alembic_environment(tmp_path: Path, body: str) -> Path:
@@ -146,6 +152,7 @@ def _copy_test_alembic_environment(tmp_path: Path, body: str) -> Path:
     )
     return fixture_root / "alembic.ini"
 
+
 ###############################################################################
 def _set_postgres_revision(engine, revision: str) -> None:
     with engine.begin() as connection:
@@ -153,6 +160,7 @@ def _set_postgres_revision(engine, revision: str) -> None:
             text("UPDATE alembic_version SET version_num = :revision"),
             {"revision": revision},
         )
+
 
 ###############################################################################
 def test_postgresql_clean_and_current_are_idempotent(postgres_engine) -> None:
@@ -165,6 +173,7 @@ def test_postgresql_clean_and_current_are_idempotent(postgres_engine) -> None:
             ).scalar_one()
             == CURRENT_REVISION
         )
+
 
 ###############################################################################
 def test_postgresql_unversioned_database_is_rejected_without_mutation(
@@ -190,6 +199,7 @@ def test_postgresql_unversioned_database_is_rejected_without_mutation(
             connection.execute(text("SELECT COUNT(*) FROM datasets")).scalar_one() == 1
         )
         assert not inspect(connection).has_table("alembic_version")
+
 
 ###############################################################################
 def test_postgresql_synthetic_rollback_and_behind_revision(
@@ -251,6 +261,7 @@ def downgrade() -> None:
             == TEST_REVISION
         )
 
+
 ###############################################################################
 def test_postgresql_concurrent_initializers_serialize(postgres_engine) -> None:
     def initialize() -> None:
@@ -272,6 +283,7 @@ def test_postgresql_concurrent_initializers_serialize(postgres_engine) -> None:
             ).scalar_one()
             == CURRENT_REVISION
         )
+
 
 ###############################################################################
 def test_postgresql_contract(postgres_engine) -> None:

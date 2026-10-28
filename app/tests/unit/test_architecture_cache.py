@@ -23,6 +23,7 @@ BOUNDARY_RULES: dict[str, tuple[str, ...]] = {
     "server.learning": ("server.api", "server.services", "server.repositories"),
 }
 
+
 ###############################################################################
 def _module_name(path: Path) -> str:
     relative = path.relative_to(SERVER_ROOT).with_suffix("")
@@ -30,6 +31,7 @@ def _module_name(path: Path) -> str:
     if parts[-1] == "__init__":
         parts.pop()
     return ".".join(("server", *parts))
+
 
 ###############################################################################
 def _imported_modules(tree: ast.AST) -> set[str]:
@@ -40,6 +42,7 @@ def _imported_modules(tree: ast.AST) -> set[str]:
         elif isinstance(node, ast.ImportFrom) and node.module:
             imported.add(node.module)
     return {name for name in imported if name.startswith("server.")}
+
 
 ###############################################################################
 def test_backend_module_boundaries_remain_explicit() -> None:
@@ -75,6 +78,7 @@ def test_backend_module_boundaries_remain_explicit() -> None:
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2].parent
 
+
 ###############################################################################
 def test_cache_environment_contains_only_canonical_paths() -> None:
     canonical_root = shared_paths.CACHE_PATH.resolve()
@@ -83,6 +87,7 @@ def test_cache_environment_contains_only_canonical_paths() -> None:
 
     for configured_path in cache_config.CACHE_ENVIRONMENT.values():
         assert Path(configured_path).resolve().is_relative_to(canonical_root)
+
 
 ###############################################################################
 def test_custom_data_directory_remains_selectable() -> None:
@@ -97,6 +102,7 @@ def test_custom_data_directory_remains_selectable() -> None:
         assert shared_paths.CHECKPOINT_PATH == expected_root / "checkpoints"
     finally:
         shared_paths.configure_runtime_paths(original_data_dir)
+
 
 ###############################################################################
 def test_data_directory_cannot_overlap_canonical_cache_root() -> None:
