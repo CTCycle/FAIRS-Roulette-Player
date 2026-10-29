@@ -39,7 +39,7 @@ Frontend freshness is content-based rather than timestamp-based. The launcher ha
 
 ## Cache Ownership
 
-`runtimes/cache` is the only canonical cache root. Fixed child directories contain runtime, dependency, application, frontend, and test/tool caches. The cache action empties this root by removing all child files and folders while preserving only its `.gitkeep` marker, and removes source-tree `__pycache__` directories under `app/server`; later runtime/setup operations recreate cache paths when needed. It does not scan the managed `app/server/.venv` runtime or discover historical project-local cache names. Obsolete cache directories, if manually left in an old checkout, are outside current ownership and should be removed during repository cleanup.
+`runtimes/cache` is the canonical launcher cache root. Clear Cache removes its contents except `.gitkeep`, and discovers recognized caches and bytecode under `app/server` (including `.venv`), `app/client` (including `node_modules`), and `app/tests`. It handles Python bytecode, pytest/Ruff/mypy caches, nested `.cache` and Vite directories, coverage files/reports, TypeScript build info, client/server build outputs, Playwright traces/JUnit and named viewport/VAL screenshots, interrupted checkpoint staging/backup files, and exact launcher temporary-file patterns. Cache folders inside installed dependencies are removed without deleting the dependency packages. Missing paths are harmless; locked, inaccessible, unsafe, and partially cleaned locations are reported in the operation summary. Database, checkpoints, logs, settings, and unknown files are excluded from ordinary cache cleanup.
 
 ## Application Lifecycle
 
@@ -58,7 +58,10 @@ Start the backend and Vite development server manually when using hot reload:
 ```powershell
 .\start_on_windows.ps1
 # Choose Install/Check as needed, then in separate terminals:
-.\runtimes\nodejs\npm.cmd --prefix app/client run dev
+$repoRoot = (Resolve-Path .).Path
+$env:NPM_CONFIG_CACHE = Join-Path $repoRoot 'runtimes\cache\npm'
+$env:PLAYWRIGHT_BROWSERS_PATH = Join-Path $repoRoot 'runtimes\cache\playwright-browsers'
+& (Join-Path $repoRoot 'runtimes\nodejs\npm.cmd') --prefix (Join-Path $repoRoot 'app\client') run dev
 ```
 
 The Vite server uses `UI_HOST` and `UI_PORT` and proxies `/api` to the backend configured by `API_BASE_URL` or `FASTAPI_HOST` and `FASTAPI_PORT`.
@@ -82,16 +85,16 @@ Only current versioned checkpoint configuration files are supported. Unversioned
 
 ## Destructive Maintenance
 
-Log removal, cache clearing, checkpoint deletion, local data removal, and uninstall require interactive confirmation.
+Log removal, cache clearing, checkpoint deletion, local data removal, and uninstall require interactive confirmation. Each action previews resolved targets and reports cleaned, skipped, and failed paths. Cache and uninstall target paths are rooted at the launcher directory, independent of the caller's current directory. For a read-only preview from any working directory, run `start_on_windows.ps1 -Action Cache -WhatIf`, `-Action Uninstall -WhatIf`, or `-Action Uninstall -CompleteRemoval -WhatIf`.
 
-Uninstall removes only current application-owned runtime/dependency/build locations:
+Standard uninstall removes current application-owned runtime/dependency/build locations, recognized caches and temporary artifacts, test reports, and application-generated `.log` files:
 
-- `runtimes`
+- `runtimes/python`, `runtimes/uv`, `runtimes/nodejs`, and disposable contents of `runtimes/cache`
 - `app/server/.venv`
 - `app/client/node_modules`
 - `app/client/dist`
 
-It does not carry permanent knowledge of obsolete root virtual environments, Angular artifacts, or historical cache paths.
+It preserves the configured local database, checkpoints, `database-config.json`, `settings/.env`, runtime markers, unknown runtime siblings, unknown data-root files, and browser `localStorage`. Complete removal previews the exact locations and requires a separate typed `REMOVE` confirmation before deleting the configured local SQLite database and sidecars, checkpoint contents, logs, `database-config.json`, and `settings/.env`. Invalid database configuration fails closed, and a remote PostgreSQL database is never deleted. There are no application-specific filesystem targets under AppData.
 
 ## Source Updates
 

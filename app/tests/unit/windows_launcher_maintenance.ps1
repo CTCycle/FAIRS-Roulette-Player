@@ -10,6 +10,7 @@ $script:FixtureRoot = Join-Path $env:TEMP "fairs-val19-$PID-$($script:RunId)"
 $script:ExternalRoot = Join-Path $env:TEMP "fairs-val19-external-$PID-$($script:RunId)"
 $script:DataRoot = Join-Path $script:FixtureRoot 'isolated-data'
 $script:ConfirmationResponse = 'yes'
+$script:UninstallMode = 'Standard'
 $script:ProcessFixtureRoot = $null
 $script:ProcessExternalRoot = $null
 $script:OwnedProcessIds = [Collections.Generic.List[int]]::new()
@@ -33,22 +34,51 @@ function New-FixtureFile([string]$Path, [string]$Contents = 'fixture') {
     Set-Content -LiteralPath $Path -Value $Contents -NoNewline
 }
 
-function Remove-SafeTree([string]$Path, [string]$RequiredPrefix) {
+function Remove-TreeWithoutFollowingLinks([string]$Path) {
     if (-not (Test-Path -LiteralPath $Path)) { return }
+    $root = Get-Item -LiteralPath $Path -Force
+    if (($root.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+        if ($root.PSIsContainer) { [IO.Directory]::Delete($root.FullName, $false) } else { [IO.File]::Delete($root.FullName) }
+        return
+    }
+    if (-not $root.PSIsContainer) { [IO.File]::Delete($root.FullName); return }
+    $pending = [Collections.Generic.Stack[object]]::new()
+    $pending.Push([pscustomobject]@{ Item = $root; Visited = $false })
+    while ($pending.Count -gt 0) {
+        $work = $pending.Pop()
+        $item = $work.Item
+        if ($item.PSIsContainer -and -not $work.Visited -and (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -eq 0)) {
+            $pending.Push([pscustomobject]@{ Item = $item; Visited = $true })
+            foreach ($child in @(Get-ChildItem -LiteralPath $item.FullName -Force)) {
+                $pending.Push([pscustomobject]@{ Item = $child; Visited = $false })
+            }
+        } elseif (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+            if ($item.PSIsContainer) { [IO.Directory]::Delete($item.FullName, $false) } else { [IO.File]::Delete($item.FullName) }
+        } elseif ($item.PSIsContainer) {
+            [IO.Directory]::Delete($item.FullName, $false)
+        } else {
+            [IO.File]::Delete($item.FullName)
+        }
+    }
+}
+
+function Remove-SafeTree([string]$Path, [string]$RequiredPrefix) {
+    if ([string]::IsNullOrWhiteSpace($Path) -or -not (Test-Path -LiteralPath $Path)) { return }
     $resolved = [IO.Path]::GetFullPath($Path)
     $tempRoot = [IO.Path]::GetFullPath($env:TEMP).TrimEnd('\') + '\'
     Assert-Condition ($resolved.StartsWith($tempRoot, [StringComparison]::OrdinalIgnoreCase)) "Refusing to remove a path outside TEMP: '$resolved'."
     Assert-Condition ([IO.Path]::GetFileName($resolved).StartsWith($RequiredPrefix, [StringComparison]::OrdinalIgnoreCase)) "Refusing to remove an unexpected fixture path: '$resolved'."
-    Remove-Item -LiteralPath $resolved -Recurse -Force
+    Remove-TreeWithoutFollowingLinks $resolved
 }
 
 function Remove-SafeQaTree([string]$Path, [string]$RequiredPrefix) {
+    if ([string]::IsNullOrWhiteSpace($Path)) { return }
     if (-not (Test-Path -LiteralPath $Path)) { return }
     $resolved = [IO.Path]::GetFullPath($Path)
     $qaRoot = [IO.Path]::GetFullPath((Join-Path $script:RepositoryRoot 'assets\QA')).TrimEnd('\') + '\'
     Assert-Condition ($resolved.StartsWith($qaRoot, [StringComparison]::OrdinalIgnoreCase)) "Refusing to remove a path outside assets/QA: '$resolved'."
     Assert-Condition ([IO.Path]::GetFileName($resolved).StartsWith($RequiredPrefix, [StringComparison]::OrdinalIgnoreCase)) "Refusing to remove an unexpected QA fixture path: '$resolved'."
-    Remove-Item -LiteralPath $resolved -Recurse -Force
+    Remove-TreeWithoutFollowingLinks $resolved
 }
 
 function Get-FreeTcpPort {
@@ -75,9 +105,13 @@ function Reset-Fixture([int]$BackendPort = -1, [int]$FrontendPort = -1) {
 
     $script:repoRoot = $script:FixtureRoot
     $script:runtimeRoot = Join-Path $script:repoRoot 'runtimes'
+    $script:pythonDir = Join-Path $script:runtimeRoot 'python'
+    $script:uvDir = Join-Path $script:runtimeRoot 'uv'
+    $script:nodeDir = Join-Path $script:runtimeRoot 'nodejs'
     $script:runtimeCacheDir = Join-Path $script:runtimeRoot 'cache'
     $script:serverDir = Join-Path $script:repoRoot 'app\server'
     $script:clientDir = Join-Path $script:repoRoot 'app\client'
+    $script:testsDir = Join-Path $script:repoRoot 'app\tests'
     $script:venvDir = Join-Path $script:serverDir '.venv'
     $script:envFile = Join-Path $script:repoRoot 'settings\.env'
     $script:envExample = Join-Path $script:repoRoot 'settings\.env.example'
@@ -106,6 +140,7 @@ function Reset-Fixture([int]$BackendPort = -1, [int]$FrontendPort = -1) {
     $env:UI_PORT = [string]$FrontendPort
     $env:FAIRS_DATA_DIR = $script:DataRoot
     $script:ConfirmationResponse = 'yes'
+    $script:UninstallMode = 'Standard'
     $script:LauncherInteractive = $false
 }
 
@@ -154,7 +189,7 @@ function Invoke-MaintenanceAction([string]$Name) {
         'Cache' { Clear-Cache }
         'Checkpoints' { Remove-Checkpoints }
         'AllData' { Remove-AllData }
-        'Uninstall' { Uninstall-Application }
+        'Uninstall' { Uninstall-Application -Mode $script:UninstallMode }
         'StopProcesses' { Stop-ApplicationProcesses }
         default { throw "Unknown maintenance action '$Name'." }
     }
@@ -172,8 +207,12 @@ function Assert-Throws([scriptblock]$Action, [string]$ExpectedText) {
 }
 
 function Read-Host([string]$Prompt) {
+    if ($Prompt -like 'Uninstall mode*') {
+        if ($script:UninstallMode -eq 'Complete') { return '2' }
+        return '1'
+    }
+    if ($Prompt -like 'Type REMOVE*') { return 'REMOVE' }
     $response = $script:ConfirmationResponse
-    $script:LauncherInteractive = $false
     return $response
 }
 
@@ -241,8 +280,37 @@ function Test-ClearCache {
     New-FixtureFile (Join-Path $script:serverDir '__pycache__\module.cpython-314.pyc') 'server bytecode'
     New-FixtureFile (Join-Path $script:serverDir 'services\predictions\__pycache__\module.cpython-314.pyc') 'nested bytecode'
     New-FixtureFile (Join-Path $script:venvDir '__pycache__\module.cpython-314.pyc') 'venv bytecode'
+    New-FixtureFile (Join-Path $script:serverDir '.pytest_cache\v\cache\nodeids') 'pytest cache'
+    New-FixtureFile (Join-Path $script:serverDir '.ruff_cache\content\hash') 'ruff cache'
+    New-FixtureFile (Join-Path $script:serverDir '.mypy_cache\3.14\meta.json') 'mypy cache'
+    New-FixtureFile (Join-Path $script:serverDir 'tests\.coverage') 'coverage cache'
+    New-FixtureFile (Join-Path $script:clientDir '.vite\deps\metadata.json') 'vite cache'
+    New-FixtureFile (Join-Path $script:clientDir 'node_modules\package-a\.cache\entry.json') 'dependency cache'
+    New-FixtureFile (Join-Path $script:clientDir 'node_modules\package-a\index.js') 'installed package'
+    New-FixtureFile (Join-Path $script:clientDir 'tsconfig.tsbuildinfo') 'typescript build info'
+    New-FixtureFile (Join-Path $script:repoRoot 'app\tests\unit\__pycache__\test.cpython-314.pyc') 'test bytecode'
+    New-FixtureFile (Join-Path $script:repoRoot 'assets\QA\frontend-e2e-artifacts\trace.zip') 'playwright trace'
+    New-FixtureFile (Join-Path $script:repoRoot 'assets\QA\frontend-e2e-junit-chromium.xml') 'playwright junit'
+    New-FixtureFile (Join-Path $script:repoRoot 'assets\QA\frontend-viewport-1100-chromium.png') 'viewport capture'
+    New-FixtureFile (Join-Path $script:repoRoot 'assets\QA\val17-training-active-1440x900.png') 'validation capture'
+    New-FixtureFile (Join-Path $script:repoRoot 'assets\QA\keep-note.txt') 'unknown QA file'
+    New-FixtureFile (Join-Path $script:DataRoot '.database-config.json.1234567890.tmp') 'configuration temp'
+    New-FixtureFile (Join-Path $script:DataRoot 'checkpoints\.broken.staging-0123456789abcdef0123456789abcdef\partial.bin') 'incomplete checkpoint'
+    New-FixtureFile (Join-Path $script:DataRoot 'checkpoints\.saved_model.keras.0123456789abcdef0123456789abcdef.tmp.keras') 'checkpoint temp'
+    New-FixtureFile (Join-Path $script:DataRoot 'checkpoints\valid-checkpoint\.complete.0123456789abcdef0123456789abcdef.tmp') 'completion marker temp'
+    New-FixtureFile (Join-Path $script:DataRoot 'checkpoints\valid-checkpoint\saved_model.keras') 'valid checkpoint model'
+    New-FixtureFile (Join-Path $script:repoRoot 'settings\.env.1234567890.tmp') 'environment temp'
+    New-FixtureFile (Join-Path $script:runtimeRoot 'python\python.zip') 'partial runtime download'
+    New-FixtureFile (Join-Path $script:DataRoot 'database.db') 'persistent database'
+    New-FixtureFile (Join-Path $script:DataRoot 'checkpoints\model.pt') 'persistent checkpoint'
+    New-FixtureFile (Join-Path $script:DataRoot 'logs\current.log') 'persistent log'
     $neighbor = Join-Path $script:runtimeRoot 'cache-neighbor'
     New-FixtureFile (Join-Path $neighbor 'keep.txt') 'keep neighbor'
+
+    $outsideMarker = Join-Path $script:ExternalRoot 'outside.txt'
+    New-FixtureFile $outsideMarker 'outside target'
+    $junction = Join-Path $script:runtimeCacheDir 'external-link'
+    New-Item -ItemType Junction -Path $junction -Target $script:ExternalRoot -ErrorAction Stop | Out-Null
 
     $script:LauncherInteractive = $true
     Invoke-MaintenanceAction 'Cache'
@@ -253,8 +321,111 @@ function Test-ClearCache {
     Assert-Condition (@(Get-ChildItem -LiteralPath $script:runtimeCacheDir -Directory -Force).Count -eq 0) 'Clear cache left a runtime cache folder.'
     Assert-Condition (-not (Test-Path -LiteralPath (Join-Path $script:serverDir '__pycache__'))) 'Clear cache left the server bytecode directory.'
     Assert-Condition (-not (Test-Path -LiteralPath (Join-Path $script:serverDir 'services\predictions\__pycache__'))) 'Clear cache left a nested server bytecode directory.'
-    Assert-FileContains (Join-Path $script:venvDir '__pycache__\module.cpython-314.pyc') 'venv bytecode'
+    Assert-Condition (-not (Test-Path -LiteralPath (Join-Path $script:serverDir '.pytest_cache'))) 'Clear cache left pytest cache output.'
+    Assert-Condition (-not (Test-Path -LiteralPath (Join-Path $script:serverDir '.ruff_cache'))) 'Clear cache left Ruff cache output.'
+    Assert-Condition (-not (Test-Path -LiteralPath (Join-Path $script:serverDir '.mypy_cache'))) 'Clear cache left mypy cache output.'
+    Assert-Condition (-not (Test-Path -LiteralPath (Join-Path $script:serverDir 'tests\.coverage'))) 'Clear cache left coverage data.'
+    Assert-Condition (-not (Test-Path -LiteralPath (Join-Path $script:clientDir '.vite'))) 'Clear cache left a client Vite cache.'
+    Assert-Condition (-not (Test-Path -LiteralPath (Join-Path $script:clientDir 'node_modules\package-a\.cache'))) 'Clear cache left node_modules cache output.'
+    Assert-Condition (-not (Test-Path -LiteralPath (Join-Path $script:clientDir 'tsconfig.tsbuildinfo'))) 'Clear cache left TypeScript build information.'
+    Assert-FileContains (Join-Path $script:clientDir 'node_modules\package-a\index.js') 'installed package'
+    Assert-Condition (-not (Test-Path -LiteralPath (Join-Path $script:repoRoot 'app\tests\unit\__pycache__'))) 'Clear cache left test bytecode.'
+    Assert-Condition (-not (Test-Path -LiteralPath (Join-Path $script:repoRoot 'assets\QA\frontend-e2e-artifacts'))) 'Clear cache left Playwright reports.'
+    Assert-Condition (-not (Test-Path -LiteralPath (Join-Path $script:repoRoot 'assets\QA\frontend-e2e-junit-chromium.xml'))) 'Clear cache left Playwright JUnit output.'
+    Assert-Condition (-not (Test-Path -LiteralPath (Join-Path $script:repoRoot 'assets\QA\frontend-viewport-1100-chromium.png'))) 'Clear cache left a generated frontend viewport screenshot.'
+    Assert-Condition (-not (Test-Path -LiteralPath (Join-Path $script:repoRoot 'assets\QA\val17-training-active-1440x900.png'))) 'Clear cache left a generated validation screenshot.'
+    Assert-FileContains (Join-Path $script:repoRoot 'assets\QA\keep-note.txt') 'unknown QA file'
+    foreach ($temporaryPath in @(
+        (Join-Path $script:DataRoot '.database-config.json.1234567890.tmp'),
+        (Join-Path $script:DataRoot 'checkpoints\.broken.staging-0123456789abcdef0123456789abcdef'),
+        (Join-Path $script:DataRoot 'checkpoints\.saved_model.keras.0123456789abcdef0123456789abcdef.tmp.keras'),
+        (Join-Path $script:DataRoot 'checkpoints\valid-checkpoint\.complete.0123456789abcdef0123456789abcdef.tmp'),
+        (Join-Path $script:repoRoot 'settings\.env.1234567890.tmp'),
+        (Join-Path $script:runtimeRoot 'python\python.zip')
+    )) { Assert-Condition (-not (Test-Path -LiteralPath $temporaryPath)) "Clear cache left an incomplete temporary artifact '$temporaryPath'." }
+    Assert-FileContains (Join-Path $script:DataRoot 'checkpoints\valid-checkpoint\saved_model.keras') 'valid checkpoint model'
+    Assert-Condition (-not (Test-Path -LiteralPath $junction)) 'Clear cache left a recognized junction under its owned cache root.'
+    Assert-FileContains $outsideMarker 'outside target'
+    Assert-FileContains (Join-Path $script:DataRoot 'database.db') 'persistent database'
+    Assert-FileContains (Join-Path $script:DataRoot 'checkpoints\model.pt') 'persistent checkpoint'
+    Assert-FileContains (Join-Path $script:DataRoot 'logs\current.log') 'persistent log'
     Assert-FileContains (Join-Path $neighbor 'keep.txt') 'keep neighbor'
+
+    $script:LauncherInteractive = $true
+    Invoke-MaintenanceAction 'Cache'
+    Assert-FileContains (Join-Path $script:DataRoot 'database.db') 'persistent database'
+}
+
+function Test-CleanupDryRunAndPathValidation {
+    Reset-Fixture
+    $ownedRoot = Join-Path $script:FixtureRoot 'owned'
+    $ownedFile = Join-Path $ownedRoot 'nested\cache.bin'
+    New-FixtureFile $ownedFile 'keep during preview'
+    $target = New-CleanupTarget -Path (Join-Path $ownedRoot 'nested') -AllowedRoot $ownedRoot
+    $inventory = Get-CleanupInventory -Targets @($target)
+    $result = Invoke-CleanupInventory -Inventory $inventory -WhatIf
+    $resolvedOwnedFile = (Get-Item -LiteralPath $ownedFile).FullName
+    Assert-Condition ($result.Planned -contains $resolvedOwnedFile) 'Dry run did not include the nested file target.'
+    Assert-FileContains $ownedFile 'keep during preview'
+
+    $outsideFile = Join-Path $script:ExternalRoot 'outside-cache.bin'
+    New-FixtureFile $outsideFile 'outside remains'
+    $unsafe = New-CleanupTarget -Path $outsideFile -AllowedRoot $ownedRoot -Mode 'File'
+    $unsafeInventory = Get-CleanupInventory -Targets @($unsafe)
+    Assert-Condition ($unsafeInventory.Failed.Count -gt 0) 'Path validation did not reject a target outside its allowed root.'
+    Assert-FileContains $outsideFile 'outside remains'
+
+    $linkedRoot = Join-Path $ownedRoot 'linked-root'
+    New-Item -ItemType Junction -Path $linkedRoot -Target $script:ExternalRoot -ErrorAction Stop | Out-Null
+    $linkedTarget = New-CleanupTarget -Path (Join-Path $linkedRoot 'outside-cache.bin') -AllowedRoot $linkedRoot -Mode 'File'
+    $linkedInventory = Get-CleanupInventory -Targets @($linkedTarget)
+    Assert-Condition ($linkedInventory.Failed.Count -gt 0) 'Path validation allowed a target below a reparse-point root.'
+    Assert-FileContains $outsideFile 'outside remains'
+
+    $lockedPath = Join-Path $ownedRoot 'locked.cache'
+    New-FixtureFile $lockedPath 'locked remains'
+    $lockedStream = [IO.File]::Open($lockedPath, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::None)
+    try {
+        $lockedInventory = Get-CleanupInventory -Targets @((New-CleanupTarget -Path $lockedPath -AllowedRoot $ownedRoot -Mode 'File'))
+        $lockedResult = Invoke-CleanupInventory -Inventory $lockedInventory
+        Assert-Condition ($lockedResult.Failed.Count -gt 0) 'A locked file was not reported as a cleanup failure.'
+    } finally { $lockedStream.Dispose() }
+    Assert-FileContains $lockedPath 'locked remains'
+
+    $inaccessibleDirectory = Join-Path $ownedRoot 'inaccessible'
+    New-FixtureFile (Join-Path $inaccessibleDirectory 'protected.bin') 'permission protected'
+    $sid = [Security.Principal.WindowsIdentity]::GetCurrent().User
+    $denyRule = [Security.AccessControl.FileSystemAccessRule]::new(
+        $sid,
+        [Security.AccessControl.FileSystemRights]::ListDirectory,
+        [Security.AccessControl.AccessControlType]::Deny
+    )
+    $originalAcl = Get-Acl -LiteralPath $inaccessibleDirectory
+    $originalAcl.AddAccessRule($denyRule)
+    Set-Acl -LiteralPath $inaccessibleDirectory -AclObject $originalAcl
+    try {
+        $inaccessibleTarget = New-CleanupTarget -Path $inaccessibleDirectory -AllowedRoot $ownedRoot
+        $inaccessibleInventory = Get-CleanupInventory -Targets @($inaccessibleTarget)
+        Assert-Condition ($inaccessibleInventory.Failed.Count -gt 0) 'An inaccessible directory was not reported as a cleanup failure.'
+    } finally {
+        $restoredAcl = Get-Acl -LiteralPath $inaccessibleDirectory
+        [void]$restoredAcl.RemoveAccessRuleSpecific($denyRule)
+        Set-Acl -LiteralPath $inaccessibleDirectory -AclObject $restoredAcl
+    }
+    Assert-FileContains (Join-Path $inaccessibleDirectory 'protected.bin') 'permission protected'
+
+    $linkedDataRoot = Join-Path $ownedRoot 'linked-data-root'
+    New-Item -ItemType Junction -Path $linkedDataRoot -Target $script:ExternalRoot -ErrorAction Stop | Out-Null
+    $env:FAIRS_DATA_DIR = $linkedDataRoot
+    Assert-Throws { Assert-DataCacheIsolation } 'traverses a symbolic link or junction'
+    $env:FAIRS_DATA_DIR = $script:DataRoot
+
+    $overlappingDataRoot = Join-Path $script:clientDir 'dist\persistent-data'
+    New-FixtureFile (Join-Path $overlappingDataRoot 'database-config.json') '{"schema_version":1,"backend":"postgresql","postgresql":{"engine":"postgresql+psycopg"}}'
+    $env:FAIRS_DATA_DIR = $overlappingDataRoot
+    Assert-Throws { Get-CacheCleanupTargets } 'overlaps persistent FAIRS data root'
+    Assert-FileContains (Join-Path $overlappingDataRoot 'database-config.json') '{"schema_version":1,"backend":"postgresql","postgresql":{"engine":"postgresql+psycopg"}}'
+    $env:FAIRS_DATA_DIR = $script:DataRoot
 }
 
 function Test-RemoveCheckpoints {
@@ -286,6 +457,7 @@ function Test-RemoveAllData {
     New-FixtureFile $configuredDatabase 'configured database'
     New-FixtureFile "$configuredDatabase-shm" 'shared memory'
     New-FixtureFile "$configuredDatabase-wal" 'write ahead log'
+    New-FixtureFile "$configuredDatabase-journal" 'rollback journal'
     New-FixtureFile (Join-Path $script:DataRoot 'database.db') 'database'
     New-FixtureFile (Join-Path $script:DataRoot 'logs\run.log') 'log'
     New-FixtureFile (Join-Path $script:DataRoot 'logs\notes.txt') 'keep note'
@@ -294,7 +466,7 @@ function Test-RemoveAllData {
     $script:LauncherInteractive = $true
     Invoke-MaintenanceAction 'AllData'
 
-    foreach ($path in @($configuredDatabase, "$configuredDatabase-shm", "$configuredDatabase-wal")) {
+    foreach ($path in @($configuredDatabase, "$configuredDatabase-shm", "$configuredDatabase-wal", "$configuredDatabase-journal")) {
         Assert-Condition (-not (Test-Path -LiteralPath $path)) "Remove all data left configured SQLite file '$path'."
     }
     Assert-FileContains (Join-Path $script:DataRoot 'database.db') 'database'
@@ -323,33 +495,109 @@ function Test-RemoveAllData {
 
 function Test-Uninstall {
     Reset-Fixture
+    New-FixtureFile (Join-Path $script:runtimeRoot '.gitkeep') ''
+    New-FixtureFile (Join-Path $script:runtimeCacheDir '.gitkeep') ''
     New-FixtureFile (Join-Path $script:runtimeRoot 'python\python.exe') 'runtime'
     New-FixtureFile (Join-Path $script:runtimeCacheDir 'cache.bin') 'cache'
     New-FixtureFile (Join-Path $script:venvDir 'Scripts\python.exe') 'venv'
     New-FixtureFile (Join-Path $script:clientDir 'node_modules\marker') 'dependency'
     New-FixtureFile (Join-Path $script:clientDir 'dist\index.html') 'build'
+    New-FixtureFile (Join-Path $script:runtimeRoot 'custom-tool\keep.txt') 'unknown runtime sibling'
     New-FixtureFile (Join-Path $script:serverDir 'pyproject.toml') 'server project metadata'
     New-FixtureFile (Join-Path $script:serverDir 'uv.lock') 'server lockfile'
     New-FixtureFile (Join-Path $script:clientDir 'package-lock.json') 'frontend lock metadata'
+    $configuredDatabase = Join-Path $script:ExternalRoot 'standard-user.sqlite'
+    $databaseConfiguration = @{ schema_version = 1; backend = 'sqlite'; sqlite = @{ path = $configuredDatabase } } | ConvertTo-Json -Compress -Depth 4
     New-FixtureFile (Join-Path $script:DataRoot 'database.db') 'user database'
+    New-FixtureFile (Join-Path $script:DataRoot 'database.db-shm') 'user database shared memory'
+    New-FixtureFile (Join-Path $script:DataRoot 'database.db-wal') 'user database write ahead log'
+    New-FixtureFile (Join-Path $script:DataRoot 'database.db-journal') 'user database rollback journal'
+    New-FixtureFile (Join-Path $script:DataRoot 'database-config.json') $databaseConfiguration
+    New-FixtureFile $configuredDatabase 'external configured database'
+    New-FixtureFile "$configuredDatabase-shm" 'external shared memory'
+    New-FixtureFile "$configuredDatabase-wal" 'external write ahead log'
+    New-FixtureFile "$configuredDatabase-journal" 'external rollback journal'
+    New-FixtureFile (Join-Path $script:DataRoot 'checkpoints\model.pt') 'checkpoint'
+    New-FixtureFile (Join-Path $script:DataRoot 'logs\run.log') 'application log'
+    New-FixtureFile (Join-Path $script:DataRoot 'logs\notes.txt') 'keep log note'
+    New-FixtureFile (Join-Path $script:DataRoot 'unknown.txt') 'unknown data'
 
     $script:LauncherInteractive = $true
+    $script:UninstallMode = 'Standard'
     Invoke-MaintenanceAction 'Uninstall'
 
-    Assert-Condition (Test-Path -LiteralPath (Join-Path $script:runtimeRoot '.gitkeep')) 'Uninstall did not recreate the runtime marker.'
+    Assert-Condition (Test-Path -LiteralPath (Join-Path $script:runtimeRoot '.gitkeep')) 'Uninstall removed the runtime marker.'
     foreach ($path in @(
         (Join-Path $script:runtimeRoot 'python'),
-        $script:runtimeCacheDir,
         $script:venvDir,
         (Join-Path $script:clientDir 'node_modules'),
         (Join-Path $script:clientDir 'dist')
     )) {
         Assert-Condition (-not (Test-Path -LiteralPath $path)) "Uninstall left owned path '$path'."
     }
+    Assert-Condition (Test-Path -LiteralPath (Join-Path $script:runtimeCacheDir '.gitkeep')) 'Uninstall removed the canonical cache marker.'
+    Assert-Condition (@(Get-ChildItem -LiteralPath $script:runtimeCacheDir -Force | Where-Object { $_.Name -ne '.gitkeep' }).Count -eq 0) 'Uninstall left disposable cache content.'
+    Assert-FileContains (Join-Path $script:runtimeRoot 'custom-tool\keep.txt') 'unknown runtime sibling'
     Assert-FileContains (Join-Path $script:serverDir 'pyproject.toml') 'server project metadata'
     Assert-FileContains (Join-Path $script:serverDir 'uv.lock') 'server lockfile'
     Assert-FileContains (Join-Path $script:clientDir 'package-lock.json') 'frontend lock metadata'
     Assert-FileContains (Join-Path $script:DataRoot 'database.db') 'user database'
+    Assert-FileContains (Join-Path $script:DataRoot 'database.db-shm') 'user database shared memory'
+    Assert-FileContains (Join-Path $script:DataRoot 'database.db-wal') 'user database write ahead log'
+    Assert-FileContains (Join-Path $script:DataRoot 'database.db-journal') 'user database rollback journal'
+    Assert-FileContains (Join-Path $script:DataRoot 'database-config.json') $databaseConfiguration
+    foreach ($path in @($configuredDatabase, "$configuredDatabase-shm", "$configuredDatabase-wal", "$configuredDatabase-journal")) {
+        Assert-Condition (Test-Path -LiteralPath $path) "Standard uninstall deleted configured persistent database path '$path'."
+    }
+    Assert-FileContains (Join-Path $script:DataRoot 'checkpoints\model.pt') 'checkpoint'
+    Assert-Condition (-not (Test-Path -LiteralPath (Join-Path $script:DataRoot 'logs\run.log'))) 'Standard uninstall left an application log.'
+    Assert-FileContains (Join-Path $script:DataRoot 'logs\notes.txt') 'keep log note'
+    Assert-FileContains (Join-Path $script:DataRoot 'unknown.txt') 'unknown data'
+    Assert-Condition (Test-Path -LiteralPath $script:envFile) 'Standard uninstall removed settings/.env.'
+}
+
+function Test-CompleteUninstall {
+    Reset-Fixture
+    $configuredDatabase = Join-Path $script:ExternalRoot 'outside-database.sqlite'
+    $configuration = @{ schema_version = 1; backend = 'sqlite'; sqlite = @{ path = $configuredDatabase; insert_batch_size = 1000 } } | ConvertTo-Json -Depth 4
+    New-FixtureFile (Join-Path $script:DataRoot 'database-config.json') $configuration
+    New-FixtureFile $configuredDatabase 'configured database'
+    New-FixtureFile "$configuredDatabase-shm" 'shared memory'
+    New-FixtureFile "$configuredDatabase-wal" 'write ahead log'
+    New-FixtureFile "$configuredDatabase-journal" 'rollback journal'
+    New-FixtureFile (Join-Path $script:DataRoot 'database.db') 'inactive database'
+    New-FixtureFile (Join-Path $script:DataRoot 'checkpoints\model.pt') 'checkpoint'
+    New-FixtureFile (Join-Path $script:DataRoot 'logs\run.log') 'application log'
+    New-FixtureFile (Join-Path $script:DataRoot 'unknown.txt') 'preserve unknown'
+
+    $script:LauncherInteractive = $true
+    $script:UninstallMode = 'Complete'
+    Invoke-MaintenanceAction 'Uninstall'
+
+    foreach ($path in @($configuredDatabase, "$configuredDatabase-shm", "$configuredDatabase-wal", "$configuredDatabase-journal", (Join-Path $script:DataRoot 'database-config.json'), (Join-Path $script:DataRoot 'checkpoints\model.pt'), (Join-Path $script:DataRoot 'logs\run.log'), $script:envFile)) {
+        Assert-Condition (-not (Test-Path -LiteralPath $path)) "Complete uninstall left known application data '$path'."
+    }
+    Assert-FileContains (Join-Path $script:DataRoot 'database.db') 'inactive database'
+    Assert-FileContains (Join-Path $script:DataRoot 'unknown.txt') 'preserve unknown'
+
+    Reset-Fixture
+    $postgresConfiguration = @{ schema_version = 1; backend = 'postgresql'; postgresql = @{ engine = 'postgresql+psycopg'; host = 'localhost' } } | ConvertTo-Json -Depth 4
+    New-FixtureFile (Join-Path $script:DataRoot 'database-config.json') $postgresConfiguration
+    New-FixtureFile (Join-Path $script:DataRoot 'database.db') 'local inactive database'
+    $script:LauncherInteractive = $true
+    $script:UninstallMode = 'Complete'
+    Invoke-MaintenanceAction 'Uninstall'
+    Assert-Condition (-not (Test-Path -LiteralPath (Join-Path $script:DataRoot 'database-config.json'))) 'Complete uninstall left local PostgreSQL configuration.'
+    Assert-FileContains (Join-Path $script:DataRoot 'database.db') 'local inactive database'
+
+    Reset-Fixture
+    New-FixtureFile (Join-Path $script:runtimeRoot 'python\python.exe') 'runtime'
+    New-FixtureFile (Join-Path $script:DataRoot 'database-config.json') '{invalid json'
+    $before = @(Get-FixtureSnapshot)
+    $script:LauncherInteractive = $true
+    $script:UninstallMode = 'Complete'
+    Assert-Throws { Uninstall-Application -Mode Complete } 'refusing persistent data removal'
+    Assert-SnapshotEqual $before @(Get-FixtureSnapshot) 'Invalid database configuration fail-closed behavior'
 }
 
 function New-SleeperProcess([string]$ScriptPath) {
@@ -557,9 +805,11 @@ try {
     Test-RunningApplicationGuards
     Test-RemoveLogs
     Test-ClearCache
+    Test-CleanupDryRunAndPathValidation
     Test-RemoveCheckpoints
     Test-RemoveAllData
     Test-Uninstall
+    Test-CompleteUninstall
     Test-StopApplicationProcesses
     Test-LauncherOwnedProcessTreeCleanup
     Test-ExitedLauncherParentCleanup

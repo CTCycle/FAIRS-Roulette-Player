@@ -30,7 +30,9 @@ Choose option 2 and then `Development` when browser/test dependencies are requir
 
 Use option 4 to run the database create/upgrade workflow directly. Option 2 explicitly synchronizes both dependency layers and rebuilds the frontend; option 3 explicitly rebuilds the frontend without automatic dependency synchronization. Stop the app with Ctrl+C in its launcher console before maintenance or cleanup.
 
-Use option 7 to pull application changes from `main`. Use option 6 to check the locally known `origin/main` status without fetching or applying updates. Options 8 through 12 are destructive cleanup actions and require an affirmative response at a `[y/N]` prompt; option 10 removes checkpoints separately, while option 11 removes local database and log data while preserving checkpoints.
+Use option 7 to pull application changes from `main`. Use option 6 to check the locally known `origin/main` status without fetching or applying updates. Options 8 through 12 are destructive cleanup actions and require an affirmative response at a `[y/N]` prompt; option 10 removes checkpoints separately, while option 11 removes local database and log data while preserving checkpoints and configuration. Option 12 offers standard uninstall or complete removal; complete removal displays its exact targets and asks for a separate `REMOVE` confirmation before deleting persistent local data.
+
+For read-only cleanup previews from any working directory, run `start_on_windows.ps1 -Action Cache -WhatIf`, `-Action Uninstall -WhatIf`, or `start_on_windows.ps1 -Action Uninstall -CompleteRemoval -WhatIf`.
 
 Use option 13, `Stop all app processes`, when the launcher console is unavailable. It requires confirmation and stops detected FAIRS backend or older Vite preview process trees without closing the browser.
 

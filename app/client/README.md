@@ -27,19 +27,23 @@ The production launcher starts only FastAPI, waits for `/api/health`, and opens 
 Run these commands from the repository root with the managed Node runtime when available:
 
 ```powershell
-& '.\runtimes\nodejs\npm.cmd' --prefix app/client run dev
-& '.\runtimes\nodejs\npm.cmd' --prefix app/client run lint
-& '.\runtimes\nodejs\npm.cmd' --prefix app/client run build
-& '.\runtimes\nodejs\npm.cmd' --prefix app/client run preview
+$repoRoot = (Resolve-Path .).Path
+$env:NPM_CONFIG_CACHE = Join-Path $repoRoot 'runtimes\cache\npm'
+$env:PLAYWRIGHT_BROWSERS_PATH = Join-Path $repoRoot 'runtimes\cache\playwright-browsers'
+$npm = Join-Path $repoRoot 'runtimes\nodejs\npm.cmd'
+& $npm --prefix (Join-Path $repoRoot 'app\client') run dev
+& $npm --prefix (Join-Path $repoRoot 'app\client') run lint
+& $npm --prefix (Join-Path $repoRoot 'app\client') run build
+& $npm --prefix (Join-Path $repoRoot 'app\client') run preview
 ```
 
-`npm run test:unit` runs the Vitest checks for client-owned payload conversion, API error parsing, and inference session storage. `npm run test:e2e` runs the Playwright desktop workflow and viewport checks against an existing Vite preview server with mocked API responses. Set `FRONTEND_E2E_BASE_URL` when the preview server is not at `http://127.0.0.1:4173`. The Windows standard runner and hosted CI supply the preview server. Playwright JUnit output, traces, and the retained 1100px/1099px screenshots are written under the repository's ignored `assets/QA/` directory.
+`npm run test:unit` runs the Vitest checks for client-owned payload conversion, API error parsing, and inference session storage. `npm run test:e2e` runs the Playwright desktop workflow and viewport checks against an existing Vite preview server with mocked API responses. Set `FRONTEND_E2E_BASE_URL` when the preview server is not at `http://127.0.0.1:4173`. The Windows standard runner and hosted CI supply the preview server. Playwright JUnit output, traces, and generated 1100px/1099px screenshots are written under the repository's ignored `assets/QA/` directory and are removed by the launcher's Clear Cache action.
 
 On Windows, set `FRONTEND_E2E_BROWSER_CHANNEL=msedge` to run the same suite against the installed Microsoft Edge browser. Chromium remains the default and the hosted CI browser.
 
 The Windows standard runner installs Node Playwright Chromium into its configured browser cache and executes both scripts. Backend lifecycle behavior remains covered by the Python Playwright suite.
 
-Vite's dependency cache and TypeScript build-info files are written below `../../runtimes/cache` through `vite.config.ts` and the TypeScript project configurations. Do not add frontend cache paths under `node_modules` or the client source tree.
+Vite's dependency cache and TypeScript build-info files are written below `../../runtimes/cache` through `vite.config.ts` and the TypeScript project configurations. The launcher cache cleanup also finds nested client and `node_modules` caches, while preserving installed packages. Set the cache variables above when running these commands in separate shells so npm and Playwright stay under the application-owned cache root.
 
 ## Implementation guidance
 

@@ -1,6 +1,6 @@
 ## Project Status Ledger
 
-Last updated: 2026-10-26
+Last updated: 2026-10-29
 
 ## Purpose and authority
 
@@ -66,6 +66,8 @@ Future coding agents must:
 ## Current component ledger
 
 2026-10-26: The Windows launcher now reports elapsed milliseconds for its major startup phases and total time to application readiness. This informational output change has not been runtime-validated independently.
+
+2026-10-29: Launcher cleanup was centralized around validated, no-follow target inventories. The direct Windows PowerShell 5.1 maintenance harness passed against isolated fixtures for nested Python/frontend/dependency caches, Playwright output, interrupted checkpoint artifacts, locked and ACL-inaccessible files, junction boundaries, persistent-data overlap, repeat cleanup, standard uninstall, configured SQLite sidecars outside the data root, remote PostgreSQL preservation, and invalid configuration. Read-only Cache, Standard uninstall, and Complete uninstall previews also passed from `%TEMP%` under Windows PowerShell 5.1; those preview runs made no changes. This validates the cleanup paths and fixtures, not the broader startup component's still-open ASGI `TestClient` and full-runner evidence boundaries.
 
 | Component | Status | Scope | Current evidence and limitation | Last validated | Validation level | Related docs | Next action |
 | --- | --- | --- | --- | --- | --- | --- | --- |

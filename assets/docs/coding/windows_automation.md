@@ -34,7 +34,7 @@ A failed dependency sync is surfaced directly. Do not interpret it as evidence o
 
 ## Cache Ownership
 
-`runtimes/cache` is the only cache root owned by current automation. Fixed child directories hold uv, npm, pip, Python bytecode, pytest, pytest basetemp, Ruff, mypy, coverage, Playwright, Vite, TypeScript, Keras, Torch, Triton, Matplotlib, XDG, and CUDA cache data. Clear Cache removes all child files and folders under this root, preserves only its `.gitkeep` marker, and also removes source-tree `__pycache__` directories under `app/server`, while leaving the managed `app/server/.venv` runtime untouched. Do not recursively discover or create other cache directories elsewhere in the repository.
+`runtimes/cache` remains the canonical location for launcher-managed uv, npm, pip, Python, pytest, Ruff, mypy, coverage, Playwright, Vite, TypeScript, Keras, Torch, Triton, Matplotlib, XDG, and CUDA caches. Clear Cache empties its contents while preserving `.gitkeep`, then discovers recognized cache directories and Python bytecode throughout `app/server` (including `.venv`), `app/client` (including `node_modules`), and `app/tests`. Recognized generated paths include `__pycache__`, `.pytest_cache`, `.ruff_cache`, `.mypy_cache`, nested `.cache` and Vite caches, `htmlcov`, `*.pyc`, `*.pyo`, `.coverage*`, and `*.tsbuildinfo`. It removes known frontend/backend build output, Playwright traces/JUnit and named viewport/VAL screenshots under `assets/QA`, interrupted checkpoint staging files, and exact launcher temporary-file patterns. It preserves installed packages, valid checkpoints, databases, logs, settings, and unknown files. New cache types should be added only when a dependency in the current stack creates them.
 
 ## Lifecycle Rules
 
@@ -55,7 +55,17 @@ A failed dependency sync is surfaced directly. Do not interpret it as evidence o
 
 ## Uninstall Scope
 
-Uninstall removes current runtime, dependency, cache, and build targets only. It does not retain permanent cleanup knowledge for superseded root virtual environments, Angular build directories, or old cache conventions.
+Standard uninstall removes the known launcher runtime directories (`runtimes/python`, `runtimes/uv`, and `runtimes/nodejs`), the disposable runtime-cache contents, `app/server/.venv`, `app/client/node_modules`, frontend/backend build output, recognized caches and temporary artifacts, Playwright reports, and application `.log` files. Runtime/cache markers and unknown runtime siblings are kept. The local database, checkpoints, `database-config.json`, `settings/.env`, and other unknown data-root files remain.
+
+The Uninstall menu offers Complete removal after displaying the exact targets. It first confirms generated-file removal, then requires typing `REMOVE` before deleting the configured local SQLite database and sidecars, checkpoint contents, application logs, `database-config.json`, and `settings/.env`. A malformed or unsafe database configuration stops complete removal before any deletion. A PostgreSQL server is never modified. Unknown data-root files and browser-managed `localStorage` remain; the launcher has no application-specific AppData filesystem targets.
+
+Menu cleanup actions print a target preview and a cleaned/skipped/failed summary. Read-only previews can also be run from any working directory:
+
+```powershell
+.\start_on_windows.ps1 -Action Cache -WhatIf
+.\start_on_windows.ps1 -Action Uninstall -WhatIf
+.\start_on_windows.ps1 -Action Uninstall -CompleteRemoval -WhatIf
+```
 
 ## Related Files
 

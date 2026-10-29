@@ -4,9 +4,12 @@
 # -----------------------------------------------------------------------------
 # Launcher paths and runtime locations
 # -----------------------------------------------------------------------------
-[CmdletBinding()]
+[CmdletBinding(SupportsShouldProcess = $true)]
 param(
-    [switch]$Launch
+    [switch]$Launch,
+    [ValidateSet('Cache', 'Uninstall')]
+    [string]$Action,
+    [switch]$CompleteRemoval
 )
 
 $ErrorActionPreference = 'Stop'
@@ -188,10 +191,271 @@ function Set-CacheEnvironment {
     $env:CUDA_CACHE_PATH = $cacheDirectories['cuda']
 }
 
+function New-CleanupTarget {
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)][string]$AllowedRoot,
+        [ValidateSet('Tree', 'File')][string]$Mode = 'Tree',
+        [switch]$KeepRoot,
+        [string[]]$PreserveNames = @()
+    )
+    [pscustomobject]@{
+        Path = $Path
+        AllowedRoot = $AllowedRoot
+        Mode = $Mode
+        KeepRoot = [bool]$KeepRoot
+        PreserveNames = @($PreserveNames)
+    }
+}
+
+function Reset-CleanupDiscoveryNotes {
+    if ($null -eq $script:CleanupDiscoveryNotes) {
+        $script:CleanupDiscoveryNotes = [Collections.Generic.List[string]]::new()
+    } else {
+        $script:CleanupDiscoveryNotes.Clear()
+    }
+}
+
+function Add-CleanupDiscoverySkip([string]$Message) {
+    if ($null -eq $script:CleanupDiscoveryNotes) {
+        $script:CleanupDiscoveryNotes = [Collections.Generic.List[string]]::new()
+    }
+    [void]$script:CleanupDiscoveryNotes.Add($Message)
+}
+
+function Test-CleanupPathWithinRoot([string]$Path, [string]$AllowedRoot, [switch]$AllowEqual) {
+    if ([string]::IsNullOrWhiteSpace($Path) -or [string]::IsNullOrWhiteSpace($AllowedRoot)) {
+        throw 'Cleanup paths and allowed roots must not be empty.'
+    }
+    $fullPath = [IO.Path]::GetFullPath($Path)
+    $fullRoot = [IO.Path]::GetFullPath($AllowedRoot)
+    if ($fullPath.Equals($fullRoot, [StringComparison]::OrdinalIgnoreCase)) {
+        if ($AllowEqual) { return $fullPath }
+        throw "Refusing to remove an allowed root itself: '$fullPath'."
+    }
+    $rootPrefix = $fullRoot.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
+    if (-not $fullPath.StartsWith($rootPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Cleanup target '$fullPath' is outside its recognized root '$fullRoot'."
+    }
+    return $fullPath
+}
+
+function Assert-NoReparseAncestors([string]$Path, [string]$AllowedRoot) {
+    $fullPath = [IO.Path]::GetFullPath($Path)
+    $fullRoot = [IO.Path]::GetFullPath($AllowedRoot)
+    [void](Test-CleanupPathWithinRoot -Path $fullPath -AllowedRoot $fullRoot)
+    $current = Split-Path -Parent $fullPath
+    while ($current) {
+        $item = Get-Item -LiteralPath $current -Force -ErrorAction Stop
+        if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+            throw "Cleanup path traverses a symbolic link or junction: '$current'."
+        }
+        $parent = Split-Path -Parent $current
+        if (-not $parent -or $parent.Equals($current, [StringComparison]::OrdinalIgnoreCase)) { return }
+        $current = $parent
+    }
+    throw "Cannot validate the ancestor chain for cleanup path '$fullPath'."
+}
+
+function Test-CleanupDirectorySafeToScan([string]$Path) {
+    $fullPath = [IO.Path]::GetFullPath($Path)
+    try {
+        Assert-NoReparseAncestors -Path (Join-Path $fullPath '.fairs-cleanup-scan-probe') -AllowedRoot $fullPath
+        return $true
+    } catch {
+        Add-CleanupDiscoverySkip "$fullPath (directory scan skipped: $($_.Exception.Message))"
+        return $false
+    }
+}
+
+function Get-CleanupInventory {
+    param([Parameter(Mandatory)][AllowNull()][AllowEmptyCollection()][object[]]$Targets)
+
+    $entries = [Collections.Generic.List[object]]::new()
+    $skipped = [Collections.Generic.List[string]]::new()
+    $failed = [Collections.Generic.List[string]]::new()
+    $seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    foreach ($note in @($script:CleanupDiscoveryNotes)) { [void]$skipped.Add($note) }
+    if ($null -ne $script:CleanupDiscoveryNotes) { $script:CleanupDiscoveryNotes.Clear() }
+
+    foreach ($target in @($Targets)) {
+        try {
+            $fullPath = Test-CleanupPathWithinRoot -Path $target.Path -AllowedRoot $target.AllowedRoot -AllowEqual:$target.KeepRoot
+            Assert-NoReparseAncestors -Path $fullPath -AllowedRoot $target.AllowedRoot
+            $rootItem = Get-Item -LiteralPath $fullPath -Force -ErrorAction Stop
+        }
+        catch {
+            if ($_.CategoryInfo.Category -eq [System.Management.Automation.ErrorCategory]::ObjectNotFound) {
+                [void]$skipped.Add("$($target.Path) (already absent)")
+            } else {
+                [void]$failed.Add("$($target.Path) ($($_.Exception.Message))")
+            }
+            continue
+        }
+
+        if ($target.Mode -eq 'File' -and $rootItem.PSIsContainer) {
+            [void]$failed.Add("$fullPath (expected a file but found a directory)")
+            continue
+        }
+        if ($target.KeepRoot -and (($rootItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)) {
+            [void]$skipped.Add("$fullPath (root is a symbolic link or junction)")
+            continue
+        }
+
+        $pending = [Collections.Generic.Stack[object]]::new()
+        if ($target.Mode -eq 'File') {
+            $pending.Push([pscustomobject]@{ Item = $rootItem; Visited = $true; IsRoot = $true })
+        } elseif (($rootItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+            [void]$skipped.Add("$fullPath (refusing to traverse a symbolic link or junction)")
+            continue
+        } else {
+            $pending.Push([pscustomobject]@{ Item = $rootItem; Visited = $false; IsRoot = $true })
+        }
+
+        while ($pending.Count -gt 0) {
+            $work = $pending.Pop()
+            $item = $work.Item
+            $isReparsePoint = (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)
+            if ($item.PSIsContainer -and -not $isReparsePoint -and -not $work.Visited) {
+                $pending.Push([pscustomobject]@{ Item = $item; Visited = $true; IsRoot = $work.IsRoot })
+                try {
+                    $children = @(Get-ChildItem -LiteralPath $item.FullName -Force -ErrorAction Stop)
+                    foreach ($child in $children) {
+                        if ($work.IsRoot -and $child.Name -in $target.PreserveNames) {
+                            [void]$skipped.Add("$($child.FullName) (preserved marker)")
+                            continue
+                        }
+                        $pending.Push([pscustomobject]@{ Item = $child; Visited = $false; IsRoot = $false })
+                    }
+                } catch {
+                    [void]$failed.Add("$($item.FullName) ($($_.Exception.Message))")
+                }
+                continue
+            }
+
+            if ($work.IsRoot -and $target.KeepRoot) { continue }
+            try {
+                $candidatePath = Test-CleanupPathWithinRoot -Path $item.FullName -AllowedRoot $target.AllowedRoot
+                if ($seen.Add($candidatePath)) {
+                    [void]$entries.Add([pscustomobject]@{
+                        Path = $candidatePath
+                        AllowedRoot = $target.AllowedRoot
+                        IsDirectory = [bool]$item.PSIsContainer
+                        IsReparsePoint = [bool]$isReparsePoint
+                        ReportPath = $fullPath
+                        ReportScope = if ($target.Mode -eq 'File') { 'file' } elseif ($target.KeepRoot) { 'contents of' } else { 'tree' }
+                    })
+                }
+            } catch {
+                [void]$failed.Add("$($item.FullName) ($($_.Exception.Message))")
+            }
+        }
+    }
+
+    $orderedEntries = @($entries | Sort-Object @{ Expression = { $_.Path.Length }; Descending = $true }, @{ Expression = { $_.Path.ToUpperInvariant() }; Descending = $false })
+    return [pscustomobject]@{ Entries = $orderedEntries; Skipped = @($skipped); Failed = @($failed) }
+}
+
+function Write-CleanupPreview {
+    param([Parameter(Mandatory)]$Inventory, [string]$Title = 'Cleanup preview')
+    Write-Host "[INFO] $Title" -ForegroundColor Cyan
+    if ($Inventory.Entries.Count -eq 0) { Write-Host '  No existing paths will be removed.' -ForegroundColor DarkGray }
+    foreach ($location in @(Get-CleanupReportLocations -Entries $Inventory.Entries)) {
+        $verb = if ($location.Scope -eq 'contents of') { 'REMOVE CONTENTS OF' } elseif ($location.Scope -eq 'file') { 'REMOVE FILE' } else { 'REMOVE TREE' }
+        Write-Host "  [$verb] $($location.Path) ($($location.Count) paths)" -ForegroundColor DarkYellow
+    }
+    foreach ($path in $Inventory.Skipped) { Write-Host "  [SKIP]   $path" -ForegroundColor DarkGray }
+    foreach ($path in $Inventory.Failed) { Write-Host "  [FAIL]   $path" -ForegroundColor Red }
+}
+
+function Get-CleanupReportLocations {
+    param([Parameter(Mandatory)][AllowEmptyCollection()][object[]]$Entries)
+    $locations = @{}
+    foreach ($entry in $Entries) {
+        $path = if ($entry.PSObject.Properties['ReportPath']) { $entry.ReportPath } else { $entry.Path }
+        $scope = if ($entry.PSObject.Properties['ReportScope']) { $entry.ReportScope } else { 'path' }
+        if (-not $locations.ContainsKey($path)) {
+            $locations[$path] = [pscustomobject]@{ Path = $path; Scope = $scope; Count = 0 }
+        }
+        $locations[$path].Count++
+    }
+    return @($locations.Values | Sort-Object Path)
+}
+
+function Invoke-CleanupInventory {
+    param(
+        [Parameter(Mandatory)]$Inventory,
+        [string]$Activity = 'FAIRS: remove files',
+        [switch]$WhatIf
+    )
+
+    $removed = [Collections.Generic.List[string]]::new()
+    $removedEntries = [Collections.Generic.List[object]]::new()
+    $skipped = [Collections.Generic.List[string]]::new()
+    $failed = [Collections.Generic.List[string]]::new()
+    foreach ($path in $Inventory.Skipped) { [void]$skipped.Add($path) }
+    foreach ($path in $Inventory.Failed) { [void]$failed.Add($path) }
+
+    $progressId = $null
+    try {
+        if ($Inventory.Entries.Count -gt 0) { $progressId = Start-LauncherProgress -Activity $Activity -Status "0 of $($Inventory.Entries.Count) paths" }
+        for ($index = 0; $index -lt $Inventory.Entries.Count; $index++) {
+            $entry = $Inventory.Entries[$index]
+            if ($null -ne $progressId) {
+                Update-LauncherProgress -Id $progressId -Activity $Activity -Status "$($index + 1) of $($Inventory.Entries.Count): $([IO.Path]::GetFileName($entry.Path))" -PercentComplete ([int](($index + 1) * 100 / [Math]::Max(1, $Inventory.Entries.Count)))
+            }
+            if ($WhatIf) { continue }
+            try {
+                [void](Test-CleanupPathWithinRoot -Path $entry.Path -AllowedRoot $entry.AllowedRoot)
+                Assert-NoReparseAncestors -Path $entry.Path -AllowedRoot $entry.AllowedRoot
+                $item = Get-Item -LiteralPath $entry.Path -Force -ErrorAction Stop
+                $isReparsePoint = (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)
+                if ($isReparsePoint -and $item.PSIsContainer) {
+                    [IO.Directory]::Delete($entry.Path, $false)
+                } elseif ($item.PSIsContainer) {
+                    [IO.Directory]::Delete($entry.Path, $false)
+                } else {
+                    if (-not $isReparsePoint -and ($item.Attributes -band [IO.FileAttributes]::ReadOnly) -ne 0) {
+                        [IO.File]::SetAttributes($entry.Path, $item.Attributes -band (-bnot [IO.FileAttributes]::ReadOnly))
+                    }
+                    [IO.File]::Delete($entry.Path)
+                }
+                [void]$removed.Add($entry.Path)
+                [void]$removedEntries.Add($entry)
+            } catch {
+                if (-not (Test-Path -LiteralPath $entry.Path -PathType Any -ErrorAction SilentlyContinue)) {
+                    [void]$skipped.Add("$($entry.Path) (no longer present)")
+                } else {
+                    [void]$failed.Add("$($entry.Path) ($($_.Exception.Message))")
+                }
+            }
+        }
+    } finally {
+        if ($null -ne $progressId) { Complete-LauncherProgress $progressId }
+    }
+    return [pscustomobject]@{
+        Removed = @($removed)
+        RemovedLocations = @(Get-CleanupReportLocations -Entries @($removedEntries))
+        Skipped = @($skipped)
+        Failed = @($failed)
+        Planned = @($Inventory.Entries | ForEach-Object { $_.Path })
+    }
+}
+
+function Write-CleanupSummary([string]$Action, $Result) {
+    Write-Host "[INFO] $Action summary: $($Result.Removed.Count) cleaned, $($Result.Skipped.Count) skipped, $($Result.Failed.Count) failed." -ForegroundColor Cyan
+    foreach ($location in @($Result.RemovedLocations)) {
+        Write-Host "  [CLEANED] $($location.Path) ($($location.Count) paths)" -ForegroundColor Green
+    }
+    foreach ($path in $Result.Skipped) { Write-Host "  [SKIPPED] $path" -ForegroundColor DarkGray }
+    foreach ($path in $Result.Failed) { Write-Host "  [FAILED]  $path" -ForegroundColor Red }
+}
+
 function Remove-LauncherPath {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][string]$Path,
+        [string]$AllowedRoot,
         [switch]$KeepRoot,
         [string[]]$PreserveNames = @('.gitkeep'),
         [switch]$Strict,
@@ -199,143 +463,219 @@ function Remove-LauncherPath {
         [string]$Activity = 'FAIRS: remove files'
     )
 
-    $fullPath = [IO.Path]::GetFullPath($Path)
-    $removed = [Collections.Generic.List[string]]::new()
-    $skipped = [Collections.Generic.List[string]]::new()
-    $preserved = [Collections.Generic.List[string]]::new()
-    $enumerationErrors = [Collections.Generic.List[string]]::new()
-    $result = [ordered]@{
-        Target = $fullPath
-        Path = $fullPath
-        Planned = 0
-        PlannedCount = 0
-        Removed = 0
-        RemovedCount = 0
-        RemovedPaths = $removed
-        Preserved = 0
-        PreservedEntries = $preserved
-        Skipped = 0
-        SkippedPaths = $skipped
-        EnumerationErrors = $enumerationErrors
+    $resolvedAllowedRoot = if ($AllowedRoot) { $AllowedRoot } else { Split-Path -Parent ([IO.Path]::GetFullPath($Path)) }
+    if (-not $resolvedAllowedRoot) { $resolvedAllowedRoot = [IO.Path]::GetPathRoot([IO.Path]::GetFullPath($Path)) }
+    $target = New-CleanupTarget -Path $Path -AllowedRoot $resolvedAllowedRoot -Mode 'Tree' -KeepRoot:$KeepRoot -PreserveNames $PreserveNames
+    $inventory = Get-CleanupInventory -Targets @($target)
+    $result = Invoke-CleanupInventory -Inventory $inventory -Activity $Activity -WhatIf:$WhatIf
+    if ($Strict -and ($result.Failed.Count -gt 0 -or ($result.Skipped | Where-Object { $_ -notlike '*(already absent)' }).Count -gt 0)) {
+        throw "Removal of '$Path' was incomplete. $($result.Skipped.Count) path(s) skipped and $($result.Failed.Count) path(s) failed."
+    }
+    return [pscustomobject]@{
+        Target = [IO.Path]::GetFullPath($Path)
+        Path = [IO.Path]::GetFullPath($Path)
+        Planned = $result.Planned.Count
+        PlannedCount = $result.Planned.Count
+        PlannedPaths = $result.Planned
+        Removed = $result.Removed.Count
+        RemovedCount = $result.Removed.Count
+        RemovedPaths = $result.Removed
+        Preserved = @($result.Skipped | Where-Object { $_ -like '*(preserved marker)' }).Count
+        PreservedEntries = @($result.Skipped | Where-Object { $_ -like '*(preserved marker)' })
+        Skipped = $result.Skipped.Count
+        SkippedPaths = $result.Skipped
+        EnumerationErrors = $result.Failed
+        FailedPaths = $result.Failed
         WhatIf = [bool]$WhatIf
     }
-    try {
-        $item = Get-Item -LiteralPath $fullPath -Force -ErrorAction Stop
+}
+
+function Remove-PathBestEffort([string]$Path, [string]$AllowedRoot) {
+    $result = Remove-LauncherPath -Path $Path -AllowedRoot $AllowedRoot -Activity "FAIRS: remove $([IO.Path]::GetFileName($Path))"
+    return $result.FailedPaths.Count -eq 0 -and @($result.SkippedPaths | Where-Object { $_ -notlike '*(already absent)' }).Count -eq 0
+}
+
+function Add-CleanupTargetIfPresent {
+    param([Collections.Generic.List[object]]$Targets, [string]$Path, [string]$AllowedRoot, [string]$Mode = 'Tree', [switch]$KeepRoot, [string[]]$PreserveNames = @())
+    if (Test-Path -LiteralPath $Path -PathType Any) {
+        [void]$Targets.Add((New-CleanupTarget -Path $Path -AllowedRoot $AllowedRoot -Mode $Mode -KeepRoot:$KeepRoot -PreserveNames $PreserveNames))
     }
-    catch {
-        if ($_.CategoryInfo.Category -eq [System.Management.Automation.ErrorCategory]::ObjectNotFound) { return [pscustomobject]$result }
-        [void]$enumerationErrors.Add("$fullPath ($($_.Exception.Message))")
-        Write-Info "Skipped inaccessible path: $fullPath ($($_.Exception.Message))"
-        if ($Strict) { throw }
-        return [pscustomobject]$result
-    }
-    $entries = if ($item.PSIsContainer) {
-        $errors = @()
-        $found = @(Get-ChildItem -LiteralPath $item.FullName -Force -Recurse -ErrorAction SilentlyContinue -ErrorVariable errors)
-        foreach ($errorRecord in $errors) {
-            [void]$enumerationErrors.Add("$($errorRecord.Exception.Message)")
-            Write-Info "Skipped inaccessible path below $fullPath ($($errorRecord.Exception.Message))"
-        }
-        $found
-    } else { @($item) }
-    $entries = @($entries)
-    $protectedDirectories = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
-    $preservedPaths = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
-    foreach ($entry in @($entries)) {
-        if ($entry.Name -in $PreserveNames) {
-            [void]$preservedPaths.Add($entry.FullName)
-            [void]$preserved.Add($entry.FullName)
-            $ancestor = [IO.Path]::GetDirectoryName($entry.FullName)
-            while ($ancestor -and $ancestor.StartsWith($item.FullName.TrimEnd('\') + '\', [StringComparison]::OrdinalIgnoreCase)) {
-                [void]$protectedDirectories.Add($ancestor)
-                $ancestor = [IO.Path]::GetDirectoryName($ancestor)
-            }
-        }
-    }
-    if ($item.PSIsContainer -and -not $KeepRoot -and $preservedPaths.Count -eq 0 -and $enumerationErrors.Count -eq 0) {
-        $entries += $item
-    }
-    $candidates = @($entries |
-        Where-Object { -not $preservedPaths.Contains($_.FullName) -and -not $protectedDirectories.Contains($_.FullName) } |
-        Sort-Object @{ Expression = { $_.FullName.Length }; Descending = $true }, @{ Expression = { $_.FullName.ToUpperInvariant() }; Descending = $false })
-    $result.Planned = $candidates.Count
-    $result.PlannedCount = $candidates.Count
-    $result.Preserved = $preserved.Count
-    $progressId = $null
-    try {
-        if ($candidates.Count -gt 0) { $progressId = Start-LauncherProgress -Activity $Activity -Status "0 of $($candidates.Count) items" }
-        for ($index = 0; $index -lt $candidates.Count; $index++) {
-            $entry = $candidates[$index]
-            if ($null -ne $progressId) {
-                Update-LauncherProgress -Id $progressId -Activity $Activity -Status "$($index + 1) of $($candidates.Count): $($entry.Name)" -PercentComplete ([int](($index + 1) * 100 / [Math]::Max(1, $candidates.Count)))
-            }
-            if ($WhatIf) { continue }
+}
+
+function Get-DiscoveredCacheTargets {
+    param([string[]]$Roots)
+    $recognizedDirectoryNames = @('__pycache__', '.pytest_cache', '.ruff_cache', '.mypy_cache', '.cache', '.vite', 'htmlcov')
+    $knownBuildOutputPaths = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    foreach ($path in @(
+        (Join-Path $clientDir 'dist'), (Join-Path $clientDir 'dist-ssr'),
+        (Join-Path $serverDir 'build'), (Join-Path $serverDir 'dist')
+    )) { [void]$knownBuildOutputPaths.Add([IO.Path]::GetFullPath($path)) }
+    $targets = [Collections.Generic.List[object]]::new()
+    foreach ($scanRoot in $Roots) {
+        if (-not (Test-Path -LiteralPath $scanRoot -PathType Container)) { continue }
+        if (-not (Test-CleanupDirectorySafeToScan -Path $scanRoot)) { continue }
+        $pending = [Collections.Generic.Stack[string]]::new()
+        $pending.Push([IO.Path]::GetFullPath($scanRoot))
+        while ($pending.Count -gt 0) {
+            $current = $pending.Pop()
             try {
-                Remove-Item -LiteralPath $entry.FullName -Force -Confirm:$false -ErrorAction Stop
-                [void]$removed.Add($entry.FullName)
-            }
-            catch {
-                [void]$skipped.Add("$($entry.FullName) ($($_.Exception.Message))")
-                Write-Info "Skipped locked or protected path: $($entry.FullName) ($($_.Exception.Message))"
-            }
-        }
-    }
-    finally {
-        if ($null -ne $progressId) { Complete-LauncherProgress -Id $progressId }
-    }
-    $result.Removed = $removed.Count
-    $result.RemovedCount = $removed.Count
-    $result.Skipped = $skipped.Count
-    if ($Strict -and ($skipped.Count -gt 0 -or $enumerationErrors.Count -gt 0)) {
-        throw "Removal of '$fullPath' was incomplete. Skipped $($skipped.Count) item(s) and encountered $($enumerationErrors.Count) enumeration error(s)."
-    }
-    return [pscustomobject]$result
-}
-
-function Remove-PathBestEffort([string]$Path) {
-    $result = Remove-LauncherPath -Path $Path -Activity "FAIRS: remove $([IO.Path]::GetFileName($Path))"
-    return $result.Skipped -eq 0 -and $result.EnumerationErrors.Count -eq 0
-}
-
-function Clear-RuntimeCacheDirectory {
-    if (-not (Test-Path -LiteralPath $runtimeCacheDir -PathType Container)) { return }
-
-    $cacheEntries = @(Get-ChildItem -LiteralPath $runtimeCacheDir -Force -ErrorAction SilentlyContinue)
-    foreach ($entry in $cacheEntries) {
-        if (-not $entry.PSIsContainer -and $entry.Name -eq '.gitkeep') { continue }
-        Remove-LauncherPath -Path $entry.FullName -PreserveNames @() -Activity "FAIRS: remove $($entry.Name)" | Out-Null
-    }
-}
-
-function Get-ServerBytecodeCleanupPaths {
-    if (-not (Test-Path -LiteralPath $serverDir -PathType Container)) { return @() }
-
-    $serverPath = [IO.Path]::GetFullPath($serverDir).TrimEnd('\')
-    $venvPath = [IO.Path]::GetFullPath($venvDir).TrimEnd('\') + '\'
-    $pendingDirectories = [Collections.Generic.Stack[string]]::new()
-    $bytecodePaths = [Collections.Generic.List[string]]::new()
-    $pendingDirectories.Push($serverPath)
-
-    while ($pendingDirectories.Count -gt 0) {
-        $currentPath = $pendingDirectories.Pop()
-        $directories = @(Get-ChildItem -LiteralPath $currentPath -Directory -Force -ErrorAction SilentlyContinue)
-        foreach ($directory in $directories) {
-            if (($directory.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { continue }
-            if ($directory.FullName.Equals($venvPath.TrimEnd('\'), [StringComparison]::OrdinalIgnoreCase) -or
-                $directory.FullName.StartsWith($venvPath, [StringComparison]::OrdinalIgnoreCase)) { continue }
-            if ($directory.Name -eq '__pycache__') {
-                [void]$bytecodePaths.Add($directory.FullName)
+                $children = @(Get-ChildItem -LiteralPath $current -Force -ErrorAction Stop)
+            } catch {
+                Add-CleanupDiscoverySkip "$current (cache discovery skipped: $($_.Exception.Message))"
                 continue
             }
-            $pendingDirectories.Push($directory.FullName)
+            foreach ($child in $children) {
+                if ($child.PSIsContainer) {
+                    if (($child.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+                        if ($child.Name -in $recognizedDirectoryNames) {
+                            [void]$targets.Add((New-CleanupTarget -Path $child.FullName -AllowedRoot $scanRoot))
+                        }
+                        continue
+                    }
+                    if ($child.Name -in $recognizedDirectoryNames) {
+                        [void]$targets.Add((New-CleanupTarget -Path $child.FullName -AllowedRoot $scanRoot))
+                    } elseif ($child.Name -eq '.git' -or $knownBuildOutputPaths.Contains([IO.Path]::GetFullPath($child.FullName))) {
+                        continue
+                    } else {
+                        $pending.Push($child.FullName)
+                    }
+                    continue
+                }
+                if ($child.Extension -in @('.pyc', '.pyo', '.tsbuildinfo') -or $child.Name -like '.coverage*') {
+                    [void]$targets.Add((New-CleanupTarget -Path $child.FullName -AllowedRoot $scanRoot -Mode 'File'))
+                }
+            }
         }
     }
-
-    return @($bytecodePaths | Sort-Object Length -Descending)
+    return @($targets)
 }
 
-function Get-CacheCleanupPaths {
-    return @($runtimeCacheDir) + @(Get-ServerBytecodeCleanupPaths)
+function Get-CacheCleanupTargets {
+    Assert-DataCacheIsolation
+    $targets = [Collections.Generic.List[object]]::new()
+    Add-CleanupTargetIfPresent $targets $runtimeCacheDir $runtimeRoot -KeepRoot -PreserveNames @('.gitkeep')
+    $scanRoots = @($serverDir, $clientDir, $testsDir)
+    foreach ($target in @(Get-DiscoveredCacheTargets -Roots $scanRoots)) { [void]$targets.Add($target) }
+
+    foreach ($path in @(
+        (Join-Path $clientDir 'dist'), (Join-Path $clientDir 'dist-ssr'),
+        (Join-Path $serverDir 'build'), (Join-Path $serverDir 'dist')
+    )) { Add-CleanupTargetIfPresent $targets $path $repoRoot }
+    if (Test-Path -LiteralPath $serverDir -PathType Container) {
+        try {
+            foreach ($entry in @(Get-ChildItem -LiteralPath $serverDir -Directory -Force -ErrorAction Stop | Where-Object { $_.Name -like '*.egg-info' })) {
+                [void]$targets.Add((New-CleanupTarget -Path $entry.FullName -AllowedRoot $serverDir))
+            }
+        } catch { Add-CleanupDiscoverySkip "$serverDir (build-artifact discovery skipped: $($_.Exception.Message))" }
+    }
+    Add-KnownTemporaryTargets -Targets $targets
+    Add-QaOutputTargets -Targets $targets
+    $uniqueTargets = @(Remove-DuplicateCleanupTargets -Targets @($targets))
+    Assert-NoPersistentDataTreeOverlap -Targets $uniqueTargets
+    Assert-NoDatabaseCleanupOverlap -Targets $uniqueTargets
+    return $uniqueTargets
+}
+
+function Remove-DuplicateCleanupTargets([object[]]$Targets) {
+    $seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    foreach ($target in $Targets) {
+        $key = [IO.Path]::GetFullPath($target.Path)
+        if ($seen.Add($key)) { $target }
+    }
+}
+
+function Add-KnownTemporaryTargets {
+    param([Collections.Generic.List[object]]$Targets)
+    foreach ($path in @(
+        (Join-Path $pythonDir 'python.zip'),
+        (Join-Path $uvDir 'uv.zip'),
+        (Join-Path $nodeDir 'node.zip')
+    )) { Add-CleanupTargetIfPresent $Targets $path $runtimeRoot -Mode 'File' }
+
+    $settingsDir = Join-Path $repoRoot 'settings'
+    if ((Test-Path -LiteralPath $settingsDir -PathType Container) -and (Test-CleanupDirectorySafeToScan -Path $settingsDir)) {
+        try {
+            foreach ($file in @(Get-ChildItem -LiteralPath $settingsDir -File -Force -Filter '.env.*.tmp' -ErrorAction Stop)) {
+                [void]$Targets.Add((New-CleanupTarget -Path $file.FullName -AllowedRoot $settingsDir -Mode 'File'))
+            }
+        } catch { Add-CleanupDiscoverySkip "$settingsDir (temporary-file discovery skipped: $($_.Exception.Message))" }
+    }
+
+    $dataRoot = if ($env:FAIRS_DATA_DIR -and $env:FAIRS_DATA_DIR.Trim()) { Resolve-LauncherPath $env:FAIRS_DATA_DIR.Trim() } else { Join-Path $repoRoot 'data' }
+    $databaseTemporaryPattern = '^\.database-config\.json\..+\.tmp$'
+    if ((Test-Path -LiteralPath $dataRoot -PathType Container) -and (Test-CleanupDirectorySafeToScan -Path $dataRoot)) {
+        try {
+            foreach ($file in @(Get-ChildItem -LiteralPath $dataRoot -File -Force -ErrorAction Stop | Where-Object { $_.Name -match $databaseTemporaryPattern })) {
+                [void]$Targets.Add((New-CleanupTarget -Path $file.FullName -AllowedRoot $dataRoot -Mode 'File'))
+            }
+        } catch { Add-CleanupDiscoverySkip "$dataRoot (temporary-file discovery skipped: $($_.Exception.Message))" }
+    }
+
+    $checkpointRoot = Join-Path $dataRoot 'checkpoints'
+    if ((Test-Path -LiteralPath $checkpointRoot -PathType Container) -and (Test-CleanupDirectorySafeToScan -Path $checkpointRoot)) {
+        $pending = [Collections.Generic.Stack[string]]::new()
+        $pending.Push($checkpointRoot)
+        while ($pending.Count -gt 0) {
+            $current = $pending.Pop()
+            try { $children = @(Get-ChildItem -LiteralPath $current -Force -ErrorAction Stop) }
+            catch { Add-CleanupDiscoverySkip "$current (temporary-file discovery skipped: $($_.Exception.Message))"; continue }
+            foreach ($child in $children) {
+                if ($child.PSIsContainer) {
+                    if (($child.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+                        Add-CleanupDiscoverySkip "$($child.FullName) (temporary-file discovery skipped: symbolic link or junction)"
+                        continue
+                    }
+                    if ($current.Equals($checkpointRoot, [StringComparison]::OrdinalIgnoreCase) -and
+                        $child.Name -match '^\..+\.(staging|backup|publish)-[0-9a-f]{32}$') {
+                        [void]$Targets.Add((New-CleanupTarget -Path $child.FullName -AllowedRoot $dataRoot))
+                    } else { $pending.Push($child.FullName) }
+                    continue
+                }
+                if ($child.Name -match '^\.(complete|configuration\.json|session_history\.json|replay_memory\.pkl|saved_model\.keras|strategy\.keras)\.[0-9a-f]{32}\.tmp(?:\.keras)?$') {
+                    [void]$Targets.Add((New-CleanupTarget -Path $child.FullName -AllowedRoot $dataRoot -Mode 'File'))
+                }
+            }
+        }
+    }
+}
+
+function Add-QaOutputTargets {
+    param([Collections.Generic.List[object]]$Targets)
+    $qaRoot = Join-Path $repoRoot 'assets\QA'
+    Add-CleanupTargetIfPresent $Targets (Join-Path $qaRoot 'frontend-e2e-artifacts') $qaRoot
+    if ((Test-Path -LiteralPath $qaRoot -PathType Container) -and (Test-CleanupDirectorySafeToScan -Path $qaRoot)) {
+        try {
+            $qaOutputPatterns = @(
+                'frontend-e2e-junit-*.xml', 'frontend-viewport-1100-*.png', 'frontend-viewport-1099-*.png',
+                'fairs_startup_loading.png', 'fairs_startup_loading_*x*.png',
+                'val12-inference-history-replay.png', 'val13-inference-replacement-rollback.png',
+                'val14-inference-restart-recovered.png', 'val15-strategy-suggestion.png', 'val17-*.png'
+            )
+            foreach ($file in @(Get-ChildItem -LiteralPath $qaRoot -File -Force -ErrorAction Stop | Where-Object {
+                $candidateName = $_.Name
+                @($qaOutputPatterns | Where-Object { $candidateName -like $_ }).Count -gt 0
+            })) {
+                [void]$Targets.Add((New-CleanupTarget -Path $file.FullName -AllowedRoot $qaRoot -Mode 'File'))
+            }
+        } catch { Add-CleanupDiscoverySkip "$qaRoot (test-output discovery skipped: $($_.Exception.Message))" }
+    }
+}
+
+function Assert-NoDatabaseCleanupOverlap {
+    param([AllowEmptyCollection()][object[]]$Targets)
+    $data = Get-UserDataTargets
+    if ($data.DatabaseResolutionError) { throw $data.DatabaseResolutionError }
+    foreach ($databaseFile in $data.DatabaseFiles) {
+        $databasePath = [IO.Path]::GetFullPath($databaseFile)
+        foreach ($target in $Targets) {
+            $targetPath = [IO.Path]::GetFullPath($target.Path)
+            $targetPrefix = $targetPath.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
+            if ($databasePath.Equals($targetPath, [StringComparison]::OrdinalIgnoreCase) -or
+                ($target.Mode -eq 'Tree' -and $databasePath.StartsWith($targetPrefix, [StringComparison]::OrdinalIgnoreCase))) {
+                throw "Cleanup target '$targetPath' overlaps the configured persistent database '$databasePath'; refusing cache or standard uninstall cleanup."
+            }
+        }
+    }
 }
 
 # -----------------------------------------------------------------------------
@@ -390,8 +730,8 @@ function Initialize-EnvironmentFile {
     }
 }
 
-function Import-DotEnv {
-    Initialize-EnvironmentFile
+function Import-DotEnv([switch]$NoCreate) {
+    if (-not $NoCreate) { Initialize-EnvironmentFile }
     $loadedKeys = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
     $databaseEnvironmentKeys = @(
         'DATABASE_URL', 'EMBEDDED_DATABASE', 'DATABASE_ENGINE', 'DATABASE_HOST',
@@ -399,6 +739,7 @@ function Import-DotEnv {
         'DATABASE_SSL', 'DATABASE_SSL_CA', 'DATABASE_CONNECT_TIMEOUT',
         'DATABASE_INSERT_BATCH_SIZE'
     )
+    if (Test-Path -LiteralPath $envFile -PathType Leaf) {
     foreach ($rawLine in Get-Content -LiteralPath $envFile) {
         $line = $rawLine.Trim()
         if (-not $line -or $line.StartsWith('#') -or $line.StartsWith(';') -or -not $line.Contains('=')) { continue }
@@ -414,6 +755,7 @@ function Import-DotEnv {
             [void]$loadedKeys.Add($key)
         }
     }
+    }
 
     $requiredLauncherVariables = @(
         'FASTAPI_HOST',
@@ -424,10 +766,10 @@ function Import-DotEnv {
         -not $loadedKeys.Contains($_) -or
         [string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($_, 'Process'))
     })
-    if ($missingVariables.Count -gt 0) {
+    if (-not $NoCreate -and $missingVariables.Count -gt 0) {
         throw "settings\.env is missing required launcher variable(s): $($missingVariables -join ', '). Update it from settings\.env.example."
     }
-    Assert-DataCacheIsolation
+    if (-not $NoCreate) { Assert-DataCacheIsolation }
 }
 
 function Ensure-PortableRuntimes {
@@ -1295,17 +1637,40 @@ function Invoke-TestSuite {
 # -----------------------------------------------------------------------------
 # Cleanup and data management
 # -----------------------------------------------------------------------------
-function Confirm-DestructiveAction([string]$Description) {
+function Confirm-DestructiveAction([string]$Description, [string]$RequiredText) {
     if (-not $script:LauncherInteractive) {
         throw "The destructive action '$Description' requires an interactive console; no files were changed."
     }
     Clear-LauncherProgress
+    if ($RequiredText) {
+        $confirmation = ([string](Read-Host "Type $RequiredText to $Description")).Trim()
+        if ($confirmation -cne $RequiredText) {
+            Write-Info 'Operation cancelled. No changes were made.'
+            return $false
+        }
+        return $true
+    }
     $confirmation = ([string](Read-Host "Continue to $($Description)? [y/N]")).Trim()
     if ($confirmation -notmatch '^(?i:y|yes)$') {
         Write-Info "Operation cancelled. No changes were made."
         return $false
     }
     return $true
+}
+
+function Invoke-ConfirmedCleanup {
+    param(
+        [Parameter(Mandatory)][AllowNull()][AllowEmptyCollection()][object[]]$Targets,
+        [Parameter(Mandatory)][string]$Description,
+        [Parameter(Mandatory)][string]$Activity,
+        [string]$RequiredText
+    )
+    $inventory = Get-CleanupInventory -Targets @($Targets)
+    Write-CleanupPreview -Inventory $inventory -Title $Description
+    if (-not (Confirm-DestructiveAction -Description $Description -RequiredText $RequiredText)) { return $null }
+    $result = Invoke-CleanupInventory -Inventory $inventory -Activity $Activity
+    Write-CleanupSummary -Action $Description -Result $result
+    return $result
 }
 
 function Stop-ApplicationProcesses {
@@ -1383,55 +1748,53 @@ function Stop-ApplicationProcesses {
 }
 
 function Remove-Logs {
-    Import-DotEnv
+    Import-DotEnv -NoCreate
     Assert-ApplicationStopped
-    if (-not (Confirm-DestructiveAction 'remove application log files')) { return }
+    Reset-CleanupDiscoveryNotes
+    $targets = Get-LogCleanupTargets -LogRoot (Join-Path (Get-DataRootPath) 'logs')
+    $result = Invoke-ConfirmedCleanup -Targets $targets -Description 'remove application log files' -Activity 'FAIRS: remove logs'
+    if ($null -ne $result -and $result.Failed.Count -eq 0) { Write-Ok 'Application log files removed.' }
+}
 
-    $logDir = (Get-UserDataTargets).LogRoot
-    Remove-UserLogFiles $logDir
-    Write-Ok 'Log files removed.'
+function Get-LogCleanupTargets([string]$LogRoot) {
+    $targets = [Collections.Generic.List[object]]::new()
+    if (-not (Test-Path -LiteralPath $LogRoot -PathType Container)) { return @() }
+    if (-not (Test-CleanupDirectorySafeToScan -Path $LogRoot)) { return @() }
+    $pending = [Collections.Generic.Stack[string]]::new()
+    $pending.Push([IO.Path]::GetFullPath($LogRoot))
+    while ($pending.Count -gt 0) {
+        $current = $pending.Pop()
+        try { $children = @(Get-ChildItem -LiteralPath $current -Force -ErrorAction Stop) }
+        catch { Add-CleanupDiscoverySkip "$current (log discovery skipped: $($_.Exception.Message))"; continue }
+        foreach ($child in $children) {
+            if ($child.PSIsContainer) {
+                if (($child.Attributes -band [IO.FileAttributes]::ReparsePoint) -eq 0) {
+                    $pending.Push($child.FullName)
+                } else {
+                    Add-CleanupDiscoverySkip "$($child.FullName) (log discovery skipped: symbolic link or junction)"
+                }
+            } elseif ($child.Extension -ieq '.log') {
+                [void]$targets.Add((New-CleanupTarget -Path $child.FullName -AllowedRoot $LogRoot -Mode 'File'))
+            }
+        }
+    }
+    return @($targets)
 }
 
 function Remove-UserLogFiles([string]$Path) {
-    if (-not (Test-Path -LiteralPath $Path -PathType Container)) { return }
-    $logFiles = @(Get-ChildItem -LiteralPath $Path -Filter '*.log' -File -Recurse -Force -ErrorAction SilentlyContinue |
-        Sort-Object @{ Expression = { $_.FullName.ToUpperInvariant() }; Descending = $false })
-    $progressId = Start-LauncherProgress -Activity "FAIRS: remove logs from $Path" -Status "0 of $($logFiles.Count) files"
-    try {
-        for ($index = 0; $index -lt $logFiles.Count; $index++) {
-            $logFile = $logFiles[$index]
-            Update-LauncherProgress -Id $progressId -Activity "FAIRS: remove logs from $Path" -Status "$($index + 1) of $($logFiles.Count): $($logFile.Name)" -PercentComplete ([int](($index + 1) * 100 / [Math]::Max(1, $logFiles.Count)))
-            Remove-PathBestEffort $logFile.FullName | Out-Null
-        }
-    }
-    finally {
-        Complete-LauncherProgress $progressId
-    }
+    $targets = Get-LogCleanupTargets -LogRoot $Path
+    $inventory = Get-CleanupInventory -Targets $targets
+    $result = Invoke-CleanupInventory -Inventory $inventory -Activity "FAIRS: remove logs from $Path"
+    Write-CleanupSummary -Action "Remove logs from $Path" -Result $result
+    return $result
 }
 
 function Clear-Cache {
-    Import-DotEnv
+    Import-DotEnv -NoCreate
     Assert-ApplicationStopped
-    if (-not (Confirm-DestructiveAction 'clear disposable caches and app/server Python bytecode')) { return }
-
-    $cachePaths = @(Get-CacheCleanupPaths)
-    $progressId = Start-LauncherProgress -Activity 'FAIRS: clear caches' -Status "0 of $($cachePaths.Count) roots"
-    try {
-        for ($index = 0; $index -lt $cachePaths.Count; $index++) {
-            $cachePath = $cachePaths[$index]
-            Update-LauncherProgress -Id $progressId -Activity 'FAIRS: clear caches' -Status "$($index + 1) of $($cachePaths.Count): $cachePath" -PercentComplete ([int](($index + 1) * 100 / $cachePaths.Count))
-            if ([IO.Path]::GetFullPath($cachePath).Equals([IO.Path]::GetFullPath($runtimeCacheDir), [StringComparison]::OrdinalIgnoreCase)) {
-                Clear-RuntimeCacheDirectory
-            }
-            else {
-                Remove-PathBestEffort $cachePath | Out-Null
-            }
-        }
-    }
-    finally {
-        Complete-LauncherProgress $progressId
-    }
-    Write-Ok 'Disposable cache folders and app/server Python bytecode were cleared. Locked or protected entries were skipped.'
+    Reset-CleanupDiscoveryNotes
+    $result = Invoke-ConfirmedCleanup -Targets (Get-CacheCleanupTargets) -Description 'clear disposable caches and regenerable artifacts' -Activity 'FAIRS: clear caches'
+    if ($null -ne $result -and $result.Failed.Count -eq 0) { Write-Ok 'Disposable caches and regenerable artifacts cleared.' }
 }
 
 function Resolve-LauncherPath([string]$Path) {
@@ -1447,6 +1810,13 @@ function Assert-DataCacheIsolation {
 
     $dataPath = [IO.Path]::GetFullPath((Resolve-LauncherPath $configuredDataDir.Trim()))
     $cachePath = [IO.Path]::GetFullPath($runtimeCacheDir)
+    if (Test-Path -LiteralPath $dataPath -PathType Container) {
+        try {
+            Assert-NoReparseAncestors -Path (Join-Path $dataPath '.fairs-cleanup-data-probe') -AllowedRoot $dataPath
+        } catch {
+            throw "FAIRS_DATA_DIR '$dataPath' traverses a symbolic link or junction; refusing cache and standard uninstall cleanup. $($_.Exception.Message)"
+        }
+    }
     $dataPrefix = $dataPath.TrimEnd('\') + '\'
     $cachePrefix = $cachePath.TrimEnd('\') + '\'
     if ($dataPath.Equals($cachePath, [StringComparison]::OrdinalIgnoreCase) -or
@@ -1456,32 +1826,64 @@ function Assert-DataCacheIsolation {
     }
 }
 
-function Get-UserDataTargets {
-    Import-DotEnv
-
-    $dataRoot = if ($env:FAIRS_DATA_DIR -and $env:FAIRS_DATA_DIR.Trim()) {
-        Resolve-LauncherPath $env:FAIRS_DATA_DIR.Trim()
-    } else {
-        Join-Path $repoRoot 'data'
+function Assert-NoPersistentDataTreeOverlap([object[]]$Targets) {
+    $dataRoot = [IO.Path]::GetFullPath((Get-DataRootPath))
+    $dataPrefix = $dataRoot.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
+    foreach ($target in $Targets) {
+        if ($target.Mode -ne 'Tree') { continue }
+        $targetPath = [IO.Path]::GetFullPath($target.Path)
+        $targetPrefix = $targetPath.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
+        if ($targetPath.StartsWith($dataPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+            $checkpointRoot = [IO.Path]::GetFullPath((Join-Path $dataRoot 'checkpoints'))
+            $isIncompleteCheckpointWorkspace = (Split-Path -Parent $targetPath).Equals($checkpointRoot, [StringComparison]::OrdinalIgnoreCase) -and
+                (Split-Path -Leaf $targetPath) -match '^\..+\.(staging|backup|publish)-[0-9a-f]{32}$'
+            if ($isIncompleteCheckpointWorkspace) { continue }
+        }
+        if ($targetPath.Equals($dataRoot, [StringComparison]::OrdinalIgnoreCase) -or
+            $targetPath.StartsWith($dataPrefix, [StringComparison]::OrdinalIgnoreCase) -or
+            $dataRoot.StartsWith($targetPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Cleanup tree '$targetPath' overlaps persistent FAIRS data root '$dataRoot'; refusing cache or standard uninstall cleanup."
+        }
     }
+}
+
+function Get-UserDataTargets {
+    $dataRoot = Get-DataRootPath
     $logRoot = Join-Path $dataRoot 'logs'
     $databaseFiles = @(
         (Join-Path $dataRoot 'database.db'),
         (Join-Path $dataRoot 'database.db-shm'),
-        (Join-Path $dataRoot 'database.db-wal')
+        (Join-Path $dataRoot 'database.db-wal'),
+        (Join-Path $dataRoot 'database.db-journal')
     )
     $externalDatabase = $false
     $databaseConfigPath = Join-Path $dataRoot 'database-config.json'
-    if (Test-Path -LiteralPath $databaseConfigPath -PathType Leaf) {
+    $databaseResolutionError = $null
+    $configItem = $null
+    try {
+        $configItem = Get-Item -LiteralPath $databaseConfigPath -Force -ErrorAction Stop
+    } catch {
+        if ($_.CategoryInfo.Category -ne [System.Management.Automation.ErrorCategory]::ObjectNotFound) {
+            $databaseResolutionError = "Cannot inspect database configuration at '$databaseConfigPath'; refusing persistent data removal. $($_.Exception.Message)"
+        }
+    }
+    if ($null -ne $configItem -and -not $databaseResolutionError) {
         try {
+            if ($configItem.PSIsContainer) { throw 'Database configuration path is a directory.' }
+            if (($configItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'Database configuration is a symbolic link or junction.' }
             $databaseConfig = Get-Content -LiteralPath $databaseConfigPath -Raw | ConvertFrom-Json
             if (($databaseConfig.schema_version -isnot [int] -and $databaseConfig.schema_version -isnot [long]) -or
                 $databaseConfig.schema_version -ne 1) {
                 throw 'Unsupported database configuration schema version.'
             }
             if ($databaseConfig.backend -eq 'sqlite' -and $databaseConfig.sqlite.path) {
-                $sqlitePath = [IO.Path]::GetFullPath([string]$databaseConfig.sqlite.path)
-                $databaseFiles = @($sqlitePath, "$sqlitePath-shm", "$sqlitePath-wal")
+                $sqliteConfiguredPath = [string]$databaseConfig.sqlite.path
+                $sqlitePath = if ([IO.Path]::IsPathRooted($sqliteConfiguredPath)) {
+                    [IO.Path]::GetFullPath($sqliteConfiguredPath)
+                } else {
+                    [IO.Path]::GetFullPath((Join-Path $repoRoot $sqliteConfiguredPath))
+                }
+                $databaseFiles = @($sqlitePath, "$sqlitePath-shm", "$sqlitePath-wal", "$sqlitePath-journal")
             } elseif ($databaseConfig.backend -eq 'postgresql' -and
                 $databaseConfig.postgresql.engine -eq 'postgresql+psycopg') {
                 $externalDatabase = $true
@@ -1490,92 +1892,148 @@ function Get-UserDataTargets {
                 throw 'Unknown database backend or missing SQLite path.'
             }
         } catch {
-            throw "Cannot determine the active database from '$databaseConfigPath'; refusing data removal."
+            $databaseResolutionError = "Cannot determine the active database from '$databaseConfigPath'; refusing persistent data removal. $($_.Exception.Message)"
         }
     }
 
     return [pscustomobject]@{
+        DataRoot = $dataRoot
         DatabaseFiles = $databaseFiles
+        DatabaseConfigFile = $databaseConfigPath
         CheckpointRoot = Join-Path $dataRoot 'checkpoints'
         LogRoot = $logRoot
         ExternalDatabase = $externalDatabase
+        DatabaseResolutionError = $databaseResolutionError
     }
+}
+
+function Get-DataRootPath {
+    $dataRoot = if ($env:FAIRS_DATA_DIR -and $env:FAIRS_DATA_DIR.Trim()) {
+        Resolve-LauncherPath $env:FAIRS_DATA_DIR.Trim()
+    } else {
+        Join-Path $repoRoot 'data'
+    }
+    $fullDataRoot = [IO.Path]::GetFullPath($dataRoot)
+    if ($fullDataRoot.Equals([IO.Path]::GetPathRoot($fullDataRoot), [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Refusing to use a filesystem root as FAIRS_DATA_DIR: '$fullDataRoot'."
+    }
+    return $fullDataRoot
+}
+
+function Get-CompleteDataCleanupTargets {
+    $data = Get-UserDataTargets
+    if ($data.DatabaseResolutionError) { throw $data.DatabaseResolutionError }
+    $targets = [Collections.Generic.List[object]]::new()
+    foreach ($databaseFile in $data.DatabaseFiles) {
+        $allowedRoot = Split-Path -Parent $databaseFile
+        if (-not $allowedRoot) { $allowedRoot = [IO.Path]::GetPathRoot($databaseFile) }
+        Add-CleanupTargetIfPresent $targets $databaseFile $allowedRoot -Mode 'File'
+    }
+    Add-CleanupTargetIfPresent $targets $data.CheckpointRoot $data.DataRoot -KeepRoot -PreserveNames @('.gitkeep')
+    Add-CleanupTargetIfPresent $targets $data.DatabaseConfigFile $data.DataRoot -Mode 'File'
+    Add-CleanupTargetIfPresent $targets $envFile (Join-Path $repoRoot 'settings') -Mode 'File'
+    return @(Remove-DuplicateCleanupTargets -Targets @($targets))
+}
+
+function Get-StandardUninstallTargets {
+    Assert-DataCacheIsolation
+    $targets = [Collections.Generic.List[object]]::new()
+    foreach ($path in @(
+        (Join-Path $runtimeRoot 'python'), (Join-Path $runtimeRoot 'uv'), (Join-Path $runtimeRoot 'nodejs')
+    )) { Add-CleanupTargetIfPresent $targets $path $runtimeRoot }
+    Add-CleanupTargetIfPresent $targets $runtimeCacheDir $runtimeRoot -KeepRoot -PreserveNames @('.gitkeep')
+    Add-CleanupTargetIfPresent $targets $venvDir $serverDir
+    Add-CleanupTargetIfPresent $targets (Join-Path $clientDir 'node_modules') $clientDir
+    foreach ($target in @(Get-CacheCleanupTargets)) { [void]$targets.Add($target) }
+    $logTargets = Get-LogCleanupTargets -LogRoot (Join-Path (Get-DataRootPath) 'logs')
+    foreach ($target in $logTargets) { [void]$targets.Add($target) }
+    $uniqueTargets = @(Remove-DuplicateCleanupTargets -Targets @($targets))
+    Assert-NoPersistentDataTreeOverlap -Targets $uniqueTargets
+    Assert-NoDatabaseCleanupOverlap -Targets $uniqueTargets
+    return $uniqueTargets
 }
 
 function Remove-UserDataDirectory([string]$Path) {
-    if (-not (Test-Path -LiteralPath $Path -PathType Container)) { return }
-    $children = @(Get-ChildItem -LiteralPath $Path -Force -ErrorAction SilentlyContinue |
-        Sort-Object @{ Expression = { $_.FullName.ToUpperInvariant() }; Descending = $false })
-    $progressId = Start-LauncherProgress -Activity "FAIRS: remove data from $Path" -Status "0 of $($children.Count) items"
-    try {
-        for ($index = 0; $index -lt $children.Count; $index++) {
-            $child = $children[$index]
-            if ($child.Name -eq '.gitkeep') { continue }
-            Update-LauncherProgress -Id $progressId -Activity "FAIRS: remove data from $Path" -Status "$($index + 1) of $($children.Count): $($child.Name)" -PercentComplete ([int](($index + 1) * 100 / [Math]::Max(1, $children.Count)))
-            Remove-PathBestEffort $child.FullName | Out-Null
-        }
-    }
-    finally {
-        Complete-LauncherProgress $progressId
-    }
+    $allowedRoot = Split-Path -Parent $Path
+    $target = New-CleanupTarget -Path $Path -AllowedRoot $allowedRoot -KeepRoot -PreserveNames @('.gitkeep')
+    $inventory = Get-CleanupInventory -Targets @($target)
+    $result = Invoke-CleanupInventory -Inventory $inventory -Activity "FAIRS: remove data from $Path"
+    Write-CleanupSummary -Action "Remove data from $Path" -Result $result
+    return $result
 }
 
 function Remove-Checkpoints {
-    Import-DotEnv
+    Import-DotEnv -NoCreate
     Assert-ApplicationStopped
-    if (-not (Confirm-DestructiveAction 'delete all saved checkpoints')) { return }
-
     $targets = Get-UserDataTargets
-    Remove-UserDataDirectory $targets.CheckpointRoot
-    New-Item -ItemType Directory -Path $targets.CheckpointRoot -Force | Out-Null
-    Write-Ok 'All saved checkpoints were removed.'
+    $target = New-CleanupTarget -Path $targets.CheckpointRoot -AllowedRoot $targets.DataRoot -KeepRoot -PreserveNames @('.gitkeep')
+    $inventory = Get-CleanupInventory -Targets @($target)
+    Write-CleanupPreview -Inventory $inventory -Title 'Delete saved checkpoints'
+    if (-not (Confirm-DestructiveAction 'delete all saved checkpoints')) { return }
+    $result = Invoke-CleanupInventory -Inventory $inventory -Activity 'FAIRS: remove saved checkpoints'
+    Write-CleanupSummary -Action 'Delete saved checkpoints' -Result $result
 }
 
 function Remove-AllData {
-    Import-DotEnv
+    Import-DotEnv -NoCreate
     Assert-ApplicationStopped
-    if (-not (Confirm-DestructiveAction 'delete local user data')) { return }
-
+    Reset-CleanupDiscoveryNotes
     $targets = Get-UserDataTargets
+    if ($targets.DatabaseResolutionError) { throw $targets.DatabaseResolutionError }
+    $cleanupTargets = [Collections.Generic.List[object]]::new()
     foreach ($databaseFile in $targets.DatabaseFiles) {
-        Remove-PathBestEffort $databaseFile | Out-Null
+        $allowedRoot = Split-Path -Parent $databaseFile
+        if (-not $allowedRoot) { $allowedRoot = [IO.Path]::GetPathRoot($databaseFile) }
+        Add-CleanupTargetIfPresent $cleanupTargets $databaseFile $allowedRoot -Mode 'File'
     }
-    Remove-UserLogFiles $targets.LogRoot
-
-    if (-not (Test-Path -LiteralPath $targets.LogRoot -PathType Container)) {
-        New-Item -ItemType Directory -Path $targets.LogRoot -Force | Out-Null
-    }
+    foreach ($target in (Get-LogCleanupTargets -LogRoot $targets.LogRoot)) { [void]$cleanupTargets.Add($target) }
+    $inventory = Get-CleanupInventory -Targets @(Remove-DuplicateCleanupTargets -Targets @($cleanupTargets))
+    Write-CleanupPreview -Inventory $inventory -Title 'Remove local database and logs (checkpoints and configuration are preserved)'
+    if (-not (Confirm-DestructiveAction 'remove local database and application logs')) { return }
+    $result = Invoke-CleanupInventory -Inventory $inventory -Activity 'FAIRS: remove local data'
+    Write-CleanupSummary -Action 'Remove local database and logs' -Result $result
     if ($targets.ExternalDatabase) {
         Write-Info 'An external database is configured. Its remote data was not changed.'
     }
-    Write-Ok 'Local database and user-generated log data were removed. Saved checkpoints were preserved.'
+    if ($result.Failed.Count -eq 0) { Write-Ok 'Local database and application logs were removed. Saved checkpoints and configuration were preserved.' }
 }
 
 function Uninstall-Application {
-    Import-DotEnv
+    param([ValidateSet('Standard', 'Complete')][string]$Mode)
+    Import-DotEnv -NoCreate
     Assert-ApplicationStopped
-    if (-not (Confirm-DestructiveAction 'remove local runtimes, caches, dependencies, and build outputs')) { return }
-
-    $paths = @(
-        $runtimeRoot,
-        $venvDir,
-        (Join-Path $clientDir 'node_modules'),
-        (Join-Path $clientDir 'dist')
-    )
-    $progressId = Start-LauncherProgress -Activity 'FAIRS: uninstall application' -Status "0 of $($paths.Count) paths"
-    try {
-        for ($index = 0; $index -lt $paths.Count; $index++) {
-            $path = $paths[$index]
-            Update-LauncherProgress -Id $progressId -Activity 'FAIRS: uninstall application' -Status "$($index + 1) of $($paths.Count): $path" -PercentComplete ([int](($index + 1) * 100 / $paths.Count))
-            Remove-PathBestEffort $path | Out-Null
+    Reset-CleanupDiscoveryNotes
+    if (-not $Mode) {
+        if (-not $script:LauncherInteractive) { throw "The uninstall action requires an interactive console; no files were changed." }
+        $selection = ([string](Read-Host 'Uninstall mode [1=Standard, 2=Complete removal]')).Trim()
+        switch ($selection) {
+            '1' { $Mode = 'Standard' }
+            '2' { $Mode = 'Complete' }
+            default { throw 'Invalid uninstall mode. Enter 1 for Standard or 2 for Complete removal.' }
         }
     }
-    finally {
-        Complete-LauncherProgress $progressId
+
+    $targets = [Collections.Generic.List[object]]::new()
+    foreach ($target in @(Get-StandardUninstallTargets)) { [void]$targets.Add($target) }
+    if ($Mode -eq 'Complete') {
+        foreach ($target in @(Get-CompleteDataCleanupTargets)) { [void]$targets.Add($target) }
     }
-    New-Item -ItemType Directory -Path $runtimeRoot -Force | Out-Null
-    New-Item -ItemType File -Path (Join-Path $runtimeRoot '.gitkeep') -Force | Out-Null
-    Write-Ok 'Application runtimes, caches, dependencies, and build outputs removed. Dependency lockfiles and user data were preserved.'
+    $inventory = Get-CleanupInventory -Targets @(Remove-DuplicateCleanupTargets -Targets @($targets))
+    $title = if ($Mode -eq 'Complete') { 'Complete removal: generated files and persistent FAIRS data' } else { 'Standard uninstall: runtimes, caches, build outputs, test reports, and application logs' }
+    Write-CleanupPreview -Inventory $inventory -Title $title
+    if ($inventory.Failed.Count -gt 0) {
+        throw 'Uninstall preview found unsafe or inaccessible targets; no files were changed.'
+    }
+    $confirmationDescription = if ($Mode -eq 'Complete') { 'remove generated files before complete removal' } else { 'remove standard application files' }
+    if (-not (Confirm-DestructiveAction $confirmationDescription)) { return }
+    if ($Mode -eq 'Complete' -and -not (Confirm-DestructiveAction -Description 'remove persistent FAIRS data and launcher configuration' -RequiredText 'REMOVE')) { return }
+    $result = Invoke-CleanupInventory -Inventory $inventory -Activity 'FAIRS: uninstall application'
+    Write-CleanupSummary -Action $title -Result $result
+    if ($Mode -eq 'Standard') {
+        Write-Ok 'Standard uninstall completed. Local database, checkpoints, database configuration, and settings/.env were preserved.'
+    } elseif ($result.Failed.Count -eq 0) {
+        Write-Ok 'Complete removal finished for known local FAIRS data. Unknown data-root files and browser localStorage were preserved.'
+    }
 }
 
 # -----------------------------------------------------------------------------
@@ -1664,10 +2122,10 @@ function Get-LauncherMenuEntries {
         [pscustomobject]@{ Section = 'SOURCE CONTROL'; Key = 'Check'; Label = 'Check for updates'; Description = 'Report local main-branch update status only'; Color = [ConsoleColor]::Yellow }
         [pscustomobject]@{ Section = 'SOURCE CONTROL'; Key = 'Update'; Label = 'Update application'; Description = 'Pull application changes from the main branch'; Color = [ConsoleColor]::Yellow }
         [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'Logs'; Label = 'Remove logs'; Description = 'Delete application log files'; Color = [ConsoleColor]::DarkYellow }
-        [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'Cache'; Label = 'Clear cache'; Description = 'Remove disposable caches and app/server Python bytecode'; Color = [ConsoleColor]::DarkYellow }
+        [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'Cache'; Label = 'Clear cache'; Description = 'Remove disposable caches and regenerable build/test artifacts'; Color = [ConsoleColor]::DarkYellow }
         [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'Checkpoints'; Label = 'Remove checkpoints'; Description = 'Delete saved checkpoints only'; Color = [ConsoleColor]::Red }
-        [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'AllData'; Label = 'Remove all data'; Description = 'Delete local database and logs, preserving checkpoints'; Color = [ConsoleColor]::Red }
-        [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'Uninstall'; Label = 'Uninstall application'; Description = 'Remove local runtimes, caches, dependencies, and build outputs'; Color = [ConsoleColor]::Red }
+        [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'AllData'; Label = 'Remove database + logs'; Description = 'Delete local database and logs; preserve checkpoints and configuration'; Color = [ConsoleColor]::Red }
+        [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'Uninstall'; Label = 'Uninstall application'; Description = 'Remove generated files; optionally remove persistent FAIRS data'; Color = [ConsoleColor]::Red }
         [pscustomobject]@{ Section = 'DATA & MAINTENANCE'; Key = 'StopProcesses'; Label = 'Stop all app processes'; Description = 'Terminate the backend, frontend, and child processes'; Color = [ConsoleColor]::Red }
         [pscustomobject]@{ Section = 'EXIT'; Key = 'Exit'; Label = 'Exit'; Description = 'Close this launcher'; Color = [ConsoleColor]::DarkGray }
     )
@@ -1762,6 +2220,37 @@ function Show-Menu {
         }
         Wait-ForMenu
     }
+}
+
+if ($Action) {
+    try {
+        if (-not $WhatIfPreference) { throw 'The -Action parameter is preview-only and must be combined with -WhatIf.' }
+        if ($Launch) { throw 'Use either -Launch or -Action, not both.' }
+        if ($CompleteRemoval -and $Action -ne 'Uninstall') { throw '-CompleteRemoval is available only with -Action Uninstall -WhatIf.' }
+        Import-DotEnv -NoCreate
+        Reset-CleanupDiscoveryNotes
+        $previewTargets = if ($Action -eq 'Cache') { Get-CacheCleanupTargets } else { Get-StandardUninstallTargets }
+        if ($Action -eq 'Uninstall' -and $CompleteRemoval) {
+            $previewTargets = @($previewTargets) + @(Get-CompleteDataCleanupTargets)
+        }
+        $previewInventory = Get-CleanupInventory -Targets @($previewTargets)
+        $previewTitle = if ($Action -eq 'Cache') { 'Cache cleanup dry run' } elseif ($CompleteRemoval) { 'Complete uninstall dry run' } else { 'Standard uninstall dry run' }
+        Write-CleanupPreview -Inventory $previewInventory -Title $previewTitle
+        if ($previewInventory.Failed.Count -gt 0) { exit 1 }
+        Write-Info "Dry run complete. $($previewInventory.Entries.Count) existing path(s) would be removed. No files were changed."
+        exit 0
+    } catch {
+        Write-Fatal "Cleanup preview failed: $($_.Exception.Message)"
+        exit 1
+    }
+}
+if ($CompleteRemoval) {
+    Write-Fatal '-CompleteRemoval requires -Action Uninstall -WhatIf.'
+    exit 2
+}
+if ($WhatIfPreference) {
+    Write-Fatal 'Use -Action Cache -WhatIf or -Action Uninstall -WhatIf to preview cleanup targets.'
+    exit 2
 }
 
 if ($Launch) {
