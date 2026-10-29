@@ -1,115 +1,61 @@
-<p align="center"><img src="app/client/public/roulette_wheel.png" alt="FAIRS roulette wheel mark" width="96"></p>
+<p align="center"><img src="app/client/public/roulette_wheel.png" alt="" width="80"></p>
 
 <h1 align="center">FAIRS Roulette Player</h1>
 
-<p align="center">A local research workspace for roulette training experiments and step-by-step inference sessions.</p>
+<p align="center">A local workspace for training roulette agents and reviewing their suggestions one spin at a time.</p>
 
 <p align="center">
-  <a href="https://github.com/CTCycle/FAIRS-Roulette-Player/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/CTCycle/FAIRS-Roulette-Player?style=flat-square"></a>
-  <a href="https://github.com/CTCycle/FAIRS-Roulette-Player/commits"><img alt="Last commit" src="https://img.shields.io/github/last-commit/CTCycle/FAIRS-Roulette-Player?style=flat-square"></a>
-  <a href="https://github.com/CTCycle/FAIRS-Roulette-Player/releases"><img alt="Release" src="https://img.shields.io/github/v/release/CTCycle/FAIRS-Roulette-Player?display_name=tag&style=flat-square"></a>
-  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/CTCycle/FAIRS-Roulette-Player?style=flat-square"></a>
+  <a href="#training">Training</a> ·
+  <a href="#inference">Inference</a> ·
+  <a href="#start-fairs">Start FAIRS</a> ·
+  <a href="#configuration">Configuration</a> ·
+  <a href="assets/docs/project_index.md">Documentation</a>
 </p>
 
-<p align="center">
-  <a href="https://www.python.org/"><img alt="Python 3.14.7" src="https://img.shields.io/badge/Python-3.14.7-3776AB?logo=python&logoColor=white&style=flat-square"></a>
-  <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black&style=flat-square"></a>
-  <a href="https://www.microsoft.com/windows"><img alt="Platform: Windows" src="https://img.shields.io/badge/Platform-Windows-0078D4?logo=windows&logoColor=white&style=flat-square"></a>
-</p>
+<p align="center"><img src="assets/figures/inference-page.jpg" alt="Inference session with a checkpoint, an agent suggestion, and seven recorded outcomes" width="760"></p>
 
-> FAIRS is an experimental research tool. Its suggestions are not guaranteed predictions or gambling advice. Roulette outcomes remain uncertain, and results from a simulation may not generalize to new data or future play.
+FAIRS imports spin histories from CSV or XLSX, or generates synthetic outcomes for repeatable experiments. Train an agent, keep or resume its checkpoint, then use it with a dataset in an inference session. Each round records the suggestion, observed outcome, bet, and session result.
 
-## Overview
+> **Research use only.** FAIRS suggestions are experimental; roulette outcomes remain uncertain. This is not gambling advice.
 
-FAIRS is a local browser-based research workspace for preparing roulette data, training an agent, saving checkpoints, and reviewing model suggestions against observed outcomes. It models a single-zero wheel with outcomes from 0 through 36 and supports both imported CSV or XLSX datasets and synthetic data for repeatable experiments. Training runs can be configured and monitored with metrics, checkpoints can be saved or resumed, and inference can be stepped through one round at a time. Each inference session records observed outcomes, predictions, bets, capital, results, and session history for later review. The application uses SQLite by default and can be configured for an external PostgreSQL database. FAIRS is an experimental research tool, and its suggestions are not guaranteed predictions or gambling advice.
+## Inference
 
-## Key Features
+Choose a trained checkpoint and dataset, set an initial capital and bet, then start a session. Review the agent's suggestion, enter or edit the observed outcome, and step through the session history. The page keeps the current capital and results alongside each round.
 
-- Import CSV or XLSX datasets and preview them, or generate synthetic data for repeatable experiments.
-- Configure and monitor training runs, review their metrics, and save or resume checkpoints.
-- Pair a checkpoint with a dataset and step through inference one round at a time.
-- Record observed outcomes and review predictions, bets, capital, results, and session history.
-- Configure roulette, appearance, runtime, and advanced settings from a dedicated settings page.
-- Review agent suggestions alongside live session history in a desktop-optimized workspace.
-- Use SQLite by default or configure an external PostgreSQL database.
+## Training
 
-## Screenshots
+Upload a CSV or XLSX spin history, or use the synthetic data generator. Review the dataset and configure an agent in the training wizard. The Training page shows run status, progress, metrics, and charts; completed checkpoints can be resumed or opened in Inference.
 
-<p align="center">
-  <kbd><img src="assets/figures/training-page.png" alt="Training workspace" width="49%"></kbd>
-  <kbd><img src="assets/figures/inference-page.png" alt="Inference session" width="49%"></kbd>
-</p>
-<p align="center"><em>Training workspace and inference session. Example interface states; results and charts depend on the selected data, checkpoint, and run settings.</em></p>
+<p align="center"><img src="assets/figures/training-page.jpg" alt="Training workspace with a synthetic dataset, saved checkpoint, and completed run status" width="760"></p>
 
-## Technology Stack
+Both screenshots use synthetic outcomes. They show the workflow, not predictive performance.
 
-| Layer | Technology |
-|---|---|
-| Backend | Python 3.14.7, FastAPI 0.128.0 |
-| Web client | React 19, TypeScript 5.9, Vite 7 |
-| Build tooling | Node.js 22.13.0 |
-| Database | SQLite (default), PostgreSQL |
-| Minimum browser width | 1100 pixels |
-| Launcher | Windows PowerShell with portable Python, uv, and Node.js |
+## Start FAIRS
 
-## Installation and Usage
-
-Windows is the supported launch environment. Extract the repository into a writable folder, open PowerShell at its root, and run:
+Windows is the supported launcher platform. From the repository root in PowerShell, run:
 
 ```powershell
-.\start_on_windows.ps1
+.\start_on_windows.ps1 -Launch
 ```
 
-Choose **Launch application**. On first use, the launcher prepares the local runtimes, dependencies, and database. Internet access is required to download missing runtimes and packages. The interface is designed for desktop browser windows at least 1100 pixels wide; mobile layouts are not supported.
-
-Manual (from source):
-
-```powershell
-cd app/server
-uv sync
-cd ../client
-npm install
-```
-
-Then start the backend and client following [Runtime startup](assets/docs/runtime/startup.md).
+The launcher prepares the local runtimes and dependencies, builds the web client when needed, and opens the application. It needs internet access to download missing runtimes or packages. The default address is `http://127.0.0.1:8890/`. Keep the launcher console open while using FAIRS; press **Ctrl+C** there to stop it.
 
 ## Configuration
 
-| Variable | Default | Purpose |
-|---|---|---|
-| `FASTAPI_HOST` | `127.0.0.1` | Backend host |
-| `FASTAPI_PORT` | `8890` | Backend port |
-| `UI_HOST` | `127.0.0.1` | Frontend host |
-| `UI_PORT` | `8051` | Frontend port |
-| `API_BASE_URL` | empty | Vite proxy target |
-| `CORS_ORIGINS` | empty | Comma-separated allowed browser origins |
-| `ENABLE_API_DOCS` | `true` | Enable API docs |
-| `RELOAD` | `false` | Enable backend reload |
-| `FAIRS_DATA_DIR` | empty | Data root for database, logs, and checkpoints |
-| `MPLBACKEND` | `Agg` | Matplotlib backend |
-| `KERAS_BACKEND` | `torch` | Keras backend |
+The launcher creates `settings/.env` from [`settings/.env.example`](settings/.env.example) when needed. FAIRS stores its database, datasets, checkpoints, and logs under `data` by default; set `FAIRS_DATA_DIR` to use another data directory. SQLite is the default database, and PostgreSQL can be configured from the Settings page.
 
-The launcher creates `settings/.env` from `settings/.env.example` when needed. Set the API proxy target, listener hosts and ports, or optional CORS origins there before launch; these deployment values are separate from the user preferences saved by the Settings page. FAIRS stores local datasets, checkpoints, and logs under `data` by default; set `FAIRS_DATA_DIR` to choose another persistent data root. Training and inference preferences are available in the application.
+See [runtime configuration](assets/docs/runtime/configuration.md) for environment variables and database setup, and [troubleshooting](assets/docs/operations/troubleshooting.md) for startup issues.
 
-## Documentation
+## Development
 
-- [Quick Start](assets/docs/operations/quick_start.md)
-- [Training and inference workflows](assets/docs/operations/workflows.md)
-- [Runtime startup](assets/docs/runtime/startup.md)
-- [Runtime configuration](assets/docs/runtime/configuration.md)
-- [Troubleshooting](assets/docs/operations/troubleshooting.md)
+FAIRS is distributed as source and runs as a local web app. Its backend uses Python and FastAPI; the React and TypeScript client is built with Vite. FastAPI serves the built client and API from the same origin. The layout requires a browser window at least 1100 pixels wide; mobile layouts are not supported.
 
-## Limitations
-
-- Experimental research tool; suggestions are not guaranteed predictions or gambling advice.
-- Roulette outcomes remain uncertain, and simulation results may not generalize to new data or future play.
-- Single-zero wheel with outcomes from 0 through 36 only.
-- Desktop browser windows at least 1100 pixels wide; no mobile layout.
+See [runtime startup](assets/docs/runtime/startup.md) for manual development commands and [the project documentation index](assets/docs/project_index.md) for architecture, testing, and operations guides.
 
 ## Contributing
 
-Contributions are welcome. Open an issue or pull request with a clear description of the change and its motivation.
+Issues and pull requests are welcome. Please describe the problem and keep changes focused; the [testing and quality guide](assets/docs/coding/testing_and_quality.md) covers project conventions.
 
 ## License
 
-Licensed under the MIT License. See [LICENSE](LICENSE).
+[MIT](LICENSE)
