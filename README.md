@@ -7,9 +7,6 @@
 <p align="center">
   <a href="https://github.com/CTCycle/FAIRS-Roulette-Player/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/CTCycle/FAIRS-Roulette-Player?style=flat-square"></a>
   <a href="https://github.com/CTCycle/FAIRS-Roulette-Player/commits"><img alt="Last commit" src="https://img.shields.io/github/last-commit/CTCycle/FAIRS-Roulette-Player?style=flat-square"></a>
-</p>
-
-<p align="center">
   <a href="https://github.com/CTCycle/FAIRS-Roulette-Player/releases"><img alt="Release" src="https://img.shields.io/github/v/release/CTCycle/FAIRS-Roulette-Player?display_name=tag&style=flat-square"></a>
   <a href="https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml?query=branch%3Adevelop"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/CTCycle/FAIRS-Roulette-Player/ci.yml?branch=develop&label=CI&style=flat-square"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/CTCycle/FAIRS-Roulette-Player?style=flat-square"></a>
