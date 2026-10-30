@@ -1,6 +1,6 @@
 ## Testing And Quality
 
-Last updated: 2026-10-25
+Last updated: 2026-10-30
 
 ## Quality Baseline
 
@@ -76,7 +76,7 @@ The ignored `assets/QA/` bundle was reviewed and its durable findings are captur
 The Chromium JUnit output reported 7 tests, 0 failures, 0 errors, and 0 skips. Its scenarios were: “Training wizard advances and returns to a selected step”; “Inference setup loads checkpoint and dataset options”; “Settings changes save automatically and survive a reload”; “Settings debounces continuous edits and preserves later changes after a failed write”; “Settings retries a newer immediate edit queued during a failed write”; “Database fields stay as a draft until the explicit switch action”; and “1100px is supported and 1099px shows the minimum-width notice.” The five Python skips were `test_postgresql_clean_and_current_are_idempotent`, `test_postgresql_unversioned_database_is_rejected_without_mutation`, `test_postgresql_synthetic_rollback_and_behind_revision`, `test_postgresql_concurrent_initializers_serialize`, and `test_postgresql_contract`; they require a local PostgreSQL service. Hosted PostgreSQL conformance is recorded separately in the status ledger. Playwright's `.last-run.json` also reported `passed` with no failed tests. These generated summaries duplicate the source test coverage and the results above; they are not separate evidence dependencies.
 - Set `STANDARD_TEST_CACHE_ROOT` before invoking `app/tests/run_tests.bat` to place all runner caches, including pytest basetemp and Playwright browser storage, under an isolated root. Without it, the runner uses `runtimes/cache`.
 - `.github/workflows/ci.yml`
-  - Linux CI runs the backend Ruff/unit/Alembic/OpenAPI/PostgreSQL checks and a separate frontend lint/build job. Python dependencies resolve from `app/server/pyproject.toml` when `uv.lock` is absent, while the repository-root `ruff.toml` owns Ruff’s canonical cache path; generated QA assets are excluded from lint traversal.
+  - The workflow has four gates: Linux backend validation (locked `uv` test dependencies, Ruff, unit tests, Alembic heads, and generated frontend-contract check); PostgreSQL 17 persistence conformance; frontend validation (Node 22.13.0, `npm ci`, Chromium, unit tests, lint, production build, and browser E2E); and Windows launcher maintenance (PowerShell). Ruff uses the repository-root `ruff.toml` and excludes generated QA assets.
 
 ## Migration Validation
 
