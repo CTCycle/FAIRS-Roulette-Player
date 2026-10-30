@@ -5,6 +5,23 @@
 <p align="center">A local workspace for training roulette agents and reviewing their suggestions one spin at a time.</p>
 
 <p align="center">
+  <a href="https://github.com/CTCycle/FAIRS-Roulette-Player/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/CTCycle/FAIRS-Roulette-Player?style=flat-square"></a>
+  <a href="https://github.com/CTCycle/FAIRS-Roulette-Player/commits"><img alt="Last commit" src="https://img.shields.io/github/last-commit/CTCycle/FAIRS-Roulette-Player?style=flat-square"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/CTCycle/FAIRS-Roulette-Player/releases"><img alt="Release" src="https://img.shields.io/github/v/release/CTCycle/FAIRS-Roulette-Player?display_name=tag&style=flat-square"></a>
+  <a href="https://github.com/CTCycle/FAIRS-Roulette-Player/actions/workflows/ci.yml?query=branch%3Adevelop"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/CTCycle/FAIRS-Roulette-Player/ci.yml?branch=develop&label=CI&style=flat-square"></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/CTCycle/FAIRS-Roulette-Player?style=flat-square"></a>
+</p>
+
+<p align="center">
+  <a href="https://www.python.org/"><img alt="Python 3.14.7" src="https://img.shields.io/badge/Python-3.14.7-3776AB?logo=python&logoColor=white&style=flat-square"></a>
+  <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black&style=flat-square"></a>
+  <a href="https://www.microsoft.com/windows"><img alt="Platform: Windows" src="https://img.shields.io/badge/Platform-Windows-0078D4?logo=windows&logoColor=white&style=flat-square"></a>
+</p>
+
+<p align="center">
   <a href="#training">Training</a> ·
   <a href="#inference">Inference</a> ·
   <a href="#start-fairs">Start FAIRS</a> ·
