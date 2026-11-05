@@ -6,7 +6,7 @@ Last updated: 2026-10-21
 
 FAIRS is a Windows-first local web application for roulette training and inference experiments. It is intentionally a layered local monolith with one current implementation for each major responsibility.
 
-The repository contains a React/Vite client and a FastAPI backend. In production the built SPA is served by FastAPI from the same origin as the API; Vite runs separately only for development and frontend preview/test workflows. `start_on_windows.ps1` supervises the single Uvicorn process, waits for API health before opening the browser, and owns its shutdown. Training runs in a child worker process, while active job state and live inference models remain process-local. SQLite is the embedded default and PostgreSQL is an explicitly configured alternative using the same SQLAlchemy repositories and Alembic schema. Checkpoints and logs are filesystem data.
+The repository contains a React/Vite client and a FastAPI backend. In production the built SPA is served by FastAPI from the same origin as the API; Vite runs separately only for development and frontend preview/test workflows. `setup_and_maintenance.ps1` supervises the single Uvicorn process, waits for API health before opening the browser, and owns its shutdown. Training runs in a child worker process, while active job state and live inference models remain process-local. SQLite is the embedded default and PostgreSQL is an explicitly configured alternative using the same SQLAlchemy repositories and Alembic schema. Checkpoints and logs are filesystem data.
 
 ```mermaid
 flowchart LR
@@ -56,7 +56,7 @@ flowchart LR
 | Frontend workflow/view state | feature-local React state/hooks |
 | Cache ownership | `runtimes/cache` with fixed tool-specific child directories |
 | Application resource lifecycle | FastAPI lifespan and `bootstrap_runtime()` |
-| Local process lifecycle | `start_on_windows.ps1` supervises one Uvicorn process; Ctrl+C requests FastAPI lifespan shutdown |
+| Local process lifecycle | `setup_and_maintenance.ps1` supervises one Uvicorn process; Ctrl+C requests FastAPI lifespan shutdown |
 | Application version | backend package metadata |
 
 Generated TypeScript is a derived artifact, not a parallel authority. CI regenerates it conceptually from the live backend contract and fails if the checked-in result is stale.
@@ -99,7 +99,7 @@ Generated TypeScript is a derived artifact, not a parallel authority. CI regener
 ├─ runtimes/
 ├─ settings/
 │  └─ .env.example
-└─ start_on_windows.ps1
+└─ setup_and_maintenance.ps1
 ```
 
 `app/shared/openapi.json` is intentionally absent. Runtime OpenAPI is derived directly from FastAPI and can be exported to an explicitly selected location when needed.

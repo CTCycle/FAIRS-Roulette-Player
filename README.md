@@ -49,10 +49,10 @@ Both screenshots use synthetic outcomes. They show the workflow, not predictive 
 Windows is the supported launcher platform. From the repository root in PowerShell, run:
 
 ```powershell
-.\start_on_windows.ps1 -Launch
+.\start_on_windows.bat
 ```
 
-The launcher prepares the local runtimes and dependencies, builds the web client when needed, and opens the application. It needs internet access to download missing runtimes or packages. The default address is `http://127.0.0.1:8890/`. Keep the launcher console open while using FAIRS; press **Ctrl+C** there to stop it.
+The batch launcher uses Windows PowerShell 5.1 to prepare local runtimes and dependencies, build the web client when needed, and open the application. Run powershell .\setup_and_maintenance.ps1 to open the setup and maintenance menu. It needs internet access to download missing runtimes or packages. The default address is `http://127.0.0.1:8890/`. Keep the launcher console open while using FAIRS; press **Ctrl+C** there to stop it.
 
 ## Configuration
 

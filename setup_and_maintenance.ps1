@@ -2114,7 +2114,7 @@ function Wait-ForMenu {
 
 function Get-LauncherMenuEntries {
     @(
-        [pscustomobject]@{ Section = 'APPLICATION'; Key = 'Launch'; Label = 'Launch application'; Description = 'Start the backend and player'; Color = [ConsoleColor]::Cyan }
+
         [pscustomobject]@{ Section = 'SETUP & VALIDATION'; Key = 'Install'; Label = 'Install / update dependencies'; Description = 'Prepare local runtimes and build the frontend'; Color = [ConsoleColor]::Yellow }
         [pscustomobject]@{ Section = 'SETUP & VALIDATION'; Key = 'Rebuild'; Label = 'Rebuild frontend'; Description = 'Build the frontend without updating dependencies'; Color = [ConsoleColor]::Yellow }
         [pscustomobject]@{ Section = 'SETUP & VALIDATION'; Key = 'Database'; Label = 'Create / upgrade database'; Description = 'Create the selected database and apply migrations'; Color = [ConsoleColor]::Yellow }
@@ -2193,7 +2193,7 @@ function Show-Menu {
         try {
             Invoke-TrackedLauncherAction -Name "menu option $($selectedEntry.Number)" -Action {
                 switch ($selectedEntry.Key) {
-                    'Launch' { [void](Start-Application) }
+
                     'Update' { Update-Application }
                     'Check' { Check-ForUpdates }
                     'Install' {

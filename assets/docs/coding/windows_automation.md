@@ -8,13 +8,13 @@ This file defines repository-specific rules for the PowerShell launcher and Wind
 
 ## PowerShell Rules
 
-- Keep startup and maintenance flows consolidated in `start_on_windows.ps1`.
+- Keep startup and maintenance flows consolidated in `setup_and_maintenance.ps1`.
 - Do not introduce parallel bootstrap or compatibility paths unless a current requirement is demonstrated.
 - `Standard` installation syncs runtime dependencies. `Development` additionally installs the server test extra and Playwright Chromium below `runtimes/cache/playwright-browsers`.
 - `settings/.env.example` is the canonical launcher environment template. The launcher may create a missing `.env` from it once, but must not supply a separate hardcoded defaults map for stale existing files.
 - Existing `.env` files missing launcher-critical keys (`FASTAPI_HOST`, `FASTAPI_PORT`, or `RELOAD`) must fail clearly rather than inherit obsolete behavior. `UI_HOST` and `UI_PORT` belong to the manual Vite development workflow.
 
-- On Windows PowerShell 5.1 the launcher drops inherited PowerShell 7 `PSModulePath` entries at startup. Without this, `powershell -File start_on_windows.ps1` from a PowerShell 7 session cannot resolve built-in cmdlets such as `Get-FileHash` and fails during dependency fingerprinting.
+- On Windows PowerShell 5.1 the launcher drops inherited PowerShell 7 `PSModulePath` entries at startup. Without this, `powershell -File setup_and_maintenance.ps1` from a PowerShell 7 session cannot resolve built-in cmdlets such as `Get-FileHash` and fails during dependency fingerprinting.
 - Production launch prints aligned `[TIME]` durations in milliseconds for its startup phases and total time to application readiness. These timings are informational and do not affect setup or launch decisions.
 
 ## Runtime Layout
@@ -39,7 +39,7 @@ A failed dependency sync is surfaced directly. Do not interpret it as evidence o
 ## Lifecycle Rules
 
 - Maintenance, database, testing, update, uninstall, and data-removal actions require the application to be stopped from its launcher console.
-- The launcher console owns the local process lifecycle; closing the browser does not stop the app. Both menu Launch and `start_on_windows.ps1 -Launch` supervise Uvicorn until it exits. The direct `-Launch` mode then exits; menu Launch returns to the menu.
+- The launcher console owns the local process lifecycle; closing the browser does not stop the app. Both menu Launch and `setup_and_maintenance.ps1 -Launch` supervise Uvicorn until it exits. The direct `-Launch` mode then exits; menu Launch returns to the menu.
 - Production serves `app/client/dist` through FastAPI on the API origin. Launch waits up to 60 seconds for `/api/health` to return `application=FAIRS` with `ok` or `recovery`, then opens the FastAPI root URL. It does not start Vite preview.
 - Ctrl+C in the launcher console is the normal shutdown path and allows Uvicorn/FastAPI lifespan cleanup. On startup failure or incomplete shutdown, wait for a bounded period and terminate only the backend process tree created by that launch.
 - Unexpected backend-parent exit also triggers descendant inspection and cleanup; never kill processes outside the launcher-owned tree. Run the Windows PowerShell maintenance harness in CI and verify interactive Ctrl+C locally.
@@ -62,9 +62,9 @@ The Uninstall menu offers Complete removal after displaying the exact targets. I
 Menu cleanup actions print a target preview and a cleaned/skipped/failed summary. Read-only previews can also be run from any working directory:
 
 ```powershell
-.\start_on_windows.ps1 -Action Cache -WhatIf
-.\start_on_windows.ps1 -Action Uninstall -WhatIf
-.\start_on_windows.ps1 -Action Uninstall -CompleteRemoval -WhatIf
+.\setup_and_maintenance.ps1 -Action Cache -WhatIf
+.\setup_and_maintenance.ps1 -Action Uninstall -WhatIf
+.\setup_and_maintenance.ps1 -Action Uninstall -CompleteRemoval -WhatIf
 ```
 
 ## Related Files

@@ -4,7 +4,7 @@
 $ErrorActionPreference = 'Stop'
 
 $script:RepositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))
-$script:LauncherPath = Join-Path $script:RepositoryRoot 'start_on_windows.ps1'
+$script:LauncherPath = Join-Path $script:RepositoryRoot 'setup_and_maintenance.ps1'
 $script:RunId = [Guid]::NewGuid().ToString('N')
 $script:FixtureRoot = Join-Path $env:TEMP "fairs-val19-$PID-$($script:RunId)"
 $script:ExternalRoot = Join-Path $env:TEMP "fairs-val19-external-$PID-$($script:RunId)"

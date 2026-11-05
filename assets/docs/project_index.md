@@ -119,5 +119,5 @@ The documentation set is synchronized with the current codebase: local Windows w
 
 - Windows is the default operating environment for this repository.
 - PowerShell is the default interactive shell for analysis and automation.
-- `start_on_windows.ps1` is the single interactive startup and maintenance entry point.
+- `setup_and_maintenance.ps1` is the single interactive startup and maintenance entry point.
 - Command examples should use PowerShell unless CMD materially improves usability.

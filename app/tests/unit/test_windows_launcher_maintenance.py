@@ -12,6 +12,7 @@ import pytest
 
 
 TEST_SCRIPT = Path(__file__).with_name("windows_launcher_maintenance.ps1")
+REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 
 
 ###############################################################################
@@ -44,3 +45,20 @@ def test_launcher_maintenance_actions_in_isolated_fixture() -> None:
         f"stdout:\n{result.stdout}\n"
         f"stderr:\n{result.stderr}"
     )
+
+###############################################################################
+def test_batch_entrypoint_uses_windows_powershell_and_menu_hides_launch() -> None:
+    launcher = (REPOSITORY_ROOT / "setup_and_maintenance.ps1").read_text(
+        encoding="utf-8"
+    )
+    wrapper = (REPOSITORY_ROOT / "start_on_windows.bat").read_text(encoding="utf-8")
+    menu_start = launcher.index("function Get-LauncherMenuEntries")
+    menu_end = launcher.index("\nfunction Write-MenuItem", menu_start)
+    menu = launcher[menu_start:menu_end]
+
+    assert "powershell.exe" in wrapper
+    assert "pwsh.exe" not in wrapper
+    assert "setup_and_maintenance.ps1" in wrapper
+    assert "-Launch" in wrapper
+    assert "if ($Launch)" in launcher
+    assert "Key = 'Launch'" not in menu

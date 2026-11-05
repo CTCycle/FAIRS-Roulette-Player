@@ -4,14 +4,14 @@ Last updated: 2026-10-22
 
 ## Supported Distribution
 
-FAIRS is distributed as source and run locally from its repository through `start_on_windows.ps1`. The repository does not maintain an installer, bundled executable, container image, or packaged desktop release path.
+FAIRS is distributed as source and run locally from its repository through `setup_and_maintenance.ps1`. The repository does not maintain an installer, bundled executable, container image, or packaged desktop release path.
 
 ## Local Build Chain
 
 - portable Python `3.14.7`, uv, and Node.js `22.13.0` are prepared under `runtimes/`
 - backend dependencies are synchronized into `app/server/.venv`
 - frontend dependencies are installed in `app/client/node_modules`
-- `npm run build` produces the static frontend bundle; the launcher builds it after dependency installation in option 2, directly through option 3, and during option 1 recovery when the environment or build is stale
+- `npm run build` produces the static frontend bundle; the launcher builds it after dependency installation from Install / update dependencies, directly from Rebuild frontend, and during direct-launch recovery when the environment or build is stale
 - FastAPI serves the built frontend files and API from one origin; production does not run Vite preview
 - the launcher supervises one Uvicorn worker, waits up to 60 seconds for `/api/health` to return `ok` or `recovery`, then opens the FastAPI root URL
 

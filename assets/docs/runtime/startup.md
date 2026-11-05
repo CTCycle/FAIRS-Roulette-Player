@@ -7,10 +7,10 @@ Last updated: 2026-10-22
 From repository root in PowerShell:
 
 ```powershell
-.\start_on_windows.ps1
+.\start_on_windows.bat
 ```
 
-`start_on_windows.ps1` is the single interactive Windows entry point for launching, dependency setup, frontend rebuilds, database create/upgrade, testing, maintenance, source updates, and uninstall operations.
+start_on_windows.bat launches the application through Windows PowerShell 5.1. Run powershell .\setup_and_maintenance.ps1 for the interactive setup and maintenance menu; its other options cover dependency setup, frontend rebuilds, database create/upgrade, testing, maintenance, source updates, and uninstall operations.
 
 ## Environment Initialization
 
@@ -46,7 +46,7 @@ Frontend freshness is content-based rather than timestamp-based. The launcher ha
 - The launcher builds `app/client/dist` and starts one Uvicorn worker. FastAPI serves the built HTML, assets, and client-side routes on the same origin as `/api`; Vite preview is not used in production.
 - The launcher waits up to 60 seconds for `/api/health` to return `application=FAIRS` with `status=ok` or `status=recovery`, then opens `http://<FASTAPI_HOST>:<FASTAPI_PORT>/`. Wildcard bind addresses open through loopback.
 - During launch, `[TIME]` lines report the elapsed milliseconds for environment/port preflight, runtime and dependency setup, frontend build validation, backend startup, readiness, and total time to application readiness. The timings are informational.
-- `.\start_on_windows.ps1 -Launch` starts the production app directly and keeps that console open as lifecycle supervisor until the backend stops. The menu's Launch action also waits in the launcher console, then returns to the menu.
+- setup_and_maintenance.ps1 -Launch starts the production app directly and keeps the console open as lifecycle supervisor until the backend stops. The batch wrapper uses this same non-menu route.
 - Press Ctrl+C in the launcher console to stop the app through Uvicorn and FastAPI lifespan shutdown. If startup or shutdown fails, the launcher reports the issue and only terminates the backend process tree it started after a bounded wait.
 - Closing the browser does not stop the backend or live inference session. If the launcher console is unavailable, use the confirmed `Stop all app processes` maintenance action to clean up orphaned FAIRS backend processes and any older Vite preview process tree.
 - `RELOAD=true` is development-only because a reload discards process-local training and inference state.
@@ -56,7 +56,7 @@ Frontend freshness is content-based rather than timestamp-based. The launcher ha
 Start the backend and Vite development server manually when using hot reload:
 
 ```powershell
-.\start_on_windows.ps1
+.\setup_and_maintenance.ps1
 # Choose Install/Check as needed, then in separate terminals:
 $repoRoot = (Resolve-Path .).Path
 $env:NPM_CONFIG_CACHE = Join-Path $repoRoot 'runtimes\cache\npm'
@@ -85,7 +85,7 @@ Only current versioned checkpoint configuration files are supported. Unversioned
 
 ## Destructive Maintenance
 
-Log removal, cache clearing, checkpoint deletion, local data removal, and uninstall require interactive confirmation. Each action previews resolved targets and reports cleaned, skipped, and failed paths. Cache and uninstall target paths are rooted at the launcher directory, independent of the caller's current directory. For a read-only preview from any working directory, run `start_on_windows.ps1 -Action Cache -WhatIf`, `-Action Uninstall -WhatIf`, or `-Action Uninstall -CompleteRemoval -WhatIf`.
+Log removal, cache clearing, checkpoint deletion, local data removal, and uninstall require interactive confirmation. Each action previews resolved targets and reports cleaned, skipped, and failed paths. Cache and uninstall target paths are rooted at the launcher directory, independent of the caller's current directory. For a read-only preview from any working directory, run `setup_and_maintenance.ps1 -Action Cache -WhatIf`, `-Action Uninstall -WhatIf`, or `-Action Uninstall -CompleteRemoval -WhatIf`.
 
 Standard uninstall removes current application-owned runtime/dependency/build locations, recognized caches and temporary artifacts, test reports, and application-generated `.log` files:
 
