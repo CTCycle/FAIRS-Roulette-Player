@@ -1299,7 +1299,7 @@ function Get-ApplicationProcessRecords {
     $processes = @(Get-CimInstance -ClassName Win32_Process -ErrorAction Stop)
     $repoRootPrefix = ([IO.Path]::GetFullPath($repoRoot)).TrimEnd('\') + '\'
     $repoRootPattern = [regex]::Escape($repoRootPrefix.TrimEnd('\'))
-    $applicationCommandPattern = '(?i)(\buvicorn\b|server\.app:app|\bnpm(?:\.cmd)?\b[^\r\n]*\brun\s+preview\b|\bvite(?:\.cmd)?\b[^\r\n]*\bpreview\b)'
+    $applicationCommandPattern = '(?i)(\buvicorn\b|server\.app:app|multiprocessing\.(?:spawn|resource_tracker)|\bnpm(?:\.cmd)?\b[^\r\n]*\brun\s+preview\b|\bvite(?:\.cmd)?\b[^\r\n]*\bpreview\b)'
     $applicationProcessIds = [Collections.Generic.HashSet[int]]::new()
 
     foreach ($process in $processes) {
@@ -1538,8 +1538,7 @@ function Stop-OwnedApplicationProcessTree {
         [int]$GraceSeconds = 15
     )
     if (-not $Process.HasExited) {
-        Write-Info "Requesting the backend process to close and allowing up to $GraceSeconds seconds for shutdown."
-        try { [void]$Process.CloseMainWindow() } catch { }
+        Write-Info "Waiting up to $GraceSeconds seconds for the backend process to exit before stopping its process tree."
         try { [void]$Process.WaitForExit($GraceSeconds * 1000) } catch { }
     }
 

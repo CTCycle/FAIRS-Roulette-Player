@@ -1,6 +1,6 @@
 ## Configuration
 
-Last updated: 2026-10-22
+Last updated: 2026-11-05
 
 ## Configuration Ownership
 
@@ -21,6 +21,7 @@ The runtime consumes these environment keys:
 - `ENABLE_API_DOCS`, `RELOAD`, and `FAIRS_DATA_DIR`
 - `MPLBACKEND` and `KERAS_BACKEND`
 - `WEB_CONCURRENCY`, `UVICORN_WORKERS`, and `FAIRS_WORKERS`
+- Optional, commented out by default: `OMP_NUM_THREADS`, `MKL_NUM_THREADS`, and `OPENBLAS_NUM_THREADS` cap CPU math threads so CPU-bound training does not starve the API; lowering them can reduce CPU-only training throughput, so they are not set by default
 
 `settings/.env.example` is the canonical template. The Windows launcher copies it only when `.env` does not exist. It does not overlay defaults on an existing file. The launcher requires `FASTAPI_HOST`, `FASTAPI_PORT`, and `RELOAD`; `UI_HOST` and `UI_PORT` are only needed when manually running Vite. Database selection is read from `database-config.json`, not `.env`.
 

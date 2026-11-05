@@ -206,6 +206,19 @@ export const parseTrainingStatus = (value: unknown): TrainingStatusSnapshot => {
     };
 };
 
+const isIdleAndUnchanged = (
+    previous: TrainingStatusSnapshot,
+    next: TrainingStatusSnapshot,
+): boolean => {
+    if (previous.is_training || next.is_training || previous.job_id !== next.job_id) {
+        return false;
+    }
+    const previousLast = previous.history.at(-1);
+    const nextLast = next.history.at(-1);
+    return previous.history.length === next.history.length
+        && previousLast?.time_step === nextLast?.time_step;
+};
+
 interface UseTrainingStatusResult {
     status: TrainingStatusSnapshot;
     isConnected: boolean;
@@ -248,7 +261,7 @@ export const useTrainingStatus = (): UseTrainingStatusResult => {
                     return;
                 }
                 reconnectAttemptRef.current = 0;
-                setStatus(parsed);
+                setStatus((previous) => (isIdleAndUnchanged(previous, parsed) ? previous : parsed));
                 setIsConnected(true);
                 setConnectionError(null);
                 pollIntervalRef.current = Math.max(250, parsed.poll_interval * 1000);

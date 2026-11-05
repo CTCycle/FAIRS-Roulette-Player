@@ -1,6 +1,6 @@
 ## Windows Automation
 
-Last updated: 2026-10-22
+Last updated: 2026-11-05
 
 ## Scope
 
@@ -41,9 +41,9 @@ A failed dependency sync is surfaced directly. Do not interpret it as evidence o
 - Maintenance, database, testing, update, uninstall, and data-removal actions require the application to be stopped from its launcher console.
 - The launcher console owns the local process lifecycle; closing the browser does not stop the app. Both menu Launch and `setup_and_maintenance.ps1 -Launch` supervise Uvicorn until it exits. The direct `-Launch` mode then exits; menu Launch returns to the menu.
 - Production serves `app/client/dist` through FastAPI on the API origin. Launch waits up to 60 seconds for `/api/health` to return `application=FAIRS` with `ok` or `recovery`, then opens the FastAPI root URL. It does not start Vite preview.
-- Ctrl+C in the launcher console is the normal shutdown path and allows Uvicorn/FastAPI lifespan cleanup. On startup failure or incomplete shutdown, wait for a bounded period and terminate only the backend process tree created by that launch.
+- Ctrl+C in the launcher console is the normal shutdown path and allows Uvicorn/FastAPI lifespan cleanup. On startup failure or incomplete shutdown, wait for a bounded period (the backend has no console window, so no close request is sent) and terminate only the backend process tree created by that launch.
 - Unexpected backend-parent exit also triggers descendant inspection and cleanup; never kill processes outside the launcher-owned tree. Run the Windows PowerShell maintenance harness in CI and verify interactive Ctrl+C locally.
-- The confirmed `Stop all app processes` action is for orphaned FAIRS backends, older Vite preview processes, and their descendants; it does not target browser or unrelated repository processes.
+- The confirmed `Stop all app processes` action is for orphaned FAIRS backends, older Vite preview processes, their descendants, and orphaned `multiprocessing` spawn/resource-tracker children whose command line references the repository root; it does not target browser or unrelated repository processes.
 - Production checks only `FASTAPI_PORT` before build/start. Port conflict records are grouped by PID, show process name and executable path metadata (never command lines), and are terminated only after one interactive confirmation. Each confirmed PID is targeted once; the resolver re-queries the port without killing replacement listeners and fails closed if a listener remains or termination is denied.
 - Vite `npm run dev` is a manual development workflow using `UI_HOST` and `UI_PORT`; its `/api` proxy points to the configured FastAPI host/port. `npm run preview` remains for preview/test use only.
 - A launch checks backend and frontend dependency fingerprints independently. Successful `uv sync` and `npm ci` operations publish their own generated `.fairs-install-state.json` files; automatic backend recovery does not imply a frontend rebuild.
