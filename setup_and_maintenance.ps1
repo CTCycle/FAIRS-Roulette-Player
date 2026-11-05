@@ -275,8 +275,10 @@ function Get-CleanupInventory {
     $skipped = [Collections.Generic.List[string]]::new()
     $failed = [Collections.Generic.List[string]]::new()
     $seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
-    foreach ($note in @($script:CleanupDiscoveryNotes)) { [void]$skipped.Add($note) }
-    if ($null -ne $script:CleanupDiscoveryNotes) { $script:CleanupDiscoveryNotes.Clear() }
+    if ($null -ne $script:CleanupDiscoveryNotes) {
+        foreach ($note in $script:CleanupDiscoveryNotes) { [void]$skipped.Add($note) }
+        $script:CleanupDiscoveryNotes.Clear()
+    }
 
     foreach ($target in @($Targets)) {
         try {

@@ -40,6 +40,7 @@ class DQNAgent:
     # -------------------------------------------------------------------------
     def dump_memory(self, path) -> None:
         memory_path = shared_paths.checkpoint_replay_memory_file(path)
+        memory_path.parent.mkdir(parents=True, exist_ok=True)
         with memory_path.open("wb") as file:
             pickle.dump(self.memory, file)
 
