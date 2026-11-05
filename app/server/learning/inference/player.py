@@ -113,9 +113,8 @@ class RoulettePlayer:
                 "Strategy-model betting is enabled but the strategy model is unavailable."
             )
 
-        strategy_logits = self.strategy_model.predict(
+        strategy_logits = self.strategy_model.predict_on_batch(
             {"timeseries": current_state, "gain": gain_input},
-            verbose=0,  # type: ignore
         )
         logits = np.asarray(strategy_logits).reshape(-1)
         if logits.size != STRATEGY_COUNT:
@@ -141,9 +140,8 @@ class RoulettePlayer:
         )
         gain_input = np.asarray([[gain_value]], dtype=np.float32)
 
-        action_logits = self.model.predict(
+        action_logits = self.model.predict_on_batch(
             {"timeseries": current_state, "gain": gain_input},
-            verbose=0,  # type: ignore
         )
         logits = np.asarray(action_logits).reshape(-1)
         if logits.size != STATES:

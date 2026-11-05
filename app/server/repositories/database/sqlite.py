@@ -37,6 +37,7 @@ def set_sqlite_pragma(dbapi_connection: Any, _connection_record: Any) -> None:
     try:
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.execute("PRAGMA busy_timeout=30000")
+        cursor.execute("PRAGMA journal_size_limit=67108864")
         _enable_write_ahead_logging(cursor)
     finally:
         cursor.close()

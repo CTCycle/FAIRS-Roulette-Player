@@ -440,9 +440,10 @@ async def run_resume_training_async(
         )
         progress_callback = functools.partial(queue_training_update, reporter=reporter)
 
+        target_model = checkpoint_repository.load_checkpoint(checkpoint)[0]
         model, history = await trainer.resume_training(
             model,
-            model,
+            target_model,
             strategy_model,
             target_strategy_model,
             dataset,

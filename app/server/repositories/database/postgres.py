@@ -33,6 +33,9 @@ def build_postgres_engine(settings: DatabaseSettings) -> Engine:
         future=True,
         connect_args=build_postgres_connect_args(settings),
         pool_pre_ping=True,
+        pool_size=3,
+        max_overflow=2,
+        pool_recycle=1800,
     )
 
 

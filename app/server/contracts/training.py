@@ -66,7 +66,7 @@ class TrainingConfig(BaseModel):
     max_steps_episode: int = Field(2000, ge=100)
     batch_size: int = Field(32, ge=1)
     learning_rate: float = Field(0.0001, gt=0.0)
-    max_memory_size: int = Field(10000, ge=100)
+    max_memory_size: int = Field(10000, ge=100, le=100000)
     replay_buffer_size: int = Field(1000, ge=100)
     training_seed: int = 42
     checkpoint_name: str | None = Field(None, max_length=MAX_CHECKPOINT_NAME_LENGTH)

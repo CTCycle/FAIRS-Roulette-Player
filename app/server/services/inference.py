@@ -18,7 +18,7 @@ from server.contracts.inference import (
     InferenceStepRequest,
 )
 from server.learning.inference.player import RoulettePlayer
-from server.learning.training.device import DeviceConfig
+from server.learning.training.device import DeviceConfig, release_device_memory
 from server.repositories.datasets import DatasetRepository
 from server.repositories.inference import InferenceRepository
 from server.services.checkpoints import CheckpointService
@@ -111,6 +111,7 @@ class InferenceSession:
                 setattr(player, attribute, None)
         self.last_prediction = None
         self.player = None
+        release_device_memory()
 
 
 ###############################################################################

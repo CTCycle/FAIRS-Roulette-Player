@@ -721,3 +721,20 @@ def test_training_config_rejects_inconsistent_dqn_relationships(
 ) -> None:
     with pytest.raises(ValidationError, match=message):
         TrainingConfig(use_data_generator=True, **overrides)
+
+
+###############################################################################
+def test_agent_load_memory_restores_transitions_and_bounds_size(tmp_path: Path) -> None:
+    from server.learning.training.agents import DQNAgent
+
+    config = TrainingConfig(use_data_generator=True).model_dump()
+    config["max_memory_size"] = 100
+    agent = DQNAgent(config)
+    assert agent.load_memory(tmp_path) is False
+
+    agent.memory.extend(range(5))
+    agent.dump_memory(tmp_path)
+    restored = DQNAgent(config)
+    assert restored.load_memory(tmp_path) is True
+    assert list(restored.memory) == list(range(5))
+    assert restored.memory.maxlen == 100

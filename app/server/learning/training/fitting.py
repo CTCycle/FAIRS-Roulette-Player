@@ -871,6 +871,8 @@ class DQNTraining:
         )
         from_episode = 0 if not session else int(session.get("total_episodes", 0))
         total_episodes = from_episode + additional_epochs
+        if self.agent.load_memory(checkpoint_path):
+            logger.info("Replay memory restored (%s transitions)", len(self.agent.memory))
 
         logger.info(
             "Size of the observation space (previous extractions): %s", state_size

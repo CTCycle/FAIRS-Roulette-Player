@@ -11,6 +11,7 @@ from starlette.concurrency import run_in_threadpool
 from server.common.api_errors import ExceptionStatusMap, http_exception_for_exception
 from server.configurations.dependencies import get_dataset_service
 from server.contracts.upload import DatasetKind, UploadRequest, UploadResponse
+from server.services.datasets import MAX_UPLOAD_SIZE_BYTES
 
 router = APIRouter(prefix="/data", tags=["data"])
 UPLOAD_EXCEPTION_STATUS: ExceptionStatusMap = (
@@ -53,7 +54,9 @@ async def upload(
             ) from exc
 
         try:
-            content = await file.read()
+            # Read one byte past the cap so oversize bodies are rejected
+            # without buffering them entirely.
+            content = await file.read(MAX_UPLOAD_SIZE_BYTES + 1)
         except Exception as exc:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

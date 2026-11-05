@@ -113,12 +113,10 @@ class DatasetRepository:
         clean_kind = dataset_kind.strip().lower()
         if clean_kind not in {"training", "inference"}:
             raise ValueError(f"Unsupported dataset kind: {dataset_kind}")
-        records = (
-            outcomes[["sequence_index", "outcome_id"]]
-            .astype(int)
-            .to_dict(orient="records")
+        pairs = (
+            outcomes[["sequence_index", "outcome_id"]].astype(int)
             if not outcomes.empty
-            else []
+            else outcomes.iloc[0:0]
         )
         now = datetime.now(timezone.utc)
         with self.database.transaction() as session:
@@ -148,40 +146,37 @@ class DatasetRepository:
                     DatasetOutcomes.dataset_id == dataset.dataset_id
                 )
             )
-            for start in range(0, len(records), self.database.insert_batch_size):
+            batch_size = self.database.insert_batch_size
+            for start in range(0, len(pairs), batch_size):
                 session.execute(
                     DatasetOutcomes.__table__.insert(),
                     [
                         {"dataset_id": dataset.dataset_id, **row}
-                        for row in records[
-                            start : start + self.database.insert_batch_size
-                        ]
+                        for row in pairs.iloc[start : start + batch_size].to_dict(
+                            orient="records"
+                        )
                     ],
                 )
             return {
                 "dataset_id": dataset.dataset_id,
                 "dataset_name": dataset.dataset_name,
                 "dataset_kind": dataset.dataset_kind,
-                "rows_imported": len(records),
+                "rows_imported": len(pairs),
             }
 
     # -------------------------------------------------------------------------
     def outcomes(self, dataset_id: int) -> pd.DataFrame:
         dataset_id = self.require_dataset_id(dataset_id)
         with self.database.Session() as session:
-            rows = (
-                session.execute(
-                    select(
-                        DatasetOutcomes.dataset_id,
-                        DatasetOutcomes.sequence_index,
-                        DatasetOutcomes.outcome_id,
-                    )
-                    .where(DatasetOutcomes.dataset_id == dataset_id)
-                    .order_by(DatasetOutcomes.sequence_index)
+            rows = session.execute(
+                select(
+                    DatasetOutcomes.dataset_id,
+                    DatasetOutcomes.sequence_index,
+                    DatasetOutcomes.outcome_id,
                 )
-                .mappings()
-                .all()
-            )
+                .where(DatasetOutcomes.dataset_id == dataset_id)
+                .order_by(DatasetOutcomes.sequence_index)
+            ).all()
         frame = pd.DataFrame(
             rows, columns=["dataset_id", "sequence_index", "outcome_id"]
         )
@@ -209,7 +204,7 @@ class DatasetRepository:
             )
             if dataset_id is not None:
                 stmt = stmt.where(DatasetOutcomes.dataset_id == dataset_id)
-            rows = session.execute(stmt).mappings().all()
+            rows = session.execute(stmt).all()
         frame = pd.DataFrame(
             rows,
             columns=["dataset_id", "sequence_index", "outcome_id"],

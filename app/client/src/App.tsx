@@ -1,21 +1,24 @@
 // Copyright © 2023 Thomas Virdis
 // Licensed under the MIT License.
 
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from './components/Layout/MainLayout';
-import TrainingPage from './pages/Training/TrainingPage';
-import InferencePage from './pages/Inference/InferencePage';
-import SettingsPage from './pages/Settings/SettingsPage';
 import { GuidanceProvider } from './components/guidance/GuidanceProvider';
 import StartupScreen from './components/startup/StartupScreen';
 import { useBackendStartup } from './hooks/useBackendStartup';
 import './styles/global.css';
+
+const TrainingPage = lazy(() => import('./pages/Training/TrainingPage'));
+const InferencePage = lazy(() => import('./pages/Inference/InferencePage'));
+const SettingsPage = lazy(() => import('./pages/Settings/SettingsPage'));
 
 function AppRoutes({ databaseRecovery = false }: { databaseRecovery?: boolean }) {
     return (
         <BrowserRouter>
             <GuidanceProvider>
                 <div className="app-ready-transition">
+                    <Suspense fallback={null}>
                     <Routes>
                         <Route path="/" element={<MainLayout />}>
                             <Route index element={<Navigate to={databaseRecovery ? '/settings?section=database' : '/training'} replace />} />
@@ -24,6 +27,7 @@ function AppRoutes({ databaseRecovery = false }: { databaseRecovery?: boolean })
                             <Route path="settings" element={<SettingsPage />} />
                         </Route>
                     </Routes>
+                    </Suspense>
                 </div>
             </GuidanceProvider>
         </BrowserRouter>
