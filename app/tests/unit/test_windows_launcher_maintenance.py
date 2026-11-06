@@ -46,6 +46,7 @@ def test_launcher_maintenance_actions_in_isolated_fixture() -> None:
         f"stderr:\n{result.stderr}"
     )
 
+
 ###############################################################################
 def test_batch_entrypoint_uses_windows_powershell_and_menu_hides_launch() -> None:
     launcher = (REPOSITORY_ROOT / "setup_and_maintenance.ps1").read_text(

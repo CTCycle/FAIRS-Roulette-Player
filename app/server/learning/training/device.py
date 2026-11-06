@@ -55,7 +55,7 @@ class DeviceConfig:
         return device
 
 
-# -----------------------------------------------------------------------------
+###############################################################################
 def release_device_memory() -> None:
     """Collect dropped model references and return cached GPU memory."""
     gc.collect()
