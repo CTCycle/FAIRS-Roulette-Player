@@ -11,7 +11,7 @@ Last updated: 2026-10-21
 - Frontend:
   - built React/Vite SPA served by FastAPI from `app/client/dist`
 - Startup orchestrator:
-  - `start_on_windows.ps1`
+  - `setup_and_maintenance.ps1`
 - Intended use:
   - local production-style use and experimentation
 - API docs and OpenAPI routes are enabled by default through `ENABLE_API_DOCS=true`.
@@ -32,7 +32,7 @@ Last updated: 2026-10-21
 ## Cross-Mode Differences
 
 - Production launcher mode opens the configured FastAPI URL after `/api/health` reports `ok` or `recovery`; a wildcard bind opens through loopback.
-- `start_on_windows.ps1 -Launch` stays open as lifecycle supervisor. Ctrl+C in that console requests normal Uvicorn/FastAPI shutdown; closing the browser does not stop the app.
+- `setup_and_maintenance.ps1 -Launch` stays open as lifecycle supervisor. Ctrl+C in that console requests normal Uvicorn/FastAPI shutdown; closing the browser does not stop the app.
 - SQLite and PostgreSQL are selected in Settings and saved in `<data-root>/database-config.json`; database selection is not environment configuration. Live switching is supported when training and inference are idle.
 - A built frontend is served by the backend when available in `app/client/dist`; otherwise the backend root redirects to API docs when docs are enabled. Unknown `/api/*` routes remain API 404 responses instead of falling through to the SPA.
 - `RELOAD=true` may be used for development only; reloads discard process-local jobs and live sessions. Multi-worker Uvicorn execution is unsupported.

@@ -40,14 +40,19 @@ class DQNAgent:
     # -------------------------------------------------------------------------
     def dump_memory(self, path) -> None:
         memory_path = shared_paths.checkpoint_replay_memory_file(path)
+        memory_path.parent.mkdir(parents=True, exist_ok=True)
         with memory_path.open("wb") as file:
             pickle.dump(self.memory, file)
 
     # -------------------------------------------------------------------------
-    def load_memory(self, path) -> None:
+    def load_memory(self, path) -> bool:
         memory_path = shared_paths.checkpoint_replay_memory_file(path)
+        if not memory_path.is_file():
+            return False
         with memory_path.open("rb") as file:
-            self.memory = pickle.load(file)
+            stored = pickle.load(file)
+        self.memory = deque(stored, maxlen=self.memory_size)
+        return True
 
     # -------------------------------------------------------------------------
     def act(self, model: Model, state: Any, gain: float | Any) -> np.int32:
@@ -55,7 +60,7 @@ class DQNAgent:
         if np.all(state == PAD_VALUE) or random_threshold <= self.epsilon:
             random_action = np.int32(self.rng.integers(0, self.action_size))
             return random_action
-        q_values = model.predict({"timeseries": state, "gain": gain}, verbose=0)  # type: ignore
+        q_values = model.predict_on_batch({"timeseries": state, "gain": gain})  # type: ignore
         best_q = np.int32(np.argmax(q_values))
         return best_q
 
@@ -105,17 +110,15 @@ class DQNAgent:
         )
         dones = np.array([d for s, a, r, c, nc, ns, d in minibatch], dtype=np.int32)
 
-        targets = model.predict({"timeseries": states, "gain": gains}, verbose=0)  # type: ignore
+        targets = model.predict_on_batch({"timeseries": states, "gain": gains})  # type: ignore
 
-        next_action_selection = model.predict(
+        next_action_selection = model.predict_on_batch(
             {"timeseries": next_states, "gain": next_gains},
-            verbose=0,  # type: ignore
         )
         best_next_actions = np.argmax(next_action_selection, axis=1)
 
-        q_futures_target = target_model.predict(
+        q_futures_target = target_model.predict_on_batch(
             {"timeseries": next_states, "gain": next_gains},
-            verbose=0,  # type: ignore
         )
         q_future_selected = q_futures_target[np.arange(batch_size), best_next_actions]
 
@@ -169,17 +172,15 @@ class DQNAgent:
         )
         dones = np.array([d for s, a, r, c, nc, ns, d in minibatch], dtype=np.int32)
 
-        targets = model.predict({"timeseries": states, "gain": gains}, verbose=0)  # type: ignore
+        targets = model.predict_on_batch({"timeseries": states, "gain": gains})  # type: ignore
 
-        next_action_selection = model.predict(
+        next_action_selection = model.predict_on_batch(
             {"timeseries": next_states, "gain": next_gains},
-            verbose=0,  # type: ignore
         )
         best_next_actions = np.argmax(next_action_selection, axis=1)
 
-        q_futures_target = target_model.predict(
+        q_futures_target = target_model.predict_on_batch(
             {"timeseries": next_states, "gain": next_gains},
-            verbose=0,  # type: ignore
         )
         q_future_selected = q_futures_target[np.arange(batch_size), best_next_actions]
 

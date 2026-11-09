@@ -106,7 +106,7 @@ if exist "%VENV_PYTHON%" (
   set "PYTHON_CMD=%VENV_PYTHON%"
 ) else (
   echo [ERROR] Missing backend venv: "%VENV_PYTHON%"
-  echo [ERROR] Run start_on_windows.ps1 first.
+  echo [ERROR] Run setup_and_maintenance.ps1 first.
   exit /b 1
 )
 

@@ -5,7 +5,7 @@ from io import BytesIO
 from uuid import uuid4
 from openpyxl import Workbook
 from playwright.sync_api import APIRequestContext
-from server.services.datasets import MAX_UPLOAD_SIZE_BYTES
+from server.common.constants import MAX_UPLOAD_SIZE_BYTES
 
 """
 E2E tests for Data Upload API endpoint.

@@ -1,6 +1,6 @@
 ## Testing And Quality
 
-Last updated: 2026-10-30
+Last updated: 2026-11-09
 
 ## Quality Baseline
 
@@ -112,6 +112,14 @@ The first active tier is Tier 0:
 - `VAL-01` smoke-tests the official Windows launcher, frontend-before-backend loading, `/api/health` transition, route entry, explicit owned-process shutdown, and port cleanup. It does not certify Training or Inference behavior after route mount.
 
 Use repository-local cache/temp paths and preserve unrelated data or processes. Do not infer a pass from source presence, a test definition, an HTTP 200 alone, or a hosted result from a different revision. The current consolidated gate result is in [`../project_status_ledger.md`](../project_status_ledger.md). The 2026-10-21 Windows standard runner passed `255` Python tests with `6` skips, plus frontend build, `11/11` Vitest, and `7/7` Playwright. VAL-17, VAL-21, and VAL-18 passed. VAL-23 passed through the live Settings API against a disposable PostgreSQL 18 cluster, covering connection test/rejection, switching, rollback, and independent preferences; this check did not drive the PostgreSQL switch through a browser. Hosted backend, PostgreSQL persistence, and frontend CI all passed on release commit `10dbef0` in both the develop run [39658086984](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/runs/39658086984) and main run [39658338088](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/runs/39658338088). Candidate-local checks passed Ruff, all `157` backend unit tests, `8` Settings API/SQLite restart E2E cases, Alembic head, generated-contract checks, and the offline lock check. `STARTUP-01`, the launcher interactive-stop smoke, the browser-driven PostgreSQL switch, and the frontend workflow's spoken-accessibility follow-up retain their documented boundaries.
+
+### 2026-11-09 patch-candidate QA consolidation
+
+`assets/QA/` was empty before this audit. Local Playwright failure contexts and traces were generated during validation, reviewed, and removed; no durable screenshots or reports were present to migrate. The release-readiness issue and remediation are recorded in the project status ledger.
+
+Hosted run [42637041796](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/runs/42637041796) on `develop` commit `5e4dfa0` passed persistence conformance, frontend validation, and Windows launcher maintenance. Backend Ruff, 157 unit tests (2 skipped), and Alembic history passed. The generated-contract check exposed an import-order defect: `api/upload.py` pulled the Keras-backed dataset service in only to read the upload-size limit, before lifespan bootstrap loaded `KERAS_BACKEND=torch`. The limit now lives in `server.common.constants`; the generated-contract check passes locally with `KERAS_BACKEND` unset, preserving the runtime's configured backend initialization order. After this fix, hosted run [42644225775](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/runs/42644225775) passed all four CI jobs on release-candidate commit `e33c55634aeeff340d9a1c4652da655e4a49c14d`.
+
+Local Ruff, Vitest (`11/11`), ESLint, and the production build passed. Local Playwright E2E could not launch because Chromium build `1243` was missing; download attempts were blocked by DNS resolution for `cdn.playwright.dev`. The local PowerShell maintenance harness could not detect its occupied-port fixture in this process-query environment, while the corresponding hosted Windows job passed. The local backend unit run did not complete and is not counted as a pass. The `develop` → `main` merge commit must also pass all four hosted CI jobs before the release tag is created.
 
 ## Related Files
 

@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import gc
 from typing import Any
 
 import torch
@@ -43,6 +44,8 @@ class DeviceConfig:
             if mixed_precision:
                 set_global_policy("mixed_float16")
                 logger.info("Mixed precision policy is active during training")
+            else:
+                set_global_policy("float32")
         else:
             if mixed_precision:
                 raise RuntimeError("Mixed precision requires GPU training.")
@@ -50,3 +53,11 @@ class DeviceConfig:
             logger.info("CPU is set as the active device.")
 
         return device
+
+
+###############################################################################
+def release_device_memory() -> None:
+    """Collect dropped model references and return cached GPU memory."""
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()

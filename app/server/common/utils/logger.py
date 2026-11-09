@@ -25,6 +25,11 @@ QUIET_ACCESS_PREFIXES = ("/api/training/jobs/", "/assets/")
 NOISY_LIBRARY_LOGGERS = ("matplotlib", "asyncio", "PIL", "python_multipart", "h5py")
 
 
+LOG_MAX_BYTES = 10 * 1024 * 1024
+LOG_BACKUP_COUNT = 2
+LOG_RETAINED_FILES = 15
+
+
 ###############################################################################
 class QuietAccessFilter(logging.Filter):
     """Drop successful polling, preflight, and static-asset access records."""
@@ -48,7 +53,20 @@ class QuietAccessFilter(logging.Filter):
 
 
 ###############################################################################
+def _prune_old_logs(log_directory: Path) -> None:
+    logs = sorted(
+        log_directory.glob("FAIRS_*.log*"), key=lambda item: item.stat().st_mtime
+    )
+    for stale in logs[: max(0, len(logs) - LOG_RETAINED_FILES)]:
+        try:
+            stale.unlink()
+        except OSError:
+            pass
+
+
+###############################################################################
 def _build_log_config(log_directory: Path) -> dict[str, Any]:
+    _prune_old_logs(log_directory)
     current_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     root_level = os.environ.get("FAIRS_LOG_LEVEL", "INFO").upper()
     log_filename = log_directory / f"FAIRS_{current_timestamp}.log"
@@ -72,11 +90,13 @@ def _build_log_config(log_directory: Path) -> dict[str, Any]:
                 "formatter": "minimal",
             },
             "file": {
-                "class": "logging.FileHandler",
+                "class": "logging.handlers.RotatingFileHandler",
                 "level": "DEBUG",
                 "formatter": "default",
                 "filename": str(log_filename),
-                "mode": "a",
+                "maxBytes": LOG_MAX_BYTES,
+                "backupCount": LOG_BACKUP_COUNT,
+                "encoding": "utf-8",
                 "delay": True,
             },
         },

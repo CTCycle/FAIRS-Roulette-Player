@@ -1,6 +1,6 @@
 ## Execution And Data Flow
 
-Last updated: 2026-09-22
+Last updated: 2026-11-05
 
 ## Current Layering
 
@@ -184,6 +184,10 @@ sequenceDiagram
 ```
 
 `InferenceState` is the authoritative live-session owner. Database rows preserve history but do not reconstruct a live `RoulettePlayer` after restart.
+
+Each live session loads its own copy of the checkpoint model (at most 16 sessions). Sharing one model per checkpoint is deliberately not done: sessions hold independent locks, Keras/torch inference thread-safety is not guaranteed across them, and the saving is small.
+
+`GET` session snapshots read only the step columns they serialize (no `recorded_at`).
 
 The optional `X-Preserve-Inference-Session` header is retained as the current transactional replay/replacement boundary. It is not an obsolete compatibility alias.
 

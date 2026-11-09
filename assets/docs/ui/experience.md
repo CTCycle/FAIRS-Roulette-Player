@@ -1,6 +1,6 @@
 ## Experience
 
-Last updated: 2026-10-22
+Last updated: 2026-11-09
 
 ## Page Composition
 
@@ -21,6 +21,7 @@ Last updated: 2026-10-22
   - initial-capital and bet controls
   - agent suggestion panel
   - large session history table on the right with editable observed values and row actions
+  - setup and visible history remain available when the user navigates away and returns while the backend session is active
 - `/settings`
   - left-side navigation for the configuration groups
   - `Roulette`: inclusive outcome range and zero exclusion

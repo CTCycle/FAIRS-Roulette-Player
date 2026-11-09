@@ -1,6 +1,6 @@
 ## Persistence
 
-Last updated: 2026-10-21
+Last updated: 2026-11-05
 
 ## Canonical Persistence Model
 
@@ -133,6 +133,9 @@ training = complete TrainingConfig payload
 `CheckpointRepository` saves this versioned shape and rejects unversioned, incomplete, or unsupported checkpoint configuration at runtime. Old checkpoint files are not converted or modified; only current versioned checkpoints are supported.
 
 ## Checkpoint and Dataset Ownership
+
+- Resume training restores the DQN replay buffer from the checkpoint's replay-memory file when present; `max_memory_size` is capped at 100000.
+- Uploads are read up to `MAX_UPLOAD_SIZE_BYTES + 1` bytes and rejected when larger. Log files rotate at 10 MB (2 backups) and only the 15 newest `FAIRS_*.log*` files are kept.
 
 - `CheckpointRepository` owns checkpoint filesystem I/O and persisted checkpoint validation.
 - `CheckpointService` owns checkpoint lifecycle policy.

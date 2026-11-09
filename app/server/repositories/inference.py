@@ -116,24 +116,20 @@ class InferenceRepository:
     # -------------------------------------------------------------------------
     def list_steps(self, session_id: str) -> list[dict[str, Any]]:
         with self.database.Session() as session:
-            rows = session.scalars(
-                select(InferenceSessionSteps)
+            rows = session.execute(
+                select(
+                    InferenceSessionSteps.step_number,
+                    InferenceSessionSteps.bet_amount,
+                    InferenceSessionSteps.predicted_action,
+                    InferenceSessionSteps.predicted_relative_preference,
+                    InferenceSessionSteps.observed_outcome_id,
+                    InferenceSessionSteps.reward,
+                    InferenceSessionSteps.capital_after,
+                )
                 .where(InferenceSessionSteps.session_id == session_id)
                 .order_by(InferenceSessionSteps.step_number)
-            ).all()
-            return [
-                {
-                    "step_number": row.step_number,
-                    "bet_amount": row.bet_amount,
-                    "predicted_action": row.predicted_action,
-                    "predicted_relative_preference": row.predicted_relative_preference,
-                    "observed_outcome_id": row.observed_outcome_id,
-                    "reward": row.reward,
-                    "capital_after": row.capital_after,
-                    "recorded_at": row.recorded_at,
-                }
-                for row in rows
-            ]
+            ).mappings()
+            return [dict(row) for row in rows]
 
     # -------------------------------------------------------------------------
     def end_session(self, session_id: str) -> None:

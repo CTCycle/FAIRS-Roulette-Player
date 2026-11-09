@@ -594,7 +594,7 @@ def test_shutdown_is_failure_isolated_and_idempotent(monkeypatch) -> None:
 class DummyModel:
 
     # -------------------------------------------------------------------------
-    def predict(self, inputs: dict[str, Any], verbose: int = 0) -> np.ndarray:  # noqa: ARG002
+    def predict_on_batch(self, inputs: dict[str, Any], verbose: int = 0) -> np.ndarray:  # noqa: ARG002
         logits = np.zeros((1, 47), dtype=np.float32)
         logits[0, 12] = 1.0
         return logits
@@ -604,7 +604,7 @@ class DummyModel:
 class EmptyLogitsModel:
 
     # -------------------------------------------------------------------------
-    def predict(self, inputs: dict[str, Any], verbose: int = 0) -> np.ndarray:  # noqa: ARG002
+    def predict_on_batch(self, inputs: dict[str, Any], verbose: int = 0) -> np.ndarray:  # noqa: ARG002
         return np.zeros((1, 0), dtype=np.float32)
 
 
@@ -617,7 +617,7 @@ class StrategyLogitsModel:
         self.inputs: dict[str, np.ndarray] | None = None
 
     # -------------------------------------------------------------------------
-    def predict(
+    def predict_on_batch(
         self, inputs: dict[str, np.ndarray], verbose: int = 0  # noqa: ARG002
     ) -> np.ndarray:
         self.inputs = inputs

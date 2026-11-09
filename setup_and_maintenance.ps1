@@ -275,8 +275,10 @@ function Get-CleanupInventory {
     $skipped = [Collections.Generic.List[string]]::new()
     $failed = [Collections.Generic.List[string]]::new()
     $seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
-    foreach ($note in @($script:CleanupDiscoveryNotes)) { [void]$skipped.Add($note) }
-    if ($null -ne $script:CleanupDiscoveryNotes) { $script:CleanupDiscoveryNotes.Clear() }
+    if ($null -ne $script:CleanupDiscoveryNotes) {
+        foreach ($note in $script:CleanupDiscoveryNotes) { [void]$skipped.Add($note) }
+        $script:CleanupDiscoveryNotes.Clear()
+    }
 
     foreach ($target in @($Targets)) {
         try {
@@ -1299,7 +1301,7 @@ function Get-ApplicationProcessRecords {
     $processes = @(Get-CimInstance -ClassName Win32_Process -ErrorAction Stop)
     $repoRootPrefix = ([IO.Path]::GetFullPath($repoRoot)).TrimEnd('\') + '\'
     $repoRootPattern = [regex]::Escape($repoRootPrefix.TrimEnd('\'))
-    $applicationCommandPattern = '(?i)(\buvicorn\b|server\.app:app|\bnpm(?:\.cmd)?\b[^\r\n]*\brun\s+preview\b|\bvite(?:\.cmd)?\b[^\r\n]*\bpreview\b)'
+    $applicationCommandPattern = '(?i)(\buvicorn\b|server\.app:app|multiprocessing\.(?:spawn|resource_tracker)|\bnpm(?:\.cmd)?\b[^\r\n]*\brun\s+preview\b|\bvite(?:\.cmd)?\b[^\r\n]*\bpreview\b)'
     $applicationProcessIds = [Collections.Generic.HashSet[int]]::new()
 
     foreach ($process in $processes) {
@@ -1538,8 +1540,7 @@ function Stop-OwnedApplicationProcessTree {
         [int]$GraceSeconds = 15
     )
     if (-not $Process.HasExited) {
-        Write-Info "Requesting the backend process to close and allowing up to $GraceSeconds seconds for shutdown."
-        try { [void]$Process.CloseMainWindow() } catch { }
+        Write-Info "Waiting up to $GraceSeconds seconds for the backend process to exit before stopping its process tree."
         try { [void]$Process.WaitForExit($GraceSeconds * 1000) } catch { }
     }
 
@@ -2114,7 +2115,7 @@ function Wait-ForMenu {
 
 function Get-LauncherMenuEntries {
     @(
-        [pscustomobject]@{ Section = 'APPLICATION'; Key = 'Launch'; Label = 'Launch application'; Description = 'Start the backend and player'; Color = [ConsoleColor]::Cyan }
+
         [pscustomobject]@{ Section = 'SETUP & VALIDATION'; Key = 'Install'; Label = 'Install / update dependencies'; Description = 'Prepare local runtimes and build the frontend'; Color = [ConsoleColor]::Yellow }
         [pscustomobject]@{ Section = 'SETUP & VALIDATION'; Key = 'Rebuild'; Label = 'Rebuild frontend'; Description = 'Build the frontend without updating dependencies'; Color = [ConsoleColor]::Yellow }
         [pscustomobject]@{ Section = 'SETUP & VALIDATION'; Key = 'Database'; Label = 'Create / upgrade database'; Description = 'Create the selected database and apply migrations'; Color = [ConsoleColor]::Yellow }
@@ -2193,7 +2194,7 @@ function Show-Menu {
         try {
             Invoke-TrackedLauncherAction -Name "menu option $($selectedEntry.Number)" -Action {
                 switch ($selectedEntry.Key) {
-                    'Launch' { [void](Start-Application) }
+
                     'Update' { Update-Application }
                     'Check' { Check-ForUpdates }
                     'Install' {
