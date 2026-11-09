@@ -9,9 +9,9 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, 
 from starlette.concurrency import run_in_threadpool
 
 from server.common.api_errors import ExceptionStatusMap, http_exception_for_exception
+from server.common.constants import MAX_UPLOAD_SIZE_BYTES
 from server.configurations.dependencies import get_dataset_service
 from server.contracts.upload import DatasetKind, UploadRequest, UploadResponse
-from server.services.datasets import MAX_UPLOAD_SIZE_BYTES
 
 router = APIRouter(prefix="/data", tags=["data"])
 UPLOAD_EXCEPTION_STATUS: ExceptionStatusMap = (

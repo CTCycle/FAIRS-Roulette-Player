@@ -13,6 +13,10 @@ FASTAPI_SPA_FALLBACK_ENDPOINT = "/{full_path:path}"
 FASTAPI_TITLE = "FAIRS Roulette Backend"
 FASTAPI_DESCRIPTION = "FastAPI backend"
 
+# [UPLOAD CONSTANTS]
+###############################################################################
+MAX_UPLOAD_SIZE_BYTES = 25 * 1024 * 1024
+
 # [ROULETTE WHEEL CONSTANTS]
 ###############################################################################
 ROULETTE_POSITION_MAP: dict[int, int] = {

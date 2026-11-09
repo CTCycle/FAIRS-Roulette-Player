@@ -11,6 +11,7 @@ from server.contracts.datasets import (
     DatasetSummaryResponse,
 )
 from server.contracts.upload import UploadRequest, UploadResponse
+from server.common.constants import MAX_UPLOAD_SIZE_BYTES
 from server.common.exceptions import CheckpointReferenceError
 from server.repositories.datasets import DatasetRepository
 from server.services.checkpoints import CheckpointService
@@ -18,7 +19,6 @@ from server.services.importer import DatasetImportService
 from server.services.loader import TabularFileLoader
 
 ALLOWED_CSV_SEPARATORS = {",", ";", "\t", "|"}
-MAX_UPLOAD_SIZE_BYTES = 25 * 1024 * 1024
 MAX_FILENAME_LENGTH = 255
 MAX_EXCEL_SHEET_NAME_LENGTH = 128
 

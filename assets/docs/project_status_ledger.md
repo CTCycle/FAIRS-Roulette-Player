@@ -1,6 +1,6 @@
 ## Project Status Ledger
 
-Last updated: 2026-10-30
+Last updated: 2026-11-09
 
 ## Purpose and authority
 
@@ -136,7 +136,13 @@ The campaign follows the dependency chain `startup → persistence/settings → 
 
 `VAL-09` and `VAL-20` appeared in older QA notes as conditional names, but no trigger or acceptance contract is registered in the checked-in campaign. They are not missing results, `NOT TESTED` gates, or deferred gates. No registered gate is currently `FAILED`, `BLOCKED`, or `DEFERRED`.
 
-### Release-readiness audit — current checkout
+### Pre-release audit — 2026-11-09
+
+The latest published source release at the start of this audit was `v3.6.1`; the patch candidate is `v3.6.2`. Remote `main` at `6884591` was an ancestor of remote `develop` at `5e4dfa0`, with six valid `develop` commits and no `main`-only commits. The reviewed changes are launcher maintenance separation, bounded memory and upload handling, inference route-state retention, final training metrics, and inline range validation.
+
+The ignored `assets/QA/` directory was empty before this audit. Its transient local browser failure output was removed after recording the limitation; durable QA evidence remains in this ledger and [`testing_and_quality.md`](coding/testing_and_quality.md). Hosted run [42637041796](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/runs/42637041796) passed PostgreSQL persistence, frontend validation, and Windows launcher maintenance. Backend Ruff, 157 unit tests (2 skipped), and Alembic history passed, but generated frontend-contract validation failed because the upload route imported its size limit through a Keras-backed dataset service before `.env` bootstrap. The size limit now lives in the lightweight shared constants module, preserving the configured `KERAS_BACKEND=torch` initialization order; the generated-contract check passes locally with `KERAS_BACKEND` unset.
+
+### Historical release-readiness audit — 2026-10-21
 
 The latest release is `v3.5.3`, published on 2026-10-21 from main commit `10dbef02c9379776e8b5220d31fe70e1fd19d485`. The release scope includes persisted Settings, database connection testing/switching with rollback, and moving API proxy/CORS configuration to `.env`; runtime network values remain outside the UI-backed Settings contract. GitHub release notes serve as the changelog; GitHub exposes the tag's source archives, and no installer/binary pipeline exists. Main and develop were synchronized at the tagged commit for publication. The existing `data/database.db` is stamped at the removed `0003_application_settings` revision and must be recreated explicitly before this checkout can use it.
 
@@ -179,7 +185,7 @@ These named campaigns supplied evidence to the gate register but are no longer m
 
 ## Open issues
 
-The hosted Windows validation exposed a Windows PowerShell 5.1 fingerprint compatibility defect (`Convert.ToHexString`) that is corrected in the validation-branch launcher, and confirmed the idempotent read-only prepared `_pth` path. This audit fixed the premature roulette-range flush and aligned stale tests with migration and worker changes. VAL-00 has since been re-established. The 2026-10-21 standard runner passed after the upload-size fix; hosted persistence conformance now passes against `0001_current_schema`. VAL-23 passed through a live Settings API switch check against disposable PostgreSQL 18. Backend CI on `9ceb279` stopped at Ruff for missing type imports; the fix is included in release commit `10dbef0`, whose backend, PostgreSQL, and frontend checks passed on both `develop` and `main`. `STARTUP-01` remains `PASSED` only for its recorded source revision; it does not replace current release-candidate checks. This revision passed live browser and disposable launcher/recovery/failure/HTTP/Ctrl+C checks. The focused `TestClient` check remains blocked by the Python 3.14.7 socket-pair hang, as recorded under `application.startup`.
+No release-blocking product defect is known from the 2026-11-09 review. The current patch candidate still requires a green hosted CI run on its exact source commit before publication. Local Playwright execution was limited by the missing Chromium `1243` browser build and blocked download DNS; the local backend unit attempt did not complete, so neither is counted as a pass. The latest pre-fix hosted CI run passed persistence, frontend, and Windows launcher gates, and reported the generated-contract import-order defect documented above. The focused `TestClient` check remains blocked by the Python 3.14.7 socket-pair hang, and spoken accessibility still requires user-controlled Windows Narrator observation; both are recorded validation limits rather than release blockers for this patch.
 
 ## Validation debt
 

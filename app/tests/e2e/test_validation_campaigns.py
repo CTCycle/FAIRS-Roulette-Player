@@ -12,7 +12,7 @@ from pathlib import Path
 from uuid import uuid4
 from playwright.sync_api import Page, expect, APIRequestContext
 from server.common import path as shared_paths
-from server.services.datasets import MAX_UPLOAD_SIZE_BYTES
+from server.common.constants import MAX_UPLOAD_SIZE_BYTES
 from test_inference_workflows import get_session_snapshot, require_checkpoint, require_dataset_id, start_inference_session
 from test_training_api import MINIMAL_TRAINING_CONFIG, VAL08_STORED_CPU_CONFIG, VAL10_LONG_STORED_CPU_CONFIG, assert_training_idle, incomplete_checkpoint_workspaces, wait_for_job_completion, wait_for_training_running, wait_for_training_stopped
 

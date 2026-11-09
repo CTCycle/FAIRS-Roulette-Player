@@ -1,6 +1,6 @@
 ## Configuration
 
-Last updated: 2026-11-05
+Last updated: 2026-11-09
 
 ## Configuration Ownership
 
@@ -24,6 +24,8 @@ The runtime consumes these environment keys:
 - Optional, commented out by default: `OMP_NUM_THREADS`, `MKL_NUM_THREADS`, and `OPENBLAS_NUM_THREADS` cap CPU math threads so CPU-bound training does not starve the API; lowering them can reduce CPU-only training throughput, so they are not set by default
 
 `settings/.env.example` is the canonical template. The Windows launcher copies it only when `.env` does not exist. It does not overlay defaults on an existing file. The launcher requires `FASTAPI_HOST`, `FASTAPI_PORT`, and `RELOAD`; `UI_HOST` and `UI_PORT` are only needed when manually running Vite. Database selection is read from `database-config.json`, not `.env`.
+
+`KERAS_BACKEND=torch` is set in the template. Lifespan bootstrap loads `.env` before importing Keras-backed training and inference services; keep those imports deferred until after `bootstrap_runtime()` so the configured backend is selected before Keras initializes.
 
 `API_BASE_URL` optionally selects the upstream origin used by Vite's `/api` proxy; when empty, the proxy target is composed from `FASTAPI_HOST` and `FASTAPI_PORT`. In the supported Windows launcher, `settings/.env` is authoritative and overwrites inherited process values. For an isolated Windows validation run, point `FAIRS_DATA_DIR` at a disposable location in a temporary copy of `settings/.env`; setting only the parent process variable is insufficient. When Vite is run directly for development, its `API_BASE_URL` process variable takes precedence over the file value. Browser requests use the same-origin `/api` route, and endpoint paths remain part of the application API contract. `CORS_ORIGINS` is an optional comma-separated list of exact browser origins for direct cross-origin API clients; leave it empty for the default same-origin launcher flow. These network settings are process/deployment configuration and are not exposed through the Settings UI or persisted in `application_settings`.
 
