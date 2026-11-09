@@ -280,7 +280,26 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
         }
     };
 
+    const explorationRateError = Number.isFinite(newConfig.explorationRate)
+        && newConfig.explorationRate >= 0
+        && newConfig.explorationRate <= 1
+        ? null
+        : 'Use a value from 0 to 1.';
+    const maxStepsError = Number.isInteger(newConfig.maxStepsEpisode)
+        && newConfig.maxStepsEpisode >= 100
+        ? null
+        : 'Use a whole number of at least 100.';
+    const currentStepError = wizardStep === 0
+        ? explorationRateError
+        : wizardStep === 4
+            ? maxStepsError
+            : null;
+
     const handleNextWizardStep = () => {
+        if (currentStepError) {
+            setWizardError('Fix the highlighted field before continuing.');
+            return;
+        }
         setWizardError(null);
         goToNextWizardStep();
     };
@@ -468,7 +487,8 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label" htmlFor="wizard-explorationRate">Explore Rate</label>
-                                        <input type="number" name="explorationRate" id="wizard-explorationRate" value={newConfig.explorationRate} onChange={handleInputChange} className="form-input" step="0.01" max="1.0" />
+                                        <input type="number" name="explorationRate" id="wizard-explorationRate" value={newConfig.explorationRate} onChange={handleInputChange} className="form-input" step="0.01" min="0" max="1.0" aria-invalid={Boolean(explorationRateError)} aria-describedby={explorationRateError ? 'wizard-explorationRate-error' : undefined} />
+                                        {explorationRateError && <span id="wizard-explorationRate-error" className="wizard-field-error">{explorationRateError}</span>}
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label" htmlFor="wizard-explorationRateDecay">Decay</label>
@@ -695,7 +715,8 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                                         </div>
                                         <div className="form-group">
                                             <label className="form-label" htmlFor="wizard-maxStepsEpisode">Max Steps</label>
-                                            <input type="number" name="maxStepsEpisode" id="wizard-maxStepsEpisode" value={newConfig.maxStepsEpisode} onChange={handleInputChange} className="form-input" min="100" />
+                                            <input type="number" name="maxStepsEpisode" id="wizard-maxStepsEpisode" value={newConfig.maxStepsEpisode} onChange={handleInputChange} className="form-input" min="100" aria-invalid={Boolean(maxStepsError)} aria-describedby={maxStepsError ? 'wizard-maxStepsEpisode-error' : undefined} />
+                                            {maxStepsError && <span id="wizard-maxStepsEpisode-error" className="wizard-field-error">{maxStepsError}</span>}
                                         </div>
                                         <div className="form-group">
                                             <label className="form-label" htmlFor="wizard-batchSize">Batch Size</label>

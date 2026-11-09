@@ -708,6 +708,7 @@ class DQNTraining:
         val_environment: RouletteEnvironment | None = None,
     ) -> Model:
         total_steps = 0
+        last_episode: int | None = None
 
         for i, episode in enumerate(range(start_episode, episodes)):
             if self.should_stop():
@@ -806,6 +807,22 @@ class DQNTraining:
 
                 if total_steps % 100 == 0:
                     await asyncio.sleep(0)
+
+            last_episode = episode
+
+        # Publish final counters unconditionally: periodic updates are sampled
+        # and a short run can finish before any update reflects its last steps.
+        if ws_callback and last_episode is not None and not self.should_stop():
+            try:
+                ws_callback(
+                    self.get_latest_stats(
+                        last_episode,
+                        episodes,
+                        training_ready=self.agent.is_training_ready(),
+                    )
+                )
+            except Exception:
+                logger.exception("Failed to publish final training statistics.")
 
         return model
 

@@ -464,6 +464,9 @@ const SettingsPage: React.FC = () => {
                                                 aria-invalid={Boolean(validationErrors.minimumNumber || validationErrors.rouletteRange)}
                                                 disabled={isBusy}
                                             />
+                                            {validationErrors.minimumNumber && (
+                                                <span id="settings-minimum-error" className="settings-field-error">{validationErrors.minimumNumber}</span>
+                                            )}
                                         </label>
                                         <label htmlFor="settings-maximum-number">
                                             <span>Maximum</span>
@@ -485,14 +488,11 @@ const SettingsPage: React.FC = () => {
                                                 aria-invalid={Boolean(validationErrors.maximumNumber || validationErrors.rouletteRange)}
                                                 disabled={isBusy}
                                             />
+                                            {validationErrors.maximumNumber && (
+                                                <span id="settings-maximum-error" className="settings-field-error">{validationErrors.maximumNumber}</span>
+                                            )}
                                         </label>
                                     </div>
-                                    {validationErrors.minimumNumber && (
-                                        <span id="settings-minimum-error" className="settings-field-error">{validationErrors.minimumNumber}</span>
-                                    )}
-                                    {validationErrors.maximumNumber && (
-                                        <span id="settings-maximum-error" className="settings-field-error">{validationErrors.maximumNumber}</span>
-                                    )}
                                     {validationErrors.rouletteRange && (
                                         <span id="settings-range-error" className="settings-field-error">{validationErrors.rouletteRange}</span>
                                     )}

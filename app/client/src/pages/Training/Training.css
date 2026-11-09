@@ -1606,6 +1606,13 @@
   max-width: 60%;
 }
 
+.wizard-field-error {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.78rem;
+  color: #fecaca;
+}
+
 .wizard-error {
   padding: 0.6rem 0.75rem;
   border-radius: 8px;

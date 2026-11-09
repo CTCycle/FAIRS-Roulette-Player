@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import pandas as pd
 import pytest
 import time
@@ -84,6 +85,44 @@ def test_latest_stats_does_not_carry_sparse_validation_metrics_forward() -> None
     assert latest_stats["val_loss"] is None
     assert latest_stats["val_rmse"] is None
     assert latest_stats["val_reward"] is None
+
+
+###############################################################################
+def test_final_training_stats_are_published_despite_polling_interval(
+    monkeypatch,
+) -> None:
+    trainer = DQNTraining(build_configuration(max_steps_episode=5))
+    trainer.polling_interval_ms = 10**9
+    trainer.last_ws_update_time = time.time() * 1000 + 10**9
+    agent = Mock()
+    agent.act.return_value = 0
+    agent.epsilon = 0.5
+    agent.replay_size = 20
+    agent.memory = [0] * 5
+    agent.is_training_ready.return_value = False
+    trainer.agent = agent
+    monkeypatch.setattr(trainer, "_handle_replay_and_logging", lambda *a, **k: None)
+    environment = Mock(
+        max_steps=5,
+        capital=100.0,
+        initial_capital=100.0,
+        current_bet_amount=1.0,
+        current_strategy_id=0,
+        current_strategy_name="fixed",
+    )
+    environment.reset.return_value = [0] * 8
+    environment.step.return_value = ([0] * 8, 0.0, False, 1)
+    model = Mock()
+    updates: list[dict[str, object]] = []
+
+    asyncio.run(
+        trainer.train_with_reinforcement_learning(
+            model, model, None, None, environment, 0, 1, 8, ws_callback=updates.append
+        )
+    )
+
+    assert updates[-1]["time_step"] == 4
+    assert updates[-1]["experience_count"] == 5
 
 
 ###############################################################################
