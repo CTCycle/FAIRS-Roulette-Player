@@ -125,6 +125,10 @@ Local Ruff, Vitest (`11/11`), ESLint, and the production build passed. Local Pla
 
 On documentation-only commit `1868ed10207ec5316555b7a185c1c806de3215e6`, the first attempt of hosted run [42649012102](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/runs/42649012102) failed in the Windows launcher-maintenance harness: during the owned-process cleanup case, PID `6732` resolved to `csrss`, and Windows denied the stop attempt. Rerunning the failed job on the unchanged commit passed all four workflow jobs. The intermittent process-identity observation has no confirmed root cause; monitor it if it recurs.
 
+### 2026-11-09 v3.6.3 patch QA
+
+`assets/QA/` was empty again; nothing to migrate. Local Ruff, lockfile check, 159 backend unit tests, ESLint, Vitest (`11/11`), and the production build passed on the candidate. Hosted CI on the exact release commit is recorded in the project status ledger.
+
 ## Related Files
 
 - Read `python.md` for backend implementation rules.
