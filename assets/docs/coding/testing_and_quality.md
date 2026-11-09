@@ -123,6 +123,8 @@ The release PR [#9](https://github.com/CTCycle/FAIRS-Roulette-Player/pull/9) mer
 
 Local Ruff, Vitest (`11/11`), ESLint, and the production build passed. Local Playwright E2E could not launch because Chromium build `1243` was missing; download attempts were blocked by DNS resolution for `cdn.playwright.dev`. The local PowerShell maintenance harness could not detect its occupied-port fixture in this process-query environment, while the corresponding hosted Windows job passed. The local backend unit run did not complete and is not counted as a pass.
 
+On documentation-only commit `1868ed10207ec5316555b7a185c1c806de3215e6`, the first attempt of hosted run [42649012102](https://github.com/CTCycle/FAIRS-Roulette-Player/actions/runs/42649012102) failed in the Windows launcher-maintenance harness: during the owned-process cleanup case, PID `6732` resolved to `csrss`, and Windows denied the stop attempt. Rerunning the failed job on the unchanged commit passed all four workflow jobs. The intermittent process-identity observation has no confirmed root cause; monitor it if it recurs.
+
 ## Related Files
 
 - Read `python.md` for backend implementation rules.
