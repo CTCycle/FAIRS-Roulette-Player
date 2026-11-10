@@ -37,7 +37,7 @@ $npm = Join-Path $repoRoot 'runtimes\nodejs\npm.cmd'
 & $npm --prefix (Join-Path $repoRoot 'app\client') run preview
 ```
 
-`npm run test:unit` runs the Vitest checks for client-owned payload conversion, API error parsing, and inference session storage. `npm run test:e2e` runs the Playwright desktop workflow and viewport checks against an existing Vite preview server with mocked API responses. Set `FRONTEND_E2E_BASE_URL` when the preview server is not at `http://127.0.0.1:4173`. The Windows standard runner and hosted CI supply the preview server. Playwright JUnit output, traces, and generated 1100px/1099px screenshots are written under the repository's ignored `assets/QA/` directory and are removed by the launcher's Clear Cache action.
+`npm run test:unit` runs the Vitest checks for client-owned payload conversion, API error parsing, and inference session storage. `npm run test:e2e` runs the Playwright desktop workflow and viewport checks against an existing Vite preview server with mocked API responses. Set `FRONTEND_E2E_BASE_URL` when the preview server is not at `http://127.0.0.1:4173`. The Windows standard runner and hosted CI supply the preview server. Playwright JUnit output, traces, and generated viewport screenshots are written under the repository's ignored `assets/QA/` directory and are removed by the launcher's Clear Cache action.
 
 On Windows, set `FRONTEND_E2E_BROWSER_CHANNEL=msedge` to run the same suite against the installed Microsoft Edge browser. Chromium remains the default and the hosted CI browser.
 

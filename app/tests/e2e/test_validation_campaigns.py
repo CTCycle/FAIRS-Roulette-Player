@@ -44,7 +44,6 @@ def _assert_supported_desktop(page: Page, width: int, height: int) -> None:
         "height": height,
         "horizontalOverflow": False,
     }
-    expect(page.locator(".desktop-size-notice")).to_be_hidden()
 
 
 ###############################################################################
@@ -121,30 +120,14 @@ def test_desktop_page_views_and_minimum_width_boundary(page: Page, base_url: str
             _assert_supported_desktop(page, width, height)
             _capture(page, f"{image_prefix}-{width}x{height}.png")
 
-    page.set_viewport_size({"width": 1099, "height": 800})
+    page.set_viewport_size({"width": 800, "height": 800})
     page.goto(f"{base_url}/inference")
     page.wait_for_load_state("networkidle")
     expect(page.get_by_role("heading", name="Session History", exact=True)).to_be_visible()
-    notice = page.locator(".desktop-size-notice")
-    expect(notice).to_be_visible()
-    expect(notice).to_contain_text("at least 1100px wide")
-    boundary = page.evaluate(
-        """() => {
-            const root = document.querySelector('.inference-workspace > div');
-            const panels = Array.from(root.children).map((panel) => panel.getBoundingClientRect());
-            return {
-                width: window.innerWidth,
-                mainWidth: document.querySelector('.main-layout').getBoundingClientRect().width,
-                columns: getComputedStyle(root).gridTemplateColumns.trim().split(/\\s+/).length,
-                panelTopDelta: Math.abs(panels[0].top - panels[1].top),
-            };
-        }"""
-    )
-    assert boundary["width"] == 1099
-    assert abs(boundary["mainWidth"] - 1100) < 1
-    assert boundary["columns"] == 2
-    assert boundary["panelTopDelta"] < 1
-    _capture(page, "val17-inference-minimum-boundary-1099x800.png")
+    assert page.evaluate(
+        "document.querySelector('.main-layout').getBoundingClientRect().width"
+    ) <= 800
+    _capture(page, "val17-inference-narrow-800x800.png")
 
     assert page_errors == []
     assert console_errors == []

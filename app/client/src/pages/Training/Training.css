@@ -1004,6 +1004,26 @@
   }
 }
 
+@media (max-width: 800px) {
+  .training-top-row,
+  .checkpoints-row,
+  .metrics-progress-row,
+  .metrics-groups,
+  .previews-grid,
+  .wizard-grid-2x4,
+  .wizard-grid-2x2,
+  .wizard-grid-3x2,
+  .dashboard-visuals,
+  .training-grid-2x2,
+  .training-grid-2x3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .metric-group-grid-runtime {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 /* ========================================
    PREVIEW ROW (Dataset + Checkpoint Previews)
    ======================================== */

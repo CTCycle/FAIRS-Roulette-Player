@@ -349,18 +349,15 @@ test('Database fields stay as a draft until the explicit switch action', async (
     await expect(page.getByText('Database activated. Settings were reloaded from that database.', { exact: true })).toBeVisible()
 })
 
-test('1100px is supported and 1099px shows the minimum-width notice', async ({ page }) => {
+test('layout adapts to narrow viewports without a minimum-width gate', async ({ page }) => {
     const evidenceRoot = path.resolve(process.cwd(), '..', '..', 'assets', 'QA')
     await mkdir(evidenceRoot, { recursive: true })
     const browserProfile = process.env.FRONTEND_E2E_BROWSER_CHANNEL === 'msedge' ? 'edge' : 'chromium'
-    await page.setViewportSize({ width: 1100, height: 800 })
+    await page.setViewportSize({ width: 360, height: 740 })
     await page.goto('/training')
-    const minimumWidthNotice = page.getByText(/requires a browser viewport at least 1100px wide/i)
-    await expect(minimumWidthNotice).toBeHidden()
     await expect(page.getByText('Available Datasets')).toBeVisible()
-    await page.screenshot({ path: path.join(evidenceRoot, `frontend-viewport-1100-${browserProfile}.png`), fullPage: true })
-
-    await page.setViewportSize({ width: 1099, height: 800 })
-    await expect(minimumWidthNotice).toBeVisible()
-    await page.screenshot({ path: path.join(evidenceRoot, `frontend-viewport-1099-${browserProfile}.png`), fullPage: true })
+    await expect(page.getByText(/requires a browser viewport/i)).toHaveCount(0)
+    const layoutWidth = await page.locator('.main-layout').evaluate((el) => el.getBoundingClientRect().width)
+    expect(layoutWidth).toBeLessThanOrEqual(360)
+    await page.screenshot({ path: path.join(evidenceRoot, `frontend-viewport-360-${browserProfile}.png`), fullPage: true })
 })
