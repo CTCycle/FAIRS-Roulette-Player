@@ -30,6 +30,7 @@ from server.contracts.inference import (
     InferenceStepRequest,
     InferenceStepResponse,
 )
+from server.services.settings import SettingsService
 
 router = APIRouter(prefix="/inference", tags=["inference"])
 
@@ -51,7 +52,7 @@ def _map_inference_exception(exc: Exception) -> HTTPException:
 
 
 ###############################################################################
-def _roulette_settings(settings_service: Any) -> RouletteSettings:
+def _roulette_settings(settings_service: SettingsService) -> RouletteSettings:
     settings = settings_service.get_settings().roulette
     return RouletteSettings(
         minimum_number=settings.minimum_number,
@@ -71,7 +72,7 @@ def _roulette_settings(settings_service: Any) -> RouletteSettings:
 def start_session(
     payload: InferenceStartRequest,
     service: Annotated[Any, Depends(get_inference_service)],
-    settings_service: Annotated[Any, Depends(get_settings_service)],
+    settings_service: Annotated[SettingsService, Depends(get_settings_service)],
     preserve_session_id: Annotated[
         str | None,
         Header(alias="X-Preserve-Inference-Session"),
@@ -139,7 +140,7 @@ def submit_step(
     session_id: str,
     payload: InferenceStepRequest,
     service: Annotated[Any, Depends(get_inference_service)],
-    settings_service: Annotated[Any, Depends(get_settings_service)],
+    settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ) -> InferenceStepResponse:
     try:
         roulette_settings = settings_service.get_settings().roulette

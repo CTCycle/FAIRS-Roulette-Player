@@ -448,9 +448,19 @@ def test_postgresql_startup_reports_connection_failure(monkeypatch) -> None:
     with TestClient(application) as client:
         assert application.state.lifecycle == "recovery"
         health = client.get("/api/health")
+        database_response = client.get("/api/training/status")
+        validation_response = client.put("/api/settings/database", json={})
 
     assert health.status_code == 200
     assert health.json()["status"] == "recovery"
+    assert database_response.status_code == 503
+    assert database_response.json() == {
+        "detail": "Database services are unavailable. Configure a working database."
+    }
+    assert validation_response.status_code == 422
+    assert validation_response.json() == {
+        "detail": "Invalid database configuration. Review the required fields and options."
+    }
 
 
 ###############################################################################
@@ -460,9 +470,17 @@ def test_app_factory_defers_runtime_bootstrap_until_lifespan(monkeypatch) -> Non
     bootstrap = Mock()
     monkeypatch.setattr(app_module, "bootstrap_runtime", bootstrap)
 
-    app_module.create_app()
+    application = app_module.create_app()
 
     bootstrap.assert_not_called()
+    assert any(
+        middleware.kwargs.get("dispatch") is app_module.database_runtime_guard
+        for middleware in application.user_middleware
+    )
+    assert (
+        application.exception_handlers[app_module.RequestValidationError]
+        is app_module.sanitized_database_validation_error
+    )
 
 
 ###############################################################################

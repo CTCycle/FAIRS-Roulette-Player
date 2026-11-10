@@ -275,6 +275,7 @@ def process_target(
 ) -> None:
     if os.name != "nt":
         os.setsid()
+    # Initialize the child runtime before the target imports ML modules.
     from server.bootstrap import bootstrap_runtime
 
     bootstrap_runtime()

@@ -17,9 +17,11 @@ from typing import Any
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.middleware.cors import CORSMiddleware
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from server.common.constants import (
     FASTAPI_API_PREFIX,
@@ -77,13 +79,13 @@ class RuntimeCORSMiddleware:
     """Apply the current .env CORS allowlist after lifespan environment loading."""
 
     # -------------------------------------------------------------------------
-    def __init__(self, app: Any) -> None:
+    def __init__(self, app: ASGIApp) -> None:
         self.app = app
         self._origins: tuple[str, ...] | None = None
-        self._configured_app: Any = app
+        self._configured_app: ASGIApp = app
 
     # -------------------------------------------------------------------------
-    async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
@@ -109,10 +111,55 @@ class RuntimeCORSMiddleware:
 
 
 ###############################################################################
+async def database_runtime_guard(
+    request: Request,
+    call_next: RequestResponseEndpoint,
+) -> Response:
+    api_prefix = f"{FASTAPI_API_PREFIX}/"
+    path = request.url.path
+    exempt = path == f"{FASTAPI_API_PREFIX}/health" or path.startswith(
+        f"{FASTAPI_API_PREFIX}/settings/database"
+    )
+    if path.startswith(api_prefix) and not exempt:
+        if getattr(request.app.state, "lifecycle", "starting") == "recovery":
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "detail": "Database services are unavailable. Configure a working database."
+                },
+            )
+        database_manager = getattr(request.app.state, "runtime_database", None)
+        if database_manager is not None:
+            try:
+                with database_manager.operation():
+                    return await call_next(request)
+            except DatabaseSwitchConflict as exc:
+                return JSONResponse(status_code=409, content={"detail": str(exc)})
+            except DatabaseUnavailableError as exc:
+                return JSONResponse(status_code=503, content={"detail": str(exc)})
+    return await call_next(request)
+
+
+###############################################################################
+async def sanitized_database_validation_error(
+    request: Request,
+    exc: RequestValidationError,
+) -> Response:
+    if "/settings/database" in request.url.path:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "detail": "Invalid database configuration. Review the required fields and options."
+            },
+        )
+    return await request_validation_exception_handler(request, exc)
+
+
+###############################################################################
 def _activate_runtime_services(
     application: FastAPI,
     database_configuration: LoadedDatabaseConfiguration | None,
-    application_settings: Any,
+    application_settings: JsonServerSettings | None,
 ) -> None:
     """Publish service settings only after a database target is ready."""
     if database_configuration is None or application_settings is None:
@@ -453,45 +500,11 @@ def create_app() -> FastAPI:
         lifespan=app_lifespan,
     )
     application.add_middleware(RuntimeCORSMiddleware)
-
-    @application.middleware("http")
-    async def database_runtime_guard(request: Request, call_next):
-        api_prefix = f"{FASTAPI_API_PREFIX}/"
-        path = request.url.path
-        exempt = path == f"{FASTAPI_API_PREFIX}/health" or path.startswith(
-            f"{FASTAPI_API_PREFIX}/settings/database"
-        )
-        if path.startswith(api_prefix) and not exempt:
-            if getattr(request.app.state, "lifecycle", "starting") == "recovery":
-                return JSONResponse(
-                    status_code=503,
-                    content={
-                        "detail": "Database services are unavailable. Configure a working database."
-                    },
-                )
-            database_manager = getattr(request.app.state, "runtime_database", None)
-            if database_manager is not None:
-                try:
-                    with database_manager.operation():
-                        return await call_next(request)
-                except DatabaseSwitchConflict as exc:
-                    return JSONResponse(status_code=409, content={"detail": str(exc)})
-                except DatabaseUnavailableError as exc:
-                    return JSONResponse(status_code=503, content={"detail": str(exc)})
-        return await call_next(request)
-
-    @application.exception_handler(RequestValidationError)
-    async def sanitized_database_validation_error(
-        request: Request, _exc: RequestValidationError
-    ):
-        if "/settings/database" in request.url.path:
-            return JSONResponse(
-                status_code=422,
-                content={
-                    "detail": "Invalid database configuration. Review the required fields and options."
-                },
-            )
-        return await request_validation_exception_handler(request, _exc)
+    application.add_middleware(BaseHTTPMiddleware, dispatch=database_runtime_guard)
+    application.add_exception_handler(
+        RequestValidationError,
+        sanitized_database_validation_error,
+    )
 
     include_api_routers(application)
     return application

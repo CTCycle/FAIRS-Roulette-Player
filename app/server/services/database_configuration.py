@@ -14,7 +14,7 @@ from server.configurations.database_config import (
     DatabaseConfigurationStore,
     LoadedDatabaseConfiguration,
 )
-from server.contracts.configuration import JsonServerSettings
+from server.contracts.configuration import DatabaseSettings, JsonServerSettings
 from server.contracts.database_configuration import (
     DatabaseConfigurationInput,
     DatabaseStatusResponse,
@@ -91,7 +91,10 @@ class DatabaseConfigurationService:
 
     # -------------------------------------------------------------------------
     @staticmethod
-    def _settings_and_path(candidate: DatabaseConfigurationInput, password: str | None):
+    def _settings_and_path(
+        candidate: DatabaseConfigurationInput,
+        password: str | None,
+    ) -> tuple[DatabaseConfigurationInput, DatabaseSettings, Path | None]:
         normalized = candidate.model_copy(
             update={
                 "sqlite_path": (

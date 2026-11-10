@@ -4,11 +4,14 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import AbstractContextManager, contextmanager
+from pathlib import Path
 from threading import Condition
 import time
 
+from sqlalchemy.orm import Session
 
+from server.configurations import DatabaseSettings
 from server.repositories.database.backend import FAIRSDatabase
 
 
@@ -30,11 +33,11 @@ class _ManagedSessionFactory:
         self.owner = owner
 
     # -------------------------------------------------------------------------
-    def __call__(self):
+    def __call__(self) -> AbstractContextManager[Session]:
         return self.owner.session()
 
     # -------------------------------------------------------------------------
-    def begin(self):
+    def begin(self) -> AbstractContextManager[Session]:
         return self.owner.session_transaction()
 
 
@@ -64,12 +67,12 @@ class RuntimeDatabaseManager:
 
     # -------------------------------------------------------------------------
     @property
-    def settings(self):
+    def settings(self) -> DatabaseSettings:
         return self._required_database().settings
 
     # -------------------------------------------------------------------------
     @property
-    def db_path(self):
+    def db_path(self) -> Path | None:
         return self._required_database().db_path
 
     # -------------------------------------------------------------------------
@@ -106,7 +109,7 @@ class RuntimeDatabaseManager:
 
     # -------------------------------------------------------------------------
     @contextmanager
-    def session(self):
+    def session(self) -> Iterator[Session]:
         with self.operation():
             database = self._required_database()
             with database.Session() as session:
@@ -114,7 +117,7 @@ class RuntimeDatabaseManager:
 
     # -------------------------------------------------------------------------
     @contextmanager
-    def session_transaction(self):
+    def session_transaction(self) -> Iterator[Session]:
         with self.operation():
             database = self._required_database()
             with database.Session.begin() as session:
@@ -122,7 +125,7 @@ class RuntimeDatabaseManager:
 
     # -------------------------------------------------------------------------
     @contextmanager
-    def transaction(self):
+    def transaction(self) -> Iterator[Session]:
         with self.operation():
             database = self._required_database()
             with database.transaction() as session:
@@ -130,7 +133,7 @@ class RuntimeDatabaseManager:
 
     # -------------------------------------------------------------------------
     @contextmanager
-    def switching(self, timeout_seconds: float = 10.0):
+    def switching(self, timeout_seconds: float = 10.0) -> Iterator[None]:
         deadline = time.monotonic() + timeout_seconds
         with self._condition:
             if self._switching:
