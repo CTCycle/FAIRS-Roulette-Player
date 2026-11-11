@@ -32,12 +32,18 @@ const parseFastApiDetail = (value: unknown): string | null => {
         if (!Array.isArray(entry.loc)) {
             return message;
         }
-        const location = entry.loc
+        const field = entry.loc
             .filter((segment): segment is string | number => (
                 typeof segment === 'string' || typeof segment === 'number'
             ))
-            .join('.');
-        return location ? `${location}: ${message}` : message;
+            .filter((segment) => segment !== 'body' && segment !== 'query')
+            .map(String)
+            .pop();
+        if (!field) {
+            return message;
+        }
+        const label = field.replace(/_/g, ' ');
+        return `${label.charAt(0).toUpperCase()}${label.slice(1)}: ${message}`;
     }).filter((entry): entry is string => entry !== null);
 
     return messages.length > 0 ? messages.join(' ') : null;

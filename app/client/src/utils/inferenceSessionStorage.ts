@@ -3,16 +3,26 @@
 
 import type {
     GameConfig,
+    GameStep,
     InferenceSetupState,
 } from '../types/inference';
 
 const STORAGE_KEY = 'fairs.roulette.inference-session.v1';
 const STORAGE_VERSION = 1;
 
+// Server sessions are gone once stopped; the final view is kept locally until Clear.
+export interface StoppedSessionView {
+    currentCapital: number;
+    currentBet: number;
+    totalSteps: number;
+    history: GameStep[];
+}
+
 export interface PersistedInferenceSession {
     version: typeof STORAGE_VERSION;
     config: GameConfig;
     setup: InferenceSetupState;
+    stopped?: StoppedSessionView;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> => (
@@ -59,7 +69,15 @@ const isValidSetup = (value: unknown): value is InferenceSetupState => {
         && (value.datasetFileMetadata === null || isRecord(value.datasetFileMetadata));
 };
 
-export const loadPersistedInferenceSession = (): PersistedInferenceSession | null => {
+const isValidStoppedView = (value: unknown): value is StoppedSessionView => (
+    isRecord(value)
+    && isFiniteNumber(value.currentCapital)
+    && isFiniteNumber(value.currentBet)
+    && isFiniteNumber(value.totalSteps)
+    && Array.isArray(value.history)
+);
+
+export const loadPersistedInferenceSession =(): PersistedInferenceSession | null => {
     if (typeof window === 'undefined') {
         return null;
     }
@@ -76,10 +94,12 @@ export const loadPersistedInferenceSession = (): PersistedInferenceSession | nul
             window.localStorage.removeItem(STORAGE_KEY);
             return null;
         }
+        const stopped = isValidStoppedView(value.stopped) ? value.stopped : undefined;
         return {
             version: STORAGE_VERSION,
             config: value.config,
             setup: value.setup,
+            ...(stopped ? { stopped } : {}),
         };
     } catch {
         return null;
@@ -89,6 +109,7 @@ export const loadPersistedInferenceSession = (): PersistedInferenceSession | nul
 export const persistInferenceSession = (
     config: GameConfig,
     setup: InferenceSetupState,
+    stopped?: StoppedSessionView,
 ): void => {
     if (typeof window === 'undefined') {
         return;
@@ -98,6 +119,7 @@ export const persistInferenceSession = (
             version: STORAGE_VERSION,
             config,
             setup,
+            ...(stopped ? { stopped } : {}),
         };
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
     } catch {

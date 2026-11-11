@@ -92,6 +92,9 @@ class TrainingRun:
     # -------------------------------------------------------------------------
     def update_status(self, status: str, **kwargs: Any) -> None:
         self.update(status=status, **kwargs)
+        if status == "cancelled":
+            # Keep a durable terminal state for the monitor, whichever path cancelled the run.
+            self.update_stats({"status": "cancelled", "message": "Training cancelled"})
 
     # -------------------------------------------------------------------------
     def reset_training_state(

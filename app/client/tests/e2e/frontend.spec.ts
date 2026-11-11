@@ -361,3 +361,86 @@ test('layout adapts to narrow viewports without a minimum-width gate', async ({ 
     expect(layoutWidth).toBeLessThanOrEqual(360)
     await page.screenshot({ path: path.join(evidenceRoot, `frontend-viewport-360-${browserProfile}.png`), fullPage: true })
 })
+
+const seedStoppedInferenceSession = async (page: Page) => {
+    await page.goto('/inference')
+    await page.evaluate(() => {
+        window.localStorage.setItem('fairs.roulette.inference-session.v1', JSON.stringify({
+            version: 1,
+            config: { sessionId: 'stopped-session', checkpoint: 'frontend-checkpoint', datasetId: 7, initialCapital: 100, betAmount: 1 },
+            setup: {
+                initialCapital: 100,
+                betAmount: 1,
+                checkpoint: 'frontend-checkpoint',
+                selectedDataset: 7,
+                uploadedDatasetId: null,
+                datasetFileMetadata: null,
+            },
+            stopped: {
+                currentCapital: 99,
+                currentBet: 1,
+                totalSteps: 1,
+                history: [{
+                    step: 1,
+                    predictedAction: 5,
+                    predictedActionDesc: 'Bet on 5',
+                    observed: 12,
+                    observedInput: '12',
+                    betAmount: 1,
+                    outcome: -1,
+                    capitalAfter: 99,
+                    isEditing: false,
+                }],
+            },
+        }))
+    })
+}
+
+test('Stopped inference session survives a refresh until Clear', async ({ page }) => {
+    let clearedSession: string | null = null
+    await page.route('**/api/inference/sessions/*/rows/clear', (route) => {
+        clearedSession = route.request().url().split('/sessions/')[1].split('/')[0]
+        return route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ session_id: clearedSession, status: 'cleared' }),
+        })
+    })
+    await seedStoppedInferenceSession(page)
+    await page.reload()
+
+    const history = page.getByRole('region', { name: 'Session history' })
+    await expect(history).toContainText('Bet on 5')
+    const clearButton = page.getByRole('button', { name: 'Clear', exact: true }).last()
+    await expect(clearButton).toBeEnabled()
+    await clearButton.click()
+    await expect.poll(() => clearedSession).toBe('stopped-session')
+    await expect(history).not.toContainText('Bet on 5')
+    expect(await page.evaluate(() => window.localStorage.getItem('fairs.roulette.inference-session.v1'))).toBeNull()
+})
+
+test('Inference history stays reachable at 375 px', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 })
+    await seedStoppedInferenceSession(page)
+    await page.reload()
+
+    const history = page.getByRole('region', { name: 'Session history' })
+    await expect(history).toBeVisible()
+    const box = await history.boundingBox()
+    expect(box).not.toBeNull()
+    expect(box!.x + box!.width).toBeLessThanOrEqual(375)
+})
+
+test('Training wizard clears a stale field error once the value is corrected', async ({ page }) => {
+    await page.goto('/training')
+    await page.getByRole('button', { name: 'Configure training with this dataset' }).first().click()
+    const wizard = page.getByRole('dialog', { name: 'New Training Wizard' })
+    const field = wizard.getByLabel('Perceptive Field')
+    await field.fill('0')
+    await expect(wizard.getByText('Use a whole number from 1 to 1024.')).toBeVisible()
+    await wizard.getByRole('button', { name: 'Next', exact: true }).click()
+    await expect(wizard.getByText('Fix the highlighted field before continuing.')).toBeVisible()
+    await field.fill('8')
+    await expect(wizard.getByText('Use a whole number from 1 to 1024.')).toHaveCount(0)
+    await expect(wizard.getByText('Fix the highlighted field before continuing.')).toHaveCount(0)
+})

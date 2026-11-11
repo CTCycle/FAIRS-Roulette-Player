@@ -265,6 +265,20 @@ def test_environment_overrides_existing_process_values(
 
 
 ###############################################################################
+def test_environment_blank_value_keeps_inherited_process_value(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    env_path = tmp_path / ".env"
+    _write_env(env_path, ["FAIRS_DATA_DIR="])
+    monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
+    monkeypatch.setenv("FAIRS_DATA_DIR", "/qa/root")
+
+    environment.load_environment()
+
+    assert os.getenv("FAIRS_DATA_DIR") == "/qa/root"
+
+
+###############################################################################
 def test_environment_creates_missing_env_from_example(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

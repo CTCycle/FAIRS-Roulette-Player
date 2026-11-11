@@ -82,8 +82,13 @@ def load_environment(*, force: bool = False) -> Path | None:
         for key in _DATABASE_ENV_KEYS:
             os.environ.pop(key, None)
         for key, value in values.items():
-            if key and key not in _DATABASE_ENV_KEYS and value is not None:
-                os.environ[key] = value
+            if not key or key in _DATABASE_ENV_KEYS or value is None:
+                continue
+            # A blank .env entry must not erase a value inherited from the parent
+            # process; otherwise training workers resolve a different data root.
+            if value == "" and os.environ.get(key):
+                continue
+            os.environ[key] = value
 
         state.loaded = True
         return env_path
