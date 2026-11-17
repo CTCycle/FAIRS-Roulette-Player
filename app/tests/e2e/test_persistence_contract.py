@@ -105,9 +105,7 @@ def test_sqlite_contract() -> None:
         lambda connection, _: connection.execute("PRAGMA foreign_keys=ON"),
     )
     try:
-        exercise_contract(
-            FAIRSDatabase(_test_database_settings(), engine=engine)
-        )
+        exercise_contract(FAIRSDatabase(_test_database_settings(), engine=engine))
     finally:
         engine.dispose()
 
@@ -287,6 +285,4 @@ def test_postgresql_concurrent_initializers_serialize(postgres_engine) -> None:
 
 ###############################################################################
 def test_postgresql_contract(postgres_engine) -> None:
-    exercise_contract(
-        FAIRSDatabase(_test_database_settings(), engine=postgres_engine)
-    )
+    exercise_contract(FAIRSDatabase(_test_database_settings(), engine=postgres_engine))

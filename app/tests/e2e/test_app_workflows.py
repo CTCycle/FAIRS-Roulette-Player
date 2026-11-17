@@ -35,9 +35,7 @@ class TestStartupFlow:
                 route.fulfill(
                     status=200,
                     content_type="application/json",
-                    body=json.dumps(
-                        {"status": "starting", "application": "FAIRS"}
-                    ),
+                    body=json.dumps({"status": "starting", "application": "FAIRS"}),
                 )
                 return
             route.fulfill(
@@ -51,9 +49,11 @@ class TestStartupFlow:
         page.route("**/api/health", health_route)
         page.on(
             "request",
-            lambda request: document_requests.append(request)
-            if request.resource_type == "document"
-            else None,
+            lambda request: (
+                document_requests.append(request)
+                if request.resource_type == "document"
+                else None
+            ),
         )
 
         def capture_console(message):
@@ -83,7 +83,9 @@ class TestStartupFlow:
         )
 
         expect(
-            page.get_by_role("heading", name=re.compile("Training Monitor", re.IGNORECASE))
+            page.get_by_role(
+                "heading", name=re.compile("Training Monitor", re.IGNORECASE)
+            )
         ).to_be_visible(timeout=10_000)
         assert health_calls >= 4
         assert len(document_requests) == 1
@@ -107,7 +109,9 @@ class TestStartupFlow:
         page.route("**/api/health", health_route)
         page.goto(base_url)
 
-        expect(page.get_by_role("link", name=re.compile("Training", re.IGNORECASE))).to_be_visible()
+        expect(
+            page.get_by_role("link", name=re.compile("Training", re.IGNORECASE))
+        ).to_be_visible()
         expect(page.get_by_test_id("startup-screen")).to_have_count(0)
 
     # -------------------------------------------------------------------------
@@ -133,9 +137,11 @@ class TestStartupFlow:
         page.route("**/api/health", health_route)
         page.on(
             "request",
-            lambda request: document_requests.append(request)
-            if request.resource_type == "document"
-            else None,
+            lambda request: (
+                document_requests.append(request)
+                if request.resource_type == "document"
+                else None
+            ),
         )
         page.clock.install()
         page.goto(base_url)
@@ -143,7 +149,9 @@ class TestStartupFlow:
 
         page.clock.run_for(61_000)
 
-        expect(page.get_by_text("The table is taking a break.", exact=True)).to_be_visible()
+        expect(
+            page.get_by_text("The table is taking a break.", exact=True)
+        ).to_be_visible()
         expect(page.get_by_test_id("startup-retry")).to_be_visible()
         expect(page.get_by_text("ERR_CONNECTION_REFUSED", exact=False)).to_have_count(0)
 
@@ -151,7 +159,9 @@ class TestStartupFlow:
         page.get_by_test_id("startup-retry").click()
         page.clock.run_for(3_000)
 
-        expect(page.get_by_role("link", name=re.compile("Training", re.IGNORECASE))).to_be_visible()
+        expect(
+            page.get_by_role("link", name=re.compile("Training", re.IGNORECASE))
+        ).to_be_visible()
         assert len(document_requests) == 1
 
     # -------------------------------------------------------------------------
@@ -181,9 +191,9 @@ class TestStartupFlow:
         expect(page.get_by_test_id("startup-screen")).to_be_visible()
 
         allow_health = True
-        expect(page.get_by_role("link", name=re.compile("Training", re.IGNORECASE))).to_be_visible(
-            timeout=10_000
-        )
+        expect(
+            page.get_by_role("link", name=re.compile("Training", re.IGNORECASE))
+        ).to_be_visible(timeout=10_000)
 
     # -------------------------------------------------------------------------
     def test_loading_screen_fits_supported_viewports(self, page: Page, base_url: str):
@@ -253,9 +263,9 @@ class TestCheckpointHandoff:
         page.on("pageerror", lambda error: page_errors.append(str(error)))
         page.on(
             "console",
-            lambda message: console_errors.append(message.text)
-            if message.type == "error"
-            else None,
+            lambda message: (
+                console_errors.append(message.text) if message.type == "error" else None
+            ),
         )
         page.on(
             "requestfailed",
@@ -366,9 +376,9 @@ class TestTrainingWizardFlow:
         page.on("pageerror", lambda error: page_errors.append(str(error)))
         page.on(
             "console",
-            lambda message: console_errors.append(message.text)
-            if message.type == "error"
-            else None,
+            lambda message: (
+                console_errors.append(message.text) if message.type == "error" else None
+            ),
         )
         page.on(
             "requestfailed",
@@ -473,12 +483,14 @@ class TestTrainingWizardFlow:
         assert_summary_value("Use GPU", "No")
         assert_summary_value("Mixed Precision", "No")
 
-        modal.get_by_role("button", name=re.compile(r"^1\s+Agent Configuration")).click()
+        modal.get_by_role(
+            "button", name=re.compile(r"^1\s+Agent Configuration")
+        ).click()
         expect(perceptive_field).to_have_value("8")
         modal.get_by_role("button", name=re.compile(r"^6\s+Summary")).click()
-        expect(summary.locator(".wizard-summary-row").filter(has_text="Batch Size")).to_contain_text(
-            "100"
-        )
+        expect(
+            summary.locator(".wizard-summary-row").filter(has_text="Batch Size")
+        ).to_contain_text("100")
         modal.get_by_role("button", name="Cancel", exact=True).click()
 
         page_errors_seen = page_errors[:]
@@ -499,15 +511,17 @@ class TestTrainingWizardFlow:
             "Mode: Synthetic Generator"
         )
 
-        modal.get_by_role("button", name=re.compile(r"^4\s+Dataset Configuration")).click()
+        modal.get_by_role(
+            "button", name=re.compile(r"^4\s+Dataset Configuration")
+        ).click()
         expect(modal.locator(".wizard-step-title")).to_have_text("Generator Parameters")
         generated_samples = modal.locator('input[name="numGeneratedSamples"]')
         generated_samples.fill("200")
         modal.get_by_role("button", name=re.compile(r"^6\s+Summary")).click()
         summary = modal.locator(".wizard-summary")
-        expect(summary.locator(".wizard-summary-row").filter(has_text="Dataset")).to_contain_text(
-            "Synthetic Data"
-        )
+        expect(
+            summary.locator(".wizard-summary-row").filter(has_text="Dataset")
+        ).to_contain_text("Synthetic Data")
         expect(
             summary.locator(".wizard-summary-row").filter(has_text="Generated Samples")
         ).to_contain_text("200")
@@ -520,9 +534,12 @@ class TestTrainingWizardFlow:
         start_requests: list[str] = []
         page.on(
             "request",
-            lambda request: start_requests.append(request.url)
-            if request.method == "POST" and request.url.endswith("/api/training/start")
-            else None,
+            lambda request: (
+                start_requests.append(request.url)
+                if request.method == "POST"
+                and request.url.endswith("/api/training/start")
+                else None
+            ),
         )
         modal = _open_stored_training_wizard(page, base_url)
         modal.locator('input[name="explorationRate"]').fill("0.2")
@@ -543,13 +560,15 @@ class TestTrainingWizardFlow:
         request_order: list[str] = []
         page.on(
             "request",
-            lambda request: request_order.append("validate")
-            if request.method == "POST"
-            and request.url.endswith("/api/training/validate")
-            else request_order.append("start")
-            if request.method == "POST"
-            and request.url.endswith("/api/training/start")
-            else None,
+            lambda request: (
+                request_order.append("validate")
+                if request.method == "POST"
+                and request.url.endswith("/api/training/validate")
+                else request_order.append("start")
+                if request.method == "POST"
+                and request.url.endswith("/api/training/start")
+                else None
+            ),
         )
         modal = _open_stored_training_wizard(page, base_url)
         modal.get_by_role("button", name=re.compile(r"^5\s+Session")).click()
@@ -571,11 +590,15 @@ class TestTrainingWizardFlow:
         request_order: list[str] = []
         page.on(
             "request",
-            lambda request: request_order.append("validate")
-            if request.method == "POST" and request.url.endswith("/api/training/validate")
-            else request_order.append("start")
-            if request.method == "POST" and request.url.endswith("/api/training/start")
-            else None,
+            lambda request: (
+                request_order.append("validate")
+                if request.method == "POST"
+                and request.url.endswith("/api/training/validate")
+                else request_order.append("start")
+                if request.method == "POST"
+                and request.url.endswith("/api/training/start")
+                else None
+            ),
         )
 
         def fulfill_start(route) -> None:
@@ -598,7 +621,9 @@ class TestTrainingWizardFlow:
         modal.get_by_role("button", name=re.compile(r"^6\s+Summary")).click()
         modal.locator('input[name="checkpointName"]').fill("browser_order_check")
 
-        with page.expect_response("**/api/training/validate") as validation_response_info:
+        with page.expect_response(
+            "**/api/training/validate"
+        ) as validation_response_info:
             with page.expect_request("**/api/training/start") as start_request_info:
                 modal.get_by_role("button", name="Confirm", exact=True).click()
 
@@ -636,8 +661,10 @@ class TestInferencePage:
             page.locator("#inference-bet-amount").fill("10")
 
             with page.expect_response(
-                lambda response: response.request.method == "POST"
-                and response.url.endswith("/api/inference/sessions/start"),
+                lambda response: (
+                    response.request.method == "POST"
+                    and response.url.endswith("/api/inference/sessions/start")
+                ),
                 timeout=60_000,
             ) as start_info:
                 page.get_by_role("button", name="Play", exact=True).click()
@@ -662,9 +689,11 @@ class TestInferencePage:
             ):
                 observed_field.fill(invalid_value)
                 with page.expect_response(
-                    lambda response: response.request.method == "POST"
-                    and response.url.endswith(
-                        f"/api/inference/sessions/{created_session_id}/step"
+                    lambda response: (
+                        response.request.method == "POST"
+                        and response.url.endswith(
+                            f"/api/inference/sessions/{created_session_id}/step"
+                        )
                     )
                 ) as rejection_info:
                     row.get_by_role("button", name="Confirm observed").click()
@@ -689,9 +718,11 @@ class TestInferencePage:
             assert prediction_match is not None
             observed_field.fill(prediction_match.group(1))
             with page.expect_response(
-                lambda response: response.request.method == "POST"
-                and response.url.endswith(
-                    f"/api/inference/sessions/{created_session_id}/step"
+                lambda response: (
+                    response.request.method == "POST"
+                    and response.url.endswith(
+                        f"/api/inference/sessions/{created_session_id}/step"
+                    )
                 )
             ) as recovery_info:
                 row.get_by_role("button", name="Confirm observed").click()
@@ -732,9 +763,9 @@ class TestInferencePage:
         page.on("pageerror", lambda error: page_errors.append(str(error)))
         page.on(
             "console",
-            lambda message: console_errors.append(message.text)
-            if message.type == "error"
-            else None,
+            lambda message: (
+                console_errors.append(message.text) if message.type == "error" else None
+            ),
         )
         page.on(
             "requestfailed",
@@ -744,23 +775,20 @@ class TestInferencePage:
         )
         page.on(
             "response",
-            lambda response: failed_responses.append(
-                f"{response.status} {response.url}"
-            )
-            if response.status >= 400
-            else None,
+            lambda response: (
+                failed_responses.append(f"{response.status} {response.url}")
+                if response.status >= 400
+                else None
+            ),
         )
 
         def is_session_start(response) -> bool:
-            return (
-                response.request.method == "POST"
-                and response.url.endswith("/api/inference/sessions/start")
+            return response.request.method == "POST" and response.url.endswith(
+                "/api/inference/sessions/start"
             )
 
         def session_snapshot(session_id: str) -> dict:
-            response = api_context.get(
-                f"/api/inference/sessions/{session_id}"
-            )
+            response = api_context.get(f"/api/inference/sessions/{session_id}")
             assert response.status == 200, (
                 f"Expected session snapshot 200, got {response.status}: "
                 f"{response.text()}"
@@ -768,12 +796,9 @@ class TestInferencePage:
             return response.json()
 
         def assert_session_closed(session_id: str) -> None:
-            response = api_context.post(
-                f"/api/inference/sessions/{session_id}/next"
-            )
+            response = api_context.post(f"/api/inference/sessions/{session_id}/next")
             assert response.status == 404, (
-                f"Expected closed session 404, got {response.status}: "
-                f"{response.text()}"
+                f"Expected closed session 404, got {response.status}: {response.text()}"
             )
 
         def assert_ui_step_matches_snapshot(row, step: dict) -> None:
@@ -811,14 +836,14 @@ class TestInferencePage:
             first_field = page.get_by_label("Observed value for step 1")
             first_field.fill(str(original_outcome))
             with page.expect_response(
-                lambda response: response.request.method == "POST"
-                and response.url.endswith(
-                    f"/api/inference/sessions/{current_session_id}/step"
+                lambda response: (
+                    response.request.method == "POST"
+                    and response.url.endswith(
+                        f"/api/inference/sessions/{current_session_id}/step"
+                    )
                 )
             ) as first_step_info:
-                first_row.get_by_role(
-                    "button", name="Confirm observed"
-                ).click()
+                first_row.get_by_role("button", name="Confirm observed").click()
             assert first_step_info.value.status == 200
             expect(first_field).to_be_disabled()
             original_first_reward = int(
@@ -828,9 +853,7 @@ class TestInferencePage:
 
             expect(rows).to_have_count(3)
             second_row = rows.nth(2)
-            second_prediction_text = (
-                second_row.get_by_role("cell").nth(1).inner_text()
-            )
+            second_prediction_text = second_row.get_by_role("cell").nth(1).inner_text()
             second_prediction_match = re.search(
                 r"Bet on number (\d+)", second_prediction_text
             )
@@ -840,14 +863,14 @@ class TestInferencePage:
             second_field = page.get_by_label("Observed value for step 2")
             second_field.fill(str(second_outcome))
             with page.expect_response(
-                lambda response: response.request.method == "POST"
-                and response.url.endswith(
-                    f"/api/inference/sessions/{current_session_id}/step"
+                lambda response: (
+                    response.request.method == "POST"
+                    and response.url.endswith(
+                        f"/api/inference/sessions/{current_session_id}/step"
+                    )
                 )
             ) as second_step_info:
-                second_row.get_by_role(
-                    "button", name="Confirm observed"
-                ).click()
+                second_row.get_by_role("button", name="Confirm observed").click()
             assert second_step_info.value.status == 200
             expect(second_field).to_be_disabled()
             second_row.get_by_role("button", name="Next prediction").click()
@@ -863,10 +886,10 @@ class TestInferencePage:
             first_row.get_by_role("button", name="Modify observed").click()
             first_field = page.get_by_label("Observed value for step 1")
             first_field.fill(str(predicted_number))
-            with page.expect_response(is_session_start, timeout=60_000) as correction_info:
-                first_row.get_by_role(
-                    "button", name="Confirm observed"
-                ).click()
+            with page.expect_response(
+                is_session_start, timeout=60_000
+            ) as correction_info:
+                first_row.get_by_role("button", name="Confirm observed").click()
             correction_response = correction_info.value
             assert correction_response.status == 200, correction_response.text()
             correction_request = correction_response.request
@@ -892,9 +915,10 @@ class TestInferencePage:
                 None,
             ]
             assert corrected_steps[0]["reward"] != original_first_reward
-            assert corrected_snapshot["current_capital"] == corrected_steps[1][
-                "capital_after"
-            ]
+            assert (
+                corrected_snapshot["current_capital"]
+                == corrected_steps[1]["capital_after"]
+            )
             first_row = rows.nth(1)
             second_row = rows.nth(2)
             expect(page.get_by_label("Observed value for step 1")).to_have_value(
@@ -950,12 +974,8 @@ class TestInferencePage:
         finally:
             # Close sessions but preserve persisted rows as audit evidence.
             for session_id in reversed(created_session_ids):
-                api_context.post(
-                    f"/api/inference/sessions/{session_id}/shutdown"
-                )
-                api_context.post(
-                    f"/api/inference/sessions/{session_id}/rows/clear"
-                )
+                api_context.post(f"/api/inference/sessions/{session_id}/shutdown")
+                api_context.post(f"/api/inference/sessions/{session_id}/rows/clear")
 
     # -------------------------------------------------------------------------
     def test_failed_history_replay_keeps_previous_session_active(
@@ -979,9 +999,9 @@ class TestInferencePage:
         page.on("pageerror", lambda error: page_errors.append(str(error)))
         page.on(
             "console",
-            lambda message: console_errors.append(message.text)
-            if message.type == "error"
-            else None,
+            lambda message: (
+                console_errors.append(message.text) if message.type == "error" else None
+            ),
         )
         page.on(
             "requestfailed",
@@ -991,17 +1011,16 @@ class TestInferencePage:
         )
         page.on(
             "response",
-            lambda response: failed_responses.append(
-                f"{response.status} {response.url}"
-            )
-            if response.status >= 400
-            else None,
+            lambda response: (
+                failed_responses.append(f"{response.status} {response.url}")
+                if response.status >= 400
+                else None
+            ),
         )
 
         def is_session_start(response) -> bool:
-            return (
-                response.request.method == "POST"
-                and response.url.endswith("/api/inference/sessions/start")
+            return response.request.method == "POST" and response.url.endswith(
+                "/api/inference/sessions/start"
             )
 
         def capture_replacement_start(route) -> None:
@@ -1067,12 +1086,9 @@ class TestInferencePage:
             return session_row[0], steps
 
         def assert_session_closed(session_id: str) -> None:
-            response = api_context.post(
-                f"/api/inference/sessions/{session_id}/next"
-            )
+            response = api_context.post(f"/api/inference/sessions/{session_id}/next")
             assert response.status == 404, (
-                f"Expected closed session 404, got {response.status}: "
-                f"{response.text()}"
+                f"Expected closed session 404, got {response.status}: {response.text()}"
             )
 
         def assert_ui_step_matches_snapshot(row, step: dict) -> None:
@@ -1110,14 +1126,14 @@ class TestInferencePage:
             first_field = page.get_by_label("Observed value for step 1")
             first_field.fill(str(original_outcome))
             with page.expect_response(
-                lambda response: response.request.method == "POST"
-                and response.url.endswith(
-                    f"/api/inference/sessions/{existing_session_id}/step"
+                lambda response: (
+                    response.request.method == "POST"
+                    and response.url.endswith(
+                        f"/api/inference/sessions/{existing_session_id}/step"
+                    )
                 )
             ) as first_step_info:
-                first_row.get_by_role(
-                    "button", name="Confirm observed"
-                ).click()
+                first_row.get_by_role("button", name="Confirm observed").click()
             assert first_step_info.value.status == 200
             first_row.get_by_role("button", name="Next prediction").click()
 
@@ -1133,14 +1149,14 @@ class TestInferencePage:
             second_field = page.get_by_label("Observed value for step 2")
             second_field.fill(str(second_outcome))
             with page.expect_response(
-                lambda response: response.request.method == "POST"
-                and response.url.endswith(
-                    f"/api/inference/sessions/{existing_session_id}/step"
+                lambda response: (
+                    response.request.method == "POST"
+                    and response.url.endswith(
+                        f"/api/inference/sessions/{existing_session_id}/step"
+                    )
                 )
             ) as second_step_info:
-                second_row.get_by_role(
-                    "button", name="Confirm observed"
-                ).click()
+                second_row.get_by_role("button", name="Confirm observed").click()
             assert second_step_info.value.status == 200
             second_row.get_by_role("button", name="Next prediction").click()
             expect(rows).to_have_count(4)
@@ -1156,17 +1172,19 @@ class TestInferencePage:
             first_field.fill(str(predicted_number))
             armed = True
             with (
-                page.expect_response(is_session_start, timeout=60_000) as replacement_info,
                 page.expect_response(
-                    lambda response: response.status == 503
-                    and response.request.method == "POST"
-                    and response.url.endswith("/step"),
+                    is_session_start, timeout=60_000
+                ) as replacement_info,
+                page.expect_response(
+                    lambda response: (
+                        response.status == 503
+                        and response.request.method == "POST"
+                        and response.url.endswith("/step")
+                    ),
                     timeout=60_000,
                 ) as failure_info,
             ):
-                first_row.get_by_role(
-                    "button", name="Confirm observed"
-                ).click()
+                first_row.get_by_role("button", name="Confirm observed").click()
 
             assert replacement_info.value.status == 200
             assert replacement_session_id == str(
@@ -1238,27 +1256,27 @@ class TestInferencePage:
             expect(page.get_by_label("Observed value for step 2")).to_have_value(
                 str(second_outcome)
             )
-            assert_ui_step_matches_snapshot(rows.nth(1), before_failure_snapshot["steps"][0])
-            assert_ui_step_matches_snapshot(rows.nth(2), before_failure_snapshot["steps"][1])
+            assert_ui_step_matches_snapshot(
+                rows.nth(1), before_failure_snapshot["steps"][0]
+            )
+            assert_ui_step_matches_snapshot(
+                rows.nth(2), before_failure_snapshot["steps"][1]
+            )
             expect(page.get_by_label("Observed value for step 3")).to_have_value("")
             assert page_errors == []
             assert len(console_errors) == 1
             assert "503 (Service Unavailable)" in console_errors[0]
             assert failed_requests == []
-            assert failed_responses == [
-                f"503 {failure_info.value.url}"
-            ]
+            assert failed_responses == [f"503 {failure_info.value.url}"]
         finally:
             for session_id in reversed(created_session_ids):
-                api_context.post(
-                    f"/api/inference/sessions/{session_id}/shutdown"
-                )
+                api_context.post(f"/api/inference/sessions/{session_id}/shutdown")
+
 
 ###############################################################################
 
 
 """Focused browser coverage for the optional in-app guidance system."""
-
 
 
 GUIDANCE_KEY = "fairs.guidance"
@@ -1318,9 +1336,10 @@ class TestGuidance:
         expect(tips).to_be_visible()
         media_track = tips.locator(".guidance-media-track")
         expect(media_track).to_be_visible()
-        assert media_track.evaluate(
-            "element => getComputedStyle(element).animationName"
-        ) == "none"
+        assert (
+            media_track.evaluate("element => getComputedStyle(element).animationName")
+            == "none"
+        )
         launch_button = tips.get_by_role("button", name="Show the Training walkthrough")
         expect(
             tips.locator(".guidance-tour-heading").get_by_role("button")
@@ -1389,9 +1408,10 @@ class TestGuidance:
         expect(tips.get_by_role("button", name="Close Tips & Tricks")).to_be_focused()
         media_track = tips.locator(".guidance-media-track")
         expect(media_track).to_be_visible()
-        assert media_track.evaluate(
-            "element => getComputedStyle(element).animationName"
-        ) == "none"
+        assert (
+            media_track.evaluate("element => getComputedStyle(element).animationName")
+            == "none"
+        )
 
         tips.get_by_role("button", name="Show the Inference loop").click()
         tour = page.get_by_role("dialog", name="Set up a session")
@@ -1424,16 +1444,16 @@ class TestSettingsPage:
     """The Settings screen should persist only its supported runtime fields."""
 
     # -------------------------------------------------------------------------
-    def test_settings_edit_reload_reset_and_navigation(
-        self, page: Page, base_url: str
-    ):
+    def test_settings_edit_reload_reset_and_navigation(self, page: Page, base_url: str):
         page.goto(f"{base_url}/settings")
         page.wait_for_load_state("networkidle")
 
-        expect(page.get_by_role("button", name="Roulette", exact=True)).to_have_attribute(
-            "aria-current", "page"
-        )
-        expect(page.get_by_role("heading", name="Roulette numbers", exact=True)).to_be_visible()
+        expect(
+            page.get_by_role("button", name="Roulette", exact=True)
+        ).to_have_attribute("aria-current", "page")
+        expect(
+            page.get_by_role("heading", name="Roulette numbers", exact=True)
+        ).to_be_visible()
         expect(page.get_by_role("link", name="Settings", exact=True)).to_have_attribute(
             "aria-current", "page"
         )
@@ -1453,7 +1473,9 @@ class TestSettingsPage:
         expect(include_zero).not_to_be_checked()
 
         page.get_by_role("button", name="Appearance", exact=True).click()
-        expect(page.get_by_role("heading", name="Roulette appearance", exact=True)).to_be_visible()
+        expect(
+            page.get_by_role("heading", name="Roulette appearance", exact=True)
+        ).to_be_visible()
         invert_colors = page.get_by_label("Invert colors", exact=True)
         show_number_labels = page.get_by_label("Show number labels", exact=True)
         expect(invert_colors).to_be_visible()
@@ -1464,7 +1486,9 @@ class TestSettingsPage:
         expect(page.get_by_role("status")).to_have_text("Changes saved.")
 
         page.get_by_role("button", name="Runtime", exact=True).click()
-        expect(page.get_by_role("heading", name="Training polling", exact=True)).to_be_visible()
+        expect(
+            page.get_by_role("heading", name="Training polling", exact=True)
+        ).to_be_visible()
         polling = page.get_by_label("Polling interval", exact=True)
         expect(polling).to_be_visible()
         polling.fill("2.5")
@@ -1479,7 +1503,9 @@ class TestSettingsPage:
         expect(polling).to_have_value("2.5")
 
         page.get_by_role("button", name="Advanced", exact=True).click()
-        expect(page.get_by_role("heading", name="JIT model construction", exact=True)).to_be_visible()
+        expect(
+            page.get_by_role("heading", name="JIT model construction", exact=True)
+        ).to_be_visible()
         jit_compile = page.get_by_label("Enable JIT compilation", exact=True)
         jit_backend = page.get_by_label("JIT backend", exact=True)
         expect(jit_compile).to_be_visible()
@@ -1497,7 +1523,9 @@ class TestSettingsPage:
         expect(jit_backend).to_have_value("eager")
 
         page.get_by_role("button", name="Reset to defaults", exact=True).click()
-        expect(page.get_by_text("Settings reset to defaults.", exact=True)).to_be_visible()
+        expect(
+            page.get_by_text("Settings reset to defaults.", exact=True)
+        ).to_be_visible()
         page.get_by_role("button", name="Runtime", exact=True).click()
         expect(polling).to_have_value("1")
         page.get_by_role("button", name="Roulette", exact=True).click()
@@ -1519,7 +1547,9 @@ class TestSettingsPage:
         page.get_by_role("link", name="Settings", exact=True).click()
         expect(page).to_have_url(f"{base_url}/settings")
 
-        assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
+        assert page.evaluate(
+            "document.documentElement.scrollWidth <= window.innerWidth"
+        )
 
     # -------------------------------------------------------------------------
     def test_roulette_range_validation_prevents_persistence(

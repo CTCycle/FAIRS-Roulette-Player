@@ -14,7 +14,6 @@ from server.common.utils.logger import logger
 
 ###############################################################################
 class DeviceConfig:
-
     # -------------------------------------------------------------------------
     def __init__(self, configuration: dict[str, Any]) -> None:
         self.configuration = configuration

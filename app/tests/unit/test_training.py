@@ -11,12 +11,20 @@ from server.contracts.training import TrainingConfig, ResumeConfig
 from server.learning.training.fitting import DQNTraining
 from pathlib import Path
 from unittest.mock import Mock
-from server.contracts.configuration import DeviceSettings, JobsSettings, RouletteSettings
+from server.contracts.configuration import (
+    DeviceSettings,
+    JobsSettings,
+    RouletteSettings,
+)
 from server.services.training_worker import process_target, run_training_process
 from server.services import training as training_module
 from server.services.training import TrainingService
 from threading import Event
-from server.services.training_run import TrainingRun, TrainingRunManager, default_training_stats
+from server.services.training_run import (
+    TrainingRun,
+    TrainingRunManager,
+    default_training_stats,
+)
 from server.common.roulette import ROULETTE_RUNTIME_ATTR, encode_roulette_series
 from server.services.training_data import TrainingDataService
 from pydantic import ValidationError
@@ -48,9 +56,11 @@ def test_training_and_resume_share_validation_environment_builder() -> None:
     trainer = DQNTraining(build_configuration())
     data = pd.DataFrame({"extraction": [index % 37 for index in range(100)]})
 
-    training_environment, validation_environment, state_size = trainer._build_environments(
-        data,
-        "checkpoint",
+    training_environment, validation_environment, state_size = (
+        trainer._build_environments(
+            data,
+            "checkpoint",
+        )
     )
 
     assert state_size == 8
@@ -261,14 +271,14 @@ def test_resume_training_starts_resume_job() -> None:
 
 
 ###############################################################################
-def test_resume_training_rejects_an_active_training_job_before_checkpoint_load() -> None:
+def test_resume_training_rejects_an_active_training_job_before_checkpoint_load() -> (
+    None
+):
     service, training_run_manager, checkpoint_service = build_service()
     training_run_manager.is_job_running.return_value = True
 
     with pytest.raises(RuntimeError, match="Training is already in progress"):
-        service.resume_training(
-            ResumeConfig(checkpoint="cp1", additional_episodes=1)
-        )
+        service.resume_training(ResumeConfig(checkpoint="cp1", additional_episodes=1))
 
     checkpoint_service.resolve_existing_checkpoint.assert_not_called()
     training_run_manager.start_job.assert_not_called()
@@ -305,10 +315,8 @@ def test_get_and_delete_job_contracts() -> None:
 def test_training_worker_receives_explicit_runtime_dependencies(monkeypatch) -> None:
     started: dict[str, object] = {}
 
-
     ###############################################################################
     class FakeWorker:
-
         # -------------------------------------------------------------------------
         def start(self, target, kwargs) -> None:
             started["target"] = target
@@ -541,10 +549,8 @@ def test_manager_shutdown_force_terminates_an_unresponsive_worker() -> None:
     manager = TrainingRunManager()
     runner_started = Event()
 
-
     ###############################################################################
     class FakeWorker:
-
         # -------------------------------------------------------------------------
         def __init__(self) -> None:
             self.alive = True
@@ -586,10 +592,8 @@ def test_manager_shutdown_force_terminates_an_unresponsive_worker() -> None:
 def test_terminal_jobs_release_thread_and_worker_references() -> None:
     manager = TrainingRunManager()
 
-
     ###############################################################################
     class Worker:
-
         # -------------------------------------------------------------------------
         def __init__(self) -> None:
             self.stopped = False

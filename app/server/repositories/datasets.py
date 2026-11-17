@@ -30,7 +30,6 @@ def normalize_dataset_name(value: str) -> str:
 
 ###############################################################################
 class DatasetRepository:
-
     # -------------------------------------------------------------------------
     def __init__(self, database: FAIRSDatabase) -> None:
         self.database = database

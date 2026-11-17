@@ -13,12 +13,24 @@ from uuid import uuid4
 from playwright.sync_api import Page, expect, APIRequestContext
 from server.common import path as shared_paths
 from server.common.constants import MAX_UPLOAD_SIZE_BYTES
-from test_inference_workflows import get_session_snapshot, require_checkpoint, require_dataset_id, start_inference_session
-from test_training_api import MINIMAL_TRAINING_CONFIG, VAL08_STORED_CPU_CONFIG, VAL10_LONG_STORED_CPU_CONFIG, assert_training_idle, incomplete_checkpoint_workspaces, wait_for_job_completion, wait_for_training_running, wait_for_training_stopped
+from test_inference_workflows import (
+    get_session_snapshot,
+    require_checkpoint,
+    require_dataset_id,
+    start_inference_session,
+)
+from test_training_api import (
+    MINIMAL_TRAINING_CONFIG,
+    VAL08_STORED_CPU_CONFIG,
+    VAL10_LONG_STORED_CPU_CONFIG,
+    assert_training_idle,
+    incomplete_checkpoint_workspaces,
+    wait_for_job_completion,
+    wait_for_training_running,
+    wait_for_training_stopped,
+)
 
 """Current-revision desktop evidence for the Training, Inference, and Settings pages."""
-
-
 
 
 QA_ROOT = Path(__file__).resolve().parents[3] / "assets" / "QA"
@@ -57,9 +69,9 @@ def test_desktop_page_views_and_minimum_width_boundary(page: Page, base_url: str
     page.on("pageerror", lambda error: page_errors.append(str(error)))
     page.on(
         "console",
-        lambda message: console_errors.append(message.text)
-        if message.type == "error"
-        else None,
+        lambda message: (
+            console_errors.append(message.text) if message.type == "error" else None
+        ),
     )
     page.on(
         "requestfailed",
@@ -69,11 +81,11 @@ def test_desktop_page_views_and_minimum_width_boundary(page: Page, base_url: str
     )
     page.on(
         "response",
-        lambda response: failed_responses.append(
-            f"{response.status} {response.url}"
-        )
-        if response.status >= 400
-        else None,
+        lambda response: (
+            failed_responses.append(f"{response.status} {response.url}")
+            if response.status >= 400
+            else None
+        ),
     )
 
     routes = (
@@ -112,7 +124,9 @@ def test_desktop_page_views_and_minimum_width_boundary(page: Page, base_url: str
         for route, heading, image_prefix, controls in routes:
             page.goto(f"{base_url}/{route}")
             page.wait_for_load_state("networkidle")
-            expect(page.get_by_role("heading", name=heading, exact=True)).to_be_visible()
+            expect(
+                page.get_by_role("heading", name=heading, exact=True)
+            ).to_be_visible()
             for role, name in controls:
                 expect(page.get_by_role(role, name=name, exact=True)).to_be_visible()
             if route == "inference":
@@ -123,10 +137,15 @@ def test_desktop_page_views_and_minimum_width_boundary(page: Page, base_url: str
     page.set_viewport_size({"width": 800, "height": 800})
     page.goto(f"{base_url}/inference")
     page.wait_for_load_state("networkidle")
-    expect(page.get_by_role("heading", name="Session History", exact=True)).to_be_visible()
-    assert page.evaluate(
-        "document.querySelector('.main-layout').getBoundingClientRect().width"
-    ) <= 800
+    expect(
+        page.get_by_role("heading", name="Session History", exact=True)
+    ).to_be_visible()
+    assert (
+        page.evaluate(
+            "document.querySelector('.main-layout').getBoundingClientRect().width"
+        )
+        <= 800
+    )
     _capture(page, "val17-inference-narrow-800x800.png")
 
     assert page_errors == []
@@ -146,9 +165,9 @@ def test_training_setup_and_active_monitor_render(page: Page, base_url: str):
     page.on("pageerror", lambda error: page_errors.append(str(error)))
     page.on(
         "console",
-        lambda message: console_errors.append(message.text)
-        if message.type == "error"
-        else None,
+        lambda message: (
+            console_errors.append(message.text) if message.type == "error" else None
+        ),
     )
     page.on(
         "requestfailed",
@@ -158,11 +177,11 @@ def test_training_setup_and_active_monitor_render(page: Page, base_url: str):
     )
     page.on(
         "response",
-        lambda response: failed_responses.append(
-            f"{response.status} {response.url}"
-        )
-        if response.status >= 400
-        else None,
+        lambda response: (
+            failed_responses.append(f"{response.status} {response.url}")
+            if response.status >= 400
+            else None
+        ),
     )
 
     page.set_viewport_size({"width": 1440, "height": 900})
@@ -214,8 +233,10 @@ def test_training_setup_and_active_monitor_render(page: Page, base_url: str):
 
     try:
         with page.expect_response(
-            lambda response: response.request.method == "POST"
-            and response.url.endswith("/api/training/start"),
+            lambda response: (
+                response.request.method == "POST"
+                and response.url.endswith("/api/training/start")
+            ),
             timeout=60_000,
         ) as start_info:
             wizard.get_by_role("button", name="Confirm", exact=True).click()
@@ -258,9 +279,9 @@ def test_inference_active_session_render(page: Page, base_url: str):
     page.on("pageerror", lambda error: page_errors.append(str(error)))
     page.on(
         "console",
-        lambda message: console_errors.append(message.text)
-        if message.type == "error"
-        else None,
+        lambda message: (
+            console_errors.append(message.text) if message.type == "error" else None
+        ),
     )
     page.on(
         "requestfailed",
@@ -270,11 +291,11 @@ def test_inference_active_session_render(page: Page, base_url: str):
     )
     page.on(
         "response",
-        lambda response: failed_responses.append(
-            f"{response.status} {response.url}"
-        )
-        if response.status >= 400
-        else None,
+        lambda response: (
+            failed_responses.append(f"{response.status} {response.url}")
+            if response.status >= 400
+            else None
+        ),
     )
 
     page.set_viewport_size({"width": 1440, "height": 900})
@@ -294,8 +315,10 @@ def test_inference_active_session_render(page: Page, base_url: str):
             )
 
         with page.expect_response(
-            lambda response: response.request.method == "POST"
-            and response.url.endswith("/api/inference/sessions/start"),
+            lambda response: (
+                response.request.method == "POST"
+                and response.url.endswith("/api/inference/sessions/start")
+            ),
             timeout=60_000,
         ) as start_info:
             page.get_by_role("button", name="Play", exact=True).click()
@@ -306,7 +329,9 @@ def test_inference_active_session_render(page: Page, base_url: str):
         prediction_text = rows.nth(1).get_by_role("cell").nth(1).inner_text()
         assert re.fullmatch(r"Bet on number \d+", prediction_text)
         expect(page.get_by_role("button", name="Stop", exact=True)).to_be_enabled()
-        expect(page.get_by_role("heading", name="Session History", exact=True)).to_be_visible()
+        expect(
+            page.get_by_role("heading", name="Session History", exact=True)
+        ).to_be_visible()
         _capture(page, "val17-inference-active-1440x900.png")
     finally:
         stop_button = page.get_by_role("button", name="Stop", exact=True)
@@ -401,9 +426,7 @@ def test_malformed_requests_are_4xx_and_leave_api_healthy(
             headers={"Content-Type": "application/json"},
         ),
         lambda: api_context.post("/api/training/validate", data={}),
-        lambda: api_context.post(
-            "/api/training/start", data={"episodes": "many"}
-        ),
+        lambda: api_context.post("/api/training/start", data={"episodes": "many"}),
         lambda: api_context.post("/api/inference/sessions/start", data={}),
         lambda: api_context.post(
             "/api/inference/sessions/not-a-live-session/step",
@@ -457,9 +480,7 @@ def test_rejected_settings_patches_preserve_file_and_recover(
     restored = api_context.patch(
         "/api/settings",
         data={
-            "jobs": {
-                "polling_interval": before_settings["jobs"]["polling_interval"]
-            }
+            "jobs": {"polling_interval": before_settings["jobs"]["polling_interval"]}
         },
     )
     assert restored.status == 200, restored.text()
@@ -634,9 +655,7 @@ def test_failed_uploads_are_transactional_and_valid_upload_recovers(
             dataset.get("dataset_id") == dataset_id
             for dataset in remaining.json().get("datasets", [])
         ):
-            cleanup = api_context.delete(
-                f"/api/datasets/training/{dataset_id}"
-            )
+            cleanup = api_context.delete(f"/api/datasets/training/{dataset_id}")
             assert cleanup.status == 200, cleanup.text()
 
     assert _dataset_state() == before_state
@@ -921,14 +940,16 @@ def test_repeated_inference_cycles_do_not_leak_session_state(
                 f"/api/inference/sessions/{previous_session_id}/shutdown"
             )
             assert old_shutdown.status == 200, old_shutdown.text()
-            assert api_context.post(
-                f"/api/inference/sessions/{previous_session_id}/next"
-            ).status == 404
+            assert (
+                api_context.post(
+                    f"/api/inference/sessions/{previous_session_id}/next"
+                ).status
+                == 404
+            )
             corrected_snapshot = get_session_snapshot(api_context, current_session_id)
             assert corrected_snapshot["step_count"] == 2
             assert [
-                step["observed_outcome_id"]
-                for step in corrected_snapshot["steps"]
+                step["observed_outcome_id"] for step in corrected_snapshot["steps"]
             ] == [corrected_outcome, second_outcome]
 
             removed = _start_replacement_session(
@@ -957,14 +978,16 @@ def test_repeated_inference_cycles_do_not_leak_session_state(
                 f"/api/inference/sessions/{previous_session_id}/shutdown"
             )
             assert old_shutdown.status == 200, old_shutdown.text()
-            assert api_context.post(
-                f"/api/inference/sessions/{previous_session_id}/next"
-            ).status == 404
+            assert (
+                api_context.post(
+                    f"/api/inference/sessions/{previous_session_id}/next"
+                ).status
+                == 404
+            )
             removed_snapshot = get_session_snapshot(api_context, current_session_id)
             assert removed_snapshot["step_count"] == 1
             assert [
-                step["observed_outcome_id"]
-                for step in removed_snapshot["steps"]
+                step["observed_outcome_id"] for step in removed_snapshot["steps"]
             ] == [corrected_outcome]
         finally:
             for created_session_id in reversed(cycle_session_ids):
@@ -980,9 +1003,7 @@ def test_repeated_inference_cycles_do_not_leak_session_state(
                 f"/api/inference/sessions/{created_session_id}/rows/clear"
             )
             assert clear.status == 200, clear.text()
-            with sqlite3.connect(
-                shared_paths.DATABASE_PATH, timeout=5.0
-            ) as connection:
+            with sqlite3.connect(shared_paths.DATABASE_PATH, timeout=5.0) as connection:
                 remaining_steps = connection.execute(
                     "SELECT COUNT(*) FROM inference_session_steps WHERE session_id = ?",
                     (created_session_id,),
@@ -1062,9 +1083,7 @@ def test_repeated_settings_writes_remain_parseable_and_leave_no_temp_files(
         restore = api_context.patch(
             "/api/settings",
             data={
-                "jobs": {
-                    "polling_interval": before["jobs"]["polling_interval"]
-                },
+                "jobs": {"polling_interval": before["jobs"]["polling_interval"]},
                 "device": before["device"],
             },
         )
@@ -1113,18 +1132,12 @@ def test_repeated_training_cancellation_returns_to_idle_and_recovers(
                 api_context.get("/api/training/status").json()
             )
 
-            cancelled = api_context.delete(
-                f"/api/training/jobs/{job_id}"
-            )
+            cancelled = api_context.delete(f"/api/training/jobs/{job_id}")
             assert cancelled.status == 200, cancelled.text()
-            terminal = wait_for_job_completion(
-                api_context, job_id, timeout=45.0
-            )
+            terminal = wait_for_job_completion(api_context, job_id, timeout=45.0)
             assert terminal.get("status") == "cancelled", terminal
             assert_training_idle(api_context)
-            assert checkpoint not in api_context.get(
-                "/api/training/checkpoints"
-            ).json()
+            assert checkpoint not in api_context.get("/api/training/checkpoints").json()
             assert incomplete_checkpoint_workspaces(checkpoint) == []
 
             recovery = api_context.post(
@@ -1139,9 +1152,10 @@ def test_repeated_training_cancellation_returns_to_idle_and_recovers(
             )
             assert recovered.get("status") == "completed", recovered
             assert_training_idle(api_context)
-            assert recovery_checkpoint in api_context.get(
-                "/api/training/checkpoints"
-            ).json()
+            assert (
+                recovery_checkpoint
+                in api_context.get("/api/training/checkpoints").json()
+            )
             cycle_durations.append(time.perf_counter() - started_at)
 
             delete = api_context.delete(
@@ -1149,7 +1163,9 @@ def test_repeated_training_cancellation_returns_to_idle_and_recovers(
             )
             assert delete.status == 200, delete.text()
 
-        assert api_context.get("/api/training/checkpoints").json() == baseline_checkpoints
+        assert (
+            api_context.get("/api/training/checkpoints").json() == baseline_checkpoints
+        )
         assert _training_staging_directories() == baseline_staging
         assert not api_context.get("/api/training/status").json()["is_training"]
     finally:

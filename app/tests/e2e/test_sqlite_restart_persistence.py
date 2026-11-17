@@ -123,15 +123,15 @@ def _wait_until_ready(
                 f"Isolated backend exited with {process.returncode}:\n{_log_tail(log_path)}"
             )
         try:
-            response = httpx.get(
-                f"{base_url}/api/health", timeout=2, trust_env=False
-            )
+            response = httpx.get(f"{base_url}/api/health", timeout=2, trust_env=False)
             if response.status_code == 200:
                 return
         except httpx.HTTPError:
             pass
         time.sleep(0.25)
-    raise TimeoutError(f"Isolated backend did not become healthy:\n{_log_tail(log_path)}")
+    raise TimeoutError(
+        f"Isolated backend did not become healthy:\n{_log_tail(log_path)}"
+    )
 
 
 ###############################################################################
@@ -192,9 +192,7 @@ def _running_backend(
 
 ###############################################################################
 @contextmanager
-def _running_frontend(
-    backend_port: int, ui_port: int, log_path: Path
-) -> Iterator[str]:
+def _running_frontend(backend_port: int, ui_port: int, log_path: Path) -> Iterator[str]:
     node_binary = PROJECT_ROOT / "runtimes" / "nodejs" / "node.exe"
     vite_entry = APP_ROOT / "client" / "node_modules" / "vite" / "bin" / "vite.js"
     if not node_binary.is_file() or not vite_entry.is_file():
@@ -312,11 +310,11 @@ def _copy_inference_restart_fixture(data_root: Path) -> Path:
     finally:
         database.dispose()
 
-    checkpoint_source = (
-        source_data / "checkpoints" / "val00_lineage_20260921"
-    )
+    checkpoint_source = source_data / "checkpoints" / "val00_lineage_20260921"
     if not checkpoint_source.is_dir():
-        raise FileNotFoundError(f"Required VAL-00 checkpoint is missing: {checkpoint_source}")
+        raise FileNotFoundError(
+            f"Required VAL-00 checkpoint is missing: {checkpoint_source}"
+        )
     shutil.copytree(
         checkpoint_source,
         data_root / "checkpoints" / checkpoint_source.name,
@@ -447,9 +445,9 @@ def test_inference_session_recovers_live_and_expires_after_backend_restart(
     page.on("pageerror", lambda error: page_errors.append(str(error)))
     page.on(
         "console",
-        lambda message: console_errors.append(message.text)
-        if message.type == "error"
-        else None,
+        lambda message: (
+            console_errors.append(message.text) if message.type == "error" else None
+        ),
     )
     page.on(
         "requestfailed",
@@ -459,11 +457,11 @@ def test_inference_session_recovers_live_and_expires_after_backend_restart(
     )
     page.on(
         "response",
-        lambda response: failed_responses.append(
-            f"{response.status} {response.url}"
-        )
-        if response.status >= 400
-        else None,
+        lambda response: (
+            failed_responses.append(f"{response.status} {response.url}")
+            if response.status >= 400
+            else None
+        ),
     )
 
     with _running_frontend(backend_port, ui_port, frontend_log) as frontend_url:
@@ -484,8 +482,10 @@ def test_inference_session_recovers_live_and_expires_after_backend_restart(
             page.locator("#inference-bet-amount").fill("10")
 
             with page.expect_response(
-                lambda response: response.request.method == "POST"
-                and response.url.endswith("/api/inference/sessions/start"),
+                lambda response: (
+                    response.request.method == "POST"
+                    and response.url.endswith("/api/inference/sessions/start")
+                ),
                 timeout=90_000,
             ) as start_info:
                 page.get_by_role("button", name="Play", exact=True).click()
@@ -501,13 +501,13 @@ def test_inference_session_recovers_live_and_expires_after_backend_restart(
             assert prediction_match is not None, prediction_text
             predicted_number = int(prediction_match.group(1))
             observed_outcome = (predicted_number + 1) % 37
-            page.get_by_label("Observed value for step 1").fill(
-                str(observed_outcome)
-            )
+            page.get_by_label("Observed value for step 1").fill(str(observed_outcome))
             with page.expect_response(
-                lambda response: response.request.method == "POST"
-                and response.url.endswith(
-                    f"/api/inference/sessions/{session_id}/step"
+                lambda response: (
+                    response.request.method == "POST"
+                    and response.url.endswith(
+                        f"/api/inference/sessions/{session_id}/step"
+                    )
                 )
             ) as step_info:
                 first_row.get_by_role("button", name="Confirm observed").click()
@@ -520,7 +520,9 @@ def test_inference_session_recovers_live_and_expires_after_backend_restart(
             original_snapshot = snapshot_response.json()
             assert original_snapshot["step_count"] == 1
             assert original_snapshot["prediction_pending"] is True
-            assert [step["observed_outcome_id"] for step in original_snapshot["steps"]] == [
+            assert [
+                step["observed_outcome_id"] for step in original_snapshot["steps"]
+            ] == [
                 observed_outcome,
                 None,
             ]
@@ -580,9 +582,12 @@ def test_inference_session_recovers_live_and_expires_after_backend_restart(
             page.wait_for_function(
                 "window.localStorage.getItem('fairs.roulette.inference-session.v1') === null"
             )
-            assert page.evaluate(
-                "window.localStorage.getItem('fairs.roulette.inference-session.v1')"
-            ) is None
+            assert (
+                page.evaluate(
+                    "window.localStorage.getItem('fairs.roulette.inference-session.v1')"
+                )
+                is None
+            )
             page.screenshot(
                 path=str(
                     PROJECT_ROOT
@@ -598,8 +603,10 @@ def test_inference_session_recovers_live_and_expires_after_backend_restart(
             )
             page.locator("#inference-dataset").select_option("5")
             with page.expect_response(
-                lambda response: response.request.method == "POST"
-                and response.url.endswith("/api/inference/sessions/start"),
+                lambda response: (
+                    response.request.method == "POST"
+                    and response.url.endswith("/api/inference/sessions/start")
+                ),
                 timeout=90_000,
             ) as fresh_start_info:
                 page.get_by_role("button", name="Play", exact=True).click()
@@ -627,8 +634,7 @@ def test_inference_session_recovers_live_and_expires_after_backend_restart(
         if result != f"404 {expected_expired_session_url}"
     ]
     expected_404_console_message = (
-        "Failed to load resource: the server responded with a status of 404 "
-        "(Not Found)"
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
     )
     expected_reload_cancellations = [
         request
@@ -636,7 +642,9 @@ def test_inference_session_recovers_live_and_expires_after_backend_restart(
         if request.startswith("GET ") and request.endswith(": net::ERR_ABORTED")
     ]
     unexpected_failed_requests = [
-        request for request in failed_requests if request not in expected_reload_cancellations
+        request
+        for request in failed_requests
+        if request not in expected_reload_cancellations
     ]
     assert page_errors == []
     assert console_errors == [expected_404_console_message]

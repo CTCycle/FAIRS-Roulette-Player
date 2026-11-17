@@ -27,9 +27,7 @@ def load_dataset_summary_entry(
 
 
 ###############################################################################
-def delete_uploaded_dataset(
-    api_context: APIRequestContext, dataset_id: int
-) -> None:
+def delete_uploaded_dataset(api_context: APIRequestContext, dataset_id: int) -> None:
     response = api_context.delete(f"/api/datasets/training/{dataset_id}")
     assert response.ok, f"Expected 200, got {response.status}: {response.text()}"
     assert load_dataset_summary_entry(api_context, dataset_id) is None
@@ -85,7 +83,9 @@ class TestDataUploadEndpoint:
                 },
             )
 
-            assert response.ok, f"Expected 200, got {response.status}: {response.text()}"
+            assert response.ok, (
+                f"Expected 200, got {response.status}: {response.text()}"
+            )
             data = response.json()
             dataset_id = data.get("dataset_id")
             assert isinstance(dataset_id, int)
@@ -171,9 +171,7 @@ class TestDataUploadEdgeCases:
         assert "No valid roulette" in response.json()["detail"]
 
     # -------------------------------------------------------------------------
-    def test_upload_oversized_file_returns_413(
-        self, api_context: APIRequestContext
-    ):
+    def test_upload_oversized_file_returns_413(self, api_context: APIRequestContext):
         response = api_context.post(
             "/api/data/upload?dataset_kind=training",
             multipart={
@@ -270,7 +268,9 @@ class TestDataUploadEdgeCases:
                     }
                 },
             )
-            assert response.ok, f"Expected 200, got {response.status}: {response.text()}"
+            assert response.ok, (
+                f"Expected 200, got {response.status}: {response.text()}"
+            )
             data = response.json()
             dataset_id = data.get("dataset_id")
             assert data["dataset_name"] == dataset_name
@@ -304,7 +304,9 @@ class TestDataUploadEdgeCases:
                     }
                 },
             )
-            assert response.ok, f"Expected 200, got {response.status}: {response.text()}"
+            assert response.ok, (
+                f"Expected 200, got {response.status}: {response.text()}"
+            )
             payload = response.json()
             dataset_id = payload.get("dataset_id")
             assert isinstance(dataset_id, int) and dataset_id > 0
@@ -378,7 +380,6 @@ class TestDataUploadEdgeCases:
 """
 E2E tests for dataset removal via database endpoints.
 """
-
 
 
 DATASET_NAME = "e2e_dataset_delete"

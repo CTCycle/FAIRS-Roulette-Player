@@ -16,7 +16,6 @@ from server.common.constants import PAD_VALUE
     package="CustomLayers", name="RouletteEmbedding"
 )
 class RouletteEmbedding(keras.layers.Layer):
-
     # -------------------------------------------------------------------------
     def __init__(
         self,

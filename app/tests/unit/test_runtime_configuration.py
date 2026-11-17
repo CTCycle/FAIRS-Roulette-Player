@@ -11,7 +11,10 @@ import server.configurations.database_config as database_config
 import importlib
 from pathlib import Path
 from server.common import path as shared_paths
-from server.configurations.database_config import DatabaseConfigurationError, DatabaseConfigurationStore
+from server.configurations.database_config import (
+    DatabaseConfigurationError,
+    DatabaseConfigurationStore,
+)
 from server.contracts.database_configuration import DatabaseConfigurationInput
 from server.configurations import environment
 
@@ -45,7 +48,9 @@ def _store(
 
 
 ###############################################################################
-def test_default_config_is_database_only_and_atomic(tmp_path: Path, monkeypatch) -> None:
+def test_default_config_is_database_only_and_atomic(
+    tmp_path: Path, monkeypatch
+) -> None:
     env_path = tmp_path / ".env"
     env_path.write_text("APP_NAME=FAIRS\n", encoding="utf-8")
     monkeypatch.setattr(shared_paths, "DATABASE_PATH", tmp_path / "database.db")
@@ -64,7 +69,8 @@ def test_default_config_is_database_only_and_atomic(tmp_path: Path, monkeypatch)
 
 ###############################################################################
 def test_database_environment_values_are_ignored_and_scrubbed(
-    tmp_path: Path, monkeypatch,
+    tmp_path: Path,
+    monkeypatch,
 ) -> None:
     env_path = tmp_path / ".env"
     env_path.write_text(
@@ -189,7 +195,9 @@ def test_atomic_replace_failure_preserves_previous_database_config(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     store = _store(tmp_path)
-    first = DatabaseConfigurationInput(backend="sqlite", sqlite_path=str(tmp_path / "first.db"))
+    first = DatabaseConfigurationInput(
+        backend="sqlite", sqlite_path=str(tmp_path / "first.db")
+    )
     store.write(first)
     before = store.path.read_bytes()
     monkeypatch.setattr(
@@ -211,10 +219,13 @@ def test_atomic_replace_failure_preserves_previous_database_config(
 
 ###############################################################################
 def test_invalid_old_database_environment_values_do_not_block_default(
-    tmp_path: Path, monkeypatch,
+    tmp_path: Path,
+    monkeypatch,
 ) -> None:
     env_path = tmp_path / ".env"
-    env_path.write_text("EMBEDDED_DATABASE=false\nDATABASE_HOST=missing-parts\n", encoding="utf-8")
+    env_path.write_text(
+        "EMBEDDED_DATABASE=false\nDATABASE_HOST=missing-parts\n", encoding="utf-8"
+    )
     monkeypatch.setattr(shared_paths, "DATABASE_PATH", tmp_path / "database.db")
     store = _store(tmp_path)
 
@@ -361,7 +372,11 @@ def test_environment_does_not_load_database_connection_variables(
     env_path = tmp_path / ".env"
     _write_env(
         env_path,
-        ["FASTAPI_HOST=local", "DATABASE_HOST=legacy-host", "DATABASE_PASSWORD=legacy-secret"],
+        [
+            "FASTAPI_HOST=local",
+            "DATABASE_HOST=legacy-host",
+            "DATABASE_PASSWORD=legacy-secret",
+        ],
     )
     monkeypatch.setattr(environment.shared_paths, "ENV_FILE_PATH", env_path)
     monkeypatch.setenv("DATABASE_HOST", "process-host")

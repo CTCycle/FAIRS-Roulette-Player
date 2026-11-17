@@ -12,7 +12,15 @@ from alembic import command
 from alembic.config import Config
 from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine, inspect, text
-from server.repositories.database.initializer import ALEMBIC_CONFIG_PATH, run_migrations_on_engine, validate_database_metadata, DatabaseMigrationError, DatabaseRevisionError, DatabaseSchemaDriftError, initialize_database
+from server.repositories.database.initializer import (
+    ALEMBIC_CONFIG_PATH,
+    run_migrations_on_engine,
+    validate_database_metadata,
+    DatabaseMigrationError,
+    DatabaseRevisionError,
+    DatabaseSchemaDriftError,
+    initialize_database,
+)
 from concurrent.futures import ThreadPoolExecutor
 from server.contracts.configuration import DatabaseSettings, JsonServerSettings
 from server.repositories.database import initializer
@@ -23,9 +31,15 @@ from server.configurations.database_config import DatabaseConfigurationStore
 from server.contracts.database_configuration import DatabaseConfigurationInput
 from server.repositories.application_settings import ApplicationSettingsRepository
 from server.repositories.database.backend import FAIRSDatabase
-from server.repositories.database.runtime import DatabaseSwitchConflict, RuntimeDatabaseManager
+from server.repositories.database.runtime import (
+    DatabaseSwitchConflict,
+    RuntimeDatabaseManager,
+)
 from server.services import database_configuration as database_configuration_module
-from server.services.database_configuration import DatabaseConfigurationService, DatabaseSwitchError
+from server.services.database_configuration import (
+    DatabaseConfigurationService,
+    DatabaseSwitchError,
+)
 
 
 ###############################################################################
@@ -436,13 +450,16 @@ def test_concurrent_sqlite_initializers_serialize_and_finish_at_head(
     finally:
         engine.dispose()
 
+
 # Copyright © 2026 Thomas Virdis
 # Licensed under the MIT License.
 
 
 ###############################################################################
 def _runtime_sqlite_settings() -> DatabaseSettings:
-    return DatabaseSettings(True, None, None, None, None, None, None, False, None, 10, 1000)
+    return DatabaseSettings(
+        True, None, None, None, None, None, None, False, None, 10, 1000
+    )
 
 
 ###############################################################################
@@ -467,7 +484,9 @@ def _initialized_database(path: Path, polling_interval: float) -> FAIRSDatabase:
 ###############################################################################
 @pytest.fixture
 def api_runtime(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setattr(database_configuration_module, "run_startup_validations", lambda _settings: None)
+    monkeypatch.setattr(
+        database_configuration_module, "run_startup_validations", lambda _settings: None
+    )
     old_path = tmp_path / "old.db"
     old_database = _initialized_database(old_path, 2.0)
     runtime_database = RuntimeDatabaseManager(old_database)
@@ -482,16 +501,24 @@ def api_runtime(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     application = SimpleNamespace(state=SimpleNamespace())
     application.state.lifecycle = "ready"
     application.state.recovery_message = None
-    application.state.training_run_manager = SimpleNamespace(is_job_running=lambda: False)
+    application.state.training_run_manager = SimpleNamespace(
+        is_job_running=lambda: False
+    )
     application.state.inference_service = SimpleNamespace(
         state=SimpleNamespace(has_sessions=lambda: False)
     )
-    application.state.loaded_settings = ApplicationSettingsRepository().get(old_database)
+    application.state.loaded_settings = ApplicationSettingsRepository().get(
+        old_database
+    )
 
     fail_candidate = {"enabled": False, "path": None}
 
     def activate_services(_loaded, app_settings):
-        if fail_candidate["enabled"] and _loaded and _loaded.sqlite_path == fail_candidate["path"]:
+        if (
+            fail_candidate["enabled"]
+            and _loaded
+            and _loaded.sqlite_path == fail_candidate["path"]
+        ):
             raise RuntimeError("injected service activation failure")
         application.state.loaded_settings = app_settings
 
@@ -530,10 +557,14 @@ def test_database_status_redacts_saved_password(api_runtime) -> None:
 
 
 ###############################################################################
-def test_connection_test_does_not_activate_or_persist_candidate(api_runtime, tmp_path: Path) -> None:
+def test_connection_test_does_not_activate_or_persist_candidate(
+    api_runtime, tmp_path: Path
+) -> None:
     service, runtime_database, store, old_path, _fail, _application = api_runtime
     candidate_path = tmp_path / "test-only.db"
-    candidate = DatabaseConfigurationInput(backend="sqlite", sqlite_path=str(candidate_path))
+    candidate = DatabaseConfigurationInput(
+        backend="sqlite", sqlite_path=str(candidate_path)
+    )
 
     response = service.test_connection(candidate)
 
@@ -552,7 +583,9 @@ def test_switch_loads_target_settings_without_copying_settings(
     target_path = tmp_path / "target.db"
     target_database = _initialized_database(target_path, 3.5)
     target_database.dispose()
-    candidate = DatabaseConfigurationInput(backend="sqlite", sqlite_path=str(target_path))
+    candidate = DatabaseConfigurationInput(
+        backend="sqlite", sqlite_path=str(target_path)
+    )
     initialize_target = database_configuration_module.initialize_database
 
     def initialize_after_drain(settings, *, database_path=None):
@@ -571,17 +604,25 @@ def test_switch_loads_target_settings_without_copying_settings(
     assert response.active_backend == "sqlite"
     assert runtime_database.active.db_path == target_path
     assert store.current().sqlite_path == target_path
-    assert ApplicationSettingsRepository().get(runtime_database).jobs.polling_interval == 3.5
+    assert (
+        ApplicationSettingsRepository().get(runtime_database).jobs.polling_interval
+        == 3.5
+    )
     old_database = FAIRSDatabase(_runtime_sqlite_settings(), database_path=old_path)
     try:
-        assert ApplicationSettingsRepository().get(old_database).jobs.polling_interval == 2.0
+        assert (
+            ApplicationSettingsRepository().get(old_database).jobs.polling_interval
+            == 2.0
+        )
     finally:
         old_database.dispose()
     assert application.state.loaded_settings.jobs.polling_interval == 3.5
 
 
 ###############################################################################
-def test_connection_and_unknown_schema_fail_without_changing_active_config(api_runtime, tmp_path: Path) -> None:
+def test_connection_and_unknown_schema_fail_without_changing_active_config(
+    api_runtime, tmp_path: Path
+) -> None:
     service, runtime_database, store, old_path, _fail, _application = api_runtime
     directory_candidate = DatabaseConfigurationInput(
         backend="sqlite", sqlite_path=str(tmp_path / "directory.db")
@@ -595,17 +636,19 @@ def test_connection_and_unknown_schema_fail_without_changing_active_config(api_r
         connection.execute("CREATE TABLE unknown_schema (id INTEGER PRIMARY KEY)")
     with pytest.raises(DatabaseSwitchError, match="could not be initialized"):
         service.activate(
-            DatabaseConfigurationInput(
-                backend="sqlite", sqlite_path=str(unknown_path)
-            )
+            DatabaseConfigurationInput(backend="sqlite", sqlite_path=str(unknown_path))
         )
     assert runtime_database.active.db_path == old_path
     assert store.current().sqlite_path == old_path
 
 
 ###############################################################################
-def test_activation_failure_rolls_back_to_previous_database(api_runtime, tmp_path: Path) -> None:
-    service, runtime_database, store, old_path, fail_candidate, _application = api_runtime
+def test_activation_failure_rolls_back_to_previous_database(
+    api_runtime, tmp_path: Path
+) -> None:
+    service, runtime_database, store, old_path, fail_candidate, _application = (
+        api_runtime
+    )
     candidate_path = tmp_path / "activation-failure.db"
     _initialized_database(candidate_path, 4.0).dispose()
     fail_candidate.update({"enabled": True, "path": candidate_path})
@@ -622,7 +665,9 @@ def test_activation_failure_rolls_back_to_previous_database(api_runtime, tmp_pat
 
 
 ###############################################################################
-def test_switch_conflicts_with_active_training_and_inference(api_runtime, tmp_path: Path) -> None:
+def test_switch_conflicts_with_active_training_and_inference(
+    api_runtime, tmp_path: Path
+) -> None:
     service, runtime_database, store, old_path, _fail, application = api_runtime
     target = DatabaseConfigurationInput(
         backend="sqlite", sqlite_path=str(tmp_path / "conflict.db")

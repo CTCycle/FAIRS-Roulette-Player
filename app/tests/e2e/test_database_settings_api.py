@@ -12,7 +12,12 @@ from collections.abc import Iterator
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from server.api.settings import router as settings_router
-from server.contracts.configuration import DatabaseSettings, DeviceSettings, JobsSettings, RouletteSettings
+from server.contracts.configuration import (
+    DatabaseSettings,
+    DeviceSettings,
+    JobsSettings,
+    RouletteSettings,
+)
 from server.repositories.application_settings import ApplicationSettingsRepository
 from server.repositories.database.backend import FAIRSDatabase
 from server.repositories.database.initializer import initialize_database
@@ -22,7 +27,6 @@ from server.services.settings import SettingsService
 """
 E2E tests for dataset listing APIs under /datasets/training.
 """
-
 
 
 DATASET_NAME = "e2e_dataset_for_listing"
@@ -99,7 +103,6 @@ class TestRouletteDatasetsEndpoints:
 
 ###############################################################################
 class TrainingSpy:
-
     # -------------------------------------------------------------------------
     def __init__(self) -> None:
         self.jobs = JobsSettings(polling_interval=1.0)
@@ -126,7 +129,9 @@ class TrainingSpy:
 
 ###############################################################################
 def _sqlite_settings() -> DatabaseSettings:
-    return DatabaseSettings(True, None, None, None, None, None, None, False, None, 10, 1000)
+    return DatabaseSettings(
+        True, None, None, None, None, None, None, False, None, 10, 1000
+    )
 
 
 ###############################################################################
@@ -145,7 +150,9 @@ def _build_client(tmp_path: Path) -> tuple[TestClient, RuntimeDatabaseManager]:
 
 ###############################################################################
 @contextmanager
-def _client_session(tmp_path: Path) -> Iterator[tuple[TestClient, RuntimeDatabaseManager]]:
+def _client_session(
+    tmp_path: Path,
+) -> Iterator[tuple[TestClient, RuntimeDatabaseManager]]:
     client, manager = _build_client(tmp_path)
     try:
         with client:

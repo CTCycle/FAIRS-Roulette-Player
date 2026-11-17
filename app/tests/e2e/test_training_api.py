@@ -187,8 +187,7 @@ def incomplete_checkpoint_workspaces(checkpoint: str) -> list[str]:
         if entry.is_dir()
         and entry.name.startswith(prefix)
         and any(
-            marker in entry.name
-            for marker in (".staging-", ".backup-", ".publish-")
+            marker in entry.name for marker in (".staging-", ".backup-", ".publish-")
         )
     )
 
@@ -236,9 +235,15 @@ def val10_checkpoint(playwright, api_base_url: str):
             f"/api/training/checkpoints/{checkpoint}/metadata"
         )
         assert metadata_response.ok, metadata_response.text()
-        configuration_path = checkpoint_root() / checkpoint / "configuration" / "configuration.json"
-        history_path = checkpoint_root() / checkpoint / "configuration" / "session_history.json"
-        initial_configuration = json.loads(configuration_path.read_text(encoding="utf-8"))
+        configuration_path = (
+            checkpoint_root() / checkpoint / "configuration" / "configuration.json"
+        )
+        history_path = (
+            checkpoint_root() / checkpoint / "configuration" / "session_history.json"
+        )
+        initial_configuration = json.loads(
+            configuration_path.read_text(encoding="utf-8")
+        )
         initial_history = json.loads(history_path.read_text(encoding="utf-8"))
         initial_files = checkpoint_file_signatures(checkpoint)
         yield {
@@ -395,9 +400,7 @@ def test_dataset_deleted_after_validation_is_rejected_before_start(
             f"Expected 200, got {validation.status}: {validation.text()}"
         )
         deletion = api_context.delete(f"/api/datasets/training/{dataset_id}")
-        assert deletion.ok, (
-            f"Expected 200, got {deletion.status}: {deletion.text()}"
-        )
+        assert deletion.ok, f"Expected 200, got {deletion.status}: {deletion.text()}"
 
         start = api_context.post("/api/training/start", data=payload)
         assert start.status == 404, start.text()
@@ -501,9 +504,7 @@ class TestTrainingCheckpointPublication:
             assert (published_checkpoint / ".complete").is_file()
             assert (published_checkpoint / "saved_model.keras").is_file()
             assert configuration_path.is_file()
-            persisted = json.loads(
-                configuration_path.read_text(encoding="utf-8")
-            )
+            persisted = json.loads(configuration_path.read_text(encoding="utf-8"))
             persisted_training = persisted["training"]
             for key in (
                 "dataset_id",
@@ -604,18 +605,14 @@ class TestTrainingEndpoints:
                 "checkpoint": "val00_lineage_20260921",
                 "additional_episodes": 1,
             }
-            resume_response = api_context.post(
-                "/api/training/resume", data=resume_body
-            )
+            resume_response = api_context.post("/api/training/resume", data=resume_body)
             assert resume_response.status == 409, resume_response.text()
         finally:
             api_context.post("/api/training/stop")
             terminal = wait_for_job_completion(api_context, job_id, timeout=30.0)
             assert terminal.get("status") == "cancelled", terminal
             assert_training_idle(api_context)
-            assert checkpoint not in api_context.get(
-                "/api/training/checkpoints"
-            ).json()
+            assert checkpoint not in api_context.get("/api/training/checkpoints").json()
             assert incomplete_checkpoint_workspaces(checkpoint) == []
 
     # -------------------------------------------------------------------------
@@ -651,9 +648,7 @@ class TestTrainingEndpoints:
 
             # Stop the exact run and wait for its terminal state before returning.
             time.sleep(1)
-            job_status_response = api_context.get(
-                f"/api/training/jobs/{job_id}"
-            )
+            job_status_response = api_context.get(f"/api/training/jobs/{job_id}")
             assert job_status_response.ok, job_status_response.text()
             job_status = job_status_response.json().get("status")
             if job_status in ("pending", "running"):
@@ -708,9 +703,7 @@ class TestTrainingLifecycle:
                 cancel_response = api_context.post("/api/training/stop")
                 assert cancel_response.status == 200, cancel_response.text()
             else:
-                cancel_response = api_context.delete(
-                    f"/api/training/jobs/{job_id}"
-                )
+                cancel_response = api_context.delete(f"/api/training/jobs/{job_id}")
                 assert cancel_response.status == 200, cancel_response.text()
                 cancel_payload = cancel_response.json()
                 assert cancel_payload == {
@@ -722,9 +715,7 @@ class TestTrainingLifecycle:
             terminal = wait_for_job_completion(api_context, job_id, timeout=30.0)
             assert terminal.get("status") == "cancelled", terminal
             assert_training_idle(api_context)
-            assert checkpoint not in api_context.get(
-                "/api/training/checkpoints"
-            ).json()
+            assert checkpoint not in api_context.get("/api/training/checkpoints").json()
             assert incomplete_checkpoint_workspaces(checkpoint) == []
 
             recovery_start = api_context.post(
@@ -742,15 +733,19 @@ class TestTrainingLifecycle:
             )
             assert recovery_terminal.get("status") == "completed", recovery_terminal
             assert_training_idle(api_context)
-            assert recovery_checkpoint in api_context.get(
-                "/api/training/checkpoints"
-            ).json()
+            assert (
+                recovery_checkpoint
+                in api_context.get("/api/training/checkpoints").json()
+            )
         finally:
             api_context.post("/api/training/stop")
             wait_for_training_stopped(api_context, timeout=30.0)
             for disposable in (checkpoint, recovery_checkpoint):
                 checkpoints_response = api_context.get("/api/training/checkpoints")
-                if checkpoints_response.ok and disposable in checkpoints_response.json():
+                if (
+                    checkpoints_response.ok
+                    and disposable in checkpoints_response.json()
+                ):
                     delete_response = api_context.delete(
                         f"/api/training/checkpoints/{disposable}"
                     )
@@ -796,18 +791,14 @@ class TestTrainingResume:
             assert active_status["job_id"] == resume_job_id
             assert wait_for_resume_workspace(checkpoint, timeout=45.0)
 
-            cancel_response = api_context.delete(
-                f"/api/training/jobs/{resume_job_id}"
-            )
+            cancel_response = api_context.delete(f"/api/training/jobs/{resume_job_id}")
             assert cancel_response.status == 200, cancel_response.text()
             assert cancel_response.json() == {
                 "job_id": resume_job_id,
                 "success": True,
                 "message": "Cancellation requested",
             }
-            terminal = wait_for_job_completion(
-                api_context, resume_job_id, timeout=45.0
-            )
+            terminal = wait_for_job_completion(api_context, resume_job_id, timeout=45.0)
             assert terminal.get("status") == "cancelled", terminal
             assert_training_idle(api_context)
             assert checkpoint_file_signatures(checkpoint) == val10_checkpoint["files"]
@@ -849,7 +840,10 @@ class TestTrainingResume:
         assert restored_status["latest_stats"]["total_epochs"] == previous_episodes + 2
         assert restored_status["history"]
         assert restored_status["history"][0]["epoch"] == initial_history["episode"][0]
-        assert restored_status["history"][0]["time_step"] == initial_history["time_step"][0]
+        assert (
+            restored_status["history"][0]["time_step"]
+            == initial_history["time_step"][0]
+        )
 
         terminal = wait_for_job_completion(api_context, resume_job_id, timeout=240.0)
         assert terminal.get("job_id") == resume_job_id
@@ -859,9 +853,15 @@ class TestTrainingResume:
         assert_finite_number(terminal["result"]["final_rmse"])
         assert_training_idle(api_context)
 
-        configuration_path = checkpoint_root() / checkpoint / "configuration" / "configuration.json"
-        history_path = checkpoint_root() / checkpoint / "configuration" / "session_history.json"
-        final_training = json.loads(configuration_path.read_text(encoding="utf-8"))["training"]
+        configuration_path = (
+            checkpoint_root() / checkpoint / "configuration" / "configuration.json"
+        )
+        history_path = (
+            checkpoint_root() / checkpoint / "configuration" / "session_history.json"
+        )
+        final_training = json.loads(configuration_path.read_text(encoding="utf-8"))[
+            "training"
+        ]
         final_session = json.loads(history_path.read_text(encoding="utf-8"))
         final_history = final_session["history"]
 
@@ -872,12 +872,12 @@ class TestTrainingResume:
         assert len(final_history["episode"]) > len(initial_history["episode"])
         for key, initial_values in initial_history.items():
             assert final_history[key][: len(initial_values)] == initial_values
-        assert any(
-            episode > previous_episodes for episode in final_history["episode"]
-        )
+        assert any(episode > previous_episodes for episode in final_history["episode"])
         new_validation_indices = [
             index
-            for index in range(len(initial_history["episode"]), len(final_history["episode"]))
+            for index in range(
+                len(initial_history["episode"]), len(final_history["episode"])
+            )
             if final_history["episode"][index] > previous_episodes
             and final_history["val_loss"][index] is not None
             and final_history["val_rmse"][index] is not None

@@ -38,7 +38,6 @@ class DatabaseSwitchError(RuntimeError):
 
 ###############################################################################
 class DatabaseConfigurationService:
-
     # -------------------------------------------------------------------------
     def __init__(
         self,
