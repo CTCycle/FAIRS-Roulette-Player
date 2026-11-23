@@ -580,7 +580,9 @@ class TestTrainingWizardFlow:
 
         assert validation_response.value.status == 422
         expect(modal).to_be_visible()
-        expect(modal.locator(".wizard-error")).to_contain_text("episodes")
+        expect(modal.locator(".wizard-error")).to_contain_text(
+            re.compile("episodes", re.IGNORECASE)
+        )
         assert request_order == ["validate"]
 
     # -------------------------------------------------------------------------

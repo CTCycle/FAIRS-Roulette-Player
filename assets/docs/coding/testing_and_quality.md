@@ -1,6 +1,6 @@
 ## Testing And Quality
 
-Last updated: 2026-11-09
+Last updated: 2026-11-23
 
 ## Quality Baseline
 
@@ -128,6 +128,10 @@ On documentation-only commit `1868ed10207ec5316555b7a185c1c806de3215e6`, the fir
 ### 2026-11-09 v3.6.3 patch QA
 
 `assets/QA/` was empty again; nothing to migrate. Local Ruff, lockfile check, 159 backend unit tests, ESLint, Vitest (`11/11`), and the production build passed on the candidate. Hosted CI on the exact release commit is recorded in the project status ledger.
+
+### 2026-11-23 v3.6.4 patch QA
+
+The standard runner needs a seeded data root: datasets 1–4 (160 rows), dataset 5 `val00_training_lineage` (120 rows), and checkpoints `val00_lineage_20260921` plus `val15_strategy_20260923` (the latter trained with dynamic betting and the strategy model). Unseeded, stored-dataset E2E cases fail on `Training dataset '5' was not found`. Seeded, the runner passed 258 Python cases (5 PostgreSQL skips), Vitest 11/11, Playwright 10/10, build, and Ruff. The 1100px/1099px captures described above predate the removal of the minimum-width notice; current viewport coverage is the 800px and 375px Playwright cases.
 
 ## Related Files
 

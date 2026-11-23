@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 import pandas as pd
 import pytest
 import time
@@ -125,11 +126,23 @@ def test_final_training_stats_are_published_despite_polling_interval(
     model = Mock()
     updates: list[dict[str, object]] = []
 
-    asyncio.run(
-        trainer.train_with_reinforcement_learning(
-            model, model, None, None, environment, 0, 1, 8, ws_callback=updates.append
-        )
-    )
+    # Run in a worker thread so the test also passes after Playwright's sync
+    # API has left an event loop running on the main thread.
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        executor.submit(
+            asyncio.run,
+            trainer.train_with_reinforcement_learning(
+                model,
+                model,
+                None,
+                None,
+                environment,
+                0,
+                1,
+                8,
+                ws_callback=updates.append,
+            ),
+        ).result()
 
     assert updates[-1]["time_step"] == 4
     assert updates[-1]["experience_count"] == 5

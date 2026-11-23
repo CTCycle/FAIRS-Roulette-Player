@@ -1,6 +1,6 @@
 ## Experience
 
-Last updated: 2026-11-09
+Last updated: 2026-11-23
 
 ## Page Composition
 
@@ -58,15 +58,15 @@ Composition rules:
 - The training monitor calls the pre-learning replay-memory phase `Replay warm-up`; epsilon remains visible separately because epsilon-greedy exploration continues after learning begins.
 - Validation metrics are shown only when a fresh validation measurement exists rather than being visually carried forward across unsampled steps.
 - Checkpoint `Open in Inference` preserves dataset provenance. If the checkpoint's training dataset is unavailable or incompatible, the UI asks the user to choose a dataset explicitly instead of silently substituting one.
-- Preserve the two-panel inference layout at every supported viewport width. Below the desktop minimum, retain the desktop geometry and show the minimum-window notice instead of stacking setup and history regions.
+- Keep the two-panel inference layout on desktop widths; on narrow viewports the regions stack, and the history must stay reachable (covered at 375px by the Playwright suite).
 - Keep guidance adjacent to the feature it explains, short enough to scan, and dismissible without blocking the workflow. Do not repeat a dismissed tip during the same guidance version.
 
 ## Desktop support
 
-- The supported browser viewport is at least `1100px` wide.
+- The primary target is a desktop browser; there is no minimum-width gate.
 - The interface is optimized for desktop computers, laptops, and Windows tablets that behave like normal desktop browser environments.
-- Phones, mobile navigation, touch-first interactions, and small-screen responsive layouts are not supported targets.
-- Below `1100px`, the application keeps its desktop minimum width and displays a clear request to enlarge the browser window.
+- Touch-first interactions and a dedicated mobile navigation are not supported targets.
+- At `800px` and below the header wraps and multi-column Training layouts stack into one column so the page never requires horizontal scrolling.
 - Multi-column layouts remain intact at supported widths. Dense tables may scroll within their own surface when their intrinsic desktop width is needed.
 
 Desktop layouts should favor information density, horizontal space, and efficient mouse and keyboard interaction over compact viewport adaptation.

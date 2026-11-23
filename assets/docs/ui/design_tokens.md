@@ -1,6 +1,6 @@
 ## Design Tokens
 
-Last updated: 2026-08-20
+Last updated: 2026-11-23
 
 ## Typography
 
@@ -25,7 +25,7 @@ Last updated: 2026-08-20
 - Main app shell is route-based with sticky header and navigation.
 - The app shell uses a sticky branded header; content scrolls inside the main layout.
 - Global page container is constrained through `.page-shell` to a maximum width of 1680px.
-- The desktop shell minimum is `--desktop-min-width: 1100px`.
+- There is no desktop minimum-width token; narrow-viewport adaptation uses `max-width: 800px` media queries.
 - Spacing tokens:
   - `--spacing-xs: 0.25rem`
   - `--spacing-sm: 0.5rem`
