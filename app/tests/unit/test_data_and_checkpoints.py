@@ -9,11 +9,19 @@ import os
 from unittest.mock import Mock
 from server.contracts.upload import UploadRequest
 from server.services.checkpoints import CheckpointReferenceError, CheckpointService
-from server.services.datasets import DatasetService, normalize_csv_separator, normalize_filename, normalize_sheet_name
+from server.services.datasets import (
+    DatasetService,
+    normalize_csv_separator,
+    normalize_filename,
+    normalize_sheet_name,
+)
 from pathlib import Path
 from server.common import checkpoints as checkpoint_common
 from server.repositories.checkpoints import CheckpointRepository
-from server.common.checkpoints import normalize_checkpoint_identifier, resolve_checkpoint_path
+from server.common.checkpoints import (
+    normalize_checkpoint_identifier,
+    resolve_checkpoint_path,
+)
 from server.common.path import CHECKPOINT_PATH
 from server.repositories.datasets import normalize_dataset_name
 
@@ -111,7 +119,6 @@ def test_dataset_delete_blocks_checkpoint_references() -> None:
 
 ###############################################################################
 class DummyCheckpointRepository:
-
     # -------------------------------------------------------------------------
     def __init__(self) -> None:
         self._checkpoints = ["cp1"]
@@ -159,7 +166,6 @@ class DummyCheckpointRepository:
 
 ###############################################################################
 class InvalidCheckpointRepository(DummyCheckpointRepository):
-
     # -------------------------------------------------------------------------
     def load_training_configuration(self, path: str) -> tuple[list, dict]:  # noqa: ARG002
         return [], {}
@@ -212,7 +218,9 @@ def test_find_dataset_references_blocks_malformed_configuration(
 
 
 ###############################################################################
-def test_delete_checkpoint_removes_folder_through_service(tmp_path, monkeypatch) -> None:
+def test_delete_checkpoint_removes_folder_through_service(
+    tmp_path, monkeypatch
+) -> None:
     monkeypatch.setattr(checkpoint_common.shared_paths, "CHECKPOINT_PATH", tmp_path)
     checkpoint_path = tmp_path / "cp1"
     checkpoint_path.mkdir()
@@ -263,9 +271,6 @@ def test_incomplete_checkpoint_workspaces_are_cleaned_on_startup(
     repository.cleanup_incomplete_workspaces()
 
     assert not Path(staging_path).exists()
-
-
-
 
 
 os.environ.setdefault("KERAS_BACKEND", "torch")

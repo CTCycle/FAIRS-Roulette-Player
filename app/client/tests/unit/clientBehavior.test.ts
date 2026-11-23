@@ -111,7 +111,7 @@ describe('API response parsers', () => {
     it('formats FastAPI field errors with their locations', () => {
         expect(parseApiErrorDetail({
             detail: [{ loc: ['body', 'episodes'], msg: 'Input should be greater than 0' }],
-        }, 'Request failed.')).toBe('body.episodes: Input should be greater than 0')
+        }, 'Request failed.')).toBe('Episodes: Input should be greater than 0')
     })
 
     it('uses the fallback when a payload has no readable detail', () => {

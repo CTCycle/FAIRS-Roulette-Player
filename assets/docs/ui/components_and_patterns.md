@@ -1,6 +1,6 @@
 ## Components And Patterns
 
-Last updated: 2026-10-21
+Last updated: 2026-11-23
 
 ## Navigation And Structure
 
@@ -13,8 +13,7 @@ Last updated: 2026-10-21
 
 ## Desktop support
 
-- The shared shell requires a browser viewport at least `1100px` wide and preserves the desktop layout below that width.
-- Below the minimum, a non-dismissible notice tells the user to enlarge the browser window.
+- The shared shell has no minimum-width gate and no size notice. At `800px` and below the header wraps and the Training grids collapse to a single column so controls remain reachable.
 - Keep controls sized and ordered for mouse and keyboard use; do not add touch-first interaction variants.
 
 ## Core Reusable Patterns

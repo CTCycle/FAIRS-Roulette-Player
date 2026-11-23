@@ -67,7 +67,10 @@ export const GameSession: React.FC<GameSessionProps> = ({
     const [isRecomputing, setIsRecomputing] = useState(false);
     const [isMutating, setIsMutating] = useState(false);
     const [isRecovering, setIsRecovering] = useState(
-        () => loadPersistedInferenceSession() !== null,
+        () => {
+            const persisted = loadPersistedInferenceSession();
+            return persisted !== null && !persisted.stopped;
+        },
     );
     const [error, setError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -243,6 +246,16 @@ export const GameSession: React.FC<GameSessionProps> = ({
     useEffect(() => {
         const persisted = loadPersistedInferenceSession();
         if (!persisted) {
+            return;
+        }
+        if (persisted.stopped) {
+            // Stopped sessions no longer exist on the server; restore the final view until Clear.
+            onSetupChange(persisted.setup);
+            updateSnapshot({
+                config: persisted.config,
+                isActive: false,
+                ...persisted.stopped,
+            });
             return;
         }
         const recoveryRun = recoveryRunRef.current + 1;
@@ -525,7 +538,12 @@ export const GameSession: React.FC<GameSessionProps> = ({
             }
             try {
                 await shutdownInferenceSession(sessionId, signal);
-                clearPersistedInferenceSession();
+                persistInferenceSession(config, setup, {
+                    currentCapital,
+                    currentBet,
+                    totalSteps,
+                    history: history.map((step) => ({ ...step, isEditing: false })),
+                });
                 if (mountedRef.current) {
                     updateSnapshot({ isActive: false });
                 }
@@ -1188,7 +1206,7 @@ export const GameSession: React.FC<GameSessionProps> = ({
                             Start with Play. After each prediction, enter the observed wheel value and confirm it before requesting the next round.
                         </FeatureTip>
                     )}
-                    <div className={styles.tableBody} data-guidance-target="inference-observation">
+                    <div className={styles.tableBody} tabIndex={0} role="region" aria-label="Session history" data-guidance-target="inference-observation">
                         <table className={styles.historyTable}>
                             <thead>
                                 <tr>

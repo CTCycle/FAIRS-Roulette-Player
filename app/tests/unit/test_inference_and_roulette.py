@@ -12,8 +12,16 @@ from server.learning.betting.hold import StrategyHold
 from types import SimpleNamespace
 from unittest.mock import Mock
 from server.api.inference import start_session as start_session_api
-from server.contracts.configuration import RouletteSettings, DatabaseSettings, JsonRouletteSettings
-from server.contracts.inference import InferenceStartRequest, InferenceBetUpdateRequest, InferenceStepRequest
+from server.contracts.configuration import (
+    RouletteSettings,
+    DatabaseSettings,
+    JsonRouletteSettings,
+)
+from server.contracts.inference import (
+    InferenceStartRequest,
+    InferenceBetUpdateRequest,
+    InferenceStepRequest,
+)
 from server.services.inference import InferenceService
 from sqlalchemy import create_engine, event, text
 from server.repositories.database.backend import FAIRSDatabase
@@ -24,10 +32,20 @@ from typing import Any
 from server.contracts.training import TrainingConfig
 from pydantic import ValidationError
 from server.common.constants import ROULETTE_COLOR_MAP
-from server.common.roulette import build_roulette_number_pool, filter_roulette_series, validate_roulette_outcome
+from server.common.roulette import (
+    build_roulette_number_pool,
+    filter_roulette_series,
+    validate_roulette_outcome,
+)
 from server.learning.training.environment import RouletteWheelRenderer
 from server.learning.betting.sizer import BetSizer
-from server.learning.betting.types import STRATEGY_DALEMBERT, STRATEGY_FIBONACCI, STRATEGY_KEEP, STRATEGY_MARTINGALE, STRATEGY_REVERSE
+from server.learning.betting.types import (
+    STRATEGY_DALEMBERT,
+    STRATEGY_FIBONACCI,
+    STRATEGY_KEEP,
+    STRATEGY_MARTINGALE,
+    STRATEGY_REVERSE,
+)
 
 
 ###############################################################################
@@ -71,7 +89,6 @@ def test_hold_steps_is_clamped_to_minimum_one() -> None:
 
 ###############################################################################
 class RouletteSettingsFakePlayer:
-
     # -------------------------------------------------------------------------
     def __init__(self, *args, **kwargs):  # noqa: ANN002, ANN003
         self.context = kwargs["dataset_context"]
@@ -94,7 +111,6 @@ class RouletteSettingsFakePlayer:
 
 ###############################################################################
 class RouletteSettingsFakeDeviceConfig:
-
     # -------------------------------------------------------------------------
     def __init__(self, configuration):  # noqa: ANN001
         self.configuration = configuration
@@ -105,7 +121,9 @@ class RouletteSettingsFakeDeviceConfig:
 
 
 ###############################################################################
-def build_roulette_settings_service(monkeypatch, outcomes: list[int]) -> InferenceService:
+def build_roulette_settings_service(
+    monkeypatch, outcomes: list[int]
+) -> InferenceService:
     dataset_repository = Mock()
     dataset_repository.get.return_value = {"dataset_id": 1}
     dataset_repository.outcomes.return_value = pd.DataFrame({"outcome": outcomes})
@@ -122,8 +140,12 @@ def build_roulette_settings_service(monkeypatch, outcomes: list[int]) -> Inferen
         "path/cp1",
     )
 
-    monkeypatch.setattr("server.services.inference.RoulettePlayer", RouletteSettingsFakePlayer)
-    monkeypatch.setattr("server.services.inference.DeviceConfig", RouletteSettingsFakeDeviceConfig)
+    monkeypatch.setattr(
+        "server.services.inference.RoulettePlayer", RouletteSettingsFakePlayer
+    )
+    monkeypatch.setattr(
+        "server.services.inference.DeviceConfig", RouletteSettingsFakeDeviceConfig
+    )
 
     return InferenceService(
         dataset_repository=dataset_repository,
@@ -209,7 +231,6 @@ def test_api_passes_current_roulette_settings_to_session_start() -> None:
 
 ###############################################################################
 class FakePlayer:
-
     # -------------------------------------------------------------------------
     def __init__(self, *args, **kwargs):  # noqa: ANN002, ANN003
         self.bet_amount = 10
@@ -235,7 +256,6 @@ class FakePlayer:
 
 ###############################################################################
 class FakeDeviceConfig:
-
     # -------------------------------------------------------------------------
     def __init__(self, configuration):  # noqa: ANN001
         self.configuration = configuration
@@ -316,7 +336,9 @@ def test_capacity_bound_evicts_oldest_and_releases_models(monkeypatch) -> None:
         lambda connection, _: connection.execute("PRAGMA foreign_keys=ON"),
     )
     database = FAIRSDatabase(
-        DatabaseSettings(True, None, None, None, None, None, None, False, None, 10, 1000),
+        DatabaseSettings(
+            True, None, None, None, None, None, None, False, None, 10, 1000
+        ),
         engine=engine,
     )
     run_migrations_on_engine(engine)
@@ -331,10 +353,8 @@ def test_capacity_bound_evicts_oldest_and_releases_models(monkeypatch) -> None:
     service.inference_repository = InferenceRepository(database)
     created_players: list[FakePlayer] = []
 
-
     ###############################################################################
     class TrackingPlayer(FakePlayer):
-
         # -------------------------------------------------------------------------
         def __init__(self, *args, **kwargs):  # noqa: ANN002, ANN003
             super().__init__(*args, **kwargs)
@@ -424,7 +444,9 @@ def test_clear_context_succeeds_after_session_shutdown(monkeypatch) -> None:
 
 
 ###############################################################################
-def test_shutdown_session_keeps_live_state_when_persistence_close_fails(monkeypatch) -> None:
+def test_shutdown_session_keeps_live_state_when_persistence_close_fails(
+    monkeypatch,
+) -> None:
     service, _ = build_service(monkeypatch)
     start = service.start_session(InferenceStartRequest(checkpoint="cp1", dataset_id=1))
     service.inference_repository.end_session.side_effect = RuntimeError(
@@ -445,10 +467,8 @@ def test_session_start_rolls_back_persistence_and_model_on_registration_failure(
     service, _ = build_service(monkeypatch)
     released_players: list[FakePlayer] = []
 
-
     ###############################################################################
     class TrackingPlayer(FakePlayer):
-
         # -------------------------------------------------------------------------
         def __init__(self, *args, **kwargs):  # noqa: ANN002, ANN003
             super().__init__(*args, **kwargs)
@@ -456,8 +476,8 @@ def test_session_start_rolls_back_persistence_and_model_on_registration_failure(
             released_players.append(self)
 
     monkeypatch.setattr("server.services.inference.RoulettePlayer", TrackingPlayer)
-    service.inference_repository.create_session_with_initial_step.side_effect = RuntimeError(
-        "persistence failed"
+    service.inference_repository.create_session_with_initial_step.side_effect = (
+        RuntimeError("persistence failed")
     )
 
     with pytest.raises(RuntimeError, match="persistence failed"):
@@ -482,10 +502,8 @@ def test_replacement_start_failure_preserves_existing_session_and_releases_candi
     existing_snapshot = service.get_session_snapshot(existing_id)
     candidate_players: list[FakePlayer] = []
 
-
     ###############################################################################
     class TrackingPlayer(FakePlayer):
-
         # -------------------------------------------------------------------------
         def __init__(self, *args, **kwargs):  # noqa: ANN002, ANN003
             super().__init__(*args, **kwargs)
@@ -555,9 +573,7 @@ def test_session_snapshot_returns_authoritative_persisted_steps(monkeypatch) -> 
 def test_capacity_eviction_failure_keeps_existing_session_live(monkeypatch) -> None:
     service, _ = build_service(monkeypatch)
     service.state.max_sessions = 1
-    first = service.start_session(
-        InferenceStartRequest(checkpoint="cp1", dataset_id=1)
-    )
+    first = service.start_session(InferenceStartRequest(checkpoint="cp1", dataset_id=1))
     service.inference_repository.end_session.side_effect = RuntimeError(
         "eviction persistence failed"
     )
@@ -574,9 +590,7 @@ def test_capacity_eviction_failure_keeps_existing_session_live(monkeypatch) -> N
 def test_shutdown_is_failure_isolated_and_idempotent(monkeypatch) -> None:
     service, _ = build_service(monkeypatch)
     service.state.max_sessions = 2
-    first = service.start_session(
-        InferenceStartRequest(checkpoint="cp1", dataset_id=1)
-    )
+    first = service.start_session(InferenceStartRequest(checkpoint="cp1", dataset_id=1))
     second = service.start_session(
         InferenceStartRequest(checkpoint="cp1", dataset_id=1)
     )
@@ -592,7 +606,6 @@ def test_shutdown_is_failure_isolated_and_idempotent(monkeypatch) -> None:
 
 ###############################################################################
 class DummyModel:
-
     # -------------------------------------------------------------------------
     def predict_on_batch(self, inputs: dict[str, Any], verbose: int = 0) -> np.ndarray:  # noqa: ARG002
         logits = np.zeros((1, 47), dtype=np.float32)
@@ -602,7 +615,6 @@ class DummyModel:
 
 ###############################################################################
 class EmptyLogitsModel:
-
     # -------------------------------------------------------------------------
     def predict_on_batch(self, inputs: dict[str, Any], verbose: int = 0) -> np.ndarray:  # noqa: ARG002
         return np.zeros((1, 0), dtype=np.float32)
@@ -610,7 +622,6 @@ class EmptyLogitsModel:
 
 ###############################################################################
 class StrategyLogitsModel:
-
     # -------------------------------------------------------------------------
     def __init__(self, strategy_id: int) -> None:
         self.strategy_id = strategy_id
@@ -618,7 +629,9 @@ class StrategyLogitsModel:
 
     # -------------------------------------------------------------------------
     def predict_on_batch(
-        self, inputs: dict[str, np.ndarray], verbose: int = 0  # noqa: ARG002
+        self,
+        inputs: dict[str, np.ndarray],
+        verbose: int = 0,  # noqa: ARG002
     ) -> np.ndarray:
         self.inputs = inputs
         logits = np.zeros((1, 5), dtype=np.float32)
@@ -806,12 +819,15 @@ def test_series_filter_and_single_outcome_validation_use_same_pool() -> None:
     )
 
     assert filtered["outcome"].tolist() == [1, 2, 3, 4]
-    assert validate_roulette_outcome(
-        4,
-        minimum_number=1,
-        maximum_number=4,
-        exclude_zero=True,
-    ) == 4
+    assert (
+        validate_roulette_outcome(
+            4,
+            minimum_number=1,
+            maximum_number=4,
+            exclude_zero=True,
+        )
+        == 4
+    )
     with pytest.raises(ValueError, match="configured number pool"):
         validate_roulette_outcome(
             0,

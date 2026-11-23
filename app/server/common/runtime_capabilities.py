@@ -30,6 +30,7 @@ def get_jit_runtime_error(
     if sys.platform == "win32" and jit_backend.strip().lower() == "inductor":
         return JIT_INDUCTOR_WINDOWS_MESSAGE
     try:
+        # Keep PyTorch out of import-safe startup unless JIT is requested.
         import torch
     except Exception:  # noqa: BLE001
         return JIT_UNAVAILABLE_MESSAGE

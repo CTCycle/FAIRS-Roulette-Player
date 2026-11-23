@@ -10,7 +10,13 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 from fastapi.testclient import TestClient
 from server.repositories.database.initializer import DatabaseInitializationError
-from server.contracts.configuration import DatabaseSettings, DeviceSettings, JobsSettings, JsonServerSettings, ServerSettings
+from server.contracts.configuration import (
+    DatabaseSettings,
+    DeviceSettings,
+    JobsSettings,
+    JsonServerSettings,
+    ServerSettings,
+)
 from server.configurations.database_config import LoadedDatabaseConfiguration
 from server.services import startup_validation
 from server.common import runtime_capabilities
@@ -18,7 +24,6 @@ from server.common import runtime_capabilities
 
 ###############################################################################
 class CheckpointServiceStub:
-
     # -------------------------------------------------------------------------
     def cleanup_incomplete_workspaces(self) -> None:
         return None
@@ -26,7 +31,6 @@ class CheckpointServiceStub:
 
 ###############################################################################
 class InferenceServiceStub:
-
     # -------------------------------------------------------------------------
     def shutdown(self) -> None:
         return None
@@ -34,7 +38,6 @@ class InferenceServiceStub:
 
 ###############################################################################
 class TrainingRunManagerStub:
-
     # -------------------------------------------------------------------------
     def shutdown(self) -> bool:
         return True
@@ -99,13 +102,13 @@ def _stub_lifespan_dependencies(
     loaded_database = LoadedDatabaseConfiguration(
         document=None,
         settings=settings.database,
-        sqlite_path=Path("configured-test.db") if settings.database.embedded_database else None,
+        sqlite_path=Path("configured-test.db")
+        if settings.database.embedded_database
+        else None,
     )
-
 
     ###############################################################################
     class StoreStub:
-
         # -------------------------------------------------------------------------
         def load_or_initialize(self):
             return loaded_database
@@ -118,7 +121,9 @@ def _stub_lifespan_dependencies(
     monkeypatch.setattr(
         app_module,
         "ApplicationSettingsRepository",
-        lambda: SimpleNamespace(ensure_row=lambda *_args, **_kwargs: JsonServerSettings()),
+        lambda: SimpleNamespace(
+            ensure_row=lambda *_args, **_kwargs: JsonServerSettings()
+        ),
     )
     monkeypatch.setattr(
         app_module,
@@ -127,10 +132,8 @@ def _stub_lifespan_dependencies(
     )
     monkeypatch.setattr(app_module, "run_startup_validations", lambda settings: None)
 
-
     ###############################################################################
     class DatabaseStub:
-
         # -------------------------------------------------------------------------
         def dispose(self) -> None:
             dispose_calls.append(True)
@@ -148,10 +151,8 @@ def _stub_lifespan_dependencies(
     monkeypatch.setattr(app_module, "TabularFileLoader", lambda: object())
     monkeypatch.setattr(app_module, "DatasetService", lambda **kwargs: object())
 
-
     ###############################################################################
     class TrainingServiceStub:
-
         # -------------------------------------------------------------------------
         def get_runtime_settings(self):
             return settings.jobs, settings.device
@@ -172,8 +173,12 @@ def _stub_lifespan_dependencies(
         def shutdown(self) -> bool:
             return True
 
-    monkeypatch.setattr(app_module, "TrainingService", lambda **_kwargs: TrainingServiceStub())
-    monkeypatch.setattr(app_module, "InferenceService", lambda **kwargs: InferenceServiceStub())
+    monkeypatch.setattr(
+        app_module, "TrainingService", lambda **_kwargs: TrainingServiceStub()
+    )
+    monkeypatch.setattr(
+        app_module, "InferenceService", lambda **kwargs: InferenceServiceStub()
+    )
 
     return initialize_calls, dispose_calls
 
@@ -250,7 +255,9 @@ def test_cors_allowlist_is_read_from_runtime_environment(monkeypatch) -> None:
         )
 
     assert allowed.status_code == 200
-    assert allowed.headers["access-control-allow-origin"] == "https://console.example.test"
+    assert (
+        allowed.headers["access-control-allow-origin"] == "https://console.example.test"
+    )
     assert denied.status_code == 400
     assert "access-control-allow-origin" not in denied.headers
 
@@ -267,10 +274,8 @@ def test_repeated_lifespan_entry_reinitializes_and_disposes_once_per_run(
     monkeypatch.setenv("ENABLE_API_DOCS", "false")
     monkeypatch.setattr(app_module, "_client_build_available", lambda: False)
 
-
     ###############################################################################
     class ShutdownSpy:
-
         # -------------------------------------------------------------------------
         def __init__(self) -> None:
             self.shutdown_calls = 0
@@ -291,10 +296,8 @@ def test_repeated_lifespan_entry_reinitializes_and_disposes_once_per_run(
         def apply_database_settings(self, *_args) -> None:
             return None
 
-
     ###############################################################################
     class DatabaseSpy:
-
         # -------------------------------------------------------------------------
         def __init__(self) -> None:
             self.dispose_calls = 0
@@ -317,7 +320,7 @@ def test_repeated_lifespan_entry_reinitializes_and_disposes_once_per_run(
     monkeypatch.setattr(
         app_module,
         "FAIRSDatabase",
-        lambda *_args, **_kwargs: (databases.append(DatabaseSpy()) or databases[-1]),
+        lambda *_args, **_kwargs: databases.append(DatabaseSpy()) or databases[-1],
     )
     monkeypatch.setattr(
         app_module,
@@ -448,9 +451,19 @@ def test_postgresql_startup_reports_connection_failure(monkeypatch) -> None:
     with TestClient(application) as client:
         assert application.state.lifecycle == "recovery"
         health = client.get("/api/health")
+        database_response = client.get("/api/training/status")
+        validation_response = client.put("/api/settings/database", json={})
 
     assert health.status_code == 200
     assert health.json()["status"] == "recovery"
+    assert database_response.status_code == 503
+    assert database_response.json() == {
+        "detail": "Database services are unavailable. Configure a working database."
+    }
+    assert validation_response.status_code == 422
+    assert validation_response.json() == {
+        "detail": "Invalid database configuration. Review the required fields and options."
+    }
 
 
 ###############################################################################
@@ -460,9 +473,17 @@ def test_app_factory_defers_runtime_bootstrap_until_lifespan(monkeypatch) -> Non
     bootstrap = Mock()
     monkeypatch.setattr(app_module, "bootstrap_runtime", bootstrap)
 
-    app_module.create_app()
+    application = app_module.create_app()
 
     bootstrap.assert_not_called()
+    assert any(
+        middleware.kwargs.get("dispatch") is app_module.database_runtime_guard
+        for middleware in application.user_middleware
+    )
+    assert (
+        application.exception_handlers[app_module.RequestValidationError]
+        is app_module.sanitized_database_validation_error
+    )
 
 
 ###############################################################################
@@ -472,11 +493,21 @@ def test_lifespan_has_explicit_order_and_reverse_cleanup(monkeypatch) -> None:
     events: list[str] = []
     settings = _build_settings()
     _stub_lifespan_dependencies(monkeypatch, app_module, settings)
-    monkeypatch.setattr(app_module, "bootstrap_runtime", lambda: events.append("bootstrap"))
-    monkeypatch.setattr(app_module, "ensure_single_process_runtime", lambda: events.append("workers"))
+    monkeypatch.setattr(
+        app_module, "bootstrap_runtime", lambda: events.append("bootstrap")
+    )
+    monkeypatch.setattr(
+        app_module, "ensure_single_process_runtime", lambda: events.append("workers")
+    )
     monkeypatch.setattr(app_module, "get_application_version", lambda: "test")
-    monkeypatch.setattr(app_module, "run_startup_validations", lambda _: events.append("validate"))
-    monkeypatch.setattr(app_module, "initialize_database", lambda *_args, **_kwargs: events.append("migrate"))
+    monkeypatch.setattr(
+        app_module, "run_startup_validations", lambda _: events.append("validate")
+    )
+    monkeypatch.setattr(
+        app_module,
+        "initialize_database",
+        lambda *_args, **_kwargs: events.append("migrate"),
+    )
     loaded_database = LoadedDatabaseConfiguration(
         document=None,
         settings=settings.database,
@@ -486,7 +517,7 @@ def test_lifespan_has_explicit_order_and_reverse_cleanup(monkeypatch) -> None:
         app_module,
         "DatabaseConfigurationStore",
         lambda: SimpleNamespace(
-            load_or_initialize=lambda: (events.append("settings") or loaded_database),
+            load_or_initialize=lambda: events.append("settings") or loaded_database,
             current=lambda: loaded_database,
         ),
     )
@@ -498,20 +529,18 @@ def test_lifespan_has_explicit_order_and_reverse_cleanup(monkeypatch) -> None:
         ),
     )
     monkeypatch.setattr(app_module, "_client_build_available", lambda: False)
-    monkeypatch.setattr(app_module, "close_application_logging", lambda: events.append("logging"))
-
+    monkeypatch.setattr(
+        app_module, "close_application_logging", lambda: events.append("logging")
+    )
 
     ###############################################################################
     class Database:
-
         # -------------------------------------------------------------------------
         def dispose(self) -> None:
             events.append("database")
 
-
     ###############################################################################
     class TrainingManager:
-
         # -------------------------------------------------------------------------
         def __init__(self, *args, **kwargs):  # noqa: ANN002, ANN003
             return None
@@ -521,10 +550,8 @@ def test_lifespan_has_explicit_order_and_reverse_cleanup(monkeypatch) -> None:
             events.append("training-manager")
             return True
 
-
     ###############################################################################
     class Training:
-
         # -------------------------------------------------------------------------
         def __init__(self, *args, **kwargs):  # noqa: ANN002, ANN003
             return None
@@ -546,10 +573,8 @@ def test_lifespan_has_explicit_order_and_reverse_cleanup(monkeypatch) -> None:
         def apply_database_settings(self, *_args) -> None:
             return None
 
-
     ###############################################################################
     class Inference:
-
         # -------------------------------------------------------------------------
         def __init__(self, *args, **kwargs):  # noqa: ANN002, ANN003
             return None
@@ -561,7 +586,7 @@ def test_lifespan_has_explicit_order_and_reverse_cleanup(monkeypatch) -> None:
     monkeypatch.setattr(
         app_module,
         "FAIRSDatabase",
-        lambda *_args, **_kwargs: (events.append("database-created") or Database()),
+        lambda *_args, **_kwargs: events.append("database-created") or Database(),
     )
     monkeypatch.setattr(app_module, "DatasetRepository", lambda *_: object())
     monkeypatch.setattr(app_module, "InferenceRepository", lambda *_: object())
@@ -605,22 +630,22 @@ def test_lifespan_rolls_back_partial_initialization(monkeypatch) -> None:
     _stub_lifespan_dependencies(monkeypatch, app_module, settings)
     monkeypatch.setattr(app_module, "bootstrap_runtime", lambda: None)
     monkeypatch.setattr(app_module, "run_startup_validations", lambda _: None)
-    monkeypatch.setattr(app_module, "initialize_database", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        app_module, "initialize_database", lambda *_args, **_kwargs: None
+    )
     monkeypatch.setattr(app_module, "_client_build_available", lambda: False)
-    monkeypatch.setattr(app_module, "close_application_logging", lambda: events.append("logging"))
-
+    monkeypatch.setattr(
+        app_module, "close_application_logging", lambda: events.append("logging")
+    )
 
     ###############################################################################
     class Database:
-
         # -------------------------------------------------------------------------
         def dispose(self) -> None:
             events.append("database")
 
-
     ###############################################################################
     class TrainingManager:
-
         # -------------------------------------------------------------------------
         def __init__(self, *args, **kwargs):  # noqa: ANN002, ANN003
             return None
@@ -630,10 +655,8 @@ def test_lifespan_rolls_back_partial_initialization(monkeypatch) -> None:
             events.append("training-manager")
             return True
 
-
     ###############################################################################
     class Training:
-
         # -------------------------------------------------------------------------
         def __init__(self, *args, **kwargs):  # noqa: ANN002, ANN003
             return None
@@ -658,7 +681,7 @@ def test_lifespan_rolls_back_partial_initialization(monkeypatch) -> None:
     monkeypatch.setattr(
         app_module,
         "FAIRSDatabase",
-        lambda *_args, **_kwargs: (events.append("database-created") or Database()),
+        lambda *_args, **_kwargs: events.append("database-created") or Database(),
     )
     monkeypatch.setattr(app_module, "DatasetRepository", lambda *_: object())
     monkeypatch.setattr(app_module, "InferenceRepository", lambda *_: object())

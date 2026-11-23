@@ -11,6 +11,16 @@
     padding-bottom: 1.5rem;
 }
 
+@media (max-width: 900px) {
+    .sessionContainer {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .tableBody:focus-visible {
+        outline: 2px solid var(--accent, currentColor);
+    }
+}
+
 .leftPanel {
     display: flex;
     flex-direction: column;

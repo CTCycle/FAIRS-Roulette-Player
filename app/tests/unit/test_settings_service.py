@@ -27,7 +27,6 @@ from server.services.settings import SettingsPersistenceError, SettingsService
 
 ###############################################################################
 class FakeTrainingService:
-
     # -------------------------------------------------------------------------
     def __init__(self) -> None:
         self.jobs = JobsSettings(polling_interval=1.0)
@@ -82,12 +81,19 @@ def _build_service(tmp_path: Path):
     ApplicationSettingsRepository().ensure_row(database)
     runtime_database = RuntimeDatabaseManager(database)
     training_service = FakeTrainingService()
-    return SettingsService(runtime_database, training_service), training_service, runtime_database, database_path
+    return (
+        SettingsService(runtime_database, training_service),
+        training_service,
+        runtime_database,
+        database_path,
+    )
 
 
 ###############################################################################
 def test_get_and_partial_update_persist_in_active_database(tmp_path: Path) -> None:
-    service, training_service, runtime_database, database_path = _build_service(tmp_path)
+    service, training_service, runtime_database, database_path = _build_service(
+        tmp_path
+    )
 
     response = service.get_settings()
     assert response.model_dump() == {
@@ -167,7 +173,9 @@ def test_settings_survive_database_reopen(tmp_path: Path) -> None:
 
 
 ###############################################################################
-def test_missing_settings_row_uses_defaults_and_ignores_old_file(tmp_path: Path) -> None:
+def test_missing_settings_row_uses_defaults_and_ignores_old_file(
+    tmp_path: Path,
+) -> None:
     settings = _sqlite_settings()
     database_path = tmp_path / "authoritative.db"
     initialize_database(settings, database_path=database_path)
@@ -186,9 +194,13 @@ def test_missing_settings_row_uses_defaults_and_ignores_old_file(tmp_path: Path)
 
 
 ###############################################################################
-def test_partial_roulette_patch_is_validated_against_saved_range(tmp_path: Path) -> None:
+def test_partial_roulette_patch_is_validated_against_saved_range(
+    tmp_path: Path,
+) -> None:
     service, _, _, _ = _build_service(tmp_path)
-    service.update_settings(SettingsPatchRequest(roulette={"minimum_number": 10, "maximum_number": 20}))
+    service.update_settings(
+        SettingsPatchRequest(roulette={"minimum_number": 10, "maximum_number": 20})
+    )
 
     with pytest.raises(ValidationError, match="minimum_number"):
         service.update_settings(SettingsPatchRequest(roulette={"maximum_number": 5}))
@@ -200,8 +212,12 @@ def test_partial_roulette_patch_is_validated_against_saved_range(tmp_path: Path)
 ###############################################################################
 def test_device_update_preserves_backend_when_jit_is_disabled(tmp_path: Path) -> None:
     service, training_service, _, _ = _build_service(tmp_path)
-    service.update_settings(SettingsPatchRequest(device={"jit_compile": False, "jit_backend": " eager "}))
-    updated = service.update_settings(SettingsPatchRequest(device={"jit_compile": False}))
+    service.update_settings(
+        SettingsPatchRequest(device={"jit_compile": False, "jit_backend": " eager "})
+    )
+    updated = service.update_settings(
+        SettingsPatchRequest(device={"jit_compile": False})
+    )
 
     assert updated.device.jit_compile is False
     assert updated.device.jit_backend == "eager"
@@ -236,16 +252,23 @@ def test_enabling_jit_runs_runtime_preflight_before_database_write(
     monkeypatch.setattr(settings_module, "validate_jit_runtime", validator)
 
     with pytest.raises(ValueError, match="JIT runtime unavailable"):
-        service.update_settings(SettingsPatchRequest(device={"jit_compile": True, "jit_backend": "eager"}))
+        service.update_settings(
+            SettingsPatchRequest(device={"jit_compile": True, "jit_backend": "eager"})
+        )
 
     validator.assert_called_once_with(True, "eager")
     assert service.get_settings().device.jit_compile is False
     assert training_service.device.jit_compile is False
-    assert ApplicationSettingsRepository().get(runtime_database).device.jit_compile is False
+    assert (
+        ApplicationSettingsRepository().get(runtime_database).device.jit_compile
+        is False
+    )
 
 
 ###############################################################################
-def test_propagation_failure_restores_database_and_training_state(tmp_path: Path) -> None:
+def test_propagation_failure_restores_database_and_training_state(
+    tmp_path: Path,
+) -> None:
     service, training_service, runtime_database, _ = _build_service(tmp_path)
     training_service.fail_next_apply = True
 
@@ -253,7 +276,10 @@ def test_propagation_failure_restores_database_and_training_state(tmp_path: Path
         service.update_settings(SettingsPatchRequest(jobs={"polling_interval": 3.0}))
 
     assert service.get_settings().jobs.polling_interval == 1.0
-    assert ApplicationSettingsRepository().get(runtime_database).jobs.polling_interval == 1.0
+    assert (
+        ApplicationSettingsRepository().get(runtime_database).jobs.polling_interval
+        == 1.0
+    )
     assert training_service.jobs.polling_interval == 1.0
     assert len(training_service.calls) == 2
 

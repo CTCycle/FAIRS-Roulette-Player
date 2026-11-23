@@ -14,7 +14,6 @@ from server.repositories.schemas.models import InferenceSessionSteps, InferenceS
 
 ###############################################################################
 class InferenceRepository:
-
     # -------------------------------------------------------------------------
     def __init__(self, database: FAIRSDatabase) -> None:
         self.database = database

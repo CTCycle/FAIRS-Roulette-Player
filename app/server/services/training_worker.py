@@ -29,7 +29,6 @@ from server.repositories.checkpoints import CheckpointRepository
 
 ###############################################################################
 class QueueProgressReporter:
-
     # -------------------------------------------------------------------------
     def __init__(self, target_queue: Any) -> None:
         self.target_queue = target_queue
@@ -58,7 +57,6 @@ class QueueProgressReporter:
 
 ###############################################################################
 class WorkerChannels:
-
     # -------------------------------------------------------------------------
     def __init__(
         self,
@@ -77,7 +75,6 @@ class WorkerChannels:
 
 ###############################################################################
 class ProcessWorker:
-
     # -------------------------------------------------------------------------
     def __init__(
         self,
@@ -275,6 +272,7 @@ def process_target(
 ) -> None:
     if os.name != "nt":
         os.setsid()
+    # Initialize the child runtime before the target imports ML modules.
     from server.bootstrap import bootstrap_runtime
 
     bootstrap_runtime()

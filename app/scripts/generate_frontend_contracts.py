@@ -16,11 +16,7 @@ from server.contracts.inference import InferenceStartRequest
 from server.contracts.training import ResumeConfig, TrainingConfig
 
 OUTPUT_PATH = (
-    Path(__file__).resolve().parents[1]
-    / "client"
-    / "src"
-    / "generated"
-    / "api.ts"
+    Path(__file__).resolve().parents[1] / "client" / "src" / "generated" / "api.ts"
 )
 
 
@@ -68,9 +64,7 @@ def _schema_to_typescript(schema: Mapping[str, Any]) -> str:
     if schema_type == "array":
         items = schema.get("items")
         item_type = (
-            _schema_to_typescript(items)
-            if isinstance(items, Mapping)
-            else "unknown"
+            _schema_to_typescript(items) if isinstance(items, Mapping) else "unknown"
         )
         return f"Array<{item_type}>"
     if schema_type == "object" or "properties" in schema:

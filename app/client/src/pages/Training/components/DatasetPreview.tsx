@@ -179,6 +179,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
 
         const key = target.name;
         const currentValue = newConfig[key];
+        setWizardError(null);
 
         if (target instanceof HTMLInputElement && target.type === 'checkbox') {
             if (typeof currentValue === 'boolean') {
@@ -196,6 +197,7 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
     };
 
     const handleNumberChange = (name: keyof TrainingNewConfig, value: number) => {
+        setWizardError(null);
         if (typeof newConfig[name] === 'number') {
             updateNewConfigField(name, value as TrainingNewConfig[typeof name]);
         }
@@ -289,11 +291,22 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
         && newConfig.maxStepsEpisode >= 100
         ? null
         : 'Use a whole number of at least 100.';
+    const perceptiveFieldError = Number.isInteger(newConfig.perceptiveField)
+        && newConfig.perceptiveField >= 1
+        && newConfig.perceptiveField <= 1024
+        ? null
+        : 'Use a whole number from 1 to 1024.';
+    const replayBufferError = Number.isInteger(newConfig.replayBufferSize)
+        && newConfig.replayBufferSize >= 100
+        ? null
+        : 'Use a whole number of at least 100.';
     const currentStepError = wizardStep === 0
-        ? explorationRateError
-        : wizardStep === 4
-            ? maxStepsError
-            : null;
+        ? explorationRateError ?? perceptiveFieldError
+        : wizardStep === 1
+            ? replayBufferError
+            : wizardStep === 4
+                ? maxStepsError
+                : null;
 
     const handleNextWizardStep = () => {
         if (currentStepError) {
@@ -471,7 +484,8 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                                 <div className="wizard-grid wizard-grid-2x4">
                                     <div className="form-group">
                                         <label className="form-label" htmlFor="wizard-perceptiveField">Perceptive Field</label>
-                                        <input type="number" name="perceptiveField" id="wizard-perceptiveField" value={newConfig.perceptiveField} onChange={handleInputChange} className="form-input" max="1024" />
+                                        <input type="number" name="perceptiveField" id="wizard-perceptiveField" value={newConfig.perceptiveField} onChange={handleInputChange} className="form-input" min="1" max="1024" aria-invalid={Boolean(perceptiveFieldError)} aria-describedby={perceptiveFieldError ? 'wizard-perceptiveField-error' : undefined} />
+                                        {perceptiveFieldError && <span id="wizard-perceptiveField-error" className="wizard-field-error">{perceptiveFieldError}</span>}
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label" htmlFor="wizard-numNeurons">QNet Neurons</label>
@@ -517,7 +531,8 @@ export const DatasetPreview: React.FC<DatasetPreviewProps> = ({
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label" htmlFor="wizard-maxMemorySize">Max Memory</label>
-                                        <input type="number" name="maxMemorySize" id="wizard-maxMemorySize" value={newConfig.maxMemorySize} onChange={handleInputChange} className="form-input" min="100" />
+                                        <input type="number" name="maxMemorySize" id="wizard-maxMemorySize" value={newConfig.maxMemorySize} onChange={handleInputChange} className="form-input" min="100" aria-invalid={Boolean(replayBufferError)} aria-describedby={replayBufferError ? 'wizard-replayBufferSize-error' : undefined} />
+                                        {replayBufferError && <span id="wizard-replayBufferSize-error" className="wizard-field-error">{replayBufferError}</span>}
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label" htmlFor="wizard-replayBufferSize">Replay Buffer</label>

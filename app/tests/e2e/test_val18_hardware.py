@@ -90,9 +90,7 @@ def test_cuda_mixed_precision_eager_jit_training_publishes_checkpoint(
             set_global_policy(previous_policy)
             torch.cuda.set_device(previous_device)
 
-        start_response = api_context.post(
-            "/api/training/start", data=configuration
-        )
+        start_response = api_context.post("/api/training/start", data=configuration)
         assert start_response.status == 202, start_response.text()
         job_id = start_response.json().get("job_id")
         assert isinstance(job_id, str) and job_id
@@ -133,7 +131,9 @@ def test_cuda_mixed_precision_eager_jit_training_publishes_checkpoint(
         assert (checkpoint_root / "saved_model.keras").is_file()
 
         persisted_path = checkpoint_root / "configuration" / "configuration.json"
-        persisted_training = json.loads(persisted_path.read_text(encoding="utf-8"))["training"]
+        persisted_training = json.loads(persisted_path.read_text(encoding="utf-8"))[
+            "training"
+        ]
         assert persisted_training["use_device_gpu"] is True
         assert persisted_training["device_id"] == 0
         assert persisted_training["use_mixed_precision"] is True

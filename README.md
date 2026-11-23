@@ -62,7 +62,7 @@ See [runtime configuration](assets/docs/runtime/configuration.md) for environmen
 
 ## Development
 
-FAIRS is distributed as source and runs as a local web app. Its backend uses Python and FastAPI; the React and TypeScript client is built with Vite. FastAPI serves the built client and API from the same origin. The layout requires a browser window at least 1100 pixels wide; mobile layouts are not supported.
+FAIRS is distributed as source and runs as a local web app. Its backend uses Python and FastAPI; the React and TypeScript client is built with Vite. FastAPI serves the built client and API from the same origin. The interface is designed for desktop browsers; below 800 pixels the header wraps and the multi-column layouts stack so every control stays reachable, but touch-first mobile workflows are not a supported target.
 
 See [runtime startup](assets/docs/runtime/startup.md) for manual development commands and [the project documentation index](assets/docs/project_index.md) for architecture, testing, and operations guides.
 

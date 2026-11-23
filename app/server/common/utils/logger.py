@@ -112,9 +112,7 @@ def _build_log_config(log_directory: Path) -> dict[str, Any]:
                 "filters": ["quiet_access"],
                 "propagate": False,
             },
-            **{
-                name: {"level": "WARNING"} for name in NOISY_LIBRARY_LOGGERS
-            },
+            **{name: {"level": "WARNING"} for name in NOISY_LIBRARY_LOGGERS},
         },
         "root": {
             "level": root_level,

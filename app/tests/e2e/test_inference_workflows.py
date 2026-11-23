@@ -37,11 +37,7 @@ def require_dataset_id(api_context: APIRequestContext) -> int:
     assert response.ok, f"Expected 200, got {response.status}: {response.text()}"
     datasets = response.json().get("datasets", [])
     dataset = next(
-        (
-            item
-            for item in datasets
-            if item.get("dataset_id") == VAL11_DATASET_ID
-        ),
+        (item for item in datasets if item.get("dataset_id") == VAL11_DATASET_ID),
         None,
     )
     if dataset is None:
@@ -84,9 +80,7 @@ def start_inference_session(
 
 
 ###############################################################################
-def get_session_snapshot(
-    api_context: APIRequestContext, session_id: str
-) -> dict:
+def get_session_snapshot(api_context: APIRequestContext, session_id: str) -> dict:
     response = api_context.get(f"/api/inference/sessions/{session_id}")
     assert response.ok, f"Expected 200, got {response.status}: {response.text()}"
     return response.json()
@@ -256,7 +250,9 @@ class TestInferenceSessionFlow:
             observed_snapshot = get_session_snapshot(api_context, session_id)
             assert observed_snapshot.get("step_count") == 1
             assert observed_snapshot.get("prediction_pending") is False
-            assert observed_snapshot.get("current_capital") == step_data["capital_after"]
+            assert (
+                observed_snapshot.get("current_capital") == step_data["capital_after"]
+            )
             assert len(observed_snapshot.get("steps", [])) == 1
             assert observed_snapshot["steps"][0].get("bet_amount") == 25
             assert observed_snapshot["steps"][0].get("observed_outcome_id") == 17
@@ -410,8 +406,6 @@ class TestInferenceSessionFlow:
 """Live browser coverage for learned inference betting suggestions."""
 
 
-
-
 VAL15_CHECKPOINT = os.getenv("FAIRS_VAL15_CHECKPOINT", "val15_strategy_20260923")
 VAL15_DATASET_ID = 5
 STRATEGY_NAMES = {
@@ -494,9 +488,9 @@ def test_learned_strategy_suggestion_applies_without_advancing_pending_step(
     page.on("pageerror", lambda error: page_errors.append(str(error)))
     page.on(
         "console",
-        lambda message: console_errors.append(message.text)
-        if message.type == "error"
-        else None,
+        lambda message: (
+            console_errors.append(message.text) if message.type == "error" else None
+        ),
     )
     page.on(
         "requestfailed",
@@ -506,11 +500,11 @@ def test_learned_strategy_suggestion_applies_without_advancing_pending_step(
     )
     page.on(
         "response",
-        lambda response: failed_responses.append(
-            f"{response.status} {response.url}"
-        )
-        if response.status >= 400
-        else None,
+        lambda response: (
+            failed_responses.append(f"{response.status} {response.url}")
+            if response.status >= 400
+            else None
+        ),
     )
 
     def session_snapshot(session_id: str) -> dict:
@@ -519,17 +513,13 @@ def test_learned_strategy_suggestion_applies_without_advancing_pending_step(
         return response.json()
 
     def is_session_start(response) -> bool:
-        return (
-            response.request.method == "POST"
-            and response.url.endswith("/api/inference/sessions/start")
+        return response.request.method == "POST" and response.url.endswith(
+            "/api/inference/sessions/start"
         )
 
     def is_bet_update(response) -> bool:
-        return (
-            response.request.method == "POST"
-            and response.url.endswith(
-                f"/api/inference/sessions/{created_session_id}/bet"
-            )
+        return response.request.method == "POST" and response.url.endswith(
+            f"/api/inference/sessions/{created_session_id}/bet"
         )
 
     page.set_viewport_size({"width": 1440, "height": 900})
@@ -554,9 +544,13 @@ def test_learned_strategy_suggestion_applies_without_advancing_pending_step(
         assert prediction["bet_strategy_name"] == STRATEGY_NAMES[strategy_id]
         assert isinstance(suggested_bet, int) and suggested_bet >= 1
 
-        expect(page.get_by_text(f"Strategy: {STRATEGY_NAMES[strategy_id]}")).to_be_visible()
+        expect(
+            page.get_by_text(f"Strategy: {STRATEGY_NAMES[strategy_id]}")
+        ).to_be_visible()
         expect(page.get_by_text(f"Suggested Bet: € {suggested_bet}")).to_be_visible()
-        apply_button = page.get_by_role("button", name="Apply Suggested Bet", exact=True)
+        apply_button = page.get_by_role(
+            "button", name="Apply Suggested Bet", exact=True
+        )
         expect(apply_button).to_be_enabled()
 
         before_snapshot = session_snapshot(created_session_id)
@@ -598,9 +592,7 @@ def test_learned_strategy_suggestion_applies_without_advancing_pending_step(
         )
     finally:
         if created_session_id is not None:
-            api_context.post(
-                f"/api/inference/sessions/{created_session_id}/shutdown"
-            )
+            api_context.post(f"/api/inference/sessions/{created_session_id}/shutdown")
 
     assert page_errors == []
     assert console_errors == []

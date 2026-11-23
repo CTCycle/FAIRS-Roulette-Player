@@ -3,14 +3,12 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from server.common.utils.logger import logger
 from server.configurations.dependencies import get_settings_service
 from server.contracts.settings import SettingsPatchRequest, SettingsResponse
-from server.services.settings import SettingsPersistenceError
+from server.services.settings import SettingsPersistenceError, SettingsService
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
@@ -30,7 +28,7 @@ def _settings_failure(detail: str, exc: Exception) -> HTTPException:
     status_code=status.HTTP_200_OK,
 )
 def get_settings(
-    service: Any = Depends(get_settings_service),
+    service: SettingsService = Depends(get_settings_service),
 ) -> SettingsResponse:
     try:
         return service.get_settings()
@@ -46,7 +44,7 @@ def get_settings(
 )
 def update_settings(
     patch: SettingsPatchRequest,
-    service: Any = Depends(get_settings_service),
+    service: SettingsService = Depends(get_settings_service),
 ) -> SettingsResponse:
     try:
         return service.update_settings(patch)
@@ -68,7 +66,7 @@ def update_settings(
     status_code=status.HTTP_200_OK,
 )
 def reset_settings(
-    service: Any = Depends(get_settings_service),
+    service: SettingsService = Depends(get_settings_service),
 ) -> SettingsResponse:
     try:
         return service.reset_settings()
