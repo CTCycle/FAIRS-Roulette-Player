@@ -240,21 +240,30 @@ function Test-CleanupPathWithinRoot([string]$Path, [string]$AllowedRoot, [switch
     return $fullPath
 }
 
-function Assert-NoReparseAncestors([string]$Path, [string]$AllowedRoot) {
+function Assert-NoReparseAncestors([string]$Path, [string]$AllowedRoot, [Collections.Generic.HashSet[string]]$Verified) {
     $fullPath = [IO.Path]::GetFullPath($Path)
     $fullRoot = [IO.Path]::GetFullPath($AllowedRoot)
     [void](Test-CleanupPathWithinRoot -Path $fullPath -AllowedRoot $fullRoot)
-    $current = Split-Path -Parent $fullPath
+    $current = [IO.Path]::GetDirectoryName($fullPath)
+    $walked = $null
     while ($current) {
+        # $Verified holds directories already proven free of links during this cleanup run, so
+        # sibling paths validate each shared ancestor once instead of once per file.
+        if ($null -ne $Verified -and $Verified.Contains($current)) { break }
         $item = Get-Item -LiteralPath $current -Force -ErrorAction Stop
         if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
             throw "Cleanup path traverses a symbolic link or junction: '$current'."
         }
-        $parent = Split-Path -Parent $current
-        if (-not $parent -or $parent.Equals($current, [StringComparison]::OrdinalIgnoreCase)) { return }
+        if ($null -ne $Verified) {
+            if ($null -eq $walked) { $walked = [Collections.Generic.List[string]]::new() }
+            [void]$walked.Add($current)
+        }
+        $parent = [IO.Path]::GetDirectoryName($current)
+        if (-not $parent -or $parent.Equals($current, [StringComparison]::OrdinalIgnoreCase)) { break }
         $current = $parent
     }
-    throw "Cannot validate the ancestor chain for cleanup path '$fullPath'."
+    if ($null -eq $current) { throw "Cannot validate the ancestor chain for cleanup path '$fullPath'." }
+    if ($null -ne $walked) { foreach ($directory in $walked) { [void]$Verified.Add($directory) } }
 }
 
 function Test-CleanupDirectorySafeToScan([string]$Path) {
@@ -304,48 +313,50 @@ function Get-CleanupInventory {
             continue
         }
 
-        $pending = [Collections.Generic.Stack[object]]::new()
-        if ($target.Mode -eq 'File') {
-            $pending.Push([pscustomobject]@{ Item = $rootItem; Visited = $true; IsRoot = $true })
-        } elseif (($rootItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+        if ($target.Mode -ne 'File' -and ($rootItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
             [void]$skipped.Add("$fullPath (refusing to traverse a symbolic link or junction)")
             continue
-        } else {
-            $pending.Push([pscustomobject]@{ Item = $rootItem; Visited = $false; IsRoot = $true })
         }
 
+        $reportScope = if ($target.Mode -eq 'File') { 'file' } elseif ($target.KeepRoot) { 'contents of' } else { 'tree' }
+        $allowedRoot = $target.AllowedRoot
+        $preserveNames = @($target.PreserveNames)
+        $pending = [Collections.Generic.Stack[IO.FileSystemInfo]]::new()
+        $pending.Push($rootItem)
+        $isRoot = $true
+
         while ($pending.Count -gt 0) {
-            $work = $pending.Pop()
-            $item = $work.Item
+            $item = $pending.Pop()
+            $isDirectory = $item -is [IO.DirectoryInfo]
             $isReparsePoint = (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)
-            if ($item.PSIsContainer -and -not $isReparsePoint -and -not $work.Visited) {
-                $pending.Push([pscustomobject]@{ Item = $item; Visited = $true; IsRoot = $work.IsRoot })
+            if ($isDirectory -and -not $isReparsePoint -and $target.Mode -ne 'File') {
                 try {
-                    $children = @(Get-ChildItem -LiteralPath $item.FullName -Force -ErrorAction Stop)
+                    $children = [Collections.Generic.List[IO.FileSystemInfo]]::new(([IO.DirectoryInfo]$item).EnumerateFileSystemInfos())
                     foreach ($child in $children) {
-                        if ($work.IsRoot -and $child.Name -in $target.PreserveNames) {
+                        if ($isRoot -and $child.Name -in $preserveNames) {
                             [void]$skipped.Add("$($child.FullName) (preserved marker)")
                             continue
                         }
-                        $pending.Push([pscustomobject]@{ Item = $child; Visited = $false; IsRoot = $false })
+                        $pending.Push($child)
                     }
                 } catch {
                     [void]$failed.Add("$($item.FullName) ($($_.Exception.Message))")
                 }
-                continue
             }
 
-            if ($work.IsRoot -and $target.KeepRoot) { continue }
+            $itemIsRoot = $isRoot
+            $isRoot = $false
+            if ($itemIsRoot -and $target.KeepRoot) { continue }
             try {
-                $candidatePath = Test-CleanupPathWithinRoot -Path $item.FullName -AllowedRoot $target.AllowedRoot
+                $candidatePath = Test-CleanupPathWithinRoot -Path $item.FullName -AllowedRoot $allowedRoot
                 if ($seen.Add($candidatePath)) {
                     [void]$entries.Add([pscustomobject]@{
                         Path = $candidatePath
-                        AllowedRoot = $target.AllowedRoot
-                        IsDirectory = [bool]$item.PSIsContainer
-                        IsReparsePoint = [bool]$isReparsePoint
+                        AllowedRoot = $allowedRoot
+                        IsDirectory = $isDirectory
+                        IsReparsePoint = $isReparsePoint
                         ReportPath = $fullPath
-                        ReportScope = if ($target.Mode -eq 'File') { 'file' } elseif ($target.KeepRoot) { 'contents of' } else { 'tree' }
+                        ReportScope = $reportScope
                     })
                 }
             } catch {
@@ -354,7 +365,14 @@ function Get-CleanupInventory {
         }
     }
 
-    $orderedEntries = @($entries | Sort-Object @{ Expression = { $_.Path.Length }; Descending = $true }, @{ Expression = { $_.Path.ToUpperInvariant() }; Descending = $false })
+    # Delete children before parents: a child path is always longer than its parent path.
+    $orderedEntries = $entries.ToArray()
+    if ($orderedEntries.Length -gt 1) {
+        $pathLengths = [int[]]::new($orderedEntries.Length)
+        for ($index = 0; $index -lt $orderedEntries.Length; $index++) { $pathLengths[$index] = $orderedEntries[$index].Path.Length }
+        [Array]::Sort($pathLengths, $orderedEntries)
+        [Array]::Reverse($orderedEntries)
+    }
     return [pscustomobject]@{ Entries = $orderedEntries; Skipped = @($skipped); Failed = @($failed) }
 }
 
@@ -399,26 +417,28 @@ function Invoke-CleanupInventory {
     foreach ($path in $Inventory.Failed) { [void]$failed.Add($path) }
 
     $progressId = $null
+    $verifiedDirectories = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    $entryCount = $Inventory.Entries.Count
     try {
-        if ($Inventory.Entries.Count -gt 0) { $progressId = Start-LauncherProgress -Activity $Activity -Status "0 of $($Inventory.Entries.Count) paths" }
-        for ($index = 0; $index -lt $Inventory.Entries.Count; $index++) {
+        if ($entryCount -gt 0) { $progressId = Start-LauncherProgress -Activity $Activity -Status "0 of $entryCount paths" }
+        for ($index = 0; $index -lt $entryCount; $index++) {
             $entry = $Inventory.Entries[$index]
-            if ($null -ne $progressId) {
-                Update-LauncherProgress -Id $progressId -Activity $Activity -Status "$($index + 1) of $($Inventory.Entries.Count): $([IO.Path]::GetFileName($entry.Path))" -PercentComplete ([int](($index + 1) * 100 / [Math]::Max(1, $Inventory.Entries.Count)))
+            # Write-Progress is slow; refresh it periodically rather than for every path.
+            if ($null -ne $progressId -and ($index % 100 -eq 0 -or $index -eq $entryCount - 1)) {
+                Update-LauncherProgress -Id $progressId -Activity $Activity -Status "$($index + 1) of ${entryCount}: $([IO.Path]::GetFileName($entry.Path))" -PercentComplete ([int](($index + 1) * 100 / [Math]::Max(1, $entryCount)))
             }
             if ($WhatIf) { continue }
             try {
                 [void](Test-CleanupPathWithinRoot -Path $entry.Path -AllowedRoot $entry.AllowedRoot)
-                Assert-NoReparseAncestors -Path $entry.Path -AllowedRoot $entry.AllowedRoot
-                $item = Get-Item -LiteralPath $entry.Path -Force -ErrorAction Stop
-                $isReparsePoint = (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)
-                if ($isReparsePoint -and $item.PSIsContainer) {
+                Assert-NoReparseAncestors -Path $entry.Path -AllowedRoot $entry.AllowedRoot -Verified $verifiedDirectories
+                $attributes = [IO.File]::GetAttributes($entry.Path)
+                $isReparsePoint = (($attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)
+                if (($attributes -band [IO.FileAttributes]::Directory) -ne 0) {
                     [IO.Directory]::Delete($entry.Path, $false)
-                } elseif ($item.PSIsContainer) {
-                    [IO.Directory]::Delete($entry.Path, $false)
+                    [void]$verifiedDirectories.Remove($entry.Path)
                 } else {
-                    if (-not $isReparsePoint -and ($item.Attributes -band [IO.FileAttributes]::ReadOnly) -ne 0) {
-                        [IO.File]::SetAttributes($entry.Path, $item.Attributes -band (-bnot [IO.FileAttributes]::ReadOnly))
+                    if (-not $isReparsePoint -and ($attributes -band [IO.FileAttributes]::ReadOnly) -ne 0) {
+                        [IO.File]::SetAttributes($entry.Path, $attributes -band (-bnot [IO.FileAttributes]::ReadOnly))
                     }
                     [IO.File]::Delete($entry.Path)
                 }
@@ -506,7 +526,12 @@ function Add-CleanupTargetIfPresent {
 
 function Get-DiscoveredCacheTargets {
     param([string[]]$Roots)
-    $recognizedDirectoryNames = @('__pycache__', '.pytest_cache', '.ruff_cache', '.mypy_cache', '.cache', '.vite', 'htmlcov')
+    # Dependency trees are not walked in full: a recursive scan of node_modules or a virtual
+    # environment dominates cleanup time. node_modules is probed only where tools place caches
+    # (node_modules/.cache, node_modules/<package>/.cache and node_modules/@scope/<package>/.cache);
+    # virtual environments are dependency installs, removed by uninstall, not by clearing caches.
+    $recognizedDirectoryNames = [Collections.Generic.HashSet[string]]::new([string[]]@('__pycache__', '.pytest_cache', '.ruff_cache', '.mypy_cache', '.cache', '.vite', 'htmlcov'), [StringComparer]::OrdinalIgnoreCase)
+    $skippedDirectoryNames = [Collections.Generic.HashSet[string]]::new([string[]]@('.git'), [StringComparer]::OrdinalIgnoreCase)
     $knownBuildOutputPaths = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
     foreach ($path in @(
         (Join-Path $clientDir 'dist'), (Join-Path $clientDir 'dist-ssr'),
@@ -518,38 +543,69 @@ function Get-DiscoveredCacheTargets {
         if (-not (Test-CleanupDirectorySafeToScan -Path $scanRoot)) { continue }
         $pending = [Collections.Generic.Stack[string]]::new()
         $pending.Push([IO.Path]::GetFullPath($scanRoot))
+        $dependencyDirectories = [Collections.Generic.List[string]]::new()
         while ($pending.Count -gt 0) {
             $current = $pending.Pop()
             try {
-                $children = @(Get-ChildItem -LiteralPath $current -Force -ErrorAction Stop)
+                $children = [Collections.Generic.List[IO.FileSystemInfo]]::new(([IO.DirectoryInfo]::new($current)).EnumerateFileSystemInfos())
             } catch {
                 Add-CleanupDiscoverySkip "$current (cache discovery skipped: $($_.Exception.Message))"
                 continue
             }
             foreach ($child in $children) {
-                if ($child.PSIsContainer) {
-                    if (($child.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
-                        if ($child.Name -in $recognizedDirectoryNames) {
-                            [void]$targets.Add((New-CleanupTarget -Path $child.FullName -AllowedRoot $scanRoot))
-                        }
-                        continue
-                    }
-                    if ($child.Name -in $recognizedDirectoryNames) {
+                $name = $child.Name
+                if ($child -is [IO.DirectoryInfo]) {
+                    if ($recognizedDirectoryNames.Contains($name)) {
                         [void]$targets.Add((New-CleanupTarget -Path $child.FullName -AllowedRoot $scanRoot))
-                    } elseif ($child.Name -eq '.git' -or $knownBuildOutputPaths.Contains([IO.Path]::GetFullPath($child.FullName))) {
+                    } elseif (($child.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or
+                        $skippedDirectoryNames.Contains($name) -or $knownBuildOutputPaths.Contains($child.FullName)) {
                         continue
+                    } elseif ($name -ieq 'node_modules') {
+                        [void]$dependencyDirectories.Add($child.FullName)
                     } else {
                         $pending.Push($child.FullName)
                     }
                     continue
                 }
-                if ($child.Extension -in @('.pyc', '.pyo', '.tsbuildinfo') -or $child.Name -like '.coverage*') {
+                if ($name.StartsWith('.coverage', [StringComparison]::OrdinalIgnoreCase) -or
+                    $child.Extension -in @('.pyc', '.pyo', '.tsbuildinfo')) {
                     [void]$targets.Add((New-CleanupTarget -Path $child.FullName -AllowedRoot $scanRoot -Mode 'File'))
                 }
             }
         }
+        foreach ($dependencyDirectory in $dependencyDirectories) {
+            foreach ($cachePath in @(Get-DependencyCachePaths -NodeModulesPath $dependencyDirectory -RecognizedNames $recognizedDirectoryNames)) {
+                [void]$targets.Add((New-CleanupTarget -Path $cachePath -AllowedRoot $scanRoot))
+            }
+        }
     }
     return @($targets)
+}
+
+function Get-DependencyCachePaths {
+    param([string]$NodeModulesPath, [Collections.Generic.HashSet[string]]$RecognizedNames)
+    $found = [Collections.Generic.List[string]]::new()
+    $packageDirectories = [Collections.Generic.List[string]]::new()
+    $subDirectories = {
+        param([string]$Path)
+        try { ([IO.DirectoryInfo]::new($Path)).EnumerateDirectories() }
+        catch { Add-CleanupDiscoverySkip "$Path (cache discovery skipped: $($_.Exception.Message))" }
+    }
+    foreach ($entry in @(& $subDirectories $NodeModulesPath)) {
+        if (($entry.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { continue }
+        if ($RecognizedNames.Contains($entry.Name)) { [void]$found.Add($entry.FullName) }
+        elseif ($entry.Name.StartsWith('@')) {
+            foreach ($scoped in @(& $subDirectories $entry.FullName)) {
+                if (($scoped.Attributes -band [IO.FileAttributes]::ReparsePoint) -eq 0) { [void]$packageDirectories.Add($scoped.FullName) }
+            }
+        } else { [void]$packageDirectories.Add($entry.FullName) }
+    }
+    foreach ($package in $packageDirectories) {
+        foreach ($entry in @(& $subDirectories $package)) {
+            if ($RecognizedNames.Contains($entry.Name)) { [void]$found.Add($entry.FullName) }
+        }
+    }
+    return @($found)
 }
 
 function Get-CacheCleanupTargets {
